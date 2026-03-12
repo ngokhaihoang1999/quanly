@@ -1,11 +1,41 @@
-# Hệ Thống Quản Lý Hồ Sơ Telegram Bot - (Maize Tracking)
+# Hệ Thống Quản Lý Hồ Sơ Telegram Bot - (Checking Jondo)
 
 Đây là kho lưu trữ mã nguồn cho hệ thống Bot quản lý hồ sơ nhân sự, sử dụng **Supabase Edge Functions** (TypeScript/Deno) thay vì Google Apps Script, giúp đồng bộ 100% với hệ thống cơ sở dữ liệu và dễ dàng mở rộng, chỉnh sửa chung qua Git.
 
 ## Cấu trúc thư mục
 
-- `supabase/functions/telegram-bot/`: Chứa toàn bộ mã logic của Telegram Bot. Code sẽ được chạy serverless với tốc độ cao.
-- `.github/workflows/deploy.yml`: Hệ thống CI/CD để tự động cập nhật Bot lên Supabase khi bạn gõ lệnh `git push`.
+- `supabase/functions/telegram-bot/`: Chứa toàn bộ mã logic của Telegram Bot (serverless).
+- `supabase/migrations/`: Các file SQL tạo/cập nhật cơ sở dữ liệu.
+- `mini-app/`: Telegram Mini App — giao diện quản lý hồ sơ trên điện thoại.
+- `.github/workflows/`: CI/CD tự động deploy khi `git push`.
+
+## Tính năng
+
+### 🤖 Telegram Bot
+- `/register [Mã_NV]` — Đăng ký thiết bị Telegram với mã nhân viên
+- `/start` | `/menu` — Hiện menu chính (Danh bạ + Mở Mini App)
+- `/search [tên]` — Tìm kiếm hồ sơ theo tên
+- Bấm vào tên cá → Xem thông tin chi tiết (SĐT, NDD, nghề, địa chỉ, số phiếu TVV/BB)
+
+### 📱 Mini App
+- **Tab Hồ sơ**: Danh sách, tìm kiếm, thêm/xoá hồ sơ
+  - **Tờ 1** — Duyệt Cá (lưu & load lại dữ liệu)
+  - **Tờ 2** — Hành Chính (23 mục, bao gồm chip multi-select)
+  - **Tờ 3** — Phiếu TVV (thêm/xoá phiếu tư vấn)
+  - **Tờ 4** — Biên Bản BB (thêm/xoá biên bản)
+- **Tab Nhân sự**: Quản lý nhân viên
+  - Đăng ký nhân viên mới (tên, mã NV, chức vụ, cấp độ, SĐT, email)
+  - Chức vụ: NDD, TVV, GGN, GVBB, Admin
+  - Cấp độ: Thực tập, Chính thức, Trưởng nhóm, Quản lý
+  - Trạng thái kết nối Telegram (🟢/⚪)
+
+### 🗄️ Database (Supabase)
+| Bảng | Mục đích |
+|---|---|
+| `staff` | Nhân viên (staff_code, telegram_id, role, level, phone, email) |
+| `profiles` | Hồ sơ cá (full_name, phone_number, ndd_staff_code) |
+| `form_hanh_chinh` | Dữ liệu Tờ 2 (profile_id, data JSON) |
+| `records` | Phiếu TVV/BB + Tờ 1 (profile_id, record_type, content JSON) |
 
 ## Cách đẩy mã lên GitHub & Tự động Deploy
 

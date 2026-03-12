@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Maize Tracking - Quản lý Hồ sơ</title>
+  <title>Checking Jondo - Quản lý Hồ sơ</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -360,6 +360,60 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
     .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+    /* DELETE PROFILE BTN */
+    .delete-profile-btn {
+      width: 100%; padding: 12px;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: var(--radius);
+      color: var(--red); font-size: 13px; font-weight: 600;
+      cursor: pointer; margin-top: 20px;
+      transition: all 0.2s;
+    }
+    .delete-profile-btn:active { background: rgba(248,113,113,0.25); }
+
+    /* DELETE RECORD BTN */
+    .record-delete {
+      background: none; border: none;
+      color: var(--text3); font-size: 16px;
+      cursor: pointer; padding: 4px;
+      flex-shrink: 0; transition: color 0.2s;
+    }
+    .record-delete:hover { color: var(--red); }
+
+    /* STAFF CARD */
+    .staff-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .staff-avatar {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, #34d399, #059669);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; flex-shrink: 0; color: white;
+    }
+    .staff-role-badge {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .role-admin { background: rgba(124,106,247,0.2); color: var(--accent2); border: 1px solid rgba(124,106,247,0.4); }
+    .role-ndd { background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+    .role-tvv { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+    .role-default { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+    .level-badge {
+      display: inline-block;
+      font-size: 10px; font-weight: 500;
+      padding: 1px 6px; border-radius: 8px;
+      background: var(--surface2); color: var(--text3);
+      border: 1px solid var(--border); margin-left: 6px;
+    }
   </style>
 </head>
 <body>
@@ -368,9 +422,9 @@
 <div class="header">
   <div class="header-top">
     <div class="logo">
-      <div class="logo-icon">🌽</div>
+      <div class="logo-icon">✅</div>
       <div class="logo-text">
-        <h1>Maize Tracking</h1>
+        <h1>Checking Jondo</h1>
         <span>Hệ thống quản lý hồ sơ</span>
       </div>
     </div>
@@ -378,6 +432,7 @@
   </div>
   <div class="tab-bar" id="mainTabBar">
     <div class="tab active" data-tab="profiles" onclick="switchMainTab(this,'profiles')">📋 Hồ sơ</div>
+    <div class="tab" data-tab="staff" onclick="switchMainTab(this,'staff')">👥 TĐ</div>
     <div class="tab" data-tab="add-profile" onclick="openAddProfileModal()">➕ Thêm Cá</div>
   </div>
 </div>
@@ -401,6 +456,25 @@
       <div class="profile-card skeleton" style="height:68px;opacity:0.7;"></div>
       <div class="profile-card skeleton" style="height:68px;opacity:0.4;"></div>
     </div>
+  </div>
+
+  <!-- DANH SÁCH NHÂN SỰ -->
+  <div id="tab-staff" style="display:none;">
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" placeholder="Tìm theo tên, mã NV..." id="staffSearchInput" oninput="filterStaff()" />
+    </div>
+    <div class="section-header">
+      <div class="section-title">Tất cả nhân sự</div>
+      <div class="section-count" id="staffCount">-- nhân viên</div>
+    </div>
+    <div id="staffList">
+      <div class="staff-card skeleton" style="height:68px;"></div>
+      <div class="staff-card skeleton" style="height:68px;opacity:0.7;"></div>
+    </div>
+    <button class="add-record-btn" onclick="openAddStaffModal()" style="margin-top:12px;">
+      ＋ Đăng ký nhân viên mới
+    </button>
   </div>
 
   <!-- DETAIL VIEW (Ẩn ban đầu) -->
@@ -453,7 +527,7 @@
         </div>
         <div class="field-group">
           <label>🙏 Tôn giáo (Có tin thần linh không?)</label>
-          <div class="chips">
+          <div class="chips" id="chips_t1_ton_giao">
             <div class="chip" onclick="toggleChip(this)">Có</div>
             <div class="chip" onclick="toggleChip(this)">Không</div>
             <div class="chip" onclick="toggleChip(this)">Đang tìm hiểu</div>
@@ -528,7 +602,7 @@
         </div>
         <div class="field-group">
           <label>9. Mối quan hệ với NDD</label>
-          <div class="chips">
+          <div class="chips" id="chips_quan_he_ndd">
             <div class="chip" onclick="toggleChip(this)">Người thân</div>
             <div class="chip" onclick="toggleChip(this)">Bạn bè</div>
             <div class="chip" onclick="toggleChip(this)">Đồng nghiệp</div>
@@ -546,7 +620,7 @@
         </div>
         <div class="field-group">
           <label>13. Không gian sống</label>
-          <div class="chips">
+          <div class="chips" id="chips_khong_gian_song">
             <div class="chip" onclick="toggleChip(this)">Ở trọ một mình</div>
             <div class="chip" onclick="toggleChip(this)">Ký túc xá</div>
             <div class="chip" onclick="toggleChip(this)">Cùng gia đình</div>
@@ -629,6 +703,12 @@
       </div>
     </div>
   </div>
+
+    <!-- NÚT XOÁ HỒ SƠ -->
+    <button class="delete-profile-btn" onclick="deleteProfile()">
+      🗑️ Xoá hồ sơ này
+    </button>
+  </div>
 </div>
 
 <!-- FAB BUTTON (chỉ hiện khi đang ở list) -->
@@ -672,6 +752,55 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- MODAL: ĐĂNG KÝ NHÂN VIÊN MỚI -->
+<div class="modal-overlay" id="addStaffModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👥 Đăng ký TĐ Mới</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field-group">
+        <label>Họ và tên *</label>
+        <input type="text" id="new_staff_name" placeholder="Nhập họ tên..." />
+      </div>
+      <div class="field-group">
+        <label>Mã TĐ *</label>
+        <input type="text" id="new_staff_code" placeholder="VD: 012345-ABC" />
+      </div>
+      <div class="field-group">
+        <label>Chức vụ (Role)</label>
+        <select id="new_staff_role">
+          <option value="ndd">NDD - Người dẫn dắt</option>
+          <option value="tvv">TVV - Tư vấn viên</option>
+          <option value="ggn">GGN - Giáo viên giảng nhóm</option>
+          <option value="gvbb">GVBB - Giáo viên BB</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Cấp độ (Level)</label>
+        <select id="new_staff_level">
+          <option value="thuc_tap">Thực tập</option>
+          <option value="chinh_thuc">Chính thức</option>
+          <option value="truong_nhom">Trưởng nhóm</option>
+          <option value="quan_ly">Quản lý</option>
+        </select>
+      </div>
+      <div class="grid-2">
+        <div class="field-group">
+          <label>Số điện thoại</label>
+          <input type="tel" id="new_staff_phone" placeholder="0xxx..." />
+        </div>
+        <div class="field-group">
+          <label>Email</label>
+          <input type="text" id="new_staff_email" placeholder="email@..." />
+        </div>
+      </div>
+      <button class="save-btn" onclick="addStaff()">✅ Đăng ký TĐ</button>
+      <button onclick="closeModal('addStaffModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
@@ -680,8 +809,52 @@ const tg = window.Telegram?.WebApp;
 let currentProfileId = null;
 let currentRecordType = null;
 let allProfiles = [];
+let allStaff = [];
 
-// Init
+// ============ HELPERS ============
+
+// Read selected chips from a container
+function getChipValues(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('.chip.selected')).map(c => c.textContent.trim());
+}
+
+// Restore chip selections from saved array
+function setChipValues(containerId, values) {
+  const el = document.getElementById(containerId);
+  if (!el || !values || !values.length) return;
+  el.querySelectorAll('.chip').forEach(c => {
+    if (values.includes(c.textContent.trim())) c.classList.add('selected');
+    else c.classList.remove('selected');
+  });
+}
+
+// Clear all chips in a container
+function clearChips(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+}
+
+// Role badge CSS class
+function getRoleBadgeClass(role) {
+  if (!role) return 'role-default';
+  const r = role.toLowerCase();
+  if (r === 'admin') return 'role-admin';
+  if (r === 'ndd') return 'role-ndd';
+  if (r === 'tvv' || r === 'ggn' || r === 'gvbb') return 'role-tvv';
+  return 'role-default';
+}
+
+// Level display name
+function getLevelName(level) {
+  const map = { thuc_tap: 'Thực tập', chinh_thuc: 'Chính thức', truong_nhom: 'Trưởng nhóm', quan_ly: 'Quản lý' };
+  return map[level] || level || '';
+}
+
+// ============ INIT ============
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) {
     tg.ready();
@@ -692,7 +865,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadProfiles();
 });
 
-// Load staff info
+// Load staff info (current user badge)
 async function loadStaffInfo() {
   const userId = tg?.initDataUnsafe?.user?.id;
   if (!userId) {
@@ -703,12 +876,13 @@ async function loadStaffInfo() {
     const res = await sbFetch(`/rest/v1/staff?telegram_id=eq.${userId}&select=*`);
     const data = await res.json();
     if (data.length > 0) {
-      document.getElementById('staffBadge').textContent = `${data[0].staff_code} · ${data[0].role.toUpperCase()}`;
+      document.getElementById('staffBadge').textContent = `${data[0].staff_code} · ${(data[0].role || '').toUpperCase()}`;
     }
   } catch {}
 }
 
-// API helper
+// ============ API HELPER ============
+
 async function sbFetch(path, opts = {}) {
   return fetch(SUPABASE_URL + path, {
     ...opts,
@@ -722,7 +896,8 @@ async function sbFetch(path, opts = {}) {
   });
 }
 
-// Load profiles
+// ============ PROFILES ============
+
 async function loadProfiles() {
   try {
     const res = await sbFetch('/rest/v1/profiles?select=*&order=created_at.desc');
@@ -741,8 +916,8 @@ function renderProfiles(profiles) {
     return;
   }
   el.innerHTML = profiles.map(p => `
-    <div class="profile-card" onclick="openProfile('${p.id}','${p.full_name}','${p.phone_number||''}','${p.ndd_staff_code||'Chưa xác định'}')">
-      <div class="avatar">${p.full_name[0]}</div>
+    <div class="profile-card" onclick="openProfile('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}','${(p.phone_number||'').replace(/'/g,"\\'")}','${(p.ndd_staff_code||'Chưa xác định').replace(/'/g,"\\'")}')">
+      <div class="avatar">${(p.full_name||'?')[0]}</div>
       <div class="profile-info">
         <div class="profile-name">${p.full_name}</div>
         <div class="profile-meta">
@@ -763,10 +938,12 @@ function filterProfiles() {
   ));
 }
 
-// Open profile detail
+// ============ PROFILE DETAIL ============
+
 async function openProfile(id, name, phone, ndd) {
   currentProfileId = id;
   document.getElementById('tab-profiles').style.display = 'none';
+  document.getElementById('tab-staff').style.display = 'none';
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
 
@@ -776,27 +953,79 @@ async function openProfile(id, name, phone, ndd) {
     <div class="profile-detail-meta">${phone} · NDD: ${ndd}</div>
   `;
 
-  // Tải dữ liệu Tờ 2
+  // Clear all form fields first to prevent data leaking
+  clearFormFields();
+
+  // Load data for each tab
+  loadTo1(id);
   loadHanhChinh(id);
-  // Tải danh sách phiếu Tờ 3, 4
   loadRecords(id, 'to_3', 'to3List', 'to3count');
   loadRecords(id, 'to_4', 'to4List', 'to4count');
 }
 
+function clearFormFields() {
+  // Clear Tờ 1
+  ['t1_ndd','t1_tvv','t1_ten_trai','t1_tuoi','t1_gioi_tinh','t1_nghe_nghiep','t1_lich_trinh','t1_concept'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  clearChips('chips_t1_ton_giao');
+
+  // Clear Tờ 2
+  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  clearChips('chips_ton_giao');
+  clearChips('chips_hon_nhan');
+  clearChips('chips_quan_he_ndd');
+  clearChips('chips_khong_gian_song');
+}
+
+// Load Tờ 1 from records table
+async function loadTo1(profileId) {
+  try {
+    const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.to_1&select=*&order=created_at.desc&limit=1`);
+    const records = await res.json();
+    if (records.length > 0 && records[0].content) {
+      const d = records[0].content;
+      if (d.ndd) document.getElementById('t1_ndd').value = d.ndd;
+      if (d.tvv) document.getElementById('t1_tvv').value = d.tvv;
+      if (d.ten_trai) document.getElementById('t1_ten_trai').value = d.ten_trai;
+      if (d.tuoi) document.getElementById('t1_tuoi').value = d.tuoi;
+      if (d.gioi_tinh) document.getElementById('t1_gioi_tinh').value = d.gioi_tinh;
+      if (d.nghe_nghiep) document.getElementById('t1_nghe_nghiep').value = d.nghe_nghiep;
+      if (d.lich_trinh) document.getElementById('t1_lich_trinh').value = d.lich_trinh;
+      if (d.concept) document.getElementById('t1_concept').value = d.concept;
+      if (d.ton_giao) setChipValues('chips_t1_ton_giao', d.ton_giao);
+    }
+  } catch {}
+}
+
+// Load Tờ 2 from form_hanh_chinh
 async function loadHanhChinh(profileId) {
   try {
     const res = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=*`);
     const data = await res.json();
     if (data.length > 0 && data[0].data) {
       const d = data[0].data;
+      // Restore text/select fields
       Object.entries(d).forEach(([key, val]) => {
-        const el = document.getElementById(key);
-        if (el) el.value = val;
+        if (typeof val === 'string') {
+          const el = document.getElementById(key);
+          if (el) el.value = val;
+        }
       });
+      // Restore chip fields
+      if (d.t2_ton_giao) setChipValues('chips_ton_giao', d.t2_ton_giao);
+      if (d.t2_hon_nhan) setChipValues('chips_hon_nhan', d.t2_hon_nhan);
+      if (d.t2_quan_he_ndd) setChipValues('chips_quan_he_ndd', d.t2_quan_he_ndd);
+      if (d.t2_khong_gian_song) setChipValues('chips_khong_gian_song', d.t2_khong_gian_song);
     }
   } catch {}
 }
 
+// Load Tờ 3/4 records
 async function loadRecords(profileId, type, listElId, countElId) {
   try {
     const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.desc`);
@@ -822,18 +1051,21 @@ async function loadRecords(profileId, type, listElId, countElId) {
             <div class="record-title">${title}</div>
             <div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div>
           </div>
+          <button class="record-delete" onclick="event.stopPropagation();deleteRecord('${r.id}','${type}')" title="Xoá phiếu">🗑️</button>
         </div>
       `;
     }).join('');
   } catch {}
 }
 
+// ============ NAVIGATION ============
+
 function backToList() {
   document.getElementById('tab-profiles').style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = 'flex';
   currentProfileId = null;
-  // Reset form tabs về Tờ 1
+  // Reset form tabs about Tờ 1
   document.querySelectorAll('.form-tab').forEach((t,i) => t.classList.toggle('active', i===0));
   document.querySelectorAll('.form-card').forEach((c,i) => c.classList.toggle('active', i===0));
 }
@@ -848,9 +1080,17 @@ function switchFormTab(el, cardId) {
 function switchMainTab(el, tab) {
   document.querySelectorAll('#mainTabBar .tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
+  // Toggle tab content visibility
+  document.getElementById('tab-profiles').style.display = tab === 'profiles' ? 'block' : 'none';
+  document.getElementById('tab-staff').style.display = tab === 'staff' ? 'block' : 'none';
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('fabBtn').style.display = tab === 'profiles' ? 'flex' : 'none';
+  // Load staff data when switching to staff tab
+  if (tab === 'staff') loadStaff();
 }
 
-// ADD PROFILE
+// ============ ADD PROFILE ============
+
 function openAddProfileModal() {
   document.getElementById('addProfileModal').classList.add('open');
 }
@@ -861,12 +1101,11 @@ async function addProfile() {
   const phone = document.getElementById('new_phone').value.trim();
   const ndd = document.getElementById('new_ndd').value.trim();
   try {
-    const res = await sbFetch('/rest/v1/profiles', {
+    await sbFetch('/rest/v1/profiles', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
       body: JSON.stringify({ full_name: name, phone_number: phone, ndd_staff_code: ndd || null })
     });
-    const data = await res.json();
     closeModal('addProfileModal');
     showToast('✅ Đã tạo hồ sơ thành công!');
     document.getElementById('new_name').value = '';
@@ -876,7 +1115,40 @@ async function addProfile() {
   } catch (e) { showToast('❌ Lỗi khi tạo hồ sơ'); }
 }
 
-// SAVE TỜ 1
+// ============ DELETE PROFILE ============
+
+async function deleteProfile() {
+  if (!currentProfileId) return;
+  if (!confirm('⚠️ Xác nhận xoá hồ sơ này?\n\nTất cả dữ liệu liên quan (Tờ 1, 2, 3, 4) sẽ bị xoá vĩnh viễn.')) return;
+
+  try {
+    // Xoá records liên quan
+    await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}`, { method: 'DELETE' });
+    // Xoá form_hanh_chinh liên quan
+    await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${currentProfileId}`, { method: 'DELETE' });
+    // Xoá profile
+    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'DELETE' });
+
+    showToast('✅ Đã xoá hồ sơ thành công!');
+    backToList();
+    await loadProfiles();
+  } catch { showToast('❌ Lỗi khi xoá hồ sơ'); }
+}
+
+// ============ DELETE RECORD ============
+
+async function deleteRecord(recordId, type) {
+  if (!confirm('Xác nhận xoá phiếu này?')) return;
+  try {
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
+    showToast('✅ Đã xoá phiếu!');
+    if (type === 'to_3') loadRecords(currentProfileId, 'to_3', 'to3List', 'to3count');
+    else loadRecords(currentProfileId, 'to_4', 'to4List', 'to4count');
+  } catch { showToast('❌ Lỗi khi xoá phiếu'); }
+}
+
+// ============ SAVE TỜ 1 ============
+
 async function saveTo1() {
   const data = {
     ndd: document.getElementById('t1_ndd').value,
@@ -887,11 +1159,13 @@ async function saveTo1() {
     nghe_nghiep: document.getElementById('t1_nghe_nghiep').value,
     lich_trinh: document.getElementById('t1_lich_trinh').value,
     concept: document.getElementById('t1_concept').value,
+    ton_giao: getChipValues('chips_t1_ton_giao'),
   };
   await saveFormData('to_1', data);
 }
 
-// SAVE TỜ 2
+// ============ SAVE TỜ 2 ============
+
 async function saveTo2() {
   const data = {
     t2_ho_ten: document.getElementById('t2_ho_ten').value,
@@ -912,6 +1186,11 @@ async function saveTo2() {
     t2_quan_diem: document.getElementById('t2_quan_diem').value,
     t2_cong_cu: document.getElementById('t2_cong_cu').value,
     t2_luu_y: document.getElementById('t2_luu_y').value,
+    // Chip values
+    t2_ton_giao: getChipValues('chips_ton_giao'),
+    t2_hon_nhan: getChipValues('chips_hon_nhan'),
+    t2_quan_he_ndd: getChipValues('chips_quan_he_ndd'),
+    t2_khong_gian_song: getChipValues('chips_khong_gian_song'),
   };
   // Upsert form_hanh_chinh
   try {
@@ -935,7 +1214,8 @@ async function saveFormData(type, data) {
   } catch { showToast('❌ Lỗi khi lưu'); }
 }
 
-// ADD RECORD MODAL
+// ============ ADD RECORD MODAL (Tờ 3 / 4) ============
+
 function openAddRecordModal(type) {
   currentRecordType = type;
   const isTo3 = type === 'to_3';
@@ -995,19 +1275,103 @@ async function saveRecord() {
     });
     closeModal('addRecordModal');
     showToast(`✅ Đã thêm phiếu ${isTo3 ? 'TVV' : 'BB'} thành công!`);
-    // Reload phiếu
     if (isTo3) loadRecords(currentProfileId, 'to_3', 'to3List', 'to3count');
     else loadRecords(currentProfileId, 'to_4', 'to4List', 'to4count');
   } catch { showToast('❌ Lỗi khi lưu phiếu'); }
 }
 
-// CHIP TOGGLE
+// ============ STAFF MANAGEMENT ============
+
+async function loadStaff() {
+  try {
+    const res = await sbFetch('/rest/v1/staff?select=*&order=created_at.desc');
+    allStaff = await res.json();
+    renderStaff(allStaff);
+  } catch {
+    document.getElementById('staffList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Không thể tải danh sách TĐ</div></div>';
+  }
+}
+
+function renderStaff(staffList) {
+  const el = document.getElementById('staffList');
+  document.getElementById('staffCount').textContent = staffList.length + ' TĐ';
+  if (!staffList.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Chưa có TĐ nào</div><div class="empty-sub">Đăng ký TĐ mới bằng nút bên dưới</div></div>';
+    return;
+  }
+  el.innerHTML = staffList.map(s => {
+    const roleBadge = getRoleBadgeClass(s.role);
+    const levelName = getLevelName(s.level);
+    const connected = s.telegram_id ? '🟢' : '⚪';
+    return `
+      <div class="staff-card">
+        <div class="staff-avatar">${(s.full_name||'?')[0]}</div>
+        <div class="profile-info">
+          <div class="profile-name">${s.full_name} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
+          <div class="profile-meta">
+            <span class="staff-role-badge ${roleBadge}">${(s.role||'---').toUpperCase()}</span>
+            ${levelName ? `<span class="level-badge">${levelName}</span>` : ''}
+            ${connected} ${s.telegram_id ? 'Đã kết nối' : 'Chưa kết nối TG'}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterStaff() {
+  const q = document.getElementById('staffSearchInput').value.toLowerCase();
+  renderStaff(allStaff.filter(s =>
+    s.full_name.toLowerCase().includes(q) ||
+    s.staff_code.toLowerCase().includes(q) ||
+    (s.role||'').toLowerCase().includes(q)
+  ));
+}
+
+function openAddStaffModal() {
+  document.getElementById('addStaffModal').classList.add('open');
+}
+
+async function addStaff() {
+  const name = document.getElementById('new_staff_name').value.trim();
+  const code = document.getElementById('new_staff_code').value.trim();
+  if (!name || !code) { showToast('⚠️ Vui lòng nhập họ tên và mã TĐ'); return; }
+
+  const role = document.getElementById('new_staff_role').value;
+  const level = document.getElementById('new_staff_level').value;
+  const phone = document.getElementById('new_staff_phone').value.trim();
+  const email = document.getElementById('new_staff_email').value.trim();
+
+  try {
+    await sbFetch('/rest/v1/staff', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        full_name: name,
+        staff_code: code,
+        role: role,
+        level: level,
+        phone: phone || null,
+        email: email || null
+      })
+    });
+    closeModal('addStaffModal');
+    showToast('✅ Đã đăng ký nhân viên thành công!');
+    // Clear form
+    document.getElementById('new_staff_name').value = '';
+    document.getElementById('new_staff_code').value = '';
+    document.getElementById('new_staff_phone').value = '';
+    document.getElementById('new_staff_email').value = '';
+    await loadStaff();
+  } catch (e) { showToast('❌ Lỗi khi đăng ký nhân viên'); }
+}
+
+// ============ UTILS ============
+
 function toggleChip(el) { el.classList.toggle('selected'); }
 
-// MODAL HELPERS
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// TOAST
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
