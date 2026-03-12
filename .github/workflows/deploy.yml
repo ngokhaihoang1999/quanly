@@ -21,4 +21,4 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: smzoomekyvllsgppgvxw
         run: |
-          supabase functions deploy telegram-bot --project-ref $SUPABASE_PROJECT_ID
+          supabase functions deploy telegram-bot --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
