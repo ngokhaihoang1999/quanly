@@ -102,17 +102,41 @@ Deno.serve(async (req) => {
 
     // 4. Xử lý Lệnh Text 
     if (text === '/start' || text === '/menu') {
+      const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html`;
+      
       const keyboard = [
         [{ text: "📋 Danh bạ & Hồ sơ", callback_data: "list_profiles" }],
-        // Ở phase sau Web App sẽ cấu hình URL Mini App của Telegram vào đây 
-        [{ text: "🖥 Mở Quản Lý Nâng Cao (Web App)", web_app: { url: "https://google.com" } }]
+        [{ text: "🖥 Mở Quản Lý (Mini App)", web_app: { url: miniAppUrl } }]
       ];
-      await sendKeyboard(chatId, `Xin chào, **${staffData.full_name}** - Quyền truy cập: ${staffData.role.toUpperCase()}\n\nBạn có thể quản lý nhanh qua Bot hoặc mở Mini App bên dưới để nhập các form phiếu (Tờ 1, 2, 3, 4) dễ dàng hơn nhé!`, keyboard);
+      
+      const welcomeMsg = `Xin chào, **${staffData.full_name}** (${staffData.staff_code})\n\n` +
+                        `Bạn đang sử dụng hệ thống Maize Tracking.\n\n` +
+                        `🔹 **Dùng Bot:** Tra cứu nhanh thông tin.\n` +
+                        `🔹 **Dùng Mini App:** Điền form Tờ 1, 2, 3, 4 (thuận tiện hơn trên điện thoại).`;
+      
+      await sendKeyboard(chatId, welcomeMsg, keyboard);
+    }
+
+    // 5. Thêm lệnh nhanh trong Group (VD: /ca [Tên] để tìm nhanh)
+    if (text && text.startsWith('/search ')) {
+      const query = text.replace('/search ', '');
+      const { data: searchResults } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('full_name', `%${query}%`)
+        .limit(5);
+      
+      if (!searchResults || searchResults.length === 0) {
+        await sendText(chatId, `🔍 Không tìm thấy hồ sơ nào khớp với "${query}"`);
+      } else {
+        const keyboard = searchResults.map((p: any) => [{ text: `👤 ${p.full_name}`, callback_data: `view_p_${p.id}` }]);
+        await sendKeyboard(chatId, `🔍 Kết quả tìm kiếm cho "${query}":`, keyboard);
+      }
     }
 
     return new Response("OK", { status: 200 });
   } catch (e) {
     console.error(e);
-    return new Response("Hệ thống quá tải hoặc lỗi.", { status: 500 });
+    return new Response("Hệ thống gặp lỗi xử lý.", { status: 500 });
   }
 });

@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Maize Tracking - Quản lý Hồ sơ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #22223a;
+      --border: #2e2e4a;
+      --accent: #7c6af7;
+      --accent2: #a78bfa;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --text: #f0f0ff;
+      --text2: #9090b8;
+      --text3: #5a5a80;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overscroll-behavior: none;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      padding: 16px 20px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(124,106,247,0.2);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+    .logo-text span { font-size: 11px; color: var(--accent2); }
+    .badge {
+      background: rgba(124,106,247,0.2);
+      border: 1px solid rgba(124,106,247,0.4);
+      color: var(--accent2);
+      font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 20px;
+    }
+
+    /* TAB BAR */
+    .tab-bar {
+      display: flex; gap: 6px; overflow-x: auto;
+      scrollbar-width: none; padding-bottom: 2px;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0;
+      padding: 7px 16px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--text2);
+    }
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      box-shadow: 0 0 16px rgba(124,106,247,0.4);
+    }
+
+    /* CONTENT */
+    .content { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+    /* SEARCH BAR */
+    .search-wrap { position: relative; margin-bottom: 16px; }
+    .search-wrap input {
+      width: 100%; padding: 12px 16px 12px 42px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text); font-size: 14px;
+      outline: none; transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap .icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 16px;
+    }
+
+    /* PROFILE CARDS */
+    .profile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .profile-card:hover, .profile-card:active { border-color: var(--accent); background: var(--surface2); }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #ec4899);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; flex-shrink: 0;
+    }
+    .profile-info { flex: 1; min-width: 0; }
+    .profile-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .profile-meta { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .profile-arrow { color: var(--text3); font-size: 18px; }
+
+    /* STATUS DOTS */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .status-active { background: var(--green); }
+    .status-inactive { background: var(--text3); }
+
+    /* FAB - Floating Action Button */
+    .fab {
+      position: fixed; bottom: 20px; right: 20px;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: white;
+      box-shadow: 0 4px 20px rgba(124,106,247,0.5);
+      transition: transform 0.2s, box-shadow 0.2s;
+      z-index: 200;
+    }
+    .fab:active { transform: scale(0.92); box-shadow: 0 2px 10px rgba(124,106,247,0.4); }
+
+    /* SECTION HEADER */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; }
+    .section-count {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 10px; color: var(--accent2);
+    }
+
+    /* DETAIL VIEW */
+    .detail-view { display: none; }
+    .detail-view.active { display: block; }
+
+    .back-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      padding: 8px 14px; border-radius: 20px;
+      cursor: pointer; margin-bottom: 16px;
+      width: fit-content;
+    }
+
+    /* PROFILE DETAIL HEADER */
+    .profile-detail-header {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px; margin-bottom: 16px;
+      text-align: center;
+    }
+    .profile-detail-avatar {
+      width: 72px; height: 72px; border-radius: 20px;
+      background: linear-gradient(135deg, var(--accent), #ec4899);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; font-weight: 700;
+      margin: 0 auto 12px;
+      box-shadow: 0 8px 24px rgba(124,106,247,0.3);
+    }
+    .profile-detail-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .profile-detail-meta { font-size: 13px; color: var(--text2); }
+
+    /* FORM TABS (Tờ 1,2,3,4) */
+    .form-tabs {
+      display: flex; gap: 8px; overflow-x: auto;
+      scrollbar-width: none; margin-bottom: 16px;
+    }
+    .form-tabs::-webkit-scrollbar { display: none; }
+    .form-tab {
+      flex-shrink: 0; padding: 8px 14px;
+      border-radius: 10px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text2);
+      transition: all 0.2s;
+    }
+    .form-tab.active {
+      background: var(--accent); border-color: var(--accent);
+      color: white;
+    }
+
+    /* FORM CARD */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      display: none;
+    }
+    .form-card.active { display: block; }
+    .form-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-card-title { font-size: 13px; font-weight: 700; }
+    .form-card-meta { font-size: 11px; color: var(--text3); }
+    .form-card-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* INPUT FIELDS */
+    label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
+    input[type="text"], input[type="tel"], input[type="date"], textarea, select {
+      width: 100%; padding: 10px 12px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; }
+    select { appearance: none; -webkit-appearance: none; cursor: pointer; }
+    select option { background: #1a1a24; }
+
+    /* CHIPS (multi-select) */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text2); cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip.selected {
+      background: rgba(124,106,247,0.2);
+      border-color: var(--accent);
+      color: var(--accent2);
+    }
+
+    /* RECORD ITEM (Phiếu TVV / Biên bản BB) */
+    .record-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .record-number {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(124,106,247,0.15);
+      border: 1px solid rgba(124,106,247,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--accent2);
+      flex-shrink: 0;
+    }
+    .record-content { flex: 1; }
+    .record-date { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+    .record-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .record-preview { font-size: 12px; color: var(--text2); }
+
+    /* ADD BUTTON */
+    .add-record-btn {
+      width: 100%; padding: 12px;
+      background: rgba(124,106,247,0.1);
+      border: 2px dashed rgba(124,106,247,0.3);
+      border-radius: var(--radius-sm);
+      color: var(--accent2); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .add-record-btn:active { background: rgba(124,106,247,0.2); }
+
+    /* SAVE BTN */
+    .save-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: var(--radius);
+      color: white; font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-top: 8px;
+      box-shadow: 0 4px 16px rgba(124,106,247,0.4);
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .save-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+    /* MODAL OVERLAY */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 500; display: none;
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: 100%; background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      padding: 20px; max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: var(--border); border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      opacity: 0; transition: all 0.3s;
+      pointer-events: none; z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* SKELETON LOADING */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: var(--radius-sm);
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 48px 20px; }
+    .empty-icon { font-size: 56px; margin-bottom: 12px; }
+    .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .empty-sub { font-size: 13px; color: var(--text2); }
+
+    /* GRID */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-icon">🌽</div>
+      <div class="logo-text">
+        <h1>Maize Tracking</h1>
+        <span>Hệ thống quản lý hồ sơ</span>
+      </div>
+    </div>
+    <div class="badge" id="staffBadge">---</div>
+  </div>
+  <div class="tab-bar" id="mainTabBar">
+    <div class="tab active" data-tab="profiles" onclick="switchMainTab(this,'profiles')">📋 Hồ sơ</div>
+    <div class="tab" data-tab="add-profile" onclick="openAddProfileModal()">➕ Thêm Cá</div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content" id="mainContent">
+
+  <!-- DANH SÁCH HỒ SƠ -->
+  <div id="tab-profiles">
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" placeholder="Tìm kiếm theo tên, SĐT..." id="searchInput" oninput="filterProfiles()" />
+    </div>
+    <div class="section-header">
+      <div class="section-title">Tất cả hồ sơ</div>
+      <div class="section-count" id="profileCount">-- hồ sơ</div>
+    </div>
+    <div id="profileList">
+      <!-- skeleton -->
+      <div class="profile-card skeleton" style="height:68px;"></div>
+      <div class="profile-card skeleton" style="height:68px;opacity:0.7;"></div>
+      <div class="profile-card skeleton" style="height:68px;opacity:0.4;"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL VIEW (Ẩn ban đầu) -->
+  <div id="detailView" class="detail-view">
+    <button class="back-btn" onclick="backToList()">← Quay lại</button>
+    <div class="profile-detail-header" id="profileDetailHeader"></div>
+
+    <!-- Form Tabs: Tờ 1, 2, 3, 4 -->
+    <div class="form-tabs">
+      <div class="form-tab active" onclick="switchFormTab(this,'to1')">📝 Tờ 1 - Duyệt Cá</div>
+      <div class="form-tab" onclick="switchFormTab(this,'to2')">📋 Tờ 2 - Hành Chính</div>
+      <div class="form-tab" onclick="switchFormTab(this,'to3')">💬 Tờ 3 - TVV</div>
+      <div class="form-tab" onclick="switchFormTab(this,'to4')">📝 Tờ 4 - BB</div>
+    </div>
+
+    <!-- TỜ 1: THÔNG TIN DUYỆT CÁ -->
+    <div class="form-card active" id="to1">
+      <div class="form-card-header">
+        <div class="form-card-title">📝 TỜ 1 - THÔNG TIN DUYỆT CÁ</div>
+      </div>
+      <div class="form-card-body">
+        <div class="field-group">
+          <label>👤 Tên NDD điền</label>
+          <input type="text" id="t1_ndd" placeholder="Tên NDD/GYJN..." />
+        </div>
+        <div class="field-group">
+          <label>✅ TVV/GGN double-check</label>
+          <input type="text" id="t1_tvv" placeholder="Tên TVV/GGN..." />
+        </div>
+        <div class="field-group">
+          <label>🌱 Tên trái</label>
+          <input type="text" id="t1_ten_trai" placeholder="Tên thường gọi của cá..." />
+        </div>
+        <div class="grid-2">
+          <div class="field-group">
+            <label>🎂 Tuổi</label>
+            <input type="text" id="t1_tuoi" placeholder="Tuổi..." />
+          </div>
+          <div class="field-group">
+            <label>⚧ Giới tính</label>
+            <select id="t1_gioi_tinh">
+              <option value="">Chọn...</option>
+              <option>Nam</option><option>Nữ</option><option>Khác</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>💼 Nghề nghiệp</label>
+          <input type="text" id="t1_nghe_nghiep" placeholder="Nghề nghiệp..." />
+        </div>
+        <div class="field-group">
+          <label>🙏 Tôn giáo (Có tin thần linh không?)</label>
+          <div class="chips">
+            <div class="chip" onclick="toggleChip(this)">Có</div>
+            <div class="chip" onclick="toggleChip(this)">Không</div>
+            <div class="chip" onclick="toggleChip(this)">Đang tìm hiểu</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>📅 Lịch trình (Có Hapja không?)</label>
+          <textarea id="t1_lich_trinh" placeholder="Lịch trình học/làm việc, thời gian có thể học BB..."></textarea>
+        </div>
+        <div class="field-group">
+          <label>🌽 Concept Chakky</label>
+          <textarea id="t1_concept" placeholder="Nhận định concept chakky của cá..."></textarea>
+        </div>
+        <button class="save-btn" onclick="saveTo1()">💾 Lưu Tờ 1</button>
+      </div>
+    </div>
+
+    <!-- TỜ 2: HÀNH CHÍNH -->
+    <div class="form-card" id="to2">
+      <div class="form-card-header">
+        <div class="form-card-title">📋 TỜ 2 - HÀNH CHÍNH</div>
+        <div class="form-card-meta">23 mục thông tin</div>
+      </div>
+      <div class="form-card-body">
+        <div class="field-group">
+          <label>1. Họ và tên đầy đủ</label>
+          <input type="text" id="t2_ho_ten" placeholder="Họ tên cá đầy đủ..." />
+        </div>
+        <div class="grid-2">
+          <div class="field-group">
+            <label>2. Giới tính</label>
+            <select id="t2_gioi_tinh">
+              <option value="">Chọn...</option>
+              <option>Nam</option><option>Nữ</option><option>Khác</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>3. Năm sinh</label>
+            <input type="text" id="t2_nam_sinh" placeholder="YYYY..." />
+          </div>
+        </div>
+        <div class="field-group">
+          <label>4. Nghề nghiệp</label>
+          <input type="text" id="t2_nghe_nghiep" placeholder="..." />
+        </div>
+        <div class="field-group">
+          <label>5. Thời gian làm việc</label>
+          <input type="text" id="t2_thoi_gian_lam_viec" placeholder="Ca sáng, chiều, tối... " />
+        </div>
+        <div class="field-group">
+          <label>6. Tôn giáo</label>
+          <div class="chips" id="chips_ton_giao">
+            <div class="chip" onclick="toggleChip(this)">Không</div>
+            <div class="chip" onclick="toggleChip(this)">Phật giáo</div>
+            <div class="chip" onclick="toggleChip(this)">Thiên Chúa</div>
+            <div class="chip" onclick="toggleChip(this)">Tin Lành</div>
+            <div class="chip" onclick="toggleChip(this)">Khác</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>7. Số điện thoại</label>
+          <input type="tel" id="t2_sdt" placeholder="0xxxx..." />
+        </div>
+        <div class="field-group">
+          <label>8. Tình trạng hôn nhân</label>
+          <div class="chips" id="chips_hon_nhan">
+            <div class="chip" onclick="toggleChip(this)">Độc thân</div>
+            <div class="chip" onclick="toggleChip(this)">Kết hôn</div>
+            <div class="chip" onclick="toggleChip(this)">Ly hôn</div>
+            <div class="chip" onclick="toggleChip(this)">Có người yêu</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>9. Mối quan hệ với NDD</label>
+          <div class="chips">
+            <div class="chip" onclick="toggleChip(this)">Người thân</div>
+            <div class="chip" onclick="toggleChip(this)">Bạn bè</div>
+            <div class="chip" onclick="toggleChip(this)">Đồng nghiệp</div>
+            <div class="chip" onclick="toggleChip(this)">Chakki offline</div>
+            <div class="chip" onclick="toggleChip(this)">Khác</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>10. Địa chỉ nơi ở</label>
+          <input type="text" id="t2_dia_chi" placeholder="Số nhà, Đường, Quận, TP..." />
+        </div>
+        <div class="field-group">
+          <label>12. Quê quán</label>
+          <input type="text" id="t2_que_quan" placeholder="Tỉnh/TP quê quán..." />
+        </div>
+        <div class="field-group">
+          <label>13. Không gian sống</label>
+          <div class="chips">
+            <div class="chip" onclick="toggleChip(this)">Ở trọ một mình</div>
+            <div class="chip" onclick="toggleChip(this)">Ký túc xá</div>
+            <div class="chip" onclick="toggleChip(this)">Cùng gia đình</div>
+            <div class="chip" onclick="toggleChip(this)">Khác</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>14. Khung thời gian rảnh</label>
+          <textarea id="t2_khung_ranh" placeholder="Buổi sáng, chiều, tối... ngày nào..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>15. Sở thích / Mối bận tâm</label>
+          <textarea id="t2_so_thich" placeholder="..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>16. Tính cách / Enneagram</label>
+          <input type="text" id="t2_tinh_cach" placeholder="Enneagram số..., mô tả..." />
+        </div>
+        <div class="field-group">
+          <label>17. Dự định tương lai</label>
+          <textarea id="t2_du_dinh" placeholder="..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>18. Những câu chuyện / sự kiện đã trải qua</label>
+          <textarea id="t2_chuyen_cu" placeholder="..." style="min-height:80px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>19. Thông tin người thân</label>
+          <textarea id="t2_nguoi_than" placeholder="Bố mẹ, anh chị em..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>20. Người quan trọng nhất với cá</label>
+          <input type="text" id="t2_nguoi_quan_trong" placeholder="..." />
+        </div>
+        <div class="field-group">
+          <label>21. Quan điểm về thần linh</label>
+          <textarea id="t2_quan_diem" placeholder="..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>22. Công cụ đã tư vấn (nếu có)</label>
+          <textarea id="t2_cong_cu" placeholder="..." style="min-height:60px;"></textarea>
+        </div>
+        <div class="field-group">
+          <label>23. Lưu ý</label>
+          <textarea id="t2_luu_y" placeholder="Các lưu ý quan trọng..." style="min-height:60px;"></textarea>
+        </div>
+        <button class="save-btn" onclick="saveTo2()">💾 Lưu Tờ 2</button>
+      </div>
+    </div>
+
+    <!-- TỜ 3: BIÊN BẢN TVV -->
+    <div class="form-card" id="to3">
+      <div class="form-card-header">
+        <div class="form-card-title">💬 TỜ 3 - TVV</div>
+        <div class="form-card-meta" id="to3count">0 phiếu</div>
+      </div>
+      <div class="form-card-body" id="to3List">
+        <!-- Records loaded here -->
+      </div>
+      <div style="padding:0 16px 16px;">
+        <button class="add-record-btn" onclick="openAddRecordModal('to_3')">
+          ＋ Thêm Phiếu Tư Vấn Mới
+        </button>
+      </div>
+    </div>
+
+    <!-- TỜ 4: BIÊN BẢN BB -->
+    <div class="form-card" id="to4">
+      <div class="form-card-header">
+        <div class="form-card-title">📝 TỜ 4 - BIÊN BẢN BB</div>
+        <div class="form-card-meta" id="to4count">0 phiếu</div>
+      </div>
+      <div class="form-card-body" id="to4List">
+        <!-- Records loaded here -->
+      </div>
+      <div style="padding:0 16px 16px;">
+        <button class="add-record-btn" onclick="openAddRecordModal('to_4')">
+          ＋ Thêm Biên Bản BB Mới
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB BUTTON (chỉ hiện khi đang ở list) -->
+<button class="fab" id="fabBtn" onclick="openAddProfileModal()">＋</button>
+
+<!-- MODAL: THÊM HỒ SƠ MỚI -->
+<div class="modal-overlay" id="addProfileModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">➕ Thêm Cá Mới</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field-group">
+        <label>Họ và tên *</label>
+        <input type="text" id="new_name" placeholder="Nhập họ tên..." />
+      </div>
+      <div class="field-group">
+        <label>Số điện thoại</label>
+        <input type="tel" id="new_phone" placeholder="0xxx..." />
+      </div>
+      <div class="field-group">
+        <label>NDD phụ trách</label>
+        <input type="text" id="new_ndd" placeholder="Mã NDD..." />
+      </div>
+      <button class="save-btn" onclick="addProfile()">✅ Tạo Hồ Sơ</button>
+      <button onclick="closeModal('addProfileModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: THÊM PHIẾU TVV / BB -->
+<div class="modal-overlay" id="addRecordModal">
+  <div class="modal" style="max-height:85vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="recordModalTitle">Thêm phiếu mới</div>
+    <div id="recordModalBody" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:65vh;"></div>
+    <button class="save-btn" onclick="saveRecord()" style="margin-top:16px;">💾 Lưu phiếu</button>
+    <button onclick="closeModal('addRecordModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
+const tg = window.Telegram?.WebApp;
+
+let currentProfileId = null;
+let currentRecordType = null;
+let allProfiles = [];
+
+// Init
+document.addEventListener('DOMContentLoaded', async () => {
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    document.body.style.background = tg.colorScheme === 'light' ? '#f5f5ff' : '#0f0f13';
+  }
+  await loadStaffInfo();
+  await loadProfiles();
+});
+
+// Load staff info
+async function loadStaffInfo() {
+  const userId = tg?.initDataUnsafe?.user?.id;
+  if (!userId) {
+    document.getElementById('staffBadge').textContent = 'Demo Mode';
+    return;
+  }
+  try {
+    const res = await sbFetch(`/rest/v1/staff?telegram_id=eq.${userId}&select=*`);
+    const data = await res.json();
+    if (data.length > 0) {
+      document.getElementById('staffBadge').textContent = `${data[0].staff_code} · ${data[0].role.toUpperCase()}`;
+    }
+  } catch {}
+}
+
+// API helper
+async function sbFetch(path, opts = {}) {
+  return fetch(SUPABASE_URL + path, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.method === 'POST' ? 'return=representation' : undefined,
+      ...opts.headers
+    }
+  });
+}
+
+// Load profiles
+async function loadProfiles() {
+  try {
+    const res = await sbFetch('/rest/v1/profiles?select=*&order=created_at.desc');
+    allProfiles = await res.json();
+    renderProfiles(allProfiles);
+  } catch (e) {
+    document.getElementById('profileList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Không thể tải dữ liệu</div><div class="empty-sub">Kiểm tra kết nối mạng</div></div>';
+  }
+}
+
+function renderProfiles(profiles) {
+  const el = document.getElementById('profileList');
+  document.getElementById('profileCount').textContent = profiles.length + ' hồ sơ';
+  if (!profiles.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Chưa có hồ sơ nào</div><div class="empty-sub">Nhấn ➕ để thêm hồ sơ đầu tiên</div></div>';
+    return;
+  }
+  el.innerHTML = profiles.map(p => `
+    <div class="profile-card" onclick="openProfile('${p.id}','${p.full_name}','${p.phone_number||''}','${p.ndd_staff_code||'Chưa xác định'}')">
+      <div class="avatar">${p.full_name[0]}</div>
+      <div class="profile-info">
+        <div class="profile-name">${p.full_name}</div>
+        <div class="profile-meta">
+          <span class="status-dot status-active"></span>
+          ${p.phone_number || 'Chưa có SĐT'} · NDD: ${p.ndd_staff_code || '---'}
+        </div>
+      </div>
+      <div class="profile-arrow">›</div>
+    </div>
+  `).join('');
+}
+
+function filterProfiles() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderProfiles(allProfiles.filter(p =>
+    p.full_name.toLowerCase().includes(q) ||
+    (p.phone_number||'').includes(q)
+  ));
+}
+
+// Open profile detail
+async function openProfile(id, name, phone, ndd) {
+  currentProfileId = id;
+  document.getElementById('tab-profiles').style.display = 'none';
+  document.getElementById('detailView').style.display = 'block';
+  document.getElementById('fabBtn').style.display = 'none';
+
+  document.getElementById('profileDetailHeader').innerHTML = `
+    <div class="profile-detail-avatar">${name[0]}</div>
+    <div class="profile-detail-name">${name}</div>
+    <div class="profile-detail-meta">${phone} · NDD: ${ndd}</div>
+  `;
+
+  // Tải dữ liệu Tờ 2
+  loadHanhChinh(id);
+  // Tải danh sách phiếu Tờ 3, 4
+  loadRecords(id, 'to_3', 'to3List', 'to3count');
+  loadRecords(id, 'to_4', 'to4List', 'to4count');
+}
+
+async function loadHanhChinh(profileId) {
+  try {
+    const res = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=*`);
+    const data = await res.json();
+    if (data.length > 0 && data[0].data) {
+      const d = data[0].data;
+      Object.entries(d).forEach(([key, val]) => {
+        const el = document.getElementById(key);
+        if (el) el.value = val;
+      });
+    }
+  } catch {}
+}
+
+async function loadRecords(profileId, type, listElId, countElId) {
+  try {
+    const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.desc`);
+    const records = await res.json();
+    const countEl = document.getElementById(countElId);
+    if (countEl) countEl.textContent = records.length + ' phiếu';
+    const listEl = document.getElementById(listElId);
+    if (!listEl) return;
+    if (!records.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>';
+      return;
+    }
+    listEl.innerHTML = records.map((r, i) => {
+      const c = r.content || {};
+      const title = c.ten_cong_cu || c.muc_tieu || 'Phiếu #' + (i+1);
+      const preview = c.bien_ban_tu_van || c.noi_dung || 'Chưa có nội dung chi tiết';
+      const date = new Date(r.created_at).toLocaleDateString('vi-VN');
+      return `
+        <div class="record-item">
+          <div class="record-number">${i+1}</div>
+          <div class="record-content">
+            <div class="record-date">📅 ${date}</div>
+            <div class="record-title">${title}</div>
+            <div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch {}
+}
+
+function backToList() {
+  document.getElementById('tab-profiles').style.display = 'block';
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('fabBtn').style.display = 'flex';
+  currentProfileId = null;
+  // Reset form tabs về Tờ 1
+  document.querySelectorAll('.form-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.querySelectorAll('.form-card').forEach((c,i) => c.classList.toggle('active', i===0));
+}
+
+function switchFormTab(el, cardId) {
+  document.querySelectorAll('.form-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.form-card').forEach(c => c.classList.remove('active'));
+  document.getElementById(cardId).classList.add('active');
+}
+
+function switchMainTab(el, tab) {
+  document.querySelectorAll('#mainTabBar .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ADD PROFILE
+function openAddProfileModal() {
+  document.getElementById('addProfileModal').classList.add('open');
+}
+
+async function addProfile() {
+  const name = document.getElementById('new_name').value.trim();
+  if (!name) { showToast('⚠️ Vui lòng nhập họ tên'); return; }
+  const phone = document.getElementById('new_phone').value.trim();
+  const ndd = document.getElementById('new_ndd').value.trim();
+  try {
+    const res = await sbFetch('/rest/v1/profiles', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ full_name: name, phone_number: phone, ndd_staff_code: ndd || null })
+    });
+    const data = await res.json();
+    closeModal('addProfileModal');
+    showToast('✅ Đã tạo hồ sơ thành công!');
+    document.getElementById('new_name').value = '';
+    document.getElementById('new_phone').value = '';
+    document.getElementById('new_ndd').value = '';
+    await loadProfiles();
+  } catch (e) { showToast('❌ Lỗi khi tạo hồ sơ'); }
+}
+
+// SAVE TỜ 1
+async function saveTo1() {
+  const data = {
+    ndd: document.getElementById('t1_ndd').value,
+    tvv: document.getElementById('t1_tvv').value,
+    ten_trai: document.getElementById('t1_ten_trai').value,
+    tuoi: document.getElementById('t1_tuoi').value,
+    gioi_tinh: document.getElementById('t1_gioi_tinh').value,
+    nghe_nghiep: document.getElementById('t1_nghe_nghiep').value,
+    lich_trinh: document.getElementById('t1_lich_trinh').value,
+    concept: document.getElementById('t1_concept').value,
+  };
+  await saveFormData('to_1', data);
+}
+
+// SAVE TỜ 2
+async function saveTo2() {
+  const data = {
+    t2_ho_ten: document.getElementById('t2_ho_ten').value,
+    t2_gioi_tinh: document.getElementById('t2_gioi_tinh').value,
+    t2_nam_sinh: document.getElementById('t2_nam_sinh').value,
+    t2_nghe_nghiep: document.getElementById('t2_nghe_nghiep').value,
+    t2_thoi_gian_lam_viec: document.getElementById('t2_thoi_gian_lam_viec').value,
+    t2_sdt: document.getElementById('t2_sdt').value,
+    t2_dia_chi: document.getElementById('t2_dia_chi').value,
+    t2_que_quan: document.getElementById('t2_que_quan').value,
+    t2_khung_ranh: document.getElementById('t2_khung_ranh').value,
+    t2_so_thich: document.getElementById('t2_so_thich').value,
+    t2_tinh_cach: document.getElementById('t2_tinh_cach').value,
+    t2_du_dinh: document.getElementById('t2_du_dinh').value,
+    t2_chuyen_cu: document.getElementById('t2_chuyen_cu').value,
+    t2_nguoi_than: document.getElementById('t2_nguoi_than').value,
+    t2_nguoi_quan_trong: document.getElementById('t2_nguoi_quan_trong').value,
+    t2_quan_diem: document.getElementById('t2_quan_diem').value,
+    t2_cong_cu: document.getElementById('t2_cong_cu').value,
+    t2_luu_y: document.getElementById('t2_luu_y').value,
+  };
+  // Upsert form_hanh_chinh
+  try {
+    await sbFetch('/rest/v1/form_hanh_chinh', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ profile_id: currentProfileId, data: data })
+    });
+    showToast('✅ Đã lưu Tờ 2!');
+  } catch { showToast('❌ Lỗi khi lưu'); }
+}
+
+async function saveFormData(type, data) {
+  try {
+    await sbFetch('/rest/v1/records', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ profile_id: currentProfileId, record_type: type, content: data })
+    });
+    showToast('✅ Đã lưu!');
+  } catch { showToast('❌ Lỗi khi lưu'); }
+}
+
+// ADD RECORD MODAL
+function openAddRecordModal(type) {
+  currentRecordType = type;
+  const isTo3 = type === 'to_3';
+  document.getElementById('recordModalTitle').textContent = isTo3 ? '💬 Thêm Phiếu Tư Vấn' : '📝 Thêm Biên Bản BB';
+  const body = document.getElementById('recordModalBody');
+  if (isTo3) {
+    body.innerHTML = `
+      <div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" placeholder="DISC, Enneagram..."/></div>
+      <div class="field-group"><label>Kết quả test</label><textarea id="rm_ket_qua_test" placeholder="..."></textarea></div>
+      <div class="field-group"><label>Biên bản / Kết quả tư vấn</label><textarea id="rm_bien_ban" style="min-height:100px;" placeholder="Ghi rõ các vấn đề, nhu cầu, thông tin khai thác..."></textarea></div>
+      <div class="field-group"><label>Phản hồi / Cảm nhận của trái sau tư vấn</label><textarea id="rm_phan_hoi" placeholder="..."></textarea></div>
+      <div class="field-group"><label>Lịch hẹn tư vấn lần 2</label><input type="text" id="rm_lich_hen" placeholder="DD/MM/YYYY..."/></div>
+      <div class="field-group"><label>Đề xuất hướng dẫn tiếp theo</label><textarea id="rm_de_xuat" placeholder="Công cụ tiếp theo, TVV tiếp theo, hướng kết nối NDD..."></textarea></div>
+    `;
+  } else {
+    body.innerHTML = `
+      <div class="field-group"><label>1. Mục tiêu buổi học</label><textarea id="rm_muc_tieu" placeholder="..."></textarea></div>
+      <div class="field-group"><label>2. Phản hồi HS trong và sau buổi học</label><textarea id="rm_phan_hoi_hs" placeholder="..."></textarea></div>
+      <div class="field-group"><label>3. Tình hình hiện tại của HS</label><textarea id="rm_tinh_hinh" placeholder="..."></textarea></div>
+      <div class="field-group"><label>4. Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="Các xử trí của GVBB với trái trong buổi học..."></textarea></div>
+      <div class="field-group"><label>5. Vấn đề mới của HS</label><textarea id="rm_van_de_moi" placeholder="Do GVBB nhận diện mới..."></textarea></div>
+      <div class="field-group"><label>6. Đề xuất hướng chăm sóc và xử trí tiếp theo</label><textarea id="rm_de_xuat_cs" placeholder="Do GVBB đề xuất..."></textarea></div>
+      <div class="field-group"><label>7. Lưu ý (nếu có)</label><textarea id="rm_luu_y" placeholder="..."></textarea></div>
+    `;
+  }
+  document.getElementById('addRecordModal').classList.add('open');
+}
+
+async function saveRecord() {
+  const isTo3 = currentRecordType === 'to_3';
+  let data = {};
+  if (isTo3) {
+    data = {
+      ten_cong_cu: document.getElementById('rm_ten_cong_cu')?.value,
+      ket_qua_test: document.getElementById('rm_ket_qua_test')?.value,
+      bien_ban_tu_van: document.getElementById('rm_bien_ban')?.value,
+      phan_hoi: document.getElementById('rm_phan_hoi')?.value,
+      lich_hen: document.getElementById('rm_lich_hen')?.value,
+      de_xuat: document.getElementById('rm_de_xuat')?.value,
+    };
+  } else {
+    data = {
+      muc_tieu: document.getElementById('rm_muc_tieu')?.value,
+      phan_hoi_hs: document.getElementById('rm_phan_hoi_hs')?.value,
+      tinh_hinh: document.getElementById('rm_tinh_hinh')?.value,
+      noi_dung: document.getElementById('rm_noi_dung')?.value,
+      van_de_moi: document.getElementById('rm_van_de_moi')?.value,
+      de_xuat_cs: document.getElementById('rm_de_xuat_cs')?.value,
+      luu_y: document.getElementById('rm_luu_y')?.value,
+    };
+  }
+  try {
+    await sbFetch('/rest/v1/records', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data })
+    });
+    closeModal('addRecordModal');
+    showToast(`✅ Đã thêm phiếu ${isTo3 ? 'TVV' : 'BB'} thành công!`);
+    // Reload phiếu
+    if (isTo3) loadRecords(currentProfileId, 'to_3', 'to3List', 'to3count');
+    else loadRecords(currentProfileId, 'to_4', 'to4List', 'to4count');
+  } catch { showToast('❌ Lỗi khi lưu phiếu'); }
+}
+
+// CHIP TOGGLE
+function toggleChip(el) { el.classList.toggle('selected'); }
+
+// MODAL HELPERS
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
