@@ -2,104 +2,96 @@
 
 ## Tổng quan
 
-File: `mini-app/index.html`  
-Loại: Single Page Application (Vanilla HTML/CSS/JS)  
+Loại: Single Page Application (Vanilla HTML/CSS/JS — không framework)  
 Mở qua: Telegram WebApp button từ Bot `/start`
 
 ---
 
-## Kiến trúc
+## Cấu trúc module
 
-- **Không framework** — một file HTML duy nhất chứa toàn bộ CSS + JS
-- **Supabase REST API** — gọi trực tiếp qua `sbFetch()` helper
-- **Telegram WebApp SDK** — nhận `initData` để xác thực user
+```
+mini-app/
+├── index.html    # HTML template — chỉ markup (~278 dòng)
+├── styles.css    # Design system — CSS variables, components (~170 dòng)
+└── app.js        # Business logic — auth, data, UI (~994 dòng)
+```
 
-### Authentication Flow
+### Nguyên tắc thiết kế
+- **Structure (HTML)** · **Presentation (CSS)** · **Behavior (JS)** tách biệt
+- CSS dùng **CSS Variables** cho theming (dark/light mode)
+- JS là vanilla — không dependency, load sau HTML render
+- Supabase REST API gọi trực tiếp qua `sbFetch()` wrapper
+
+---
+
+## Authentication Flow
 ```
 Telegram.WebApp.initDataUnsafe.user.id
   → sbFetch('/rest/v1/staff?telegram_id=eq.{id}')
   → Xác định staff_code, position
   → Load dashboard theo quyền
+  → Admin: hiện View-As dropdown
 ```
 
-### View As (Admin)
-Admin có thể giả lập quyền hạn của bất kỳ chức vụ nào qua dropdown "Test:" ở header.
-
 ---
 
-## 4 Tab chính
+## Modules trong app.js
 
-### 1. Dashboard
-- **Admin/YJYN:** Tổng TĐ, Tổng hồ sơ, Hapja chờ duyệt, Tổng Group
-- **TJN/GYJN/BGYJN:** Trái đang chăm, Hapja cần duyệt, Group tham gia
-- **TĐ/TVV/NDD:** Trái đang chăm, Group tham gia, Hapja của tôi
-
-Bên dưới: danh sách hồ sơ gần đây + phiếu Hapja chờ duyệt
-
-### 2. Hồ sơ Trái quả
-- Danh sách + tìm kiếm
-- Xem chi tiết: 4 sub-tab
-
-#### Sub-tab: Trang bìa
-| Field | Ghi chú |
-|-------|---------|
-| Tên trái quả | `profiles.full_name` |
-| Năm sinh | `profiles.birth_year` |
-| Giới tính | `profiles.gender` |
-| NDD | Searchable datalist → `profiles.ndd_staff_code` |
-| TVV | `profiles.info_sheet.tvv_name` hoặc đọc từ `fruit_roles` |
-| GVBB | Ưu tiên đọc từ `fruit_roles` (Bot gán), fallback `info_sheet.gvbb_name` |
-| Lá | `profiles.info_sheet.la_name` |
-| Truy cập group | Nút → `Telegram.WebApp.openTelegramLink(t.me/c/{id}/1)` |
-
-#### Sub-tab: Phiếu Thông tin
-- 23 mục hành chính (họ tên, nghề nghiệp, tôn giáo, tính cách,...)
-- Lưu vào `form_hanh_chinh.data` (JSON)
-
-#### Sub-tab: Báo cáo Tư vấn
-- Nhiều phiếu — lưu vào `records` (record_type = `tu_van`)
-- 6 fields: tên công cụ, kết quả test, biên bản, phản hồi, lịch hẹn, đề xuất
-- **Bấm vào phiếu → mở modal xem/sửa nội dung (PATCH)**
-
-#### Sub-tab: Biên bản BB
-- Nhiều phiếu — lưu vào `records` (record_type = `bien_ban`)
-- 7 fields: mục tiêu, phản hồi HS, tình hình, nội dung, vấn đề mới, đề xuất, lưu ý
-- **Bấm vào phiếu → mở modal xem/sửa nội dung (PATCH)**
-
-### 3. TĐ (Nhân sự)
-- Danh sách toàn bộ TĐ + badge chức vụ
-- Tìm kiếm theo tên/mã/chức vụ
-- Đăng ký TĐ mới (cần chức vụ phù hợp)
-
-### 4. Cơ cấu
-- Tree view: Khu vực → Nhóm → Tổ
-- Bấm vào node → modal sửa (đổi tên, gán quản lý, quản lý thành viên Tổ)
-- Nút tạo mới từng tầng
-- Quyền: Admin/YJYN
-
----
-
-## Hàm helper quan trọng
-
+### Helpers (global)
 | Hàm | Mục đích |
 |-----|----------|
-| `sbFetch(path, opts)` | Wrapper gọi Supabase REST API với auth header |
-| `getStaffCodeFromInput(id)` | Trích mã TĐ từ searchable input `"NKH (000142-NKH)"` → `"000142-NKH"` |
-| `setStaffInputValue(id, code)` | Đặt giá trị searchable input từ mã TĐ |
-| `populateStaffSelect(inputId, ...)` | Populate datalist options cho ô tìm TĐ |
-| `getChipValues(containerId)` | Lấy mảng chip đã chọn |
-| `getCurrentPosition()` | Lấy chức vụ hiện tại (có View As) |
-| `getEffectiveStaffCode()` | Lấy mã TĐ hiện tại (có View As) |
+| `sbFetch(path, opts)` | Wrapper gọi Supabase REST API |
+| `getStaffCodeFromInput(id)` | Trích mã TĐ từ searchable input |
+| `setStaffInputValue(id, code)` | Set giá trị searchable input |
+| `populateStaffSelect(inputId)` | Populate datalist cho input search |
 | `openGroupChat(url)` | Mở group Telegram qua WebApp SDK |
+| `showToast(msg)` | Hiện toast notification |
+
+### Dashboard
+- Metrics responsive theo chức vụ (Admin/YJYN: overview; TJN/GYJN: manager; TĐ: personal)
+- Danh sách hồ sơ gần đây + Hapja chờ duyệt
+
+### Profiles (Hồ sơ)
+- CRUD hồ sơ — 4 sub-tab:
+  - **Trang bìa:** roles (NDD, TVV, GVBB, Lá) auto-sync từ `fruit_roles` + nút truy cập group
+  - **Phiếu Thông tin:** 23 mục → `form_hanh_chinh.data` (JSON)
+  - **Báo cáo Tư vấn:** Multiple records — click to view/edit (PATCH)
+  - **Biên bản BB:** Multiple records — click to view/edit (PATCH)
+
+### Staff (Nhân sự)
+- Danh sách, tìm kiếm, đăng ký mới
+
+### Structure (Cơ cấu)
+- Tree view: Khu vực → Nhóm → Tổ → Thành viên
+- Click node → modal sửa (tên, quản lý, thành viên)
+- Permission-aware: chỉ hiện ✏️ cho node mình quản lý
 
 ---
 
-## Các Modal
+## styles.css — Design System
 
-| Modal | Trigger | Dữ liệu |
-|-------|---------|----------|
-| Check Hapja | FAB ＋ | 12 mục sàng lọc → `check_hapja` |
-| Thêm/Sửa phiếu | Nút "＋ Thêm" hoặc bấm vào phiếu | `records` |
-| Thêm TĐ | Tab TĐ → nút thêm | `staff` |
-| Tạo cấu trúc | Tab Cơ cấu → nút tạo | `areas` / `org_groups` / `teams` |
-| Sửa cấu trúc | Bấm vào node cơ cấu | update tương ứng |
+### CSS Variables
+```css
+:root {                     /* Dark theme (default) */
+  --bg, --surface, --surface2, --border
+  --accent, --accent2, --green, --red, --yellow
+  --text, --text2, --text3
+  --radius, --radius-sm
+  --header-bg, --modal-bg, --fab-shadow
+}
+[data-theme="light"] { ... }  /* Light theme override */
+```
+
+### Component classes
+| Class | Mô tả |
+|-------|-------|
+| `.header` | Sticky header gradient |
+| `.tab-bar` / `.tab` | Navigation tabs |
+| `.profile-card` / `.staff-card` | List item cards |
+| `.dash-stat` / `.dash-card` | Dashboard metrics |
+| `.form-tab` / `.form-card` | Profile detail tabs |
+| `.record-item` | Record list item |
+| `.modal-overlay` / `.modal` | Bottom sheet modal |
+| `.tree-node` | Structure tree node |
+| `.fab` | Floating action button |
+| `.toast` | Toast notification |

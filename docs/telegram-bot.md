@@ -2,38 +2,83 @@
 
 ## Tổng quan
 
-File: `supabase/functions/telegram-bot/index.ts`  
 Runtime: Supabase Edge Function (Deno)  
-Webhook: nhận mọi update từ Telegram Bot API
+Entry point: `index.ts` — thin router (~90 dòng)
 
 ---
 
-## Kiến trúc xử lý
+## Cấu trúc module
 
 ```
-Telegram Update
-  ├── callback_query?  → handleCallback()
-  ├── group chat?      → handleGroupChat()
-  └── private chat?    → Xử lý inline (register, search, support,...)
+supabase/functions/telegram-bot/
+├── index.ts          # Router — phân luồng request
+├── config.ts         # Constants, Supabase client, position labels
+├── permissions.ts    # ACL: canDefineStructure, canAssignPosition,...
+├── telegram.ts       # API helpers: sendText, sendKeyboard, getChatAdmins,...
+└── handlers/
+    ├── group.ts      # Group chat handler
+    ├── callbacks.ts  # Callback query handler
+    └── private.ts    # Private chat handler
 ```
 
-### Helper Functions
-
-| Hàm | Mục đích |
-|-----|----------|
-| `sendText(chatId, text)` | Gửi tin nhắn Markdown |
-| `sendKeyboard(chatId, text, keyboard)` | Gửi inline keyboard |
-| `editMessageReplyMarkup(chatId, msgId, markup)` | Xóa/sửa inline keyboard (tránh bấm trùng) |
-| `getChatAdmins(chatId)` | Lấy danh sách admin của group |
-| `getStaffByTelegramId(tid)` | Tra cứu TĐ qua Telegram ID |
-| `forwardMessage(from, to, msgId)` | Chuyển tiếp tin nhắn |
+### Nguyên tắc thiết kế
+- **Single Responsibility:** Mỗi file xử lý đúng 1 domain
+- **Dependency flow:** `config.ts` → `permissions.ts` / `telegram.ts` → `handlers/*` → `index.ts`
+- **Không circular imports:** Dependency chỉ chạy 1 chiều
 
 ---
 
-## Permission Functions
+## Request Flow
 
-| Hàm | Chức vụ được phép |
-|-----|-------------------|
+```
+Telegram Webhook → Deno.serve() (index.ts)
+  │
+  ├── Group message?
+  │   └── handleGroupChat(update) → handlers/group.ts
+  │       Bot added → register group, show unlinked profiles
+  │       /menu → inline keyboard (5 nút)
+  │       /link_profile, /assign_role, /set_level, /group_info
+  │
+  ├── Callback query?
+  │   └── handleCallback(update, staffData) → handlers/callbacks.ts
+  │       menu_info, menu_view_profile, menu_link_profile
+  │       menu_assign_role, menu_set_level
+  │       link_fg_*, assign_gvbb_*, action_set_level_*
+  │       approve_hapja_*, reject_hapja_*
+  │       approve_*, deny_*, setpos_*
+  │       list_profiles, view_p_*
+  │
+  ├── Unregistered user?
+  │   └── /register inline (index.ts)
+  │       Nếu mã TĐ đã liên kết TG khác → pending approval
+  │
+  └── Private message?
+      └── handlePrivateChat(update, staffData) → handlers/private.ts
+          /start, /menu → Mini App button
+          /search, /check_hapja, /assign_pos, /structure
+          /create_area, /create_group, /create_team
+          /support, /reply (admin), media forwarding
+```
+
+---
+
+## modules
+
+### config.ts
+| Export | Mô tả |
+|--------|-------|
+| `BOT_TOKEN` | Token từ @BotFather |
+| `SUPABASE_URL` | URL Supabase project |
+| `ADMIN_STAFF_CODE` | `000142-NKH` |
+| `supabase` | Supabase client instance |
+| `POSITION_LEVELS` | Map chức vụ → cấp (0-5) |
+| `POSITION_LABELS` | Map chức vụ → tên hiển thị |
+| `ROLE_LABELS` | Map role_type → tên (NDD, TVV, GVBB, Lá) |
+
+### permissions.ts
+| Export | Chức vụ được phép |
+|--------|-------------------|
+| `posLevel(p)` | Trả về cấp số |
 | `canDefineStructure(p)` | admin, yjyn |
 | `canAssignPosition(p)` | admin, yjyn, tjn, gyjn |
 | `canAssignRole(p)` | admin, yjyn, tjn, gyjn, ggn_jondo |
@@ -42,78 +87,23 @@ Telegram Update
 | `canLinkProfile(p)` | admin, yjyn, ggn_jondo, tjn, gyjn |
 | `canChangeLevel(p)` | ggn_jondo, tjn |
 
----
-
-## Group Chat Flow
-
-### Bot được thêm vào Group:
-1. Tự đăng ký group vào `fruit_groups`
-2. Gửi thông báo chào → hướng dẫn `/menu`
-3. Hiện danh sách hồ sơ chưa gắn group (inline buttons)
-
-### `/menu` — Menu tương tác (5 nút):
-
-```
-📋 Xem thông tin Group     → menu_info
-👤 Xem hồ sơ Trái quả     → menu_view_profile
-🍎 Gắn hồ sơ              → menu_link_profile
-👥 Xác nhận GVBB           → menu_assign_role
-🔄 Chuyển giai đoạn        → menu_set_level
-```
-
-### Callback Flow:
-
-```
-menu_link_profile
-  → Hiện ALL profiles (cho phép đổi lại)
-  → click link_fg_{id}
-  → Gắn profile, xóa keyboard
-
-menu_assign_role
-  → getChatAdmins → map telegram_id → staff_code
-  → Hiện danh sách TĐ (chỉ mã TĐ)
-  → click assign_gvbb_{code}
-  → Upsert fruit_roles(gvbb)
-
-menu_set_level
-  → Hiện 2 nút: Tư vấn / BB
-  → click action_set_level_{level}
-  → Update fruit_groups.level
-
-menu_view_profile
-  → Fetch profile + roles + records count
-  → Gửi text đầy đủ hồ sơ vào chat
-```
+### telegram.ts
+| Export | Mô tả |
+|--------|-------|
+| `sendText(chatId, text, extra?)` | Gửi Markdown message |
+| `sendKeyboard(chatId, text, keyboard)` | Gửi inline keyboard |
+| `editMessageReplyMarkup(chatId, msgId, markup?)` | Sửa/xoá keyboard |
+| `forwardMessage(from, to, msgId)` | Chuyển tiếp message |
+| `getChatAdmins(chatId)` | Lấy admin list |
+| `getBotId()` | Lấy bot user ID |
+| `getAdminTelegramId()` | Lấy Admin telegram_id từ DB |
+| `getStaffByTelegramId(tid)` | Tra cứu staff theo TG ID |
 
 ---
 
-## Private Chat Flow
+## Quy tắc business
 
-| Lệnh / Hành động | Xử lý |
-|-------------------|-------|
-| `/start` | Kiểm tra đăng ký → Mở Mini App hoặc hướng dẫn `/register` |
-| `/register [mã_TĐ]` | Liên kết telegram_id ↔ staff_code (cần Admin duyệt) |
-| `/search [tên]` | Tìm trong `profiles` → hiện kết quả + nút mở chi tiết |
-| `/support [nội dung]` | Forward tin nhắn đến Admin |
-| `/reply [mã_TĐ] [nội dung]` | Admin trả lời cho TĐ |
-| Media gửi vào | Tự forward đến Admin |
-
----
-
-## Quy tắc hiển thị
-
-- **Mã TĐ** hiển thị nguyên gốc: `000142-NKH` (không kèm tên)
-- **Ngôn ngữ** nghiêm túc, dùng kính ngữ
-- **Inline keyboard** tự ẩn sau khi chọn (editMessageReplyMarkup → null)
-- **"Cấp độ"** đổi thành **"Giai đoạn"** xuyên suốt
-
----
-
-## Biến môi trường
-
-| Key | Nguồn |
-|-----|-------|
-| `TELEGRAM_BOT_TOKEN` | @BotFather |
-| `SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API |
-| `SUPABASE_URL` | Hardcoded: `https://smzoomekyvllsgppgvxw.supabase.co` |
-| `ADMIN_STAFF_CODE` | Hardcoded: `000142-NKH` |
+- **Mã TĐ** chỉ hiện code: `000142-NKH` (không kèm tên)
+- **Ngôn ngữ** nghiêm túc
+- **Inline keyboard** tự ẩn sau khi chọn
+- **"Cấp độ"** gọi là **"Giai đoạn"** xuyên suốt
