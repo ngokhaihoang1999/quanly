@@ -149,9 +149,9 @@
     <div class="badge" id="staffBadge">---</div>
   </div>
   <div class="view-as-bar" id="viewAsBar">
-    <label>👁️ View As:</label>
-    <select id="viewAsSelect" onchange="applyViewAs()">
-      <option value="">— Chính mình —</option>
+    <label>👁️ Test:</label>
+    <select id="viewAsPos" onchange="applyViewAs()" style="flex:1;">
+      <option value="">Chức vụ: Chính mình</option>
       <option value="td">TĐ</option>
       <option value="bgyjn">BGYJN (Tổ phó)</option>
       <option value="gyjn">GYJN (Tổ trưởng)</option>
@@ -160,6 +160,13 @@
       <option value="ggn_jondo">GGN Jondo</option>
       <option value="tjn">TJN</option>
       <option value="yjyn">YJYN</option>
+    </select>
+    <select id="viewAsRole" onchange="applyViewAs()" style="flex:1;">
+      <option value="">Vai trò: Không</option>
+      <option value="ndd">NDD</option>
+      <option value="tvv">TVV</option>
+      <option value="gvbb">GVBB</option>
+      <option value="la">Lá</option>
     </select>
     <button onclick="resetViewAs()">Reset</button>
   </div>
@@ -742,32 +749,51 @@ async function loadStructure() {
 
 // ============ VIEW AS (Admin testing) ============
 let viewAsPosition = null;
+let viewAsRole = null;
 function getCurrentPosition() { return viewAsPosition || myStaff?.position || 'td'; }
+function getCurrentRole() { return viewAsRole; }
 function getPosLevel(p) { return {td:0,bgyjn:1,gyjn:2,tjn:3,ggn_chakki:3,sgn_jondo:3,ggn_jondo:3,yjyn:4,admin:5}[p]||0; }
 
 function applyViewAs() {
-  const sel = document.getElementById('viewAsSelect').value;
-  viewAsPosition = sel || null;
+  const selPos = document.getElementById('viewAsPos').value;
+  const selRole = document.getElementById('viewAsRole').value;
+  viewAsPosition = selPos || null;
+  viewAsRole = selRole || null;
   const pos = getCurrentPosition();
-  const lbl = sel ? getPositionName(sel) : getPositionName(myStaff?.position);
-  document.getElementById('staffBadge').textContent = sel ? `\u{1F441} ${lbl}` : `${myStaff?.staff_code||'---'} \u00b7 ${lbl}`;
+  const posLabel = getPositionName(pos);
+  const roleLabel = selRole ? {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'L\u00e1'}[selRole] : '';
+  const badge = document.getElementById('staffBadge');
+  if (selPos || selRole) {
+    let txt = '\uD83D\uDC41 ' + posLabel;
+    if (roleLabel) txt += ' + ' + roleLabel;
+    badge.textContent = txt;
+  } else {
+    badge.textContent = `${myStaff?.staff_code||'---'} \u00b7 ${getPositionName(myStaff?.position)}`;
+  }
   applyPermissions();
-  showToast(sel ? `\u{1F441} Xem nh\u01b0: ${lbl}` : '\u2705 \u0110\u00e3 reset v\u1ec1 Admin');
+  if (selPos || selRole) {
+    let msg = '\uD83D\uDC41 ';
+    if (selPos) msg += posLabel;
+    if (selRole) msg += (selPos ? ' + ' : '') + roleLabel;
+    showToast(msg);
+  }
 }
 function resetViewAs() {
-  document.getElementById('viewAsSelect').value = '';
+  document.getElementById('viewAsPos').value = '';
+  document.getElementById('viewAsRole').value = '';
   applyViewAs();
+  showToast('\u2705 Reset v\u1ec1 Admin');
 }
 function applyPermissions() {
   const pos = getCurrentPosition();
   const lvl = getPosLevel(pos);
-  // Tab Cấu trúc: chỉ Admin/YJYN
+  const role = getCurrentRole();
+  // Tab C\u1ea5u tr\u00fac: ch\u1ec9 Admin/YJYN
   const structTab = document.querySelector('[data-tab="structure"]');
   if (structTab) structTab.style.display = (pos==='admin'||pos==='yjyn') ? '' : 'none';
-  // Hapja section in dashboard: chỉ YJYN/GGN Jondo thấy pending
-  // FAB add profile: chỉ từ GGN Jondo trở lên, hoặc NDD role
+  // FAB add profile
   const fabBtn = document.getElementById('fabBtn');
-  if (fabBtn) fabBtn.style.display = lvl >= 2 ? 'flex' : 'none';
+  if (fabBtn) fabBtn.style.display = (lvl >= 2 || role === 'ndd') ? 'flex' : 'none';
 }
 </script>
 </body>
