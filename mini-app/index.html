@@ -131,6 +131,12 @@
     .cover-role-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .cover-role-label { font-size: 12px; font-weight: 600; color: var(--accent2); min-width: 50px; }
     .cover-role-input { flex: 1; }
+    /* View As bar */
+    .view-as-bar { display: none; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); border-radius: 10px; padding: 6px 12px; margin-bottom: 10px; align-items: center; gap: 8px; }
+    .view-as-bar.active { display: flex; }
+    .view-as-bar label { font-size: 11px; color: var(--red); font-weight: 600; margin: 0; white-space: nowrap; }
+    .view-as-bar select { flex: 1; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(248,113,113,0.3); border-radius: 6px; color: var(--text); font-size: 12px; font-family: inherit; }
+    .view-as-bar button { background: none; border: 1px solid rgba(248,113,113,0.3); color: var(--red); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -141,6 +147,21 @@
       <div class="logo-text"><h1>Checking Jondo</h1><span>Hệ thống quản lý</span></div>
     </div>
     <div class="badge" id="staffBadge">---</div>
+  </div>
+  <div class="view-as-bar" id="viewAsBar">
+    <label>👁️ View As:</label>
+    <select id="viewAsSelect" onchange="applyViewAs()">
+      <option value="">— Chính mình —</option>
+      <option value="td">TĐ</option>
+      <option value="bgyjn">BGYJN (Tổ phó)</option>
+      <option value="gyjn">GYJN (Tổ trưởng)</option>
+      <option value="sgn_jondo">SGN Jondo</option>
+      <option value="ggn_chakki">GGN Chakki</option>
+      <option value="ggn_jondo">GGN Jondo</option>
+      <option value="tjn">TJN</option>
+      <option value="yjyn">YJYN</option>
+    </select>
+    <button onclick="resetViewAs()">Reset</button>
   </div>
   <div class="tab-bar" id="mainTabBar">
     <div class="tab active" data-tab="dashboard" onclick="switchMainTab(this,'dashboard')">📊 Dashboard</div>
@@ -360,20 +381,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadStaffInfo() {
   const userId = tg?.initDataUnsafe?.user?.id;
-  if (!userId) { document.getElementById('staffBadge').textContent = 'Demo'; return; }
+  if (!userId) {
+    document.getElementById('staffBadge').textContent = 'Demo';
+    myStaff = { staff_code: 'DEMO', position: 'admin', full_name: 'Demo Admin' };
+    document.getElementById('viewAsBar').classList.add('active');
+    applyPermissions();
+    return;
+  }
   try {
     const res = await sbFetch(`/rest/v1/staff?telegram_id=eq.${userId}&select=*`);
     const data = await res.json();
     if (data.length > 0) {
       myStaff = data[0];
-      document.getElementById('staffBadge').textContent = `${myStaff.staff_code} · ${getPositionName(myStaff.position)}`;
-      // Populate staff suggestions for cover page
+      document.getElementById('staffBadge').textContent = `${myStaff.staff_code} \u00b7 ${getPositionName(myStaff.position)}`;
+      if (myStaff.position === 'admin') {
+        document.getElementById('viewAsBar').classList.add('active');
+      }
       const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code');
       const allS = await allRes.json();
       const dl = document.getElementById('staffSuggest');
       if (dl) dl.innerHTML = allS.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
     }
   } catch {}
+  applyPermissions();
 }
 
 // ============ DASHBOARD ============
@@ -708,6 +738,36 @@ async function loadStructure() {
     });
     el.innerHTML = html;
   } catch { document.getElementById('structureTree').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải</div></div>'; }
+}
+
+// ============ VIEW AS (Admin testing) ============
+let viewAsPosition = null;
+function getCurrentPosition() { return viewAsPosition || myStaff?.position || 'td'; }
+function getPosLevel(p) { return {td:0,bgyjn:1,gyjn:2,tjn:3,ggn_chakki:3,sgn_jondo:3,ggn_jondo:3,yjyn:4,admin:5}[p]||0; }
+
+function applyViewAs() {
+  const sel = document.getElementById('viewAsSelect').value;
+  viewAsPosition = sel || null;
+  const pos = getCurrentPosition();
+  const lbl = sel ? getPositionName(sel) : getPositionName(myStaff?.position);
+  document.getElementById('staffBadge').textContent = sel ? `\u{1F441} ${lbl}` : `${myStaff?.staff_code||'---'} \u00b7 ${lbl}`;
+  applyPermissions();
+  showToast(sel ? `\u{1F441} Xem nh\u01b0: ${lbl}` : '\u2705 \u0110\u00e3 reset v\u1ec1 Admin');
+}
+function resetViewAs() {
+  document.getElementById('viewAsSelect').value = '';
+  applyViewAs();
+}
+function applyPermissions() {
+  const pos = getCurrentPosition();
+  const lvl = getPosLevel(pos);
+  // Tab Cấu trúc: chỉ Admin/YJYN
+  const structTab = document.querySelector('[data-tab="structure"]');
+  if (structTab) structTab.style.display = (pos==='admin'||pos==='yjyn') ? '' : 'none';
+  // Hapja section in dashboard: chỉ YJYN/GGN Jondo thấy pending
+  // FAB add profile: chỉ từ GGN Jondo trở lên, hoặc NDD role
+  const fabBtn = document.getElementById('fabBtn');
+  if (fabBtn) fabBtn.style.display = lvl >= 2 ? 'flex' : 'none';
 }
 </script>
 </body>
