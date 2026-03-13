@@ -80,9 +80,11 @@
     .add-record-btn:active { background: rgba(124,106,247,0.2); }
     .save-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: var(--radius); color: white; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; box-shadow: 0 4px 16px rgba(124,106,247,0.4); transition: opacity 0.2s, transform 0.1s; }
     .save-btn:active { opacity: 0.85; transform: scale(0.98); }
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; display: none; align-items: flex-end; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 500; display: none; align-items: flex-end; animation: fadeIn 0.2s; }
     .modal-overlay.open { display: flex; }
-    .modal { width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; }
+    .modal { width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
     .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
     .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 1px solid var(--border); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999; white-space: nowrap; }
@@ -307,7 +309,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">🍎 Check Hapja - Bảng Thông Tin Về Trái</div>
   <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:72vh;">
-    <div class="field-group"><label>* Tên NDD</label><input type="text" id="hj_ndd" placeholder="Tên NDD..." list="staffSuggestHj" /></div>
+    <div class="field-group"><label>* NDD (mã TĐ)</label><select id="hj_ndd" style="padding:10px 12px;"><option value="">Chọn NDD...</option></select></div>
     <div class="grid-2">
       <div class="field-group"><label>* Ngày Chakki</label><input type="date" id="hj_ngay" /></div>
       <div class="field-group"><label>* Concept</label><input type="text" id="hj_concept" placeholder="..." /></div>
@@ -336,10 +338,6 @@
       <textarea id="hj_noi_lo" placeholder="Nỗi lo, sở thích, kênh YouTube..." style="min-height:60px;"></textarea>
     </div>
     <div class="field-group"><label>9. Số điện thoại</label><input type="tel" id="hj_sdt" placeholder="0xxx..." /></div>
-    <div class="field-group"><label>❌ Lý do bị loại (nếu có)</label>
-      <div class="chips" id="chips_hj_loai"><div class="chip" onclick="toggleChip(this)">Quân đội</div><div class="chip" onclick="toggleChip(this)">Hải ngoại</div><div class="chip" onclick="toggleChip(this)">Sinh con</div><div class="chip" onclick="toggleChip(this)">LGBT</div><div class="chip" onclick="toggleChip(this)">Ở chung bạn trai</div><div class="chip" onclick="toggleChip(this)">Vấn đề tâm lí</div></div>
-    </div>
-    <datalist id="staffSuggestHj"></datalist>
     <button class="save-btn" onclick="saveCheckHapja()">🍎 Gửi Check Hapja</button>
     <button onclick="closeModal('checkHapjaModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
@@ -652,15 +650,15 @@ function openCheckHapjaModal() {
   const pos = getCurrentPosition();
   if (!canCreateHapja(pos)) { showToast('\u26d4 Ch\u1ee9c v\u1ee5 kh\u00f4ng \u0111\u01b0\u1ee3c t\u1ea1o Hapja'); return; }
   document.getElementById('checkHapjaModal').classList.add('open');
-  if (allStaff.length) {
-    const dl = document.getElementById('staffSuggestHj');
-    if (dl) dl.innerHTML = allStaff.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
+  // Populate NDD select with staff codes
+  const sel = document.getElementById('hj_ndd');
+  if (sel && allStaff.length) {
+    sel.innerHTML = '<option value="">Ch\u1ecdn NDD...</option>' + allStaff.map(s=>`<option value="${s.staff_code}">${s.full_name} (${s.staff_code})</option>`).join('');
   }
 }
 async function saveCheckHapja() {
   const fullName = document.getElementById('hj_hoten')?.value?.trim();
   if (!fullName) { showToast('\u26a0\ufe0f Nh\u1eadp h\u1ecd t\u00ean tr\u00e1i (m\u1ee5c 1)'); return; }
-  const rejected = getChipValues('chips_hj_loai');
   const data = {
     full_name: fullName,
     ndd_name: document.getElementById('hj_ndd')?.value || '',
@@ -678,16 +676,16 @@ async function saveCheckHapja() {
     hoc_ki: document.getElementById('hj_hoc_ki')?.value || '',
     noi_lo: document.getElementById('hj_noi_lo')?.value || '',
     sdt: document.getElementById('hj_sdt')?.value || '',
-    ly_do_loai: rejected,
-    status: rejected.length > 0 ? 'rejected' : 'pending',
+    status: 'pending',
     created_by: myStaff?.staff_code || 'unknown'
   };
   try {
     await sbFetch('/rest/v1/check_hapja', { method: 'POST', headers: {'Prefer':'return=representation'}, body: JSON.stringify(data) });
     closeModal('checkHapjaModal');
-    showToast(rejected.length > 0 ? '\u274c Tr\u00e1i b\u1ecb lo\u1ea1i' : '\u2705 \u0110\u00e3 g\u1eedi Check Hapja!');
-    ['hj_ndd','hj_ngay','hj_concept','hj_hoten','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh','chips_hj_loai'].forEach(clearChips);
+    showToast('\u2705 \u0110\u00e3 g\u1eedi Check Hapja!');
+    ['hj_ngay','hj_concept','hj_hoten','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('hj_ndd').selectedIndex = 0;
+    ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh'].forEach(clearChips);
     loadDashboard();
   } catch(e) { showToast('\u274c L\u1ed7i khi g\u1eedi'); console.error(e); }
 }
@@ -806,6 +804,13 @@ async function loadStructure() {
     el.innerHTML = html;
   } catch { document.getElementById('structureTree').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải</div></div>'; }
 }
+
+// ============ MODAL CLOSE ON OVERLAY CLICK ============
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
 
 // ============ VIEW AS (Admin testing) ============
 let viewAsPosition = null;
