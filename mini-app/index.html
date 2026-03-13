@@ -217,17 +217,10 @@
 
   <!-- DASHBOARD -->
   <div id="tab-dashboard">
-    <div class="dash-card-row">
-      <div class="dash-stat"><div class="num" id="dMyFruit">0</div><div class="lbl">Trái đang chăm</div></div>
-      <div class="dash-stat"><div class="num" id="dPending">0</div><div class="lbl">Hapja chờ duyệt</div></div>
-    </div>
-    <div class="dash-card-row">
-      <div class="dash-stat"><div class="num" id="dGroups">0</div><div class="lbl">Group tham gia</div></div>
-      <div class="dash-stat"><div class="num" id="dTotal">0</div><div class="lbl">Tổng hồ sơ</div></div>
-    </div>
-    <div class="section-header"><div class="section-title">🍎 Trái của tôi</div></div>
+    <div id="dashMetricsWrap"></div>
+    <div class="section-header"><div class="section-title" id="dashMyListTitle">🍎 Trái của tôi</div></div>
     <div id="dashMyList"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-sub">Đang tải...</div></div></div>
-    <div class="section-header" style="margin-top:16px;"><div class="section-title">📋 Check Hapja gần đây</div></div>
+    <div class="section-header" style="margin-top:16px;"><div class="section-title" id="dashHapjaTitle">📋 Check Hapja gần đây</div></div>
     <div id="dashHapjaList"><div class="empty-state"><div class="empty-sub">Đang tải...</div></div></div>
   </div>
 
@@ -515,49 +508,101 @@ async function loadStaffInfo() {
 }
 
 // ============ DASHBOARD ============
+// ============ DASHBOARD ============
 async function loadDashboard() {
   try {
-    // Total profiles
-    const pRes = await sbFetch('/rest/v1/profiles?select=id');
-    const profiles = await pRes.json();
-    document.getElementById('dTotal').textContent = profiles.length;
+    const pos = getCurrentPosition();
+    const lvl = getPosLevel(pos);
+    const myCode = getEffectiveStaffCode();
 
-    // My fruit (roles I'm assigned to)
-    const myCode = myStaff?.staff_code;
+    let metricsHtml = '';
+
+    // 1. Hapja (Pending)
+    let hapjaQuery = '/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20';
+    if (lvl < 3) hapjaQuery += `&created_by=eq.${myCode}`; // only mine for TD/TVV/NDD
+    const hRes = await sbFetch(hapjaQuery);
+    const hapjas = await hRes.json();
+
+    // 2. My Fruits & Groups (always mine)
+    let myFruitsCount = 0;
+    let myGroupsCount = 0;
+    let myRoles = [];
     if (myCode) {
       const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
-      const myRoles = await rRes.json();
-      document.getElementById('dMyFruit').textContent = myRoles.length;
-
-      const listEl = document.getElementById('dashMyList');
-      if (myRoles.length === 0) {
-        listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa được gắn vai trò nào</div>';
-      } else {
-        listEl.innerHTML = myRoles.map(r => {
-          const name = r.fruit_groups?.profiles?.full_name || 'N/A';
-          const role = {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'Lá'}[r.role_type] || r.role_type;
-          const lvl = r.fruit_groups?.level || 'tu_van';
-          return `<div class="dash-list-item" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${role} · ${lvl==='bb'?'BB':'Tư vấn'}</div></div><div class="profile-arrow">›</div></div>`;
-        }).join('');
-      }
-
-      // Groups
-      const gRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=fruit_group_id`);
-      const groups = await gRes.json();
-      document.getElementById('dGroups').textContent = new Set(groups.map(g=>g.fruit_group_id)).size;
+      myRoles = await rRes.json();
+      myFruitsCount = myRoles.length;
+      myGroupsCount = new Set(myRoles.map(r=>r.fruit_group_id)).size;
     }
 
-    // Pending Hapja
-    const hRes = await sbFetch('/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=5');
-    const hapjas = await hRes.json();
-    document.getElementById('dPending').textContent = hapjas.length;
+    if (['admin','yjyn'].includes(pos)) {
+      // OVERVIEW METRICS
+      const pRes = await sbFetch('/rest/v1/profiles?select=id');
+      const totalProfiles = (await pRes.json()).length;
+      metricsHtml = `
+        <div class="dash-card-row">
+          <div class="dash-stat"><div class="num">${allStaff.length}</div><div class="lbl">T\u1ed5ng T\u0110</div></div>
+          <div class="dash-stat"><div class="num">${totalProfiles}</div><div class="lbl">T\u1ed5ng h\u1ed3 s\u01a1</div></div>
+        </div>
+        <div class="dash-card-row">
+          <div class="dash-stat"><div class="num" style="color:var(--yellow);">${hapjas.length}</div><div class="lbl">Hapja ch\u1edd duy\u1ec7t</div></div>
+          <div class="dash-stat"><div class="num" style="color:var(--green);">${myGroupsCount}</div><div class="lbl">Group (Tham gia)</div></div>
+        </div>
+      `;
+    } else if (['tjn','gyjn','bgyjn'].includes(pos)) {
+      // MANAGER METRICS
+      metricsHtml = `
+        <div class="dash-card-row">
+          <div class="dash-stat"><div class="num">${myFruitsCount}</div><div class="lbl">Tr\u00e1i \u0111ang ch\u0103m</div></div>
+          <div class="dash-stat"><div class="num" style="color:var(--yellow);">${hapjas.length}</div><div class="lbl">Hapja (C\u1ea7n duy\u1ec7t)</div></div>
+        </div>
+        <div class="dash-card-row">
+          <div class="dash-stat"><div class="num">${myGroupsCount}</div><div class="lbl">Group tham gia</div></div>
+        </div>
+      `;
+    } else {
+      // STAFF METRICS (TĐ/TVV/NDD)
+      metricsHtml = `
+        <div class="dash-card-row">
+          <div class="dash-stat"><div class="num">${myFruitsCount}</div><div class="lbl">Tr\u00e1i \u0111ang ch\u0103m</div></div>
+          <div class="dash-stat"><div class="num">${myGroupsCount}</div><div class="lbl">Group tham gia</div></div>
+        </div>
+        <div class="dash-card-row">
+          <div class="dash-stat"><div class="num" style="color:var(--accent);">${hapjas.length}</div><div class="lbl">Hapja c\u1ee7a t\u00f4i (Ch\u1edd)</div></div>
+        </div>
+      `;
+    }
+    document.getElementById('dashMetricsWrap').innerHTML = metricsHtml;
+
+    // Render lists
+    const listEl = document.getElementById('dashMyList');
+    document.getElementById('dashMyListTitle').textContent = ['admin','yjyn'].includes(pos) ? '\ud83d\udcc1 H\u1ed3 s\u01a1 g\u1ea7n \u0111\u00e2y' : '\ud83c\udf4e Tr\u00e1i c\u1ee7a t\u00f4i';
+    
+    if (['admin','yjyn'].includes(pos)) {
+       const rpRes = await sbFetch('/rest/v1/profiles?select=id,full_name,status&order=created_at.desc&limit=5');
+       const rProfs = await rpRes.json();
+       if (!rProfs.length) listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Ch\u01b0a c\u00f3 h\u1ed3 s\u01a1 n\u00e0o</div>';
+       else listEl.innerHTML = rProfs.map(p => `<div class="dash-list-item" onclick="openProfileById('${p.id}')"><div class="dash-dot bb"></div><div class="profile-info"><div class="profile-name">${p.full_name||'V\u00f4 danh'}</div></div><div class="profile-arrow">\u203a</div></div>`).join('');
+    } else {
+       if (myRoles.length === 0) listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Ch\u01b0a \u0111\u01b0\u1ee3c g\u1eafn vai tr\u00f2 n\u00e0o</div>';
+       else listEl.innerHTML = myRoles.map(r => {
+         const name = r.fruit_groups?.profiles?.full_name || 'N/A';
+         const role = {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'L\u00e1'}[r.role_type] || r.role_type;
+         const lvl2 = r.fruit_groups?.level || 'tu_van';
+         return `<div class="dash-list-item" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl2==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${role} \u00b7 ${lvl2==='bb'?'BB':'T\u01b0 v\u1ea5n'}</div></div><div class="profile-arrow">\u203a</div></div>`;
+       }).join('');
+    }
+
+    // Check Hapja list
     const hList = document.getElementById('dashHapjaList');
+    document.getElementById('dashHapjaTitle').textContent = ['admin','yjyn','tjn','gyjn','bgyjn'].includes(pos) ? '\ud83d\udccb C\u1ea7n duy\u1ec7t Hapja' : '\ud83d\udccb Ti\u1ebfn \u0111\u1ed9 Hapja c\u1ee7a t\u00f4i';
     if (hapjas.length === 0) {
-      hList.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Không có phiếu chờ duyệt</div>';
+      hList.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Kh\u00f4ng c\u00f3 phi\u1ebfu ch\u1edd duy\u1ec7t</div>';
     } else {
       hList.innerHTML = hapjas.map(h => {
         const date = new Date(h.created_at).toLocaleDateString('vi-VN');
-        return `<div class="dash-list-item"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${h.full_name}</div><div class="profile-meta">📅 ${date} · Bởi: ${h.created_by}</div></div></div>`;
+        const fname = h.full_name;
+        const ndd = h.data?.ndd_staff_code || h.created_by;
+        return `<div class="dash-list-item"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${fname}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${ndd}</div></div></div>`;
       }).join('');
     }
   } catch(e) { console.error('Dashboard error:', e); }
@@ -623,7 +668,7 @@ function loadCover(p) {
   if (p.full_name) document.getElementById('cv_ten').value = p.full_name;
   if (p.birth_year) document.getElementById('cv_nam_sinh').value = p.birth_year;
   if (p.gender) document.getElementById('cv_gioi_tinh').value = p.gender;
-  if (p.ndd_staff_code) document.getElementById('cv_ndd').value = p.ndd_staff_code;
+  if (p.ndd_staff_code) setStaffInputValue('cv_ndd', p.ndd_staff_code);
   // Load role names from info_sheet if stored
   const info = p.info_sheet || {};
   if (info.tvv_name) document.getElementById('cv_tvv').value = info.tvv_name;
@@ -635,7 +680,7 @@ async function saveCover() {
     full_name: document.getElementById('cv_ten').value,
     birth_year: document.getElementById('cv_nam_sinh').value,
     gender: document.getElementById('cv_gioi_tinh').value,
-    ndd_staff_code: document.getElementById('cv_ndd').value || null,
+    ndd_staff_code: getStaffCodeFromInput('cv_ndd'),
     info_sheet: {
       ...(allProfiles.find(p=>p.id===currentProfileId)?.info_sheet || {}),
       tvv_name: document.getElementById('cv_tvv').value,
@@ -737,23 +782,25 @@ async function saveCheckHapja() {
   if (!fullName) { showToast('\u26a0\ufe0f Nh\u1eadp h\u1ecd t\u00ean tr\u00e1i (m\u1ee5c 1)'); return; }
   const data = {
     full_name: fullName,
-    ndd_name: document.getElementById('hj_ndd')?.value || '',
-    ngay_chakki: document.getElementById('hj_ngay')?.value || '',
-    concept: document.getElementById('hj_concept')?.value || '',
-    hinh_thuc: getChipValues('chips_hj_hinh_thuc'),
-    than_thiet: getChipValues('chips_hj_than_thiet'),
-    noi_o: document.getElementById('hj_noi_o')?.value || '',
-    nghe_nghiep: document.getElementById('hj_nghe')?.value || '',
-    tinh_cach: document.getElementById('hj_tinh_cach')?.value || '',
-    ket_noi: getChipValues('chips_hj_ket_noi'),
-    tg_ranh: document.getElementById('hj_tg_ranh')?.value || '',
-    than_tinh: getChipValues('chips_hj_than_tinh'),
-    hoan_canh: document.getElementById('hj_hoan_canh')?.value || '',
-    hoc_ki: document.getElementById('hj_hoc_ki')?.value || '',
-    noi_lo: document.getElementById('hj_noi_lo')?.value || '',
-    sdt: document.getElementById('hj_sdt')?.value || '',
+    data: {
+      ndd_staff_code: getStaffCodeFromInput('hj_ndd') || '',
+      ngay_chakki: document.getElementById('hj_ngay')?.value || '',
+      concept: document.getElementById('hj_concept')?.value || '',
+      hinh_thuc: getChipValues('chips_hj_hinh_thuc'),
+      than_thiet: getChipValues('chips_hj_than_thiet'),
+      noi_o: document.getElementById('hj_noi_o')?.value || '',
+      nghe_nghiep: document.getElementById('hj_nghe')?.value || '',
+      tinh_cach: document.getElementById('hj_tinh_cach')?.value || '',
+      ket_noi: getChipValues('chips_hj_ket_noi'),
+      tg_ranh: document.getElementById('hj_tg_ranh')?.value || '',
+      than_tinh: getChipValues('chips_hj_than_tinh'),
+      hoan_canh: document.getElementById('hj_hoan_canh')?.value || '',
+      hoc_ki: document.getElementById('hj_hoc_ki')?.value || '',
+      noi_lo: document.getElementById('hj_noi_lo')?.value || '',
+      sdt: document.getElementById('hj_sdt')?.value || ''
+    },
     status: 'pending',
-    created_by: myStaff?.staff_code || 'unknown'
+    created_by: getEffectiveStaffCode() || 'unknown'
   };
   try {
     await sbFetch('/rest/v1/check_hapja', { method: 'POST', headers: {'Prefer':'return=representation'}, body: JSON.stringify(data) });
@@ -905,8 +952,42 @@ async function loadStructure() {
   } catch(e) { console.error(e); document.getElementById('structureTree').innerHTML = '<div class="empty-state">L\u1ed7i t\u1ea3i</div>'; }
 }
 function populateStaffSelect(selId, ph) {
-  const s = document.getElementById(selId);
-  if(s) s.innerHTML = `<option value="">${ph}</option>` + allStaff.map(x=>`<option value="${x.staff_code}">${x.full_name} (${x.staff_code})</option>`).join('');
+  let s = document.getElementById(selId);
+  if(!s) return;
+  // Create global datalist once
+  if (!document.getElementById('globalStaffDatalist')) {
+    const dl = document.createElement('datalist');
+    dl.id = 'globalStaffDatalist';
+    document.body.appendChild(dl);
+  }
+  const dl = document.getElementById('globalStaffDatalist');
+  dl.innerHTML = allStaff.map(x=>`<option value="${x.staff_code} - ${x.full_name}"></option>`).join('');
+
+  if (s.tagName === 'SELECT') {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = s.id;
+    inp.className = s.className;
+    inp.style.cssText = s.style.cssText;
+    inp.placeholder = ph || 'Nh\u1eadp T\u0110 k\u00ecm ki\u1ebfm...';
+    inp.setAttribute('list', 'globalStaffDatalist');
+    if(s.onchange) inp.onchange = s.onchange;
+    s.parentNode.replaceChild(inp, s);
+  } else {
+    s.placeholder = ph || 'Nh\u1eadp mã h\u1eb7c t\u00ean T\u0110...';
+  }
+}
+function getStaffCodeFromInput(id) {
+  const el = document.getElementById(id);
+  if (!el || !el.value) return null;
+  return el.value.split(' - ')[0].trim() || null;
+}
+function setStaffInputValue(id, code) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!code) { el.value = ''; return; }
+  const s = allStaff.find(x => x.staff_code === code);
+  el.value = s ? `${s.staff_code} - ${s.full_name}` : code;
 }
 function openAddAreaModal() {
   document.getElementById('structureModalTitle').textContent = '\ud83c\udfe2 Th\u00eam Khu v\u1ef1c';
@@ -954,8 +1035,8 @@ async function saveStructure() {
   if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
   const type = document.getElementById('struct_type').value;
   const parentId = document.getElementById('struct_parent').value;
-  const mgr = document.getElementById('struct_manager')?.value;
-  const mgr2 = document.getElementById('struct_manager2')?.value;
+  const mgr = getStaffCodeFromInput('struct_manager');
+  const mgr2 = getStaffCodeFromInput('struct_manager2');
 
   // Check duplicate name
   if (type === 'area' && structureData.some(a => a.name.toLowerCase() === name.toLowerCase())) {
@@ -1028,21 +1109,21 @@ function openEditStructModal(type, id) {
   if (type==='area') {
     document.getElementById('edit_mgr1_label').textContent = 'YJYN';
     populateStaffSelect('edit_mgr1', 'Ch\u1ecdn YJYN...');
-    document.getElementById('edit_mgr1').value = item.yjyn_staff_code||'';
+    setStaffInputValue('edit_mgr1', item.yjyn_staff_code);
     document.getElementById('edit_mgr2_wrap').style.display = 'none';
   } else if (type==='group') {
     document.getElementById('edit_mgr1_label').textContent = 'TJN';
     populateStaffSelect('edit_mgr1', 'Ch\u1ecdn TJN...');
-    document.getElementById('edit_mgr1').value = item.tjn_staff_code||'';
+    setStaffInputValue('edit_mgr1', item.tjn_staff_code);
     document.getElementById('edit_mgr2_wrap').style.display = 'none';
   } else {
     document.getElementById('edit_mgr1_label').textContent = 'GYJN (T\u1ed5 tr\u01b0\u1edfng)';
     populateStaffSelect('edit_mgr1', 'Ch\u1ecdn GYJN...');
-    document.getElementById('edit_mgr1').value = item.gyjn_staff_code||'';
+    setStaffInputValue('edit_mgr1', item.gyjn_staff_code);
     document.getElementById('edit_mgr2_wrap').style.display = 'block';
     document.getElementById('edit_mgr2_label').textContent = 'BGYJN (T\u1ed5 ph\u00f3)';
     populateStaffSelect('edit_mgr2', 'Ch\u1ecdn BGYJN...');
-    document.getElementById('edit_mgr2').value = item.bgyjn_staff_code||'';
+    setStaffInputValue('edit_mgr2', item.bgyjn_staff_code);
   }
   document.getElementById('edit_mgr1_wrap').style.display = 'block';
   // Members section (only for teams)
@@ -1075,17 +1156,22 @@ function renderTeamMembers(teamItem) {
   // Populate add-member dropdown with staff NOT already in this team
   const teamId = document.getElementById('edit_struct_id').value;
   const memberCodes = members.map(m => m.staff_code);
-  const addSel = document.getElementById('edit_add_member');
-  addSel.innerHTML = '<option value="">Ch\u1ecdn T\u0110 \u0111\u1ec3 th\u00eam...</option>' +
-    allStaff.filter(s => !memberCodes.includes(s.staff_code)).map(s => `<option value="${s.staff_code}">${s.full_name} (${s.staff_code})</option>`).join('');
+  let addSel = document.getElementById('edit_add_member');
+  const dListId = 'teamAddDatalist';
+  if (!document.getElementById(dListId)) { const dl = document.createElement('datalist'); dl.id = dListId; document.body.appendChild(dl); }
+  document.getElementById(dListId).innerHTML = allStaff.filter(s => !memberCodes.includes(s.staff_code)).map(s => `<option value="${s.staff_code} - ${s.full_name}"></option>`).join('');
+  if (addSel.tagName === 'SELECT') {
+    const inp = document.createElement('input'); inp.type='text'; inp.id=addSel.id; inp.className=addSel.className; inp.style.cssText=addSel.style.cssText; inp.placeholder='Ch\u1ecdn T\u0110 k\u00ecm ki\u1ebfm...'; inp.setAttribute('list', dListId);
+    addSel.parentNode.replaceChild(inp, addSel);
+  } else { addSel.value = ''; }
 }
 async function updateStructure() {
   const id = document.getElementById('edit_struct_id').value;
   const type = document.getElementById('edit_struct_type').value;
   const name = document.getElementById('edit_struct_name').value.trim();
   if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
-  const mgr = document.getElementById('edit_mgr1').value;
-  const mgr2 = document.getElementById('edit_mgr2')?.value;
+  const mgr = getStaffCodeFromInput('edit_mgr1');
+  const mgr2 = getStaffCodeFromInput('edit_mgr2');
   const tables = {area:'areas', group:'org_groups', team:'teams'};
   let body = { name };
   if (type==='area') body.yjyn_staff_code = mgr||null;
@@ -1120,7 +1206,7 @@ async function deleteStructure() {
 
 // ============ TEAM MEMBERS ============
 async function addMemberToTeam() {
-  const code = document.getElementById('edit_add_member').value;
+  const code = getStaffCodeFromInput('edit_add_member');
   if (!code) { showToast('\u26a0\ufe0f Ch\u1ecdn T\u0110'); return; }
   const teamId = document.getElementById('edit_struct_id').value;
   try {
