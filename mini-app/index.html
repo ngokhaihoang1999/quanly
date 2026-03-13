@@ -988,13 +988,18 @@ function applyPermissions() {
   const pos = getCurrentPosition();
   const lvl = getPosLevel(pos);
   const role = getCurrentRole();
-  // Tab C\u1ea5u tr\u00fac: ch\u1ec9 Admin/YJYN
+  // Tab Cấu trúc: Admin/YJYN/TJN can see
   const structTab = document.querySelector('[data-tab="structure"]');
-  if (structTab) structTab.style.display = (pos==='admin'||pos==='yjyn') ? '' : 'none';
+  if (structTab) structTab.style.display = ['admin','yjyn','tjn'].includes(pos) ? '' : 'none';
+  // "+ Khu vực" button: Admin only
+  const btnAddArea = document.getElementById('btnAddArea');
+  if (btnAddArea) btnAddArea.style.display = pos==='admin' ? '' : 'none';
   // FAB: only for those who can create Hapja
   const fabBtn = document.getElementById('fabBtn');
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
   if (fabBtn) fabBtn.style.display = (canCreateHapja(pos) && (activeTab==='dashboard'||activeTab==='profiles')) ? 'flex' : 'none';
+  // Reload structure tree to update inline add buttons
+  if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
 }
 
 // ============ THEME TOGGLE ============
