@@ -538,6 +538,8 @@ async function loadDashboard() {
       // OVERVIEW METRICS
       const pRes = await sbFetch('/rest/v1/profiles?select=id');
       const totalProfiles = (await pRes.json()).length;
+      const fgRes = await sbFetch('/rest/v1/fruit_groups?profile_id=not.is.null&select=id');
+      const totalGroups = (await fgRes.json()).length;
       metricsHtml = `
         <div class="dash-card-row">
           <div class="dash-stat"><div class="num">${allStaff.length}</div><div class="lbl">T\u1ed5ng T\u0110</div></div>
@@ -545,7 +547,7 @@ async function loadDashboard() {
         </div>
         <div class="dash-card-row">
           <div class="dash-stat"><div class="num" style="color:var(--yellow);">${hapjas.length}</div><div class="lbl">Hapja ch\u1edd duy\u1ec7t</div></div>
-          <div class="dash-stat"><div class="num" style="color:var(--green);">${myGroupsCount}</div><div class="lbl">Group (Tham gia)</div></div>
+          <div class="dash-stat"><div class="num" style="color:var(--green);">${totalGroups}</div><div class="lbl">T\u1ed5ng Group</div></div>
         </div>
       `;
     } else if (['tjn','gyjn','bgyjn'].includes(pos)) {

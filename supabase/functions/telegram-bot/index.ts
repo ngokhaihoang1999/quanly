@@ -56,6 +56,18 @@ async function forwardMessage(fromChatId: number, toChatId: number, messageId: n
   });
 }
 
+async function editMessageReplyMarkup(chatId: number, messageId: number, replyMarkup: any = null) {
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageReplyMarkup`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: replyMarkup })
+  });
+}
+
+async function getChatAdmins(chatId: number) {
+  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatAdministrators?chat_id=${chatId}`).then(r => r.json());
+  return res.ok ? res.result : [];
+}
+
 async function getAdminTelegramId(): Promise<number | null> {
   const { data } = await supabase.from('staff').select('telegram_id').eq('staff_code', ADMIN_STAFF_CODE).single();
   return data?.telegram_id || null;
@@ -107,7 +119,7 @@ async function handleGroupChat(update: any) {
 
       // Fetch unlinked profiles (approved check_hapja/profiles without a group)
       const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
-      const linkedProfileIds = linkedGroups?.map(g => g.profile_id) || [];
+      const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
       
       let query = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(10);
       if (linkedProfileIds.length > 0) {
@@ -235,6 +247,18 @@ async function handleGroupChat(update: any) {
     );
     return;
   }
+
+  // /menu — Menu lệnh cho group
+  if (text === '/menu' || text.startsWith('/menu@')) {
+    const keyboard = [
+      [{ text: '📋 Xem thông tin Group', callback_data: 'menu_info' }],
+      [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
+      [{ text: '👥 Gắn vai trò (NDD/TVV/...)', callback_data: 'menu_assign_role' }],
+      [{ text: '🔄 Chuyển cấp độ', callback_data: 'menu_set_level' }]
+    ];
+    await sendKeyboard(chatId, `🛠 *Menu Quản lý Group*`, keyboard);
+    return;
+  }
 }
 
 // ============ CALLBACK HANDLERS ============
@@ -254,7 +278,112 @@ async function handleCallback(update: any, staffData: any) {
     await supabase.from('fruit_groups')
       .update({ profile_id: profileId, updated_at: new Date().toISOString() })
       .eq('telegram_group_id', chatId);
+      
+  // Remove the keyboard to prevent multiple clicks
+    const msgId = update.callback_query.message.message_id;
+    await editMessageReplyMarkup(chatId, msgId, null);
+    
     await sendText(chatId, `✅ Đã gắn hồ sơ *${profile.full_name}* cho group này!`);
+    return;
+  }
+
+  // --- MENU INTERACTIONS ---
+  if (cbData === 'menu_info') {
+    const { data: fg } = await supabase.from('fruit_groups').select('*, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    if (!fg) return sendText(chatId, `❌ Group này chưa được đăng ký.`);
+    const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
+    const { data: roles } = await supabase.from('fruit_roles').select('*, staff!fruit_roles_staff_code_fkey(full_name)').eq('fruit_group_id', fg.id);
+    let rolesText = (roles && roles.length > 0) ? roles.map((r: any) => `  • ${ROLE_LABELS[r.role_type]}: ${r.staff?.full_name || r.staff_code}`).join('\n') : '  Chưa có vai trò nào.';
+    await sendText(chatId, `📋 *Thông tin Group Trái quả*\n\n🍎 Trái: *${fg.profiles?.full_name || 'Chưa gắn'}*\n📊 Cấp độ: *${levelLabel}*\n\n👥 Vai trò:\n${rolesText}`);
+    return;
+  }
+
+  if (cbData === 'menu_link_profile') {
+    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Bạn không có quyền gắn hồ sơ.`);
+    const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
+    const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
+    let query = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(10);
+    if (linkedProfileIds.length > 0) query = query.not('id', 'in', `(${linkedProfileIds.join(',')})`);
+    const { data: unlinkedProfiles } = await query;
+    if (!unlinkedProfiles || unlinkedProfiles.length === 0) return sendText(chatId, `❌ Không có hồ sơ nào rảnh.`);
+    const keyboard = unlinkedProfiles.map((p: any) => [{ text: `🍎 Gắn: ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
+    await sendKeyboard(chatId, `Danh sách hồ sơ chưa có group (Bấm để gắn ngay):`, keyboard);
+    return;
+  }
+
+  if (cbData === 'menu_set_level') {
+    if (!canChangeLevel(pos)) return sendText(chatId, `⛔ Bạn không có quyền chuyển cấp.`);
+    await sendKeyboard(chatId, `Chọn cấp độ:`, [
+      [{ text: 'Tư vấn', callback_data: `action_set_level_tu_van` }, { text: 'BB', callback_data: `action_set_level_bb` }]
+    ]);
+    return;
+  }
+
+  if (cbData.startsWith('action_set_level_')) {
+    if (!canChangeLevel(pos)) return;
+    const newLevel = cbData.replace('action_set_level_', '');
+    await supabase.from('fruit_groups').update({ level: newLevel, updated_at: new Date().toISOString() }).eq('telegram_group_id', chatId);
+    await editMessageReplyMarkup(chatId, update.callback_query.message.message_id, null);
+    await sendText(chatId, `✅ Đã chuyển cấp độ group sang *${newLevel === 'tu_van' ? 'Tư vấn' : 'BB'}*.`);
+    return;
+  }
+
+  if (cbData === 'menu_assign_role') {
+    if (!canAssignRole(pos)) return sendText(chatId, `⛔ Bạn không có quyền gắn vai trò.`);
+    const admins = await getChatAdmins(chatId);
+    if (!admins || !admins.length) return sendText(chatId, `❌ Không lấy được danh sách nhóm.`);
+    
+    const adminIds = admins.filter((a: any) => !a.user.is_bot).map((a: any) => a.user.id);
+    const { data: staffList } = await supabase.from('staff').select('telegram_id, staff_code, full_name').in('telegram_id', adminIds);
+    const staffMap: any = {};
+    staffList?.forEach((s: any) => staffMap[s.telegram_id] = s);
+    
+    const kb = [];
+    for (const a of admins) {
+      if (a.user.is_bot) continue;
+      const tid = a.user.id;
+      const staff = staffMap[tid];
+      const nameStr = staff ? `TĐ: ${staff.full_name} (${staff.staff_code})` : `User: ${a.user.first_name || 'N/A'}`;
+      if (staff) {
+        kb.push([{ text: nameStr, callback_data: `pick_staff_role_${staff.staff_code}` }]);
+      } else {
+        kb.push([{ text: nameStr, callback_data: `ignore` }]);
+      }
+    }
+    if (kb.length === 0) return sendText(chatId, `❌ Không có TĐ nào trong group.`);
+    await sendKeyboard(chatId, `Chọn TĐ để gắn vai trò:`, kb);
+    return;
+  }
+
+  if (cbData.startsWith('pick_staff_role_')) {
+    if (!canAssignRole(pos)) return;
+    const targetCode = cbData.replace('pick_staff_role_', '');
+    const kb = [
+      [{ text: 'NDD', callback_data: `action_assign_${targetCode}_ndd` }, { text: 'TVV', callback_data: `action_assign_${targetCode}_tvv` }],
+      [{ text: 'GVBB', callback_data: `action_assign_${targetCode}_gvbb` }, { text: 'Lá', callback_data: `action_assign_${targetCode}_la` }]
+    ];
+    await editMessageReplyMarkup(chatId, update.callback_query.message.message_id, kb);
+    return;
+  }
+
+  if (cbData.startsWith('action_assign_')) {
+    if (!canAssignRole(pos)) return;
+    // Format: action_assign_CODE_role
+    const parts = cbData.split('_');
+    const roleType = parts[parts.length - 1]; // last part
+    const targetCode = parts.slice(2, parts.length - 1).join('_');
+    
+    const { data: targetStaff } = await supabase.from('staff').select('*').eq('staff_code', targetCode).single();
+    if (!targetStaff) return;
+    const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
+    if (!fg) return;
+    
+    await supabase.from('fruit_roles').upsert({
+      fruit_group_id: fg.id, staff_code: targetCode, role_type: roleType, assigned_by: staffData.staff_code
+    }, { onConflict: 'fruit_group_id,staff_code,role_type' });
+    
+    await editMessageReplyMarkup(chatId, update.callback_query.message.message_id, null);
+    await sendText(chatId, `✅ Đã gắn vai trò *${ROLE_LABELS[roleType]}* cho *${targetStaff.full_name}* trong group này.`);
     return;
   }
 
