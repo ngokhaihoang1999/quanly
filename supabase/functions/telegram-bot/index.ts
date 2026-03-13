@@ -246,6 +246,7 @@ async function handleGroupChat(update: any) {
   if (text === '/menu' || text.startsWith('/menu@')) {
     const keyboard = [
       [{ text: '📋 Xem thông tin Group', callback_data: 'menu_info' }],
+      [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
       [{ text: '🔄 Chuyển giai đoạn', callback_data: 'menu_set_level' }]
@@ -287,8 +288,45 @@ async function handleCallback(update: any, staffData: any) {
     if (!fg) return sendText(chatId, `❌ Group này chưa được đăng ký.`);
     const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
     const { data: roles } = await supabase.from('fruit_roles').select('*, staff!fruit_roles_staff_code_fkey(full_name)').eq('fruit_group_id', fg.id);
-    let rolesText = (roles && roles.length > 0) ? roles.map((r: any) => `  • ${ROLE_LABELS[r.role_type]}: ${r.staff?.full_name || r.staff_code}`).join('\n') : '  Chưa có vai trò nào.';
-    await sendText(chatId, `📋 *Thông tin Group Trái quả*\n\n🍎 Trái: *${fg.profiles?.full_name || 'Chưa gắn'}*\n📊 Cấp độ: *${levelLabel}*\n\n👥 Vai trò:\n${rolesText}`);
+    let rolesText = (roles && roles.length > 0) ? roles.map((r: any) => `  • ${ROLE_LABELS[r.role_type]}: ${r.staff_code}`).join('\n') : '  Chưa có vai trò nào.';
+    await sendText(chatId, `📋 *Thông tin Group Trái quả*\n\n🍎 Trái: *${fg.profiles?.full_name || 'Chưa gắn'}*\n📊 Giai đoạn: *${levelLabel}*\n\n👥 Vai trò:\n${rolesText}`);
+    return;
+  }
+
+  if (cbData === 'menu_view_profile') {
+    const { data: fg } = await supabase.from('fruit_groups').select('*, profiles(*)').eq('telegram_group_id', chatId).single();
+    if (!fg || !fg.profiles) return sendText(chatId, `❌ Group này chưa được gắn hồ sơ nào.`);
+    
+    const p = fg.profiles;
+    const info = p.info_sheet || {};
+    
+    const { data: roles } = await supabase.from('fruit_roles')
+      .select('role_type, staff_code').eq('fruit_group_id', fg.id);
+    
+    const getRoleCode = (rt: string) => roles?.find((r: any) => r.role_type === rt)?.staff_code || info[`${rt}_name`] || 'Chưa xác nhận';
+    
+    const genderMap: Record<string,string> = { nam: 'Nam', nu: 'Nữ' };
+    const genderLabel = genderMap[p.gender] || p.gender || 'N/A';
+    const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
+    
+    const { data: tvRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'tu_van');
+    const { data: bbRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'bien_ban');
+    
+    const profileText =
+      `🍎 *Hồ sơ Trái quả*\n` +
+      `───────────────────\n` +
+      `*Tên:* ${p.full_name}\n` +
+      `*Sinh năm:* ${p.birth_year || 'N/A'}   *Giới tính:* ${genderLabel}\n` +
+      `*Giai đoạn:* ${levelLabel}\n\n` +
+      `👥 *Đội ngũ chăm sóc:*\n` +
+      `  NDD: ${p.ndd_staff_code || getRoleCode('ndd')}\n` +
+      `  TVV: ${getRoleCode('tvv')}\n` +
+      `  GVBB: ${getRoleCode('gvbb')}\n\n` +
+      `📝 *Báo cáo:* ${tvRecords?.length || 0} Tư vấn | ${bbRecords?.length || 0} Biên bản BB\n` +
+      (info.tinh_cach ? `\n🔍 *Tính cách:* ${info.tinh_cach}` : '') +
+      (info.nghe_nghiep ? `\n💼 *Nghề nghiệp:* ${info.nghe_nghiep}` : '');
+    
+    await sendText(chatId, profileText);
     return;
   }
 
@@ -336,7 +374,7 @@ async function handleCallback(update: any, staffData: any) {
       const tid = a.user.id;
       const staff = staffMap[tid];
       if (staff) {
-        kb.push([{ text: `${staff.staff_code} — ${staff.full_name}`, callback_data: `assign_gvbb_${staff.staff_code}` }]);
+        kb.push([{ text: staff.staff_code, callback_data: `assign_gvbb_${staff.staff_code}` }]);
       }
       // Non-registered users are excluded silently
     }

@@ -666,16 +666,39 @@ function clearFormFields() {
 }
 
 // Cover page
-function loadCover(p) {
+async function loadCover(p) {
   if (p.full_name) document.getElementById('cv_ten').value = p.full_name;
   if (p.birth_year) document.getElementById('cv_nam_sinh').value = p.birth_year;
   if (p.gender) document.getElementById('cv_gioi_tinh').value = p.gender;
   if (p.ndd_staff_code) setStaffInputValue('cv_ndd', p.ndd_staff_code);
-  // Load role names from info_sheet if stored
+  // Load role names from info_sheet
   const info = p.info_sheet || {};
   if (info.tvv_name) document.getElementById('cv_tvv').value = info.tvv_name;
-  if (info.gvbb_name) document.getElementById('cv_gvbb').value = info.gvbb_name;
   if (info.la_name) document.getElementById('cv_la').value = info.la_name;
+  // Also load GVBB from fruit_roles (may have been assigned via Telegram bot)
+  try {
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id`);
+    const fgs = await fgRes.json();
+    if (fgs && fgs.length) {
+      const fgId = fgs[0].id;
+      const rolesRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&select=*`);
+      const roles = await rolesRes.json();
+      const gvbbRole = roles.find(r => r.role_type === 'gvbb');
+      const tvvRole = roles.find(r => r.role_type === 'tvv');
+      const nddRole = roles.find(r => r.role_type === 'ndd');
+      if (gvbbRole) {
+        const gvbbStaff = allStaff.find(s => s.staff_code === gvbbRole.staff_code);
+        document.getElementById('cv_gvbb').value = gvbbStaff ? gvbbStaff.full_name : gvbbRole.staff_code;
+      } else if (info.gvbb_name) {
+        document.getElementById('cv_gvbb').value = info.gvbb_name;
+      }
+      if (tvvRole && !info.tvv_name) {
+        const tvvStaff = allStaff.find(s => s.staff_code === tvvRole.staff_code);
+        if (tvvStaff) document.getElementById('cv_tvv').value = tvvStaff.full_name;
+      }
+      if (nddRole && !p.ndd_staff_code) setStaffInputValue('cv_ndd', nddRole.staff_code);
+    }
+  } catch(e) { console.warn('loadCover roles:', e); }
 }
 async function saveCover() {
   const data = {
@@ -726,6 +749,7 @@ async function saveInfoSheet() {
 }
 
 // Records (Tư vấn / BB)
+let currentRecordId = null;
 async function loadRecords(profileId, type, listElId, countElId) {
   try {
     const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.desc`);
@@ -738,9 +762,26 @@ async function loadRecords(profileId, type, listElId, countElId) {
       const title = c.ten_cong_cu || c.muc_tieu || 'Phiếu #'+(i+1);
       const preview = c.bien_ban_tu_van || c.noi_dung || '';
       const date = new Date(r.created_at).toLocaleDateString('vi-VN');
-      return `<div class="record-item"><div class="record-number">${i+1}</div><div class="record-content"><div class="record-date">📅 ${date}</div><div class="record-title">${title}</div><div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div></div><button class="record-delete" onclick="event.stopPropagation();deleteRecord('${r.id}','${type}')" title="Xoá">🗑️</button></div>`;
+      return `<div class="record-item" onclick="openRecord('${r.id}','${type}')" style="cursor:pointer;">
+        <div class="record-number">${i+1}</div>
+        <div class="record-content">
+          <div class="record-date">📅 ${date}</div>
+          <div class="record-title">${title}</div>
+          <div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div>
+        </div>
+        <button class="record-delete" onclick="event.stopPropagation();deleteRecord('${r.id}','${type}')" title="Xoá">🗑️</button>
+      </div>`;
     }).join('');
   } catch {}
+}
+async function openRecord(recordId, type) {
+  // Fetch full record from server
+  const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
+  const rows = await res.json();
+  if (!rows || !rows.length) return;
+  const r = rows[0];
+  currentRecordId = recordId;
+  openAddRecordModal(type || r.record_type, r.content);
 }
 
 // ============ NAVIGATION ============
@@ -834,26 +875,30 @@ async function deleteRecord(id, type) {
 }
 
 // ============ ADD RECORD MODAL ============
-function openAddRecordModal(type) {
+function openAddRecordModal(type, existingContent = null) {
   currentRecordType = type;
+  if (!existingContent) currentRecordId = null; // new record
   const isTV = type==='tu_van';
-  document.getElementById('recordModalTitle').textContent = isTV ? '💬 Báo cáo Tư vấn' : '📝 Biên bản BB';
+  document.getElementById('recordModalTitle').textContent = existingContent
+    ? (isTV ? '✏️ Chỉnh sửa Báo cáo Tư vấn' : '✏️ Chỉnh sửa Biên bản BB')
+    : (isTV ? '💬 Báo cáo Tư vấn' : '📝 Biên bản BB');
   const body = document.getElementById('recordModalBody');
+  const c = existingContent || {};
   if (isTV) {
-    body.innerHTML = `<div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" placeholder="DISC, Enneagram..."/></div>
-      <div class="field-group"><label>Kết quả test</label><textarea id="rm_ket_qua_test" placeholder="..."></textarea></div>
-      <div class="field-group"><label>Biên bản / Kết quả tư vấn</label><textarea id="rm_bien_ban" style="min-height:100px;" placeholder="..."></textarea></div>
-      <div class="field-group"><label>Phản hồi của trái</label><textarea id="rm_phan_hoi" placeholder="..."></textarea></div>
-      <div class="field-group"><label>Lịch hẹn tư vấn lần 2</label><input type="text" id="rm_lich_hen" placeholder="DD/MM/YYYY"/></div>
-      <div class="field-group"><label>Đề xuất</label><textarea id="rm_de_xuat" placeholder="..."></textarea></div>`;
+    body.innerHTML = `<div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" placeholder="DISC, Enneagram..." value="${c.ten_cong_cu||''}"/></div>
+      <div class="field-group"><label>Kết quả test</label><textarea id="rm_ket_qua_test" placeholder="...">${c.ket_qua_test||''}</textarea></div>
+      <div class="field-group"><label>Biên bản / Kết quả tư vấn</label><textarea id="rm_bien_ban" style="min-height:100px;" placeholder="...">${c.bien_ban_tu_van||''}</textarea></div>
+      <div class="field-group"><label>Phản hồi của trái</label><textarea id="rm_phan_hoi" placeholder="...">${c.phan_hoi||''}</textarea></div>
+      <div class="field-group"><label>Lịch hẹn tư vấn lần 2</label><input type="text" id="rm_lich_hen" placeholder="DD/MM/YYYY" value="${c.lich_hen||''}"/></div>
+      <div class="field-group"><label>Đề xuất</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
   } else {
-    body.innerHTML = `<div class="field-group"><label>1. Mục tiêu buổi học</label><textarea id="rm_muc_tieu" placeholder="..."></textarea></div>
-      <div class="field-group"><label>2. Phản hồi HS</label><textarea id="rm_phan_hoi_hs" placeholder="..."></textarea></div>
-      <div class="field-group"><label>3. Tình hình hiện tại</label><textarea id="rm_tinh_hinh" placeholder="..."></textarea></div>
-      <div class="field-group"><label>4. Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="..."></textarea></div>
-      <div class="field-group"><label>5. Vấn đề mới</label><textarea id="rm_van_de_moi" placeholder="..."></textarea></div>
-      <div class="field-group"><label>6. Đề xuất</label><textarea id="rm_de_xuat_cs" placeholder="..."></textarea></div>
-      <div class="field-group"><label>7. Lưu ý</label><textarea id="rm_luu_y_bb" placeholder="..."></textarea></div>`;
+    body.innerHTML = `<div class="field-group"><label>1. Mục tiêu buổi học</label><textarea id="rm_muc_tieu" placeholder="...">${c.muc_tieu||''}</textarea></div>
+      <div class="field-group"><label>2. Phản hồi HS</label><textarea id="rm_phan_hoi_hs" placeholder="...">${c.phan_hoi_hs||''}</textarea></div>
+      <div class="field-group"><label>3. Tình hình hiện tại</label><textarea id="rm_tinh_hinh" placeholder="...">${c.tinh_hinh||''}</textarea></div>
+      <div class="field-group"><label>4. Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung||''}</textarea></div>
+      <div class="field-group"><label>5. Vấn đề mới</label><textarea id="rm_van_de_moi" placeholder="...">${c.van_de_moi||''}</textarea></div>
+      <div class="field-group"><label>6. Đề xuất</label><textarea id="rm_de_xuat_cs" placeholder="...">${c.de_xuat_cs||''}</textarea></div>
+      <div class="field-group"><label>7. Lưu ý</label><textarea id="rm_luu_y_bb" placeholder="...">${c.luu_y||''}</textarea></div>`;
   }
   document.getElementById('addRecordModal').classList.add('open');
 }
@@ -863,8 +908,17 @@ async function saveRecord() {
   if (isTV) { data = { ten_cong_cu:document.getElementById('rm_ten_cong_cu')?.value, ket_qua_test:document.getElementById('rm_ket_qua_test')?.value, bien_ban_tu_van:document.getElementById('rm_bien_ban')?.value, phan_hoi:document.getElementById('rm_phan_hoi')?.value, lich_hen:document.getElementById('rm_lich_hen')?.value, de_xuat:document.getElementById('rm_de_xuat')?.value }; }
   else { data = { muc_tieu:document.getElementById('rm_muc_tieu')?.value, phan_hoi_hs:document.getElementById('rm_phan_hoi_hs')?.value, tinh_hinh:document.getElementById('rm_tinh_hinh')?.value, noi_dung:document.getElementById('rm_noi_dung')?.value, van_de_moi:document.getElementById('rm_van_de_moi')?.value, de_xuat_cs:document.getElementById('rm_de_xuat_cs')?.value, luu_y:document.getElementById('rm_luu_y_bb')?.value }; }
   try {
-    await sbFetch('/rest/v1/records', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
-    closeModal('addRecordModal'); showToast(`✅ Đã thêm!`);
+    if (currentRecordId) {
+      // Edit existing
+      await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify({ content: data }) });
+      showToast('✅ Đã cập nhật phiếu!');
+    } else {
+      // Create new
+      await sbFetch('/rest/v1/records', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
+      showToast('✅ Đã thêm!');
+    }
+    closeModal('addRecordModal');
+    currentRecordId = null;
     if (isTV) loadRecords(currentProfileId,'tu_van','tvList','tvCount');
     else loadRecords(currentProfileId,'bien_ban','bbList','bbCount');
   } catch { showToast('❌ Lỗi'); }
