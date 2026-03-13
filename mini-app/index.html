@@ -217,7 +217,7 @@
     <div class="tab active" data-tab="dashboard" onclick="switchMainTab(this,'dashboard')">📊 Dashboard</div>
     <div class="tab" data-tab="profiles" onclick="switchMainTab(this,'profiles')">🍎 Hồ sơ</div>
     <div class="tab" data-tab="staff" onclick="switchMainTab(this,'staff')">👥 TĐ</div>
-    <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')">🏢 Cấu trúc</div>
+    <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')">🏢 Cơ cấu</div>
   </div>
 </div>
 
@@ -260,7 +260,7 @@
   <!-- CẤU TRÚC -->
   <div id="tab-structure" style="display:none;">
     <div class="section-header">
-      <div class="section-title">Khu vực → Nhóm → Tổ</div>
+      <div class="section-title">Cơ cấu tổ chức</div>
       <button class="add-record-btn" id="btnAddArea" onclick="openAddAreaModal()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;">+ Khu vực</button>
     </div>
     <div id="structureTree"><div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-sub">Đang tải...</div></div></div>
@@ -968,10 +968,17 @@ async function saveStructure() {
   else if (type==='group') { endpoint='/rest/v1/org_groups'; body={name, area_id:parentId, tjn_staff_code:mgr||null}; }
   else { endpoint='/rest/v1/teams'; body={name, group_id:parentId, gyjn_staff_code:mgr||null, bgyjn_staff_code:mgr2||null}; }
   try {
-    await sbFetch(endpoint, { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    const resp = await sbFetch(endpoint, { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    const created = await resp.json();
+    // Auto-add GYJN/BGYJN as team members
+    if (type==='team' && created?.[0]?.id) {
+      const tid = created[0].id;
+      if (mgr) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr}`, { method:'PATCH', body:JSON.stringify({team_id:tid}) });
+      if (mgr2) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr2}`, { method:'PATCH', body:JSON.stringify({team_id:tid}) });
+    }
     closeModal('structureModal');
     showToast('\u2705 \u0110\u00e3 t\u1ea1o ' + name);
-    loadStructure();
+    loadStructure(); loadStaff();
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 
@@ -1065,9 +1072,14 @@ async function updateStructure() {
   else { body.gyjn_staff_code = mgr||null; body.bgyjn_staff_code = mgr2||null; }
   try {
     await sbFetch(`/rest/v1/${tables[type]}?id=eq.${id}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    // Auto-add GYJN/BGYJN as team members
+    if (type==='team') {
+      if (mgr) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:id}) });
+      if (mgr2) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr2}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:id}) });
+    }
     closeModal('editStructModal');
     showToast('\u2705 \u0110\u00e3 c\u1eadp nh\u1eadt');
-    loadStructure();
+    loadStructure(); loadStaff();
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 async function deleteStructure() {
@@ -1161,9 +1173,9 @@ function applyPermissions() {
   const pos = getCurrentPosition();
   const lvl = getPosLevel(pos);
   const role = getCurrentRole();
-  // Tab Cấu trúc: Admin/YJYN/TJN can see
+  // Tab Cơ cấu: visible for all
   const structTab = document.querySelector('[data-tab="structure"]');
-  if (structTab) structTab.style.display = ['admin','yjyn','tjn'].includes(pos) ? '' : 'none';
+  if (structTab) structTab.style.display = '';
   // "+ Khu vực" button: Admin only
   const btnAddArea = document.getElementById('btnAddArea');
   if (btnAddArea) btnAddArea.style.display = pos==='admin' ? '' : 'none';
