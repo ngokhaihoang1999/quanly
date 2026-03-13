@@ -408,7 +408,7 @@ async function sbFetch(path, opts={}) {
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) { tg.ready(); tg.expand(); }
   await loadStaffInfo();
-  await Promise.all([loadProfiles(), loadDashboard()]);
+  await Promise.all([loadProfiles(), loadDashboard(), loadStaff()]);
 });
 
 async function loadStaffInfo() {
