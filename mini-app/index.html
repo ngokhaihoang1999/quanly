@@ -300,21 +300,48 @@
   </div>
 </div>
 
-<button class="fab" id="fabBtn" onclick="openAddProfileModal()">＋</button>
+<button class="fab" id="fabBtn" onclick="openCheckHapjaModal()">＋</button>
 
-<!-- MODAL: THÊM HỒ SƠ -->
-<div class="modal-overlay" id="addProfileModal"><div class="modal">
+<!-- MODAL: CHECK HAPJA -->
+<div class="modal-overlay" id="checkHapjaModal"><div class="modal" style="max-height:90vh;">
   <div class="modal-handle"></div>
-  <div class="modal-title">➕ Thêm Hồ sơ Trái quả</div>
-  <div style="display:flex;flex-direction:column;gap:14px;">
-    <div class="field-group"><label>Họ và tên *</label><input type="text" id="new_name" placeholder="Nhập họ tên..." /></div>
+  <div class="modal-title">🍎 Check Hapja - Bảng Thông Tin Về Trái</div>
+  <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:72vh;">
+    <div class="field-group"><label>* Tên NDD</label><input type="text" id="hj_ndd" placeholder="Tên NDD..." list="staffSuggestHj" /></div>
     <div class="grid-2">
-      <div class="field-group"><label>Năm sinh</label><input type="text" id="new_birth" placeholder="YYYY" /></div>
-      <div class="field-group"><label>Giới tính</label><select id="new_gender"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
+      <div class="field-group"><label>* Ngày Chakki</label><input type="date" id="hj_ngay" /></div>
+      <div class="field-group"><label>* Concept</label><input type="text" id="hj_concept" placeholder="..." /></div>
     </div>
-    <div class="field-group"><label>SĐT</label><input type="tel" id="new_phone" placeholder="0xxx..." /></div>
-    <button class="save-btn" onclick="addProfile()">✅ Tạo Hồ Sơ</button>
-    <button onclick="closeModal('addProfileModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
+    <div class="field-group"><label>1. Họ tên cá (Năm sinh / Giới tính)</label><input type="text" id="hj_hoten" placeholder="VD: Nguyễn Văn A (2000) / Nam" /></div>
+    <div class="field-group"><label>2. Hình thức Chakki</label>
+      <div class="chips" id="chips_hj_hinh_thuc"><div class="chip" onclick="toggleChip(this)">Online</div><div class="chip" onclick="toggleChip(this)">Offline</div><div class="chip" onclick="toggleChip(this)">Bạn</div><div class="chip" onclick="toggleChip(this)">Gia đình</div></div>
+      <label style="margin-top:6px;">Mức độ thân thiết</label>
+      <div class="chips" id="chips_hj_than_thiet"><div class="chip" onclick="toggleChip(this)">Cao</div><div class="chip" onclick="toggleChip(this)">Trung bình</div><div class="chip" onclick="toggleChip(this)">Thấp</div></div>
+    </div>
+    <div class="field-group"><label>3. Nơi ở</label><input type="text" id="hj_noi_o" placeholder="..." /></div>
+    <div class="field-group"><label>4. Nghề nghiệp / Nơi làm việc</label><input type="text" id="hj_nghe" placeholder="..." /></div>
+    <div class="field-group"><label>5. Tính cách</label>
+      <input type="text" id="hj_tinh_cach" placeholder="Theo công cụ: TSH, hình vẽ..." />
+      <div class="chips" id="chips_hj_ket_noi" style="margin-top:6px;"><div class="chip" onclick="toggleChip(this)">Phản hồi</div><div class="chip" onclick="toggleChip(this)">Không phản hồi</div></div>
+      <input type="text" id="hj_tg_ranh" placeholder="Thời gian rảnh..." style="margin-top:6px;" />
+    </div>
+    <div class="field-group"><label>6. Thần tính</label>
+      <div class="chips" id="chips_hj_than_tinh"><div class="chip" onclick="toggleChip(this)">Catholic</div><div class="chip" onclick="toggleChip(this)">Church</div><div class="chip" onclick="toggleChip(this)">Buddhism</div><div class="chip" onclick="toggleChip(this)">Tin thần linh</div><div class="chip" onclick="toggleChip(this)">Không tin</div></div>
+    </div>
+    <div class="field-group"><label>7. Hoàn cảnh</label>
+      <input type="text" id="hj_hoan_canh" placeholder="Hiện tại..." />
+      <input type="text" id="hj_hoc_ki" placeholder="Kỉ nghỉ/Học kì..." style="margin-top:6px;" />
+    </div>
+    <div class="field-group"><label>8. Nỗi lo lắng / Sự quan tâm</label>
+      <textarea id="hj_noi_lo" placeholder="Nỗi lo, sở thích, kênh YouTube..." style="min-height:60px;"></textarea>
+    </div>
+    <div class="field-group"><label>9. Số điện thoại</label><input type="tel" id="hj_sdt" placeholder="0xxx..." /></div>
+    <div class="field-group"><label>❌ Lý do bị loại (nếu có)</label>
+      <div class="chips" id="chips_hj_loai"><div class="chip" onclick="toggleChip(this)">Quân đội</div><div class="chip" onclick="toggleChip(this)">Hải ngoại</div><div class="chip" onclick="toggleChip(this)">Sinh con</div><div class="chip" onclick="toggleChip(this)">LGBT</div><div class="chip" onclick="toggleChip(this)">Ở chung bạn trai</div><div class="chip" onclick="toggleChip(this)">Vấn đề tâm lí</div></div>
+    </div>
+    <datalist id="staffSuggestHj"></datalist>
+    <button class="save-btn" onclick="saveCheckHapja()">🍎 Gửi Check Hapja</button>
+    <button onclick="closeModal('checkHapjaModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
 
@@ -613,23 +640,56 @@ function switchMainTab(el, tab) {
   ['tab-dashboard','tab-profiles','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+tab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
-  document.getElementById('fabBtn').style.display = tab==='profiles'?'flex':'none';
+  document.getElementById('fabBtn').style.display = (tab==='dashboard'||tab==='profiles') ? 'flex' : 'none';
   if (tab==='staff') loadStaff();
   if (tab==='structure') loadStructure();
   if (tab==='dashboard') loadDashboard();
 }
 
-// ============ ADD/DELETE PROFILE ============
-function openAddProfileModal() { document.getElementById('addProfileModal').classList.add('open'); }
-async function addProfile() {
-  const name = document.getElementById('new_name').value.trim();
-  if (!name) { showToast('⚠️ Nhập họ tên'); return; }
+// ============ CHECK HAPJA ============
+function canCreateHapja(pos) { return ['admin','yjyn','tjn','gyjn','bgyjn','ggn_jondo','ggn_chakki'].includes(pos); }
+function openCheckHapjaModal() {
+  const pos = getCurrentPosition();
+  if (!canCreateHapja(pos)) { showToast('\u26d4 Ch\u1ee9c v\u1ee5 kh\u00f4ng \u0111\u01b0\u1ee3c t\u1ea1o Hapja'); return; }
+  document.getElementById('checkHapjaModal').classList.add('open');
+  if (allStaff.length) {
+    const dl = document.getElementById('staffSuggestHj');
+    if (dl) dl.innerHTML = allStaff.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
+  }
+}
+async function saveCheckHapja() {
+  const fullName = document.getElementById('hj_hoten')?.value?.trim();
+  if (!fullName) { showToast('\u26a0\ufe0f Nh\u1eadp h\u1ecd t\u00ean tr\u00e1i (m\u1ee5c 1)'); return; }
+  const rejected = getChipValues('chips_hj_loai');
+  const data = {
+    full_name: fullName,
+    ndd_name: document.getElementById('hj_ndd')?.value || '',
+    ngay_chakki: document.getElementById('hj_ngay')?.value || '',
+    concept: document.getElementById('hj_concept')?.value || '',
+    hinh_thuc: getChipValues('chips_hj_hinh_thuc'),
+    than_thiet: getChipValues('chips_hj_than_thiet'),
+    noi_o: document.getElementById('hj_noi_o')?.value || '',
+    nghe_nghiep: document.getElementById('hj_nghe')?.value || '',
+    tinh_cach: document.getElementById('hj_tinh_cach')?.value || '',
+    ket_noi: getChipValues('chips_hj_ket_noi'),
+    tg_ranh: document.getElementById('hj_tg_ranh')?.value || '',
+    than_tinh: getChipValues('chips_hj_than_tinh'),
+    hoan_canh: document.getElementById('hj_hoan_canh')?.value || '',
+    hoc_ki: document.getElementById('hj_hoc_ki')?.value || '',
+    noi_lo: document.getElementById('hj_noi_lo')?.value || '',
+    sdt: document.getElementById('hj_sdt')?.value || '',
+    ly_do_loai: rejected,
+    status: rejected.length > 0 ? 'rejected' : 'pending',
+    created_by: myStaff?.staff_code || 'unknown'
+  };
   try {
-    await sbFetch('/rest/v1/profiles', { method: 'POST', headers: {'Prefer':'return=representation'}, body: JSON.stringify({ full_name: name, phone_number: document.getElementById('new_phone').value.trim()||null, birth_year: document.getElementById('new_birth').value.trim()||null, gender: document.getElementById('new_gender').value||null }) });
-    closeModal('addProfileModal'); showToast('✅ Đã tạo hồ sơ!');
-    ['new_name','new_phone','new_birth'].forEach(id=>document.getElementById(id).value='');
-    await loadProfiles();
-  } catch { showToast('❌ Lỗi'); }
+    await sbFetch('/rest/v1/check_hapja', { method: 'POST', headers: {'Prefer':'return=representation'}, body: JSON.stringify(data) });
+    closeModal('checkHapjaModal');
+    showToast(rejected.length > 0 ? '\u274c Tr\u00e1i b\u1ecb lo\u1ea1i' : '\u2705 \u0110\u00e3 g\u1eedi Check Hapja!');
+    ['hj_ndd','hj_ngay','hj_concept','hj_hoten','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh','chips_hj_loai'].forEach(clearChips);
+    loadDashboard();
+  } catch(e) { showToast('\u274c L\u1ed7i khi g\u1eedi'); console.error(e); }
 }
 async function deleteProfile() {
   if (!currentProfileId || !confirm('Xác nhận xoá hồ sơ?')) return;
@@ -791,9 +851,10 @@ function applyPermissions() {
   // Tab C\u1ea5u tr\u00fac: ch\u1ec9 Admin/YJYN
   const structTab = document.querySelector('[data-tab="structure"]');
   if (structTab) structTab.style.display = (pos==='admin'||pos==='yjyn') ? '' : 'none';
-  // FAB add profile
+  // FAB: only for those who can create Hapja
   const fabBtn = document.getElementById('fabBtn');
-  if (fabBtn) fabBtn.style.display = (lvl >= 2 || role === 'ndd') ? 'flex' : 'none';
+  const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
+  if (fabBtn) fabBtn.style.display = (canCreateHapja(pos) && (activeTab==='dashboard'||activeTab==='profiles')) ? 'flex' : 'none';
 }
 </script>
 </body>
