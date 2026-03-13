@@ -108,13 +108,7 @@ async function handleGroupChat(update: any) {
       
       // Send welcome message
       await sendText(chatId,
-        `🍎 *Bot Checking Jondo đã vào group!*\n\n` +
-        `Group này đã được đăng ký làm *Group Trái quả* (cấp: Tư vấn).\n\n` +
-        `📌 Các lệnh trong group:\n` +
-        `• \`/link_profile [tên trái]\` — Gắn hồ sơ cho group\n` +
-        `• \`/assign_role [mã_TĐ] [ndd/tvv/gvbb/la]\` — Gắn vai trò\n` +
-        `• \`/set_level [tu_van/bb]\` — Chuyển cấp độ\n` +
-        `• \`/group_info\` — Xem thông tin group`
+        `🍎 *Bot Checking Jondo đã vào group!*\n\nGroup này đã được đăng ký làm Group Trái quả.\nĐể quản lý, gõ lệnh: /menu`
       );
 
       // Fetch unlinked profiles (approved check_hapja/profiles without a group)
