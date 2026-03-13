@@ -19,16 +19,27 @@
       --fab-shadow: rgba(124,106,247,0.5);
     }
     [data-theme="light"] {
-      --bg: #f3f4f6; --surface: #ffffff; --surface2: #f0f2f5; --border: #d1d5db;
-      --accent: #217346; --accent2: #2e8b57; --green: #16a34a; --red: #dc2626; --yellow: #d97706;
-      --text: #1f2937; --text2: #6b7280; --text3: #9ca3af;
-      --header-bg: linear-gradient(135deg, #217346 0%, #2e8b57 100%);
-      --header-border: rgba(33,115,70,0.3);
-      --badge-bg: rgba(255,255,255,0.25); --badge-border: rgba(255,255,255,0.4); --badge-text: #fff;
-      --chip-bg: rgba(33,115,70,0.08); --chip-border: rgba(33,115,70,0.25); --chip-sel-bg: #217346;
-      --modal-bg: rgba(0,0,0,0.5);
-      --fab-shadow: rgba(33,115,70,0.5);
+      --bg: #f8f9fa; --surface: #ffffff; --surface2: #eef1f5; --border: #dde1e7;
+      --accent: #1a73e8; --accent2: #4a90d9; --green: #0d9e4f; --red: #d93025; --yellow: #e8710a;
+      --text: #202124; --text2: #5f6368; --text3: #9aa0a6;
+      --header-bg: linear-gradient(135deg, #1a73e8 0%, #4a90d9 100%);
+      --header-border: rgba(26,115,232,0.3);
+      --badge-bg: rgba(255,255,255,0.2); --badge-border: rgba(255,255,255,0.35); --badge-text: #fff;
+      --chip-bg: rgba(26,115,232,0.06); --chip-border: rgba(26,115,232,0.2); --chip-sel-bg: #1a73e8;
+      --modal-bg: rgba(0,0,0,0.45);
+      --fab-shadow: rgba(26,115,232,0.45);
     }
+    [data-theme="light"] .logo-text h1,
+    [data-theme="light"] .logo-text span { color: #fff; }
+    [data-theme="light"] .tab { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); }
+    [data-theme="light"] .tab.active { background: #fff; color: var(--accent); border-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    [data-theme="light"] .profile-card, [data-theme="light"] .staff-card, [data-theme="light"] .dash-stat {
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    [data-theme="light"] .view-as-bar { background: rgba(217,48,37,0.08); border-color: rgba(217,48,37,0.2); }
+    [data-theme="light"] .view-as-bar label { color: #d93025; }
+    [data-theme="light"] .view-as-bar select { background: #fff; border-color: #dde1e7; color: var(--text); }
+    [data-theme="light"] .view-as-bar button { border-color: rgba(217,48,37,0.3); color: #d93025; }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overscroll-behavior: none; transition: background 0.3s, color 0.3s; }
     .header { background: var(--header-bg); padding: 16px 20px 20px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--header-border); transition: background 0.3s; }
@@ -142,13 +153,20 @@
     .dash-dot.bb { background: var(--green); }
     .dash-dot.pending { background: var(--accent); animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-    /* Structure tree */
-    .tree-item { padding: 10px 14px; margin-bottom: 4px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); }
-    .tree-item.area { border-left: 3px solid var(--accent); }
-    .tree-item.group { margin-left: 16px; border-left: 3px solid var(--green); }
-    .tree-item.team { margin-left: 32px; border-left: 3px solid var(--yellow); }
-    .tree-label { font-size: 13px; font-weight: 600; }
-    .tree-meta { font-size: 11px; color: var(--text3); }
+    /* Structure tree - chart style with connectors */
+    .tree-container { position: relative; }
+    .tree-node { position: relative; padding: 8px 12px; margin-bottom: 2px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
+    .tree-node:hover { border-color: var(--accent); }
+    .tree-node.area { border-left: 4px solid var(--accent); margin-left: 0; }
+    .tree-node.group { border-left: 4px solid var(--green); margin-left: 28px; }
+    .tree-node.team { border-left: 4px solid var(--yellow); margin-left: 56px; }
+    .tree-node.group::before, .tree-node.team::before { content: ''; position: absolute; left: -20px; top: 50%; width: 16px; height: 1px; background: var(--border); }
+    .tree-node.group::after, .tree-node.team::after { content: ''; position: absolute; left: -20px; top: -2px; width: 1px; height: calc(50% + 2px); background: var(--border); }
+    .tree-label { font-size: 13px; font-weight: 600; flex: 1; }
+    .tree-meta { font-size: 11px; color: var(--text3); text-align: right; }
+    .tree-manager { font-size: 10px; color: var(--accent2); font-weight: 500; }
+    .tree-add { cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
+    .tree-add:hover { opacity: 1; }
     /* Cover page roles */
     .cover-role-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .cover-role-label { font-size: 12px; font-weight: 600; color: var(--accent2); min-width: 50px; }
@@ -241,7 +259,10 @@
 
   <!-- CẤU TRÚC -->
   <div id="tab-structure" style="display:none;">
-    <div class="section-header"><div class="section-title">Khu vực → Nhóm → Tổ</div></div>
+    <div class="section-header">
+      <div class="section-title">Khu vực → Nhóm → Tổ</div>
+      <button class="add-record-btn" id="btnAddArea" onclick="openAddAreaModal()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;">+ Khu vực</button>
+    </div>
     <div id="structureTree"><div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-sub">Đang tải...</div></div></div>
   </div>
 
@@ -393,6 +414,21 @@
     </div>
     <button class="save-btn" onclick="addStaff()">✅ Đăng ký TĐ</button>
     <button onclick="closeModal('addStaffModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
+  </div>
+</div></div>
+
+<!-- MODAL: CẤU TRÚC -->
+<div class="modal-overlay" id="structureModal"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="structureModalTitle">🏢 Thêm</div>
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    <div class="field-group"><label>Tên *</label><input type="text" id="struct_name" placeholder="Nhập tên..." /></div>
+    <div class="field-group" id="struct_parent_wrap" style="display:none;"><label id="struct_parent_label">Thuộc</label><select id="struct_parent" style="padding:10px 12px;"><option value="">Chọn...</option></select></div>
+    <div class="field-group" id="struct_manager_wrap"><label id="struct_manager_label">Chỉ định YJYN</label><select id="struct_manager" style="padding:10px 12px;"><option value="">Chọn TĐ...</option></select></div>
+    <div class="field-group" id="struct_manager2_wrap" style="display:none;"><label id="struct_manager2_label">BGYJN (Tổ phó)</label><select id="struct_manager2" style="padding:10px 12px;"><option value="">Chọn TĐ...</option></select></div>
+    <input type="hidden" id="struct_type" value="area" />
+    <button class="save-btn" onclick="saveStructure()">✅ Tạo</button>
+    <button onclick="closeModal('structureModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
 
@@ -808,24 +844,100 @@ async function addStaff() {
 }
 
 // ============ STRUCTURE ============
+let structureData = [];
 async function loadStructure() {
   try {
     const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*))&order=name');
-    const areas = await res.json();
+    structureData = await res.json();
     const el = document.getElementById('structureTree');
-    if (!areas.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">Chưa có cấu trúc</div><div class="empty-sub">Tạo qua Bot: /create_area</div></div>'; return; }
-    let html = '';
-    areas.forEach(a => {
-      html += `<div class="tree-item area"><div class="tree-label">🏢 ${a.name}</div><div class="tree-meta">Khu vực</div></div>`;
+    const pos = getCurrentPosition();
+    const myCode = myStaff?.staff_code;
+    const isAdmin = pos === 'admin';
+    if (!structureData.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udfe2</div><div class="empty-title">Ch\u01b0a c\u00f3</div><div class="empty-sub">B\u1ea5m + Khu v\u1ef1c</div></div>'; return; }
+    const sMap = {}; allStaff.forEach(s => sMap[s.staff_code] = s.full_name);
+    let html = '<div class="tree-container">';
+    structureData.forEach(a => {
+      const aY = a.yjyn_staff_code ? '\ud83d\udc51 '+(sMap[a.yjyn_staff_code]||a.yjyn_staff_code) : '';
+      const canArea = isAdmin || (pos==='yjyn' && a.yjyn_staff_code===myCode);
+      html += `<div class="tree-node area"><div><div class="tree-label">\ud83c\udfe2 ${a.name}</div>${aY?`<div class="tree-manager">${aY}</div>`:''}</div><div class="tree-meta">Khu v\u1ef1c</div></div>`;
       (a.org_groups||[]).forEach(g => {
-        html += `<div class="tree-item group"><div class="tree-label">👥 ${g.name}</div><div class="tree-meta">Nhóm · ${(g.teams||[]).length} tổ</div></div>`;
+        const gT = g.tjn_staff_code ? '\ud83d\udc51 '+(sMap[g.tjn_staff_code]||g.tjn_staff_code) : '';
+        const canGrp = canArea || (pos==='tjn' && g.tjn_staff_code===myCode);
+        html += `<div class="tree-node group"><div><div class="tree-label">\ud83d\udc65 ${g.name}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
         (g.teams||[]).forEach(t => {
-          html += `<div class="tree-item team"><div class="tree-label">📌 ${t.name}</div><div class="tree-meta">Tổ</div></div>`;
+          const tM = [t.gyjn_staff_code,t.bgyjn_staff_code].filter(Boolean).map(c=>sMap[c]||c).join(', ');
+          html += `<div class="tree-node team"><div><div class="tree-label">\ud83d\udccc ${t.name}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">T\u1ed5</div></div>`;
         });
+        if (canGrp) html += `<div class="tree-node team tree-add" onclick="openAddTeamModal('${g.id}')"><div class="tree-label">+ T\u1ed5</div></div>`;
       });
+      if (canArea) html += `<div class="tree-node group tree-add" onclick="openAddGroupModal('${a.id}')"><div class="tree-label">+ Nh\u00f3m</div></div>`;
     });
+    html += '</div>';
     el.innerHTML = html;
-  } catch { document.getElementById('structureTree').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải</div></div>'; }
+  } catch(e) { console.error(e); document.getElementById('structureTree').innerHTML = '<div class="empty-state">L\u1ed7i t\u1ea3i</div>'; }
+}
+function populateStaffSelect(selId, ph) {
+  const s = document.getElementById(selId);
+  if(s) s.innerHTML = `<option value="">${ph}</option>` + allStaff.map(x=>`<option value="${x.staff_code}">${x.full_name} (${x.staff_code})</option>`).join('');
+}
+function openAddAreaModal() {
+  document.getElementById('structureModalTitle').textContent = '\ud83c\udfe2 Th\u00eam Khu v\u1ef1c';
+  document.getElementById('struct_name').value = '';
+  document.getElementById('struct_type').value = 'area';
+  document.getElementById('struct_parent_wrap').style.display = 'none';
+  document.getElementById('struct_manager_wrap').style.display = 'block';
+  document.getElementById('struct_manager_label').textContent = 'Ch\u1ec9 \u0111\u1ecbnh YJYN';
+  populateStaffSelect('struct_manager','Ch\u1ecdn YJYN...');
+  document.getElementById('struct_manager2_wrap').style.display = 'none';
+  document.getElementById('structureModal').classList.add('open');
+}
+function openAddGroupModal(areaId) {
+  document.getElementById('structureModalTitle').textContent = '\ud83d\udc65 Th\u00eam Nh\u00f3m';
+  document.getElementById('struct_name').value = '';
+  document.getElementById('struct_type').value = 'group';
+  document.getElementById('struct_parent_wrap').style.display = 'block';
+  document.getElementById('struct_parent_label').textContent = 'Thu\u1ed9c Khu v\u1ef1c';
+  const sel = document.getElementById('struct_parent');
+  sel.innerHTML = structureData.map(a => `<option value="${a.id}" ${a.id===areaId?'selected':''}>${a.name}</option>`).join('');
+  document.getElementById('struct_manager_wrap').style.display = 'block';
+  document.getElementById('struct_manager_label').textContent = 'Ch\u1ec9 \u0111\u1ecbnh TJN';
+  populateStaffSelect('struct_manager','Ch\u1ecdn TJN...');
+  document.getElementById('struct_manager2_wrap').style.display = 'none';
+  document.getElementById('structureModal').classList.add('open');
+}
+function openAddTeamModal(groupId) {
+  document.getElementById('structureModalTitle').textContent = '\ud83d\udccc Th\u00eam T\u1ed5';
+  document.getElementById('struct_name').value = '';
+  document.getElementById('struct_type').value = 'team';
+  document.getElementById('struct_parent_wrap').style.display = 'block';
+  document.getElementById('struct_parent_label').textContent = 'Thu\u1ed9c Nh\u00f3m';
+  const allGroups = structureData.flatMap(a => (a.org_groups||[]).map(g => ({...g, area: a.name})));
+  const sel = document.getElementById('struct_parent');
+  sel.innerHTML = allGroups.map(g => `<option value="${g.id}" ${g.id===groupId?'selected':''}>${g.name} (${g.area})</option>`).join('');
+  document.getElementById('struct_manager_wrap').style.display = 'block';
+  document.getElementById('struct_manager_label').textContent = 'GYJN (T\u1ed5 tr\u01b0\u1edfng)';
+  populateStaffSelect('struct_manager','Ch\u1ecdn GYJN...');
+  document.getElementById('struct_manager2_wrap').style.display = 'block';
+  populateStaffSelect('struct_manager2','Ch\u1ecdn BGYJN...');
+  document.getElementById('structureModal').classList.add('open');
+}
+async function saveStructure() {
+  const name = document.getElementById('struct_name').value.trim();
+  if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
+  const type = document.getElementById('struct_type').value;
+  const parentId = document.getElementById('struct_parent').value;
+  const mgr = document.getElementById('struct_manager')?.value;
+  const mgr2 = document.getElementById('struct_manager2')?.value;
+  let endpoint, body;
+  if (type==='area') { endpoint='/rest/v1/areas'; body={name, yjyn_staff_code:mgr||null}; }
+  else if (type==='group') { endpoint='/rest/v1/org_groups'; body={name, area_id:parentId, tjn_staff_code:mgr||null}; }
+  else { endpoint='/rest/v1/teams'; body={name, group_id:parentId, gyjn_staff_code:mgr||null, bgyjn_staff_code:mgr2||null}; }
+  try {
+    await sbFetch(endpoint, { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    closeModal('structureModal');
+    showToast('\u2705 \u0110\u00e3 t\u1ea1o ' + name);
+    loadStructure();
+  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============
