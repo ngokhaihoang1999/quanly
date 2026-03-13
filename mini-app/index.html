@@ -440,6 +440,15 @@
     <div class="field-group"><label>Tên</label><input type="text" id="edit_struct_name" /></div>
     <div class="field-group" id="edit_mgr1_wrap"><label id="edit_mgr1_label">Quản lý</label><select id="edit_mgr1" style="padding:10px 12px;"><option value="">Không</option></select></div>
     <div class="field-group" id="edit_mgr2_wrap" style="display:none;"><label id="edit_mgr2_label">BGYJN</label><select id="edit_mgr2" style="padding:10px 12px;"><option value="">Không</option></select></div>
+    <!-- Members section (only for teams) -->
+    <div id="edit_members_wrap" style="display:none;">
+      <label style="margin-bottom:8px;">👥 Thành viên</label>
+      <div id="edit_members_list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <select id="edit_add_member" style="flex:1;padding:8px 10px;font-size:13px;"><option value="">Chọn TĐ để thêm...</option></select>
+        <button onclick="addMemberToTeam()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Thêm</button>
+      </div>
+    </div>
     <input type="hidden" id="edit_struct_id" />
     <input type="hidden" id="edit_struct_type" />
     <button class="save-btn" onclick="updateStructure()">💾 Lưu thay đổi</button>
@@ -863,7 +872,7 @@ async function addStaff() {
 let structureData = [];
 async function loadStructure() {
   try {
-    const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*))&order=name');
+    const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff(*)))&order=name');
     structureData = await res.json();
     const el = document.getElementById('structureTree');
     const pos = getCurrentPosition();
@@ -884,9 +893,15 @@ async function loadStructure() {
         html += `<div class="tree-node group"${gClick}><div><div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?' \u270f\ufe0f':''}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
         (g.teams||[]).forEach(t => {
           const tM = [t.gyjn_staff_code,t.bgyjn_staff_code].filter(Boolean).map(c=>sMap[c]||c).join(', ');
+          const members = t.staff||[];
           const canTeam = canGrp || (['gyjn','bgyjn'].includes(pos) && (t.gyjn_staff_code===myCode||t.bgyjn_staff_code===myCode));
           const tClick = canTeam ? ` style="cursor:pointer" onclick="openEditStructModal('team','${t.id}')"` : '';
-          html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">T\u1ed5</div></div>`;
+          html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">${members.length} TV</div></div>`;
+          if (members.length) {
+            members.forEach(m => {
+              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">\ud83d\udc64 ${m.full_name}</span> <span style="color:var(--text3);font-size:10px;">${m.staff_code} \u00b7 ${getPositionName(m.position)}</span></div>`;
+            });
+          }
         });
         if (canGrp) html += `<div class="tree-node team tree-add" onclick="openAddTeamModal('${g.id}')"><div class="tree-label">+ T\u1ed5</div></div>`;
       });
@@ -1002,7 +1017,39 @@ function openEditStructModal(type, id) {
     document.getElementById('edit_mgr2').value = item.bgyjn_staff_code||'';
   }
   document.getElementById('edit_mgr1_wrap').style.display = 'block';
+  // Members section (only for teams)
+  const membersWrap = document.getElementById('edit_members_wrap');
+  if (type==='team') {
+    membersWrap.style.display = 'block';
+    renderTeamMembers(item);
+  } else {
+    membersWrap.style.display = 'none';
+  }
   document.getElementById('editStructModal').classList.add('open');
+}
+function renderTeamMembers(teamItem) {
+  const members = teamItem.staff||[];
+  const listEl = document.getElementById('edit_members_list');
+  if (!members.length) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;">Ch\u01b0a c\u00f3 th\u00e0nh vi\u00ean</div>';
+  } else {
+    listEl.innerHTML = members.map(m => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${(m.full_name||'?')[0]}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;">${m.full_name}</div>
+          <div style="font-size:10px;color:var(--text3);">${m.staff_code} \u00b7 ${getPositionName(m.position)}</div>
+        </div>
+        <button onclick="removeMemberFromTeam('${m.staff_code}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;" title="G\u1ee1 kh\u1ecfi t\u1ed5">\u2716</button>
+      </div>
+    `).join('');
+  }
+  // Populate add-member dropdown with staff NOT already in this team
+  const teamId = document.getElementById('edit_struct_id').value;
+  const memberCodes = members.map(m => m.staff_code);
+  const addSel = document.getElementById('edit_add_member');
+  addSel.innerHTML = '<option value="">Ch\u1ecdn T\u0110 \u0111\u1ec3 th\u00eam...</option>' +
+    allStaff.filter(s => !memberCodes.includes(s.staff_code)).map(s => `<option value="${s.staff_code}">${s.full_name} (${s.staff_code})</option>`).join('');
 }
 async function updateStructure() {
   const id = document.getElementById('edit_struct_id').value;
@@ -1035,6 +1082,34 @@ async function deleteStructure() {
     closeModal('editStructModal');
     showToast('\u2705 \u0110\u00e3 x\u00f3a ' + name);
     loadStructure();
+  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+}
+
+// ============ TEAM MEMBERS ============
+async function addMemberToTeam() {
+  const code = document.getElementById('edit_add_member').value;
+  if (!code) { showToast('\u26a0\ufe0f Ch\u1ecdn T\u0110'); return; }
+  const teamId = document.getElementById('edit_struct_id').value;
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${code}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify({team_id:teamId}) });
+    showToast('\u2705 \u0110\u00e3 th\u00eam');
+    // Reload data and refresh member list
+    await loadStructure();
+    const item = findStructItem('team', teamId);
+    if (item) renderTeamMembers(item);
+    await loadStaff();
+  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+}
+async function removeMemberFromTeam(staffCode) {
+  if (!confirm('G\u1ee1 th\u00e0nh vi\u00ean n\u00e0y kh\u1ecfi t\u1ed5?')) return;
+  const teamId = document.getElementById('edit_struct_id').value;
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify({team_id:null}) });
+    showToast('\u2705 \u0110\u00e3 g\u1ee1');
+    await loadStructure();
+    const item = findStructItem('team', teamId);
+    if (item) renderTeamMembers(item);
+    await loadStaff();
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 
