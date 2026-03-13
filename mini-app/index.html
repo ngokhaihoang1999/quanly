@@ -956,23 +956,51 @@ async function saveStructure() {
   const parentId = document.getElementById('struct_parent').value;
   const mgr = document.getElementById('struct_manager')?.value;
   const mgr2 = document.getElementById('struct_manager2')?.value;
+
+  // Check duplicate name
+  if (type === 'area' && structureData.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+    showToast('\u26a0\ufe0f Khu v\u1ef1c "' + name + '" \u0111\u00e3 t\u1ed3n t\u1ea1i'); return;
+  }
+  if (type === 'group') {
+    const parent = structureData.find(a => a.id === parentId);
+    if (parent && (parent.org_groups||[]).some(g => g.name.toLowerCase() === name.toLowerCase())) {
+      showToast('\u26a0\ufe0f Nh\u00f3m "' + name + '" \u0111\u00e3 t\u1ed3n t\u1ea1i'); return;
+    }
+  }
+  if (type === 'team') {
+    for (const a of structureData) {
+      const parent = (a.org_groups||[]).find(g => g.id === parentId);
+      if (parent && (parent.teams||[]).some(t => t.name.toLowerCase() === name.toLowerCase())) {
+        showToast('\u26a0\ufe0f T\u1ed5 "' + name + '" \u0111\u00e3 t\u1ed3n t\u1ea1i'); return;
+      }
+    }
+  }
+
   let endpoint, body;
   if (type==='area') { endpoint='/rest/v1/areas'; body={name, yjyn_staff_code:mgr||null}; }
   else if (type==='group') { endpoint='/rest/v1/org_groups'; body={name, area_id:parentId, tjn_staff_code:mgr||null}; }
   else { endpoint='/rest/v1/teams'; body={name, group_id:parentId, gyjn_staff_code:mgr||null, bgyjn_staff_code:mgr2||null}; }
+  
+  const saveBtn = document.querySelector('#structureModal .save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '\u23f3 \u0110ang t\u1ea1o...'; }
+
   try {
     const resp = await sbFetch(endpoint, { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
     const created = await resp.json();
     // Auto-add GYJN/BGYJN as team members
     if (type==='team' && created?.[0]?.id) {
       const tid = created[0].id;
-      if (mgr) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr}`, { method:'PATCH', body:JSON.stringify({team_id:tid}) });
-      if (mgr2) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr2}`, { method:'PATCH', body:JSON.stringify({team_id:tid}) });
+      if (mgr) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:tid}) });
+      if (mgr2) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr2}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:tid}) });
     }
     closeModal('structureModal');
     showToast('\u2705 \u0110\u00e3 t\u1ea1o ' + name);
     loadStructure(); loadStaff();
-  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+  } catch(e) { 
+    showToast('\u274c L\u1ed7i'); console.error(e); 
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '\ud83d\udcbe L\u01b0u'; }
+  }
 }
 
 // ============ EDIT / DELETE STRUCTURE ============
