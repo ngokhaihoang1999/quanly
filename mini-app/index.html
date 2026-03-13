@@ -864,7 +864,7 @@ async function addStaff() {
 let structureData = [];
 async function loadStructure() {
   try {
-    const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff(*)))&order=name');
+    const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
     structureData = await res.json();
     const el = document.getElementById('structureTree');
     const pos = getCurrentPosition();
