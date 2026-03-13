@@ -1,4 +1,4 @@
-﻿const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
 const tg = window.Telegram?.WebApp;
 
@@ -349,8 +349,10 @@ async function loadRecords(profileId, type, listElId, countElId) {
     if (!records.length) { listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>'; return; }
     listEl.innerHTML = records.map((r,i) => {
       const c = r.content||{};
-      const title = c.ten_cong_cu || c.muc_tieu || 'Phiếu #'+(i+1);
-      const preview = c.bien_ban_tu_van || c.noi_dung || '';
+      const title = c.lan_thu ? `Lần thứ ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` :
+                    c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
+                    c.ten_cong_cu || 'Phiếu #'+(i+1);
+      const preview = c.van_de || c.noi_dung || c.phan_hoi || '';
       const date = new Date(r.created_at).toLocaleDateString('vi-VN');
       return `<div class="record-item" onclick="openRecord('${r.id}','${type}')" style="cursor:pointer;">
         <div class="record-number">${i+1}</div>
@@ -470,33 +472,57 @@ function openAddRecordModal(type, existingContent = null) {
   if (!existingContent) currentRecordId = null; // new record
   const isTV = type==='tu_van';
   document.getElementById('recordModalTitle').textContent = existingContent
-    ? (isTV ? '✏️ Chỉnh sửa Báo cáo Tư vấn' : '✏️ Chỉnh sửa Biên bản BB')
-    : (isTV ? '💬 Báo cáo Tư vấn' : '📝 Biên bản BB');
+    ? (isTV ? '✏️ Chỉnh sửa Báo cáo Tư vấn' : '✏️ Chỉnh sửa Báo cáo BB')
+    : (isTV ? '💬 Báo cáo Tư vấn' : '📝 Báo cáo BB');
   const body = document.getElementById('recordModalBody');
   const c = existingContent || {};
   if (isTV) {
-    body.innerHTML = `<div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" placeholder="DISC, Enneagram..." value="${c.ten_cong_cu||''}"/></div>
-      <div class="field-group"><label>Kết quả test</label><textarea id="rm_ket_qua_test" placeholder="...">${c.ket_qua_test||''}</textarea></div>
-      <div class="field-group"><label>Biên bản / Kết quả tư vấn</label><textarea id="rm_bien_ban" style="min-height:100px;" placeholder="...">${c.bien_ban_tu_van||''}</textarea></div>
-      <div class="field-group"><label>Phản hồi của trái</label><textarea id="rm_phan_hoi" placeholder="...">${c.phan_hoi||''}</textarea></div>
-      <div class="field-group"><label>Lịch hẹn tư vấn lần 2</label><input type="text" id="rm_lich_hen" placeholder="DD/MM/YYYY" value="${c.lich_hen||''}"/></div>
-      <div class="field-group"><label>Đề xuất</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
+    body.innerHTML = `
+      <div class="field-group"><label>Lần thứ</label><input type="text" id="rm_lan_thu" placeholder="1, 2, 3..." value="${c.lan_thu||''}"/></div>
+      <div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" placeholder="DISC, Enneagram, MBTI..." value="${c.ten_cong_cu||''}"/></div>
+      <div class="field-group"><label>Kết quả test công cụ</label><textarea id="rm_ket_qua_test" placeholder="...">${c.ket_qua_test||''}</textarea></div>
+      <div class="field-group"><label>Vấn đề / Nhu cầu / Thông tin khai thác được</label><textarea id="rm_van_de" style="min-height:100px;" placeholder="...">${c.van_de||''}</textarea></div>
+      <div class="field-group"><label>Phản hồi / Cảm nhận của trái sau tư vấn</label><textarea id="rm_phan_hoi" placeholder="...">${c.phan_hoi||''}</textarea></div>
+      <div class="field-group"><label>Điểm hái trái</label><textarea id="rm_diem_hai" placeholder="...">${c.diem_hai||''}</textarea></div>
+      <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
   } else {
-    body.innerHTML = `<div class="field-group"><label>1. Mục tiêu buổi học</label><textarea id="rm_muc_tieu" placeholder="...">${c.muc_tieu||''}</textarea></div>
-      <div class="field-group"><label>2. Phản hồi HS</label><textarea id="rm_phan_hoi_hs" placeholder="...">${c.phan_hoi_hs||''}</textarea></div>
-      <div class="field-group"><label>3. Tình hình hiện tại</label><textarea id="rm_tinh_hinh" placeholder="...">${c.tinh_hinh||''}</textarea></div>
-      <div class="field-group"><label>4. Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung||''}</textarea></div>
-      <div class="field-group"><label>5. Vấn đề mới</label><textarea id="rm_van_de_moi" placeholder="...">${c.van_de_moi||''}</textarea></div>
-      <div class="field-group"><label>6. Đề xuất</label><textarea id="rm_de_xuat_cs" placeholder="...">${c.de_xuat_cs||''}</textarea></div>
-      <div class="field-group"><label>7. Lưu ý</label><textarea id="rm_luu_y_bb" placeholder="...">${c.luu_y||''}</textarea></div>`;
+    body.innerHTML = `
+      <div class="field-group"><label>Buổi thứ</label><input type="text" id="rm_buoi_thu" placeholder="1, 2, 3..." value="${c.buoi_thu||''}"/></div>
+      <div class="field-group"><label>Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung||''}</textarea></div>
+      <div class="field-group"><label>Phản ứng của HS trong và sau buổi học</label><textarea id="rm_phan_ung" placeholder="...">${c.phan_ung||''}</textarea></div>
+      <div class="field-group"><label>Khai thác mới về HS</label><textarea id="rm_khai_thac" placeholder="...">${c.khai_thac||''}</textarea></div>
+      <div class="field-group"><label>Tương tác với HS đáng chú ý</label><textarea id="rm_tuong_tac" placeholder="...">${c.tuong_tac||''}</textarea></div>
+      <div class="field-group"><label>Đề xuất hướng chăm sóc tiếp theo</label><textarea id="rm_de_xuat_cs" placeholder="...">${c.de_xuat_cs||''}</textarea></div>
+      <div class="field-group"><label>Buổi gặp tiếp theo</label><input type="text" id="rm_buoi_tiep" placeholder="DD/MM/YYYY HH:mm" value="${c.buoi_tiep||''}"/></div>
+      <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   }
   document.getElementById('addRecordModal').classList.add('open');
 }
 async function saveRecord() {
   const isTV = currentRecordType==='tu_van';
   let data = {};
-  if (isTV) { data = { ten_cong_cu:document.getElementById('rm_ten_cong_cu')?.value, ket_qua_test:document.getElementById('rm_ket_qua_test')?.value, bien_ban_tu_van:document.getElementById('rm_bien_ban')?.value, phan_hoi:document.getElementById('rm_phan_hoi')?.value, lich_hen:document.getElementById('rm_lich_hen')?.value, de_xuat:document.getElementById('rm_de_xuat')?.value }; }
-  else { data = { muc_tieu:document.getElementById('rm_muc_tieu')?.value, phan_hoi_hs:document.getElementById('rm_phan_hoi_hs')?.value, tinh_hinh:document.getElementById('rm_tinh_hinh')?.value, noi_dung:document.getElementById('rm_noi_dung')?.value, van_de_moi:document.getElementById('rm_van_de_moi')?.value, de_xuat_cs:document.getElementById('rm_de_xuat_cs')?.value, luu_y:document.getElementById('rm_luu_y_bb')?.value }; }
+  if (isTV) {
+    data = {
+      lan_thu:       document.getElementById('rm_lan_thu')?.value,
+      ten_cong_cu:   document.getElementById('rm_ten_cong_cu')?.value,
+      ket_qua_test:  document.getElementById('rm_ket_qua_test')?.value,
+      van_de:        document.getElementById('rm_van_de')?.value,
+      phan_hoi:      document.getElementById('rm_phan_hoi')?.value,
+      diem_hai:      document.getElementById('rm_diem_hai')?.value,
+      de_xuat:       document.getElementById('rm_de_xuat')?.value,
+    };
+  } else {
+    data = {
+      buoi_thu:      document.getElementById('rm_buoi_thu')?.value,
+      noi_dung:      document.getElementById('rm_noi_dung')?.value,
+      phan_ung:      document.getElementById('rm_phan_ung')?.value,
+      khai_thac:     document.getElementById('rm_khai_thac')?.value,
+      tuong_tac:     document.getElementById('rm_tuong_tac')?.value,
+      de_xuat_cs:    document.getElementById('rm_de_xuat_cs')?.value,
+      buoi_tiep:     document.getElementById('rm_buoi_tiep')?.value,
+      noi_dung_tiep: document.getElementById('rm_noi_dung_tiep')?.value,
+    };
+  }
   try {
     if (currentRecordId) {
       // Edit existing
