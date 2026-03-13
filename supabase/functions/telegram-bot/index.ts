@@ -31,7 +31,7 @@ function canAssignPosition(p: string) { return ['admin','yjyn','tjn','gyjn'].inc
 function canAssignRole(p: string) { return ['admin','yjyn','tjn','gyjn','ggn_jondo'].includes(p); }
 function canCreateHapja(p: string) { return ['yjyn','tjn','gyjn','bgyjn','ggn_jondo','ggn_chakki'].includes(p); }
 function canApproveHapja(p: string) { return ['yjyn','ggn_jondo'].includes(p); }
-function canLinkProfile(p: string) { return ['yjyn','ggn_jondo','tjn','gyjn'].includes(p); }
+function canLinkProfile(p: string) { return ['admin','yjyn','ggn_jondo','tjn','gyjn'].includes(p); }
 function canChangeLevel(p: string) { return ['ggn_jondo','tjn'].includes(p); }
 
 // ============ HELPERS ============
@@ -93,16 +93,34 @@ async function handleGroupChat(update: any) {
           level: 'tu_van'
         });
       }
+      
+      // Send welcome message
       await sendText(chatId,
         `🍎 *Bot Checking Jondo đã vào group!*\n\n` +
         `Group này đã được đăng ký làm *Group Trái quả* (cấp: Tư vấn).\n\n` +
-        `📌 Để gắn hồ sơ trái quả cho group này:\n` +
-        `\`/link_profile [tên trái]\`\n\n` +
-        `📌 Các lệnh khác trong group:\n` +
+        `📌 Các lệnh trong group:\n` +
+        `• \`/link_profile [tên trái]\` — Gắn hồ sơ cho group\n` +
         `• \`/assign_role [mã_TĐ] [ndd/tvv/gvbb/la]\` — Gắn vai trò\n` +
         `• \`/set_level [tu_van/bb]\` — Chuyển cấp độ\n` +
         `• \`/group_info\` — Xem thông tin group`
       );
+
+      // Fetch unlinked profiles (approved check_hapja/profiles without a group)
+      const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
+      const linkedProfileIds = linkedGroups?.map(g => g.profile_id) || [];
+      
+      let query = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(10);
+      if (linkedProfileIds.length > 0) {
+        query = query.not('id', 'in', `(${linkedProfileIds.join(',')})`);
+      }
+      
+      const { data: unlinkedProfiles } = await query;
+      
+      if (unlinkedProfiles && unlinkedProfiles.length > 0) {
+        const keyboard = unlinkedProfiles.map((p: any) => [{ text: `🍎 Gắn: ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
+        await sendKeyboard(chatId, `Danh sách hồ sơ chưa có group (Bấm để gắn ngay):`, keyboard);
+      }
+      
       return;
     }
   }
