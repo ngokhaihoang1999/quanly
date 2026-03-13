@@ -278,6 +278,7 @@
         <div class="cover-role-row"><span class="cover-role-label">Lá</span><input type="text" class="cover-role-input" id="cv_la" placeholder="Tên Lá..." list="staffSuggest" /></div>
         <datalist id="staffSuggest"></datalist>
         <button class="save-btn" onclick="saveCover()">💾 Lưu Trang bìa</button>
+        <div id="cv_group_link" style="margin-top:12px;"></div>
       </div>
     </div>
 
@@ -699,6 +700,42 @@ async function loadCover(p) {
       if (nddRole && !p.ndd_staff_code) setStaffInputValue('cv_ndd', nddRole.staff_code);
     }
   } catch(e) { console.warn('loadCover roles:', e); }
+
+  // Fetch linked Telegram group
+  const groupLinkEl = document.getElementById('cv_group_link');
+  if (groupLinkEl) {
+    groupLinkEl.innerHTML = '';
+    try {
+      const fgRes2 = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=telegram_group_id,telegram_group_title`);
+      const fgs2 = await fgRes2.json();
+      if (fgs2 && fgs2.length && fgs2[0].telegram_group_id) {
+        const gid = String(fgs2[0].telegram_group_id);
+        const title = fgs2[0].telegram_group_title || 'Group Trái quả';
+        // Build deep link: supergroups start with -100
+        let tgLink = null;
+        if (gid.startsWith('-100')) {
+          tgLink = `https://t.me/c/${gid.replace('-100','')}/1`;
+        }
+        if (tgLink) {
+          groupLinkEl.innerHTML = `
+            <button onclick="openGroupChat('${tgLink}')" style="
+              width:100%;padding:12px;border-radius:var(--radius-sm);
+              background:linear-gradient(135deg,#229ed9,#1a86c9);
+              color:white;font-weight:600;font-size:14px;
+              border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              ✈️ Truy cập group: ${title}
+            </button>`;
+        }
+      }
+    } catch(e2) { console.warn('group link:', e2); }
+  }
+}
+function openGroupChat(url) {
+  if (window.Telegram?.WebApp?.openTelegramLink) {
+    window.Telegram.WebApp.openTelegramLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
 }
 async function saveCover() {
   const data = {
