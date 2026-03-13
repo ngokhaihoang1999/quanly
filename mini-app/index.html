@@ -432,6 +432,22 @@
   </div>
 </div></div>
 
+<!-- MODAL: SỬA CẤU TRÚC -->
+<div class="modal-overlay" id="editStructModal"><div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="editStructTitle">✏️ Chỉnh sửa</div>
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    <div class="field-group"><label>Tên</label><input type="text" id="edit_struct_name" /></div>
+    <div class="field-group" id="edit_mgr1_wrap"><label id="edit_mgr1_label">Quản lý</label><select id="edit_mgr1" style="padding:10px 12px;"><option value="">Không</option></select></div>
+    <div class="field-group" id="edit_mgr2_wrap" style="display:none;"><label id="edit_mgr2_label">BGYJN</label><select id="edit_mgr2" style="padding:10px 12px;"><option value="">Không</option></select></div>
+    <input type="hidden" id="edit_struct_id" />
+    <input type="hidden" id="edit_struct_type" />
+    <button class="save-btn" onclick="updateStructure()">💾 Lưu thay đổi</button>
+    <button class="delete-profile-btn" onclick="deleteStructure()" style="margin-top:4px;">🗑️ Xoá</button>
+    <button onclick="closeModal('editStructModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 <script>
 const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
@@ -859,14 +875,18 @@ async function loadStructure() {
     structureData.forEach(a => {
       const aY = a.yjyn_staff_code ? '\ud83d\udc51 '+(sMap[a.yjyn_staff_code]||a.yjyn_staff_code) : '';
       const canArea = isAdmin || (pos==='yjyn' && a.yjyn_staff_code===myCode);
-      html += `<div class="tree-node area"><div><div class="tree-label">\ud83c\udfe2 ${a.name}</div>${aY?`<div class="tree-manager">${aY}</div>`:''}</div><div class="tree-meta">Khu v\u1ef1c</div></div>`;
+      const aClick = canArea ? ` style="cursor:pointer" onclick="openEditStructModal('area','${a.id}')"` : '';
+      html += `<div class="tree-node area"${aClick}><div><div class="tree-label">\ud83c\udfe2 ${a.name}${canArea?' \u270f\ufe0f':''}</div>${aY?`<div class="tree-manager">${aY}</div>`:''}</div><div class="tree-meta">Khu v\u1ef1c</div></div>`;
       (a.org_groups||[]).forEach(g => {
         const gT = g.tjn_staff_code ? '\ud83d\udc51 '+(sMap[g.tjn_staff_code]||g.tjn_staff_code) : '';
         const canGrp = canArea || (pos==='tjn' && g.tjn_staff_code===myCode);
-        html += `<div class="tree-node group"><div><div class="tree-label">\ud83d\udc65 ${g.name}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
+        const gClick = canGrp ? ` style="cursor:pointer" onclick="openEditStructModal('group','${g.id}')"` : '';
+        html += `<div class="tree-node group"${gClick}><div><div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?' \u270f\ufe0f':''}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
         (g.teams||[]).forEach(t => {
           const tM = [t.gyjn_staff_code,t.bgyjn_staff_code].filter(Boolean).map(c=>sMap[c]||c).join(', ');
-          html += `<div class="tree-node team"><div><div class="tree-label">\ud83d\udccc ${t.name}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">T\u1ed5</div></div>`;
+          const canTeam = canGrp || (['gyjn','bgyjn'].includes(pos) && (t.gyjn_staff_code===myCode||t.bgyjn_staff_code===myCode));
+          const tClick = canTeam ? ` style="cursor:pointer" onclick="openEditStructModal('team','${t.id}')"` : '';
+          html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">T\u1ed5</div></div>`;
         });
         if (canGrp) html += `<div class="tree-node team tree-add" onclick="openAddTeamModal('${g.id}')"><div class="tree-label">+ T\u1ed5</div></div>`;
       });
@@ -936,6 +956,84 @@ async function saveStructure() {
     await sbFetch(endpoint, { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
     closeModal('structureModal');
     showToast('\u2705 \u0110\u00e3 t\u1ea1o ' + name);
+    loadStructure();
+  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+}
+
+// ============ EDIT / DELETE STRUCTURE ============
+function findStructItem(type, id) {
+  for (const a of structureData) {
+    if (type==='area' && a.id===id) return a;
+    for (const g of (a.org_groups||[])) {
+      if (type==='group' && g.id===id) return g;
+      for (const t of (g.teams||[])) {
+        if (type==='team' && t.id===id) return t;
+      }
+    }
+  }
+  return null;
+}
+function openEditStructModal(type, id) {
+  const item = findStructItem(type, id);
+  if (!item) return;
+  document.getElementById('edit_struct_id').value = id;
+  document.getElementById('edit_struct_type').value = type;
+  document.getElementById('edit_struct_name').value = item.name;
+  const labels = {area: '\ud83c\udfe2 Khu v\u1ef1c', group: '\ud83d\udc65 Nh\u00f3m', team: '\ud83d\udccc T\u1ed5'};
+  document.getElementById('editStructTitle').textContent = '\u270f\ufe0f ' + labels[type] + ': ' + item.name;
+  // Manager 1
+  if (type==='area') {
+    document.getElementById('edit_mgr1_label').textContent = 'YJYN';
+    populateStaffSelect('edit_mgr1', 'Ch\u1ecdn YJYN...');
+    document.getElementById('edit_mgr1').value = item.yjyn_staff_code||'';
+    document.getElementById('edit_mgr2_wrap').style.display = 'none';
+  } else if (type==='group') {
+    document.getElementById('edit_mgr1_label').textContent = 'TJN';
+    populateStaffSelect('edit_mgr1', 'Ch\u1ecdn TJN...');
+    document.getElementById('edit_mgr1').value = item.tjn_staff_code||'';
+    document.getElementById('edit_mgr2_wrap').style.display = 'none';
+  } else {
+    document.getElementById('edit_mgr1_label').textContent = 'GYJN (T\u1ed5 tr\u01b0\u1edfng)';
+    populateStaffSelect('edit_mgr1', 'Ch\u1ecdn GYJN...');
+    document.getElementById('edit_mgr1').value = item.gyjn_staff_code||'';
+    document.getElementById('edit_mgr2_wrap').style.display = 'block';
+    document.getElementById('edit_mgr2_label').textContent = 'BGYJN (T\u1ed5 ph\u00f3)';
+    populateStaffSelect('edit_mgr2', 'Ch\u1ecdn BGYJN...');
+    document.getElementById('edit_mgr2').value = item.bgyjn_staff_code||'';
+  }
+  document.getElementById('edit_mgr1_wrap').style.display = 'block';
+  document.getElementById('editStructModal').classList.add('open');
+}
+async function updateStructure() {
+  const id = document.getElementById('edit_struct_id').value;
+  const type = document.getElementById('edit_struct_type').value;
+  const name = document.getElementById('edit_struct_name').value.trim();
+  if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
+  const mgr = document.getElementById('edit_mgr1').value;
+  const mgr2 = document.getElementById('edit_mgr2')?.value;
+  const tables = {area:'areas', group:'org_groups', team:'teams'};
+  let body = { name };
+  if (type==='area') body.yjyn_staff_code = mgr||null;
+  else if (type==='group') body.tjn_staff_code = mgr||null;
+  else { body.gyjn_staff_code = mgr||null; body.bgyjn_staff_code = mgr2||null; }
+  try {
+    await sbFetch(`/rest/v1/${tables[type]}?id=eq.${id}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    closeModal('editStructModal');
+    showToast('\u2705 \u0110\u00e3 c\u1eadp nh\u1eadt');
+    loadStructure();
+  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+}
+async function deleteStructure() {
+  const id = document.getElementById('edit_struct_id').value;
+  const type = document.getElementById('edit_struct_type').value;
+  const name = document.getElementById('edit_struct_name').value;
+  const labels = {area:'Khu v\u1ef1c', group:'Nh\u00f3m', team:'T\u1ed5'};
+  if (!confirm(`X\u00f3a ${labels[type]} "${name}"?\nT\u1ea5t c\u1ea3 d\u1eef li\u1ec7u b\u00ean trong s\u1ebd b\u1ecb x\u00f3a!`)) return;
+  const tables = {area:'areas', group:'org_groups', team:'teams'};
+  try {
+    await sbFetch(`/rest/v1/${tables[type]}?id=eq.${id}`, { method:'DELETE' });
+    closeModal('editStructModal');
+    showToast('\u2705 \u0110\u00e3 x\u00f3a ' + name);
     loadStructure();
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
