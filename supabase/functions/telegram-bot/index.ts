@@ -253,8 +253,8 @@ async function handleGroupChat(update: any) {
     const keyboard = [
       [{ text: '📋 Xem thông tin Group', callback_data: 'menu_info' }],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
-      [{ text: '👥 Gắn vai trò (NDD/TVV/...)', callback_data: 'menu_assign_role' }],
-      [{ text: '🔄 Chuyển cấp độ', callback_data: 'menu_set_level' }]
+      [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
+      [{ text: '🔄 Chuyển giai đoạn', callback_data: 'menu_set_level' }]
     ];
     await sendKeyboard(chatId, `🛠 *Menu Quản lý Group*`, keyboard);
     return;
@@ -299,21 +299,18 @@ async function handleCallback(update: any, staffData: any) {
   }
 
   if (cbData === 'menu_link_profile') {
-    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Bạn không có quyền gắn hồ sơ.`);
-    const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
-    const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
-    let query = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(10);
-    if (linkedProfileIds.length > 0) query = query.not('id', 'in', `(${linkedProfileIds.join(',')})`);
-    const { data: unlinkedProfiles } = await query;
-    if (!unlinkedProfiles || unlinkedProfiles.length === 0) return sendText(chatId, `❌ Không có hồ sơ nào rảnh.`);
-    const keyboard = unlinkedProfiles.map((p: any) => [{ text: `🍎 Gắn: ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
-    await sendKeyboard(chatId, `Danh sách hồ sơ chưa có group (Bấm để gắn ngay):`, keyboard);
+    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền gắn hồ sơ.`);
+    // Show ALL profiles including already-linked ones to allow re-assignment
+    const { data: allProfiles } = await supabase.from('profiles').select('id, full_name').order('created_at', { ascending: false }).limit(15);
+    if (!allProfiles || allProfiles.length === 0) return sendText(chatId, `❌ Không có hồ sơ nào trong hệ thống.`);
+    const keyboard = allProfiles.map((p: any) => [{ text: `🍎 ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
+    await sendKeyboard(chatId, `Chọn hồ sơ để gắn vào group này (có thể chọn lại nếu bấm nhầm):`, keyboard);
     return;
   }
 
   if (cbData === 'menu_set_level') {
-    if (!canChangeLevel(pos)) return sendText(chatId, `⛔ Bạn không có quyền chuyển cấp.`);
-    await sendKeyboard(chatId, `Chọn cấp độ:`, [
+    if (!canChangeLevel(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền chuyển giai đoạn.`);
+    await sendKeyboard(chatId, `Chọn giai đoạn:`, [
       [{ text: 'Tư vấn', callback_data: `action_set_level_tu_van` }, { text: 'BB', callback_data: `action_set_level_bb` }]
     ]);
     return;
@@ -324,14 +321,15 @@ async function handleCallback(update: any, staffData: any) {
     const newLevel = cbData.replace('action_set_level_', '');
     await supabase.from('fruit_groups').update({ level: newLevel, updated_at: new Date().toISOString() }).eq('telegram_group_id', chatId);
     await editMessageReplyMarkup(chatId, update.callback_query.message.message_id, null);
-    await sendText(chatId, `✅ Đã chuyển cấp độ group sang *${newLevel === 'tu_van' ? 'Tư vấn' : 'BB'}*.`);
+    await sendText(chatId, `✅ Group đã chuyển sang giai đoạn *${newLevel === 'tu_van' ? 'Tư vấn' : 'BB'}*.`);
     return;
   }
 
   if (cbData === 'menu_assign_role') {
-    if (!canAssignRole(pos)) return sendText(chatId, `⛔ Bạn không có quyền gắn vai trò.`);
+    if (!canAssignRole(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền xác nhận GVBB.`);
+    // Only ask for GVBB — NDD and TVV were established before the group was created
     const admins = await getChatAdmins(chatId);
-    if (!admins || !admins.length) return sendText(chatId, `❌ Không lấy được danh sách nhóm.`);
+    if (!admins || !admins.length) return sendText(chatId, `❌ Không thể lấy danh sách quản trị viên của group.`);
     
     const adminIds = admins.filter((a: any) => !a.user.is_bot).map((a: any) => a.user.id);
     const { data: staffList } = await supabase.from('staff').select('telegram_id, staff_code, full_name').in('telegram_id', adminIds);
@@ -343,47 +341,31 @@ async function handleCallback(update: any, staffData: any) {
       if (a.user.is_bot) continue;
       const tid = a.user.id;
       const staff = staffMap[tid];
-      const nameStr = staff ? `TĐ: ${staff.full_name} (${staff.staff_code})` : `User: ${a.user.first_name || 'N/A'}`;
       if (staff) {
-        kb.push([{ text: nameStr, callback_data: `pick_staff_role_${staff.staff_code}` }]);
-      } else {
-        kb.push([{ text: nameStr, callback_data: `ignore` }]);
+        kb.push([{ text: `${staff.staff_code} — ${staff.full_name}`, callback_data: `assign_gvbb_${staff.staff_code}` }]);
       }
+      // Non-registered users are excluded silently
     }
-    if (kb.length === 0) return sendText(chatId, `❌ Không có TĐ nào trong group.`);
-    await sendKeyboard(chatId, `Chọn TĐ để gắn vai trò:`, kb);
+    if (kb.length === 0) return sendText(chatId, `❌ Không tìm thấy TĐ nào đã đăng ký trong group này.`);
+    await sendKeyboard(chatId, `Chọn TĐ đảm nhận vai trò *GVBB*:`, kb);
     return;
   }
 
-  if (cbData.startsWith('pick_staff_role_')) {
+  // GVBB direct assignment (from menu_assign_role)
+  if (cbData.startsWith('assign_gvbb_')) {
     if (!canAssignRole(pos)) return;
-    const targetCode = cbData.replace('pick_staff_role_', '');
-    const kb = [
-      [{ text: 'NDD', callback_data: `action_assign_${targetCode}_ndd` }, { text: 'TVV', callback_data: `action_assign_${targetCode}_tvv` }],
-      [{ text: 'GVBB', callback_data: `action_assign_${targetCode}_gvbb` }, { text: 'Lá', callback_data: `action_assign_${targetCode}_la` }]
-    ];
-    await editMessageReplyMarkup(chatId, update.callback_query.message.message_id, kb);
-    return;
-  }
-
-  if (cbData.startsWith('action_assign_')) {
-    if (!canAssignRole(pos)) return;
-    // Format: action_assign_CODE_role
-    const parts = cbData.split('_');
-    const roleType = parts[parts.length - 1]; // last part
-    const targetCode = parts.slice(2, parts.length - 1).join('_');
-    
+    const targetCode = cbData.replace('assign_gvbb_', '');
     const { data: targetStaff } = await supabase.from('staff').select('*').eq('staff_code', targetCode).single();
     if (!targetStaff) return;
     const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
     if (!fg) return;
     
     await supabase.from('fruit_roles').upsert({
-      fruit_group_id: fg.id, staff_code: targetCode, role_type: roleType, assigned_by: staffData.staff_code
+      fruit_group_id: fg.id, staff_code: targetCode, role_type: 'gvbb', assigned_by: staffData.staff_code
     }, { onConflict: 'fruit_group_id,staff_code,role_type' });
     
     await editMessageReplyMarkup(chatId, update.callback_query.message.message_id, null);
-    await sendText(chatId, `✅ Đã gắn vai trò *${ROLE_LABELS[roleType]}* cho *${targetStaff.full_name}* trong group này.`);
+    await sendText(chatId, `✅ Đã xác nhận *${targetCode}* đảm nhận vai trò *GVBB* trong group này.`);
     return;
   }
 
