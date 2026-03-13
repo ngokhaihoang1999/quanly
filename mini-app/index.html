@@ -767,22 +767,17 @@
         <input type="text" id="new_staff_code" placeholder="VD: 012345-ABC" />
       </div>
       <div class="field-group">
-        <label>Chức vụ (Role)</label>
-        <select id="new_staff_role">
-          <option value="ndd">NDD - Người dẫn dắt</option>
-          <option value="tvv">TVV - Tư vấn viên</option>
-          <option value="ggn">GGN - Giáo viên giảng nhóm</option>
-          <option value="gvbb">GVBB - Giáo viên BB</option>
+        <label>Chức vụ</label>
+        <select id="new_staff_position">
+          <option value="td">TĐ</option>
+          <option value="bgyjn">BGYJN</option>
+          <option value="gyjn">GYJN</option>
+          <option value="thu_ki_jondo">Thư kí Jondo</option>
+          <option value="ggn_chakki">GGN Chakki</option>
+          <option value="ggn_jondo">GGN Jondo</option>
+          <option value="tjn">TJN</option>
+          <option value="yjyn">YJYN</option>
           <option value="admin">Admin</option>
-        </select>
-      </div>
-      <div class="field-group">
-        <label>Cấp độ (Level)</label>
-        <select id="new_staff_level">
-          <option value="thuc_tap">Thực tập</option>
-          <option value="chinh_thuc">Chính thức</option>
-          <option value="truong_nhom">Trưởng nhóm</option>
-          <option value="quan_ly">Quản lý</option>
         </select>
       </div>
       <div class="grid-2">
@@ -838,19 +833,19 @@ function clearChips(containerId) {
 }
 
 // Role badge CSS class
-function getRoleBadgeClass(role) {
-  if (!role) return 'role-default';
-  const r = role.toLowerCase();
-  if (r === 'admin') return 'role-admin';
-  if (r === 'ndd') return 'role-ndd';
-  if (r === 'tvv' || r === 'ggn' || r === 'gvbb') return 'role-tvv';
+function getRoleBadgeClass(pos) {
+  if (!pos) return 'role-default';
+  const p = pos.toLowerCase();
+  if (p === 'admin' || p === 'yjyn') return 'role-admin';
+  if (p === 'tjn' || p === 'gyjn') return 'role-ndd';
+  if (p === 'ggn_jondo' || p === 'ggn_chakki' || p === 'thu_ki_jondo') return 'role-tvv';
   return 'role-default';
 }
 
-// Level display name
-function getLevelName(level) {
-  const map = { thuc_tap: 'Thực tập', chinh_thuc: 'Chính thức', truong_nhom: 'Trưởng nhóm', quan_ly: 'Quản lý' };
-  return map[level] || level || '';
+// Position display name
+function getPositionName(pos) {
+  const map = { td:'TĐ', bgyjn:'BGYJN', gyjn:'GYJN', thu_ki_jondo:'Thư kí Jondo', ggn_jondo:'GGN Jondo', ggn_chakki:'GGN Chakki', tjn:'TJN', yjyn:'YJYN', admin:'Admin' };
+  return map[pos] || pos || 'TĐ';
 }
 
 // ============ INIT ============
@@ -876,7 +871,7 @@ async function loadStaffInfo() {
     const res = await sbFetch(`/rest/v1/staff?telegram_id=eq.${userId}&select=*`);
     const data = await res.json();
     if (data.length > 0) {
-      document.getElementById('staffBadge').textContent = `${data[0].staff_code} · ${(data[0].role || '').toUpperCase()}`;
+      document.getElementById('staffBadge').textContent = `${data[0].staff_code} · ${getPositionName(data[0].position)}`;
     }
   } catch {}
 }
@@ -1300,8 +1295,8 @@ function renderStaff(staffList) {
     return;
   }
   el.innerHTML = staffList.map(s => {
-    const roleBadge = getRoleBadgeClass(s.role);
-    const levelName = getLevelName(s.level);
+    const roleBadge = getRoleBadgeClass(s.position);
+    const posName = getPositionName(s.position);
     const connected = s.telegram_id ? '🟢' : '⚪';
     return `
       <div class="staff-card">
@@ -1309,8 +1304,7 @@ function renderStaff(staffList) {
         <div class="profile-info">
           <div class="profile-name">${s.full_name} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
           <div class="profile-meta">
-            <span class="staff-role-badge ${roleBadge}">${(s.role||'---').toUpperCase()}</span>
-            ${levelName ? `<span class="level-badge">${levelName}</span>` : ''}
+            <span class="staff-role-badge ${roleBadge}">${posName}</span>
             ${connected} ${s.telegram_id ? 'Đã kết nối' : 'Chưa kết nối TG'}
           </div>
         </div>
@@ -1324,7 +1318,7 @@ function filterStaff() {
   renderStaff(allStaff.filter(s =>
     s.full_name.toLowerCase().includes(q) ||
     s.staff_code.toLowerCase().includes(q) ||
-    (s.role||'').toLowerCase().includes(q)
+    (s.position||'').toLowerCase().includes(q)
   ));
 }
 
@@ -1337,8 +1331,7 @@ async function addStaff() {
   const code = document.getElementById('new_staff_code').value.trim();
   if (!name || !code) { showToast('⚠️ Vui lòng nhập họ tên và mã TĐ'); return; }
 
-  const role = document.getElementById('new_staff_role').value;
-  const level = document.getElementById('new_staff_level').value;
+  const position = document.getElementById('new_staff_position').value;
   const phone = document.getElementById('new_staff_phone').value.trim();
   const email = document.getElementById('new_staff_email').value.trim();
 
@@ -1349,8 +1342,7 @@ async function addStaff() {
       body: JSON.stringify({
         full_name: name,
         staff_code: code,
-        role: role,
-        level: level,
+        position: position,
         phone: phone || null,
         email: email || null
       })
