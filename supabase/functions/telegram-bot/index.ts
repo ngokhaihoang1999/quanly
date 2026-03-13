@@ -7,15 +7,22 @@ const ADMIN_STAFF_CODE = '000142-NKH';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// ============ POSITION HIERARCHY ============
-const POSITIONS = ['td','bgyjn','gyjn','thu_ki_jondo','ggn_chakki','ggn_jondo','tjn','yjyn','admin'] as const;
+// ============ POSITION HIERARCHY (5 levels, some same-level) ============
+// Level 0: TĐ | Level 1: BGYJN | Level 2: GYJN
+// Level 3: TJN, GGN Chakki, SGN Jondo, GGN Jondo (NGANG HÀNG)
+// Level 4: YJYN | Level 5: Admin
+const POSITION_LEVELS: Record<string,number> = {
+  td: 0, bgyjn: 1, gyjn: 2,
+  tjn: 3, ggn_chakki: 3, sgn_jondo: 3, ggn_jondo: 3,
+  yjyn: 4, admin: 5
+};
 const POSITION_LABELS: Record<string,string> = {
-  td:'TĐ', bgyjn:'BGYJN', gyjn:'GYJN', thu_ki_jondo:'Thư kí Jondo',
+  td:'TĐ', bgyjn:'BGYJN', gyjn:'GYJN', sgn_jondo:'SGN Jondo',
   ggn_chakki:'GGN Chakki', ggn_jondo:'GGN Jondo', tjn:'TJN', yjyn:'YJYN', admin:'Admin'
 };
 const ROLE_LABELS: Record<string,string> = { ndd:'NDD', tvv:'TVV', gvbb:'GVBB', la:'Lá' };
 
-function posLevel(p: string): number { return POSITIONS.indexOf(p as any); }
+function posLevel(p: string): number { return POSITION_LEVELS[p] ?? 0; }
 function hasMinPosition(staffPos: string, minPos: string): boolean { return posLevel(staffPos) >= posLevel(minPos); }
 
 // Permission checks
@@ -488,7 +495,7 @@ Deno.serve(async (req) => {
       const { data: target } = await supabase.from('staff').select('*').eq('staff_code', targetCode).single();
       if (!target) { await sendText(chatId, `❌ Không tìm thấy mã *${targetCode}*.`); return new Response("OK"); }
       // Show assignable positions (lower than caller)
-      const assignable = POSITIONS.filter(p => posLevel(p) < posLevel(pos) && p !== 'admin');
+      const assignable = Object.keys(POSITION_LEVELS).filter(p => posLevel(p) < posLevel(pos) && p !== 'admin');
       const kb = assignable.map(p => [{ text: POSITION_LABELS[p], callback_data: `setpos_${targetCode}_${p}` }]);
       await sendKeyboard(chatId,
         `Chọn chức vụ mới cho *${target.full_name}* (${targetCode}):\n(Hiện tại: ${POSITION_LABELS[target.position || 'td']})`, kb);
