@@ -270,14 +270,26 @@ function showUnitPopup(type) {
 async function toggleFruitStatus(profileId, current) {
   const newStatus = current === 'alive' ? 'dropout' : 'alive';
   const label = newStatus === 'dropout' ? 'Drop-out' : 'Alive';
+  
+  let reason = '';
+  if (newStatus === 'dropout') {
+    reason = prompt('Nhập lý do Drop-out:');
+    if (reason === null) return; // User cancelled
+  }
+
   if (!confirm(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
   try {
-    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify({ fruit_status: newStatus }) });
+    const body = { fruit_status: newStatus };
+    if (newStatus === 'dropout') body.dropout_reason = reason;
+    else body.dropout_reason = null;
+
+    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify(body) });
     showToast(`✅ Đã chuyển sang ${label}`);
     // Update local cache
     const idx = allProfiles.findIndex(x => x.id === profileId);
     if (idx >= 0) {
       allProfiles[idx].fruit_status = newStatus;
+      allProfiles[idx].dropout_reason = body.dropout_reason;
       openProfile(allProfiles[idx]);
     }
     filterProfiles();

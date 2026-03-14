@@ -154,7 +154,9 @@ async function loadDashboard() {
       const seen = new Set();
       const matching = unitRoles.filter(r => {
         const pid = r.fruit_groups?.profile_id;
+        const p = r.fruit_groups?.profiles;
         if (!pid || !codes.includes(r.staff_code) || seen.has(pid)) return false;
+        if (p?.fruit_status === 'dropout') return false; // Filter out drop-outs from tracking
         seen.add(pid); return true;
       });
       if (!matching.length) return '';
@@ -331,7 +333,9 @@ async function loadDashboard() {
       const seenP = new Set();
       listEl.innerHTML = nddRoles.filter(r => {
         const pid = r.fruit_groups?.profile_id;
+        const p = r.fruit_groups?.profiles;
         if (!pid || seenP.has(pid)) return false;
+        if (p?.fruit_status === 'dropout') return false; // Filter out drop-outs from tracking
         seenP.add(pid); return true;
       }).map(r => {
         const p = r.fruit_groups?.profiles;
@@ -376,7 +380,9 @@ async function loadDashboard() {
       const seen2 = new Set();
       const otherItems = [...tvvRoles, ...gvbbRoles].filter(r => {
         const pid = r.fruit_groups?.profile_id;
+        const p = r.fruit_groups?.profiles;
         if (!pid || seen2.has(pid)) return false;
+        if (p?.fruit_status === 'dropout') return false; 
         seen2.add(pid); return true;
       }).map(r => {
         const name = r.fruit_groups?.profiles?.full_name || 'N/A';

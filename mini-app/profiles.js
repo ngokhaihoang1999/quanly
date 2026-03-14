@@ -86,11 +86,14 @@ async function openProfile(p) {
   const fruitStatus = p.fruit_status || 'alive';
   const statusBg = fruitStatus === 'dropout' ? 'var(--red)' : 'var(--green)';
   const statusText = fruitStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+  const reasonHtml = (fruitStatus === 'dropout' && p.dropout_reason) ? `<div style="font-size:11px;color:var(--red);margin-top:2px;padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-bottom:8px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
+  
   // Check if current user can toggle status (NDD/GYJN/BGYJN)
   const myCode2 = getEffectiveStaffCode();
   const pos2 = getCurrentPosition();
   const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
   const statusBtn = canToggleStatus ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fruitStatus}')" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>` : `<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
+
   document.getElementById('profileSummaryCard').innerHTML = `
     <div style="background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px 14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -100,6 +103,7 @@ async function openProfile(p) {
         </div>
         <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${phaseColor[ph]};color:white;">${phaseMap[ph]||ph}</span>
       </div>
+      ${reasonHtml}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;">
         <div><span style="color:var(--text3);">NDD:</span> <b>${nddDisplay}</b></div>
         <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>

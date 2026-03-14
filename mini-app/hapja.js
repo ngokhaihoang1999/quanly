@@ -214,8 +214,8 @@ async function deleteProfile() {
     }
   }
   try {
-    // 1. Unlink check_hapja (FK → profiles, no CASCADE)
-    await del(`/rest/v1/check_hapja?profile_id=eq.${pid}`, 'PATCH', {profile_id: null});
+    // 1. Delete check_hapja (Previously unlinked, now hard delete as requested)
+    await del(`/rest/v1/check_hapja?profile_id=eq.${pid}`);
     // 2. Records FIRST (has FK session_id → consultation_sessions)
     await del(`/rest/v1/records?profile_id=eq.${pid}`);
     // 3. Consultation sessions
