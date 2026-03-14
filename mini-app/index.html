@@ -301,18 +301,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">📅 Chốt Tư vấn</div>
   <div class="field-group"><label>Lần thứ</label><input type="number" id="stv_session_num" readonly style="background:var(--surface2);" /></div>
-  <div class="field-group"><label>Công cụ tư vấn</label>
-    <select id="stv_tool">
-      <option value="">Chọn công cụ...</option>
-      <option>Sinh trắc vân tay</option>
-      <option>MBTI</option>
-      <option>DISC</option>
-      <option>Enneagram</option>
-      <option>Trực tiếp</option>
-      <option>Online</option>
-      <option>Khác</option>
-    </select>
-  </div>
+  <div class="field-group"><label>Công cụ tư vấn</label><input type="text" id="stv_tool" placeholder="VD: Sinh trắc vân tay, MBTI, Trực tiếp..." /></div>
   <div class="field-group"><label>Thời gian dự kiến</label><input type="datetime-local" id="stv_datetime" /></div>
   <div class="field-group"><label>TVV phụ trách</label><input type="text" id="stv_tvv" list="staffSuggest" placeholder="Chọn TVV..." /></div>
   <div class="field-group"><label>Ghi chú</label><textarea id="stv_notes" rows="2" placeholder="Ghi chú..."></textarea></div>
@@ -326,8 +315,8 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title">🎓 Chốt BB</div>
-  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Chuyển trái sang giai đoạn BB. Sau khi chốt, hãy tạo group Telegram, thêm bot vào group và gõ <code>/link [mã hồ sơ]</code> để gắn.</div>
-  <div class="field-group"><label>GVBB phụ trách</label><input type="text" id="cbb_gvbb" list="staffSuggest" placeholder="Chọn GVBB..." /></div>
+  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Xác nhận trái đồng ý học BB. Sau khi chốt, hãy tạo group Telegram, thêm bot vào group và gõ <code>/link [mã hồ sơ]</code> để gắn.</div>
+  <div class="field-group"><label>GVBB phụ trách (tuỳ chọn)</label><input type="text" id="cbb_gvbb" list="staffSuggest" placeholder="Có thể gắn sau..." /></div>
   <div class="field-group"><label>Ghi chú</label><textarea id="cbb_notes" rows="2" placeholder="Ghi chú..."></textarea></div>
   <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Chốt BB</button>
   <button onclick="closeModal('chotBBModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>

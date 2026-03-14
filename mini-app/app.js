@@ -597,6 +597,15 @@ async function loadSessions(profileId) {
 }
 function openScheduleTVModal() {
   if (!currentProfileId) return;
+  const pos = getCurrentPosition();
+  if (!['admin','gyjn','bgyjn'].includes(pos)) {
+    // Check if user is NDD of this profile
+    const p = allProfiles.find(x=>x.id===currentProfileId);
+    if (!p || p.ndd_staff_code !== getEffectiveStaffCode()) {
+      showToast('⚠️ Chỉ NDD/GYJN/BGYJN được chốt TV');
+      return;
+    }
+  }
   // Auto-increment session number
   const existing = document.querySelectorAll('#sessionsList > div').length;
   document.getElementById('stv_session_num').value = existing + 1;
@@ -608,11 +617,11 @@ function openScheduleTVModal() {
 }
 async function saveScheduleTV() {
   const num = parseInt(document.getElementById('stv_session_num').value)||1;
-  const tool = document.getElementById('stv_tool').value;
+  const tool = document.getElementById('stv_tool').value.trim();
   const dt = document.getElementById('stv_datetime').value;
   const tvv = getStaffCodeFromInput('stv_tvv');
   const notes = document.getElementById('stv_notes').value;
-  if (!tool) { showToast('⚠️ Chọn công cụ tư vấn'); return; }
+  if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
   try {
     await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
       profile_id: currentProfileId, session_number: num, tool,
@@ -621,10 +630,30 @@ async function saveScheduleTV() {
     })});
     // Update phase to tu_van if still new
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&phase=eq.new`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
+    // If TVV assigned, create fruit_role so TVV sees this fruit in their dashboard
+    if (tvv) {
+      try {
+        // Find or create fruit_group for this profile
+        const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
+        const fgs = await fgRes.json();
+        let fgId = fgs[0]?.id;
+        if (!fgId) {
+          const newFg = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+            telegram_group_id: 0, profile_id: currentProfileId, level: 'tu_van'
+          })});
+          const newFgs = await newFg.json();
+          fgId = newFgs[0]?.id;
+        }
+        if (fgId) {
+          await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify({
+            fruit_group_id: fgId, staff_code: tvv, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
+          })});
+        }
+      } catch(e) { console.warn('TVV role assign warning:', e); }
+    }
     closeModal('scheduleTVModal');
     showToast('✅ Đã chốt Tư vấn lần ' + num);
     loadSessions(currentProfileId);
-    // Refresh profile data
     const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
     const ps = await pRes.json();
     if (ps[0]) { const idx = allProfiles.findIndex(x=>x.id===currentProfileId); if (idx>=0) allProfiles[idx]=ps[0]; openProfile(ps[0]); }
@@ -654,8 +683,7 @@ function openChotBBModal() {
   document.getElementById('chotBBModal').classList.add('open');
 }
 async function saveChotBB() {
-  const gvbb = getStaffCodeFromInput('cbb_gvbb');
-  if (!gvbb) { showToast('⚠️ Chọn GVBB'); return; }
+  const gvbb = getStaffCodeFromInput('cbb_gvbb'); // optional
   try {
     // Update phase to bb
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'bb' })});
