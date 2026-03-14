@@ -129,12 +129,16 @@ async function loadDashboard() {
     window._unitBbGroups = bbGroups;
     document.getElementById('dashUnitMetrics').innerHTML = `
       <div class="dash-card-row">
-        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('hapja')"><div class="num">${approvedHapjaList.length}</div><div class="lbl">Trái Hapja</div></div>
-        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('tvv')"><div class="num" style="color:var(--accent);">${tvvFruits.length}</div><div class="lbl">Trái TV</div></div>
+        <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup('hapja')">
+          <div class="num">${approvedHapjaList.length}</div><div class="lbl">🍎 Trái Hapja</div></div>
+        <div class="dash-stat yellow" style="cursor:pointer;" onclick="showUnitPopup('tvv')">
+          <div class="num">${tvvFruits.length}</div><div class="lbl">💬 Trái TV</div></div>
       </div>
       <div class="dash-card-row">
-        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('gvbb')"><div class="num" style="color:var(--green);">${gvbbFruits.length}</div><div class="lbl">Trái BB</div></div>
-        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('bbgroup')"><div class="num" style="color:var(--yellow);">${bbGroups.length}</div><div class="lbl">Group BB</div></div>
+        <div class="dash-stat green" style="cursor:pointer;" onclick="showUnitPopup('gvbb')">
+          <div class="num">${gvbbFruits.length}</div><div class="lbl">🎓 Trái BB</div></div>
+        <div class="dash-stat pink" style="cursor:pointer;" onclick="showUnitPopup('bbgroup')">
+          <div class="num">${bbGroups.length}</div><div class="lbl">👥 Group BB</div></div>
       </div>`;
 
     // Pre-fetch latest records AND sessions per profile — both needed for latestActivityLabel()
@@ -214,23 +218,23 @@ async function loadDashboard() {
           (g.teams||[]).forEach(t => (t.staff||[]).forEach(m => gCodes.push(m.staff_code)));
           const gS = countForCodes(gCodes);
           const gid = 'subgrp_' + g.id;
-          subHtml += `<div style="margin-bottom:4px;">
-            <div onclick="document.getElementById('${gid}').style.display=document.getElementById('${gid}').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+          subHtml += `<div style="margin-bottom:6px;">
+            <div class="subunit-group-hd" onclick="document.getElementById('${gid}').style.display=document.getElementById('${gid}').style.display==='none'?'block':'none'">
               <div style="font-weight:700;font-size:13px;">👥 ${g.name}</div>
               <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);">
-                <span>${gS.td} TĐ</span><span style="color:var(--accent);">${gS.fruits} 🍎</span>
+                <span>${gS.td} TĐ</span><span style="color:var(--accent);font-weight:700;">${gS.fruits} 🍎</span>
               </div>
             </div>
-            <div id="${gid}" style="display:none;padding-left:16px;">`;
+            <div id="${gid}" style="display:none;padding-left:12px;">`;
           (g.teams||[]).forEach(t => {
             const tCodes = (t.staff||[]).map(m => m.staff_code);
             const tS = countForCodes(tCodes);
             const tid = 'subteam_' + t.id;
             subHtml += `<div style="margin:4px 0;">
-              <div onclick="document.getElementById('${tid}').style.display=document.getElementById('${tid}').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-left:3px solid var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--surface);">
+              <div class="subunit-team-hd" onclick="document.getElementById('${tid}').style.display=document.getElementById('${tid}').style.display==='none'?'block':'none'">
                 <div style="font-size:12px;font-weight:600;">📌 ${t.name}</div>
                 <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
-                  <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span>
+                  <span>${tS.td} TĐ</span><span style="color:var(--green);font-weight:700;">${tS.fruits} 🍎</span>
                 </div>
               </div>
               <div id="${tid}" style="display:none;padding-left:12px;">${fruitCardsForCodes(tCodes)}</div>

@@ -134,9 +134,45 @@
     /* Dashboard cards */
     .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
     .dash-card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .dash-stat { text-align: center; padding: 16px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-    .dash-stat .num { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .dash-stat .lbl { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .dash-stat {
+      text-align: center; padding: 16px 8px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); position: relative; overflow: hidden;
+      transition: transform 0.15s, border-color 0.2s;
+    }
+    .dash-stat:active { transform: scale(0.97); }
+    .dash-stat::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+    .dash-stat.green::before { background: linear-gradient(90deg, #34d399, #059669); }
+    .dash-stat.yellow::before { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+    .dash-stat.pink::before { background: linear-gradient(90deg, #f472b6, #ec4899); }
+    .dash-stat .num { font-size: 30px; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+    .dash-stat.accent .num { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .dash-stat.green .num  { background: linear-gradient(135deg, #34d399, #10b981); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .dash-stat.yellow .num { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .dash-stat.pink .num   { background: linear-gradient(135deg, #f472b6, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .dash-stat .lbl { font-size: 11px; color: var(--text2); font-weight: 500; }
+    /* Section headers — cleaner accent style */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 8px 12px; background: var(--surface2); border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
+    .section-title { font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.8px; }
+    .section-count { background: var(--accent); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; color: white; }
+    /* Sub-unit group/team row headers */
+    .subunit-group-hd {
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: var(--surface2);
+      border-radius: var(--radius-sm); border: 1px solid var(--border);
+      border-left: 4px solid var(--accent); transition: border-color 0.2s;
+    }
+    .subunit-group-hd:hover { border-left-color: var(--accent2); }
+    .subunit-team-hd {
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-left: 3px solid var(--green);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--surface);
+      transition: border-color 0.2s;
+    }
+    .subunit-team-hd:hover { border-left-color: #10b981; }
     .dash-list-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
     .dash-list-item:last-child { border-bottom: none; }
     .dash-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -144,6 +180,7 @@
     .dash-dot.bb { background: var(--green); }
     .dash-dot.pending { background: var(--accent); animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
     /* Structure tree - chart style with connectors */
     .tree-container { position: relative; }
     .tree-node { position: relative; padding: 8px 12px; margin-bottom: 2px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
