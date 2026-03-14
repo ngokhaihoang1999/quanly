@@ -62,104 +62,157 @@ async function loadStaffInfo() {
 }
 
 // ============ DASHBOARD ============
-// ============ DASHBOARD ============
 async function loadDashboard() {
   try {
     const pos = getCurrentPosition();
-    const lvl = getPosLevel(pos);
     const myCode = getEffectiveStaffCode();
 
-    let metricsHtml = '';
+    // ── Determine unit scope: collect staff codes in my managed unit ──
+    let unitLabel = '';
+    let unitStaffCodes = []; // all staff_code in my unit
+    if (pos === 'admin') {
+      unitLabel = 'Toàn hệ thống';
+      unitStaffCodes = allStaff.map(s => s.staff_code);
+    } else if (pos === 'yjyn') {
+      // Manage whole Area
+      const myArea = (structureData||[]).find(a => a.yjyn_staff_code === myCode);
+      if (myArea) {
+        unitLabel = 'Khu vực: ' + myArea.name;
+        (myArea.org_groups||[]).forEach(g => {
+          (g.teams||[]).forEach(t => { (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
+        });
+      }
+    } else if (pos === 'tjn') {
+      // Manage a Group
+      for (const a of (structureData||[])) {
+        const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
+        if (myGrp) {
+          unitLabel = 'Nhóm: ' + myGrp.name;
+          (myGrp.teams||[]).forEach(t => { (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
+          break;
+        }
+      }
+    } else if (['gyjn','bgyjn'].includes(pos)) {
+      // Manage a Team
+      for (const a of (structureData||[])) {
+        for (const g of (a.org_groups||[])) {
+          const myTeam = (g.teams||[]).find(t => t.gyjn_staff_code === myCode || t.bgyjn_staff_code === myCode);
+          if (myTeam) {
+            unitLabel = 'Tổ: ' + myTeam.name;
+            (myTeam.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code));
+            break;
+          }
+        }
+        if (unitLabel) break;
+      }
+    } else if (['ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
+      // GGN/SGN → see whole Area scope
+      for (const a of (structureData||[])) {
+        for (const g of (a.org_groups||[])) {
+          for (const t of (g.teams||[])) {
+            if ((t.staff||[]).some(m => m.staff_code === myCode)) {
+              unitLabel = 'Khu vực: ' + a.name;
+              (a.org_groups||[]).forEach(g2 => {
+                (g2.teams||[]).forEach(t2 => { (t2.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
+              });
+              break;
+            }
+          }
+          if (unitLabel) break;
+        }
+        if (unitLabel) break;
+      }
+    }
+    // Deduplicate
+    unitStaffCodes = [...new Set(unitStaffCodes)];
 
-    // 1. Hapja (Pending)
+    // ── SECTION 1: ĐƠN VỊ ──
+    document.getElementById('dashUnitTitle').textContent = '🏢 ' + (unitLabel || 'Đơn vị');
+    let unitFruits = 0, unitGroups = 0, unitHapja = 0, unitRoles = [];
+    if (unitStaffCodes.length > 0) {
+      // Fruit roles in unit
+      const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
+      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
+      unitRoles = await urRes.json();
+      unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id)).size;
+      unitGroups = new Set(unitRoles.map(r => r.fruit_group_id)).size;
+      // Hapja in unit
+      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20`);
+      const unitHapjas = await uhRes.json();
+      unitHapja = unitHapjas.length;
+    }
+    const unitStaffCount = unitStaffCodes.length;
+    document.getElementById('dashUnitMetrics').innerHTML = `
+      <div class="dash-card-row">
+        <div class="dash-stat"><div class="num">${unitStaffCount}</div><div class="lbl">TĐ</div></div>
+        <div class="dash-stat"><div class="num">${unitFruits}</div><div class="lbl">Trái quả</div></div>
+      </div>
+      <div class="dash-card-row">
+        <div class="dash-stat"><div class="num" style="color:var(--green);">${unitGroups}</div><div class="lbl">Group</div></div>
+        <div class="dash-stat"><div class="num" style="color:var(--yellow);">${unitHapja}</div><div class="lbl">Hapja chờ</div></div>
+      </div>`;
+    // Unit fruit list
+    const unitListEl = document.getElementById('dashUnitList');
+    if (unitRoles.length === 0) {
+      unitListEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái quả trong đơn vị</div>';
+    } else {
+      const seen = new Set();
+      unitListEl.innerHTML = unitRoles.filter(r => {
+        const pid = r.fruit_groups?.profile_id;
+        if (!pid || seen.has(pid)) return false;
+        seen.add(pid); return true;
+      }).slice(0, 8).map(r => {
+        const name = r.fruit_groups?.profiles?.full_name || 'N/A';
+        const lvl2 = r.fruit_groups?.level || 'tu_van';
+        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl2==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${lvl2==='bb'?'BB':'Tư vấn'}</div></div><div class="profile-arrow">\u203a</div></div>`;
+      }).join('');
+    }
+
+    // ── HAPJA (all visible based on permission) ──
+    const canApprove = ['admin','yjyn','ggn_jondo'].includes(pos);
     let hapjaQuery = '/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20';
-    if (lvl < 3) hapjaQuery += `&created_by=eq.${myCode}`; // only mine for TD/TVV/NDD
+    if (!canApprove && myCode) hapjaQuery += `&created_by=eq.${myCode}`;
     const hRes = await sbFetch(hapjaQuery);
     const hapjas = await hRes.json();
-
-    // 2. My Fruits & Groups (always mine)
-    let myFruitsCount = 0;
-    let myGroupsCount = 0;
-    let myRoles = [];
-    if (myCode) {
-      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
-      myRoles = await rRes.json();
-      myFruitsCount = myRoles.length;
-      myGroupsCount = new Set(myRoles.map(r=>r.fruit_group_id)).size;
-    }
-
-    if (['admin','yjyn'].includes(pos)) {
-      // OVERVIEW METRICS
-      const pRes = await sbFetch('/rest/v1/profiles?select=id');
-      const totalProfiles = (await pRes.json()).length;
-      const fgRes = await sbFetch('/rest/v1/fruit_groups?profile_id=not.is.null&select=id');
-      const totalGroups = (await fgRes.json()).length;
-      metricsHtml = `
-        <div class="dash-card-row">
-          <div class="dash-stat"><div class="num">${allStaff.length}</div><div class="lbl">T\u1ed5ng T\u0110</div></div>
-          <div class="dash-stat"><div class="num">${totalProfiles}</div><div class="lbl">T\u1ed5ng h\u1ed3 s\u01a1</div></div>
-        </div>
-        <div class="dash-card-row">
-          <div class="dash-stat"><div class="num" style="color:var(--yellow);">${hapjas.length}</div><div class="lbl">Hapja ch\u1edd duy\u1ec7t</div></div>
-          <div class="dash-stat"><div class="num" style="color:var(--green);">${totalGroups}</div><div class="lbl">T\u1ed5ng Group</div></div>
-        </div>
-      `;
-    } else if (['tjn','gyjn','bgyjn','ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
-      // MANAGER METRICS
-      metricsHtml = `
-        <div class="dash-card-row">
-          <div class="dash-stat"><div class="num">${myFruitsCount}</div><div class="lbl">Tr\u00e1i \u0111ang ch\u0103m</div></div>
-          <div class="dash-stat"><div class="num" style="color:var(--yellow);">${hapjas.length}</div><div class="lbl">Hapja (C\u1ea7n duy\u1ec7t)</div></div>
-        </div>
-        <div class="dash-card-row">
-          <div class="dash-stat"><div class="num">${myGroupsCount}</div><div class="lbl">Group tham gia</div></div>
-        </div>
-      `;
-    } else {
-      // STAFF METRICS (TĐ/TVV/NDD)
-      metricsHtml = `
-        <div class="dash-card-row">
-          <div class="dash-stat"><div class="num">${myFruitsCount}</div><div class="lbl">Tr\u00e1i \u0111ang ch\u0103m</div></div>
-          <div class="dash-stat"><div class="num">${myGroupsCount}</div><div class="lbl">Group tham gia</div></div>
-        </div>
-        <div class="dash-card-row">
-          <div class="dash-stat"><div class="num" style="color:var(--accent);">${hapjas.length}</div><div class="lbl">Hapja c\u1ee7a t\u00f4i (Ch\u1edd)</div></div>
-        </div>
-      `;
-    }
-    document.getElementById('dashMetricsWrap').innerHTML = metricsHtml;
-
-    // Render lists
-    const listEl = document.getElementById('dashMyList');
-    document.getElementById('dashMyListTitle').textContent = ['admin','yjyn'].includes(pos) ? '\ud83d\udcc1 H\u1ed3 s\u01a1 g\u1ea7n \u0111\u00e2y' : '\ud83c\udf4e Tr\u00e1i c\u1ee7a t\u00f4i';
-    
-    if (['admin','yjyn'].includes(pos)) {
-       const rpRes = await sbFetch('/rest/v1/profiles?select=id,full_name,status&order=created_at.desc&limit=5');
-       const rProfs = await rpRes.json();
-       if (!rProfs.length) listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Ch\u01b0a c\u00f3 h\u1ed3 s\u01a1 n\u00e0o</div>';
-       else listEl.innerHTML = rProfs.map(p => `<div class="dash-list-item" onclick="openProfileById('${p.id}')"><div class="dash-dot bb"></div><div class="profile-info"><div class="profile-name">${p.full_name||'V\u00f4 danh'}</div></div><div class="profile-arrow">\u203a</div></div>`).join('');
-    } else {
-       if (myRoles.length === 0) listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Ch\u01b0a \u0111\u01b0\u1ee3c g\u1eafn vai tr\u00f2 n\u00e0o</div>';
-       else listEl.innerHTML = myRoles.map(r => {
-         const name = r.fruit_groups?.profiles?.full_name || 'N/A';
-         const role = {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'L\u00e1'}[r.role_type] || r.role_type;
-         const lvl2 = r.fruit_groups?.level || 'tu_van';
-         return `<div class="dash-list-item" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl2==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${role} \u00b7 ${lvl2==='bb'?'BB':'T\u01b0 v\u1ea5n'}</div></div><div class="profile-arrow">\u203a</div></div>`;
-       }).join('');
-    }
-
-    // Check Hapja list
-    const canApprove = ['admin','yjyn','ggn_jondo'].includes(pos);
+    document.getElementById('dashHapjaTitle').textContent = canApprove ? '📋 Cần duyệt Hapja' : '📋 Hapja của tôi';
     const hList = document.getElementById('dashHapjaList');
-    document.getElementById('dashHapjaTitle').textContent = canApprove ? '\ud83d\udccb C\u1ea7n duy\u1ec7t Hapja' : '\ud83d\udccb Ti\u1ebfn \u0111\u1ed9 Hapja c\u1ee7a t\u00f4i';
     if (hapjas.length === 0) {
-      hList.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Kh\u00f4ng c\u00f3 phi\u1ebfu ch\u1edd duy\u1ec7t</div>';
+      hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu chờ duyệt</div>';
     } else {
       hList.innerHTML = hapjas.map(h => {
         const date = new Date(h.created_at).toLocaleDateString('vi-VN');
-        const fname = h.full_name;
-        const ndd = h.data?.ndd_staff_code || h.created_by;
-        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${fname}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${ndd}</div></div><div class="profile-arrow">\u203a</div></div>`;
+        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${h.full_name}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">\u203a</div></div>`;
+      }).join('');
+    }
+
+    // ── SECTION 2: CÁ NHÂN ──
+    let myRoles = [], myFruits = 0, myGroups = 0, myHapja = 0;
+    if (myCode) {
+      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
+      myRoles = await rRes.json();
+      myFruits = myRoles.length;
+      myGroups = new Set(myRoles.map(r => r.fruit_group_id)).size;
+      const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id`);
+      myHapja = (await mhRes.json()).length;
+    }
+    document.getElementById('dashPersonalMetrics').innerHTML = `
+      <div class="dash-card-row">
+        <div class="dash-stat"><div class="num">${myFruits}</div><div class="lbl">Trái tôi chăm</div></div>
+        <div class="dash-stat"><div class="num">${myGroups}</div><div class="lbl">Group tham gia</div></div>
+      </div>
+      <div class="dash-card-row">
+        <div class="dash-stat"><div class="num" style="color:var(--accent);">${myHapja}</div><div class="lbl">Hapja tôi tạo</div></div>
+      </div>`;
+    // Personal fruit list
+    const listEl = document.getElementById('dashMyList');
+    if (myRoles.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa được gắn vai trò nào</div>';
+    } else {
+      listEl.innerHTML = myRoles.map(r => {
+        const name = r.fruit_groups?.profiles?.full_name || 'N/A';
+        const role = {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'Lá'}[r.role_type] || r.role_type;
+        const lvl2 = r.fruit_groups?.level || 'tu_van';
+        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl2==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${role} \u00b7 ${lvl2==='bb'?'BB':'Tư vấn'}</div></div><div class="profile-arrow">\u203a</div></div>`;
       }).join('');
     }
   } catch(e) { console.error('Dashboard error:', e); }
