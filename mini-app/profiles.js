@@ -52,10 +52,14 @@ async function openProfile(p) {
   ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
+
+  const fStatus = p.fruit_status || 'alive';
+  const statusLabel = fStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+
   document.getElementById('profileDetailHeader').innerHTML = `
     <div class="profile-detail-avatar">${(p.full_name||'?')[0]}</div>
     <div class="profile-detail-name">${p.full_name}</div>
-    <div class="profile-detail-meta">${p.phone_number||''} · ${p.status||'active'}</div>`;
+    <div class="profile-detail-meta">${p.phone_number||'Chưa có SĐT'} · ${statusLabel}</div>`;
   // Phase
   const ph = p.phase || 'chakki';
   // Fetch roles for this profile
