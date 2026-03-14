@@ -91,10 +91,12 @@
   <div id="detailView" class="detail-view">
     <button class="back-btn" onclick="backToList()">← Quay lại</button>
     <div class="profile-detail-header" id="profileDetailHeader"></div>
+    <div id="profilePhaseBar" style="padding:0 16px 8px;display:flex;gap:8px;align-items:center;"></div>
     <div class="form-tabs">
-      <div class="form-tab active" onclick="switchFormTab(this,'coverPage')">📄 Trang bìa</div>
-      <div class="form-tab" onclick="switchFormTab(this,'infoSheet')">📋 Thông tin</div>
-      <div class="form-tab" onclick="switchFormTab(this,'tuVan')">💬 Tư vấn</div>
+      <div class="form-tab active" onclick="switchFormTab(this,'coverPage')">📄 Bìa</div>
+      <div class="form-tab" onclick="switchFormTab(this,'infoSheet')">📋 TT</div>
+      <div class="form-tab" onclick="switchFormTab(this,'journeyTab')">📜 Hành trình</div>
+      <div class="form-tab" onclick="switchFormTab(this,'tuVan')">💬 TV</div>
       <div class="form-tab" onclick="switchFormTab(this,'bienBan')">📝 BB</div>
     </div>
 
@@ -147,6 +149,20 @@
         <div class="field-group"><label>22. Công cụ đã tư vấn</label><textarea id="t2_cong_cu" placeholder="..." style="min-height:60px;"></textarea></div>
         <div class="field-group"><label>23. Lưu ý</label><textarea id="t2_luu_y" placeholder="..." style="min-height:60px;"></textarea></div>
         <button class="save-btn" onclick="saveInfoSheet()">💾 Lưu Phiếu Thông tin</button>
+      </div>
+    </div>
+
+    <!-- HÀNH TRÌNH -->
+    <div class="form-card" id="journeyTab">
+      <div class="form-card-header"><div class="form-card-title">📜 HÀNH TRÌNH</div></div>
+      <div class="form-card-body">
+        <div id="sessionsList" style="margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn</button>
+          <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>
+        </div>
+        <div class="section-header" style="margin-top:16px;"><div class="section-title" style="font-size:13px;">📜 Dòng thời gian</div></div>
+        <div id="timelineList"></div>
       </div>
     </div>
 
@@ -278,6 +294,45 @@
     <button onclick="closeModal('editStructModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
+
+<!-- Chốt Tư vấn Modal -->
+<div class="modal-overlay" id="scheduleTVModal">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">📅 Chốt Tư vấn</div>
+  <div class="field-group"><label>Lần thứ</label><input type="number" id="stv_session_num" readonly style="background:var(--surface2);" /></div>
+  <div class="field-group"><label>Công cụ tư vấn</label>
+    <select id="stv_tool">
+      <option value="">Chọn công cụ...</option>
+      <option>Sinh trắc vân tay</option>
+      <option>MBTI</option>
+      <option>DISC</option>
+      <option>Enneagram</option>
+      <option>Trực tiếp</option>
+      <option>Online</option>
+      <option>Khác</option>
+    </select>
+  </div>
+  <div class="field-group"><label>Thời gian dự kiến</label><input type="datetime-local" id="stv_datetime" /></div>
+  <div class="field-group"><label>TVV phụ trách</label><input type="text" id="stv_tvv" list="staffSuggest" placeholder="Chọn TVV..." /></div>
+  <div class="field-group"><label>Ghi chú</label><textarea id="stv_notes" rows="2" placeholder="Ghi chú..."></textarea></div>
+  <button class="save-btn" onclick="saveScheduleTV()">📅 Lưu Chốt TV</button>
+  <button onclick="closeModal('scheduleTVModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
+</div>
+</div>
+
+<!-- Chốt BB Modal -->
+<div class="modal-overlay" id="chotBBModal">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">🎓 Chốt BB</div>
+  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Chuyển trái sang giai đoạn BB. Sau khi chốt, hãy tạo group Telegram, thêm bot vào group và gõ <code>/link [mã hồ sơ]</code> để gắn.</div>
+  <div class="field-group"><label>GVBB phụ trách</label><input type="text" id="cbb_gvbb" list="staffSuggest" placeholder="Chọn GVBB..." /></div>
+  <div class="field-group"><label>Ghi chú</label><textarea id="cbb_notes" rows="2" placeholder="Ghi chú..."></textarea></div>
+  <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Chốt BB</button>
+  <button onclick="closeModal('chotBBModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
+</div>
+</div>
 
 <!-- Hapja Detail Modal -->
 <div class="modal-overlay" id="hapjaDetailModal">
