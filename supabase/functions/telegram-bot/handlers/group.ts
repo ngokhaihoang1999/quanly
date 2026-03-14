@@ -37,7 +37,7 @@ export async function handleGroupChat(update: any) {
       // Fetch unlinked BB-phase profiles (exclude those with a REAL telegram group)
       const { data: linkedGroups } = await supabase.from('fruit_groups')
         .select('profile_id').not('profile_id', 'is', null)
-        .not('telegram_group_id', 'is', null).neq('telegram_group_id', 0);
+        .not('telegram_group_id', 'is', null);
       const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
 
       let query = supabase.from('profiles')

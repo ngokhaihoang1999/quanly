@@ -74,8 +74,8 @@ async function openProfile(p) {
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,fruit_roles(staff_code,role_type)`);
     const fgs = await fgRes.json();
     (fgs||[]).forEach(fg => {
-      // Check for real group (positive telegram_group_id)
-      if (fg.telegram_group_id != null && fg.telegram_group_id !== 0) hasRealBBGroup = true;
+      // Real group has a telegram_group_id (not null)
+      if (fg.telegram_group_id) hasRealBBGroup = true;
       (fg.fruit_roles||[]).forEach(r => {
         if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
         if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);

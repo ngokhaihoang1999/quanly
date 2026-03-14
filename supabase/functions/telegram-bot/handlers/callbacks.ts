@@ -128,7 +128,7 @@ export async function handleCallback(update: any, staffData: any) {
     // Lấy danh sách profile BB chưa gắn group
     const { data: linkedGroups } = await supabase.from('fruit_groups')
       .select('profile_id').not('profile_id', 'is', null)
-      .not('telegram_group_id', 'is', null).neq('telegram_group_id', 0);
+      .not('telegram_group_id', 'is', null);
     const linkedIds = linkedGroups?.map((g: any) => g.profile_id).filter(Boolean) || [];
     let query = supabase.from('profiles')
       .select('id, full_name, phase')
@@ -194,12 +194,35 @@ export async function handleCallback(update: any, staffData: any) {
       return sendText(chatId, `⚠️ Hồ sơ *${profile.full_name}* chưa ở giai đoạn BB — không thể gắn group BB.`);
     }
     await editMessageReplyMarkup(chatId, messageId, null);
+
+    // Find the fruit_group row for THIS Telegram group
     const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
     if (!fg) return sendText(chatId, `❌ Group chưa đăng ký.`);
-    await supabase.from('fruit_groups').update({ profile_id: profileId, level: 'bb', updated_at: new Date().toISOString() }).eq('id', fg.id);
+
+    // Check if profile already has a placeholder fruit_group (telegram_group_id IS NULL)
+    const { data: placeholders } = await supabase.from('fruit_groups')
+      .select('id').eq('profile_id', profileId).is('telegram_group_id', null);
+
+    if (placeholders && placeholders.length > 0) {
+      // Transfer roles from placeholder rows to the real group row
+      for (const ph of placeholders) {
+        await supabase.from('fruit_roles')
+          .update({ fruit_group_id: fg.id })
+          .eq('fruit_group_id', ph.id);
+        // Delete placeholder row
+        await supabase.from('fruit_groups').delete().eq('id', ph.id);
+      }
+    }
+
+    // Update the real group row with profile_id
+    await supabase.from('fruit_groups').update({
+      profile_id: profileId, level: 'bb', updated_at: new Date().toISOString()
+    }).eq('id', fg.id);
+
     await sendText(chatId, `✅ Đã gắn hồ sơ *${profile.full_name}* cho group này.`);
     return;
   }
+
 
   // action_set_level_{level} — Set group level
   if (cbData.startsWith('action_set_level_')) {

@@ -31,8 +31,8 @@ async function loadJourney(profileId, currentPhase) {
     try {
       const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title`);
       const fgs = await fgRes.json();
-      // Find the one with a real Telegram group (not null and not 0)
-      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id != null && g.telegram_group_id !== 0) || null;
+      // Find the one with a real Telegram group (not null)
+      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id) || null;
     } catch(e) {}
   }
 
@@ -63,7 +63,7 @@ async function loadJourney(profileId, currentPhase) {
   const groupBarEl = document.getElementById('bbGroupBar');
   if (groupBarEl) {
     if (['bb','center','completed'].includes(currentPhase)) {
-      if (bbGroupInfo && bbGroupInfo.telegram_group_id != null && bbGroupInfo.telegram_group_id !== 0) {
+      if (bbGroupInfo && bbGroupInfo.telegram_group_id) {
         // Group đã gắn → nút mở group
         const groupTitle = bbGroupInfo.telegram_group_title || 'Group BB';
         groupBarEl.innerHTML = `

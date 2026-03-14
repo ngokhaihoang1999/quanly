@@ -40,9 +40,9 @@ Deno.serve(async (req) => {
       const newStatus = mcm.new_chat_member?.status;
       const groupId = mcm.chat?.id;
       if (groupId && (newStatus === 'kicked' || newStatus === 'left')) {
-        // Reset telegram_group_id to 0 so the profile shows "Chưa gắn group"
+        // Reset telegram_group_id to null so the profile shows "Chưa gắn group"
         await supabase.from('fruit_groups')
-          .update({ telegram_group_id: 0, telegram_group_title: null, updated_at: new Date().toISOString() })
+          .update({ telegram_group_id: null, telegram_group_title: null, updated_at: new Date().toISOString() })
           .eq('telegram_group_id', groupId);
       }
       return new Response("OK");
