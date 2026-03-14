@@ -70,6 +70,7 @@ async function openProfile(p) {
   // Fetch roles + check real BB group
   let rolesInfo = {ndd:'', tvv:[], gvbb:''};
   let hasRealBBGroup = false;
+  let realGroupId = null;
   let realGroupTitle = '';
   let realGroupInviteLink = '';
   try {
@@ -79,6 +80,7 @@ async function openProfile(p) {
       // Real group has a telegram_group_id (not null)
       if (fg.telegram_group_id) {
         hasRealBBGroup = true;
+        realGroupId = fg.telegram_group_id;
         realGroupTitle = fg.telegram_group_title || 'Group BB';
         if (fg.invite_link) realGroupInviteLink = fg.invite_link;
       }
