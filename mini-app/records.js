@@ -25,6 +25,16 @@ async function loadJourney(profileId, currentPhase) {
   const tlEl = document.getElementById('timelineList');
   if (!phBtnEl || !tlEl) return;
 
+  // Fetch group BB info (for BB/center phase)
+  let bbGroupInfo = null;
+  if (['bb','center','completed'].includes(currentPhase)) {
+    try {
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title&limit=1`);
+      const fgs = await fgRes.json();
+      if (fgs[0]) bbGroupInfo = fgs[0];
+    } catch(e) {}
+  }
+
   // Phase action buttons
   let btnHtml = '';
   if (['new','chakki'].includes(currentPhase)) {
@@ -47,6 +57,40 @@ async function loadJourney(profileId, currentPhase) {
     </button>`;
   }
   phBtnEl.innerHTML = btnHtml;
+
+  // Group BB info bar — shown below phase buttons for BB/center phase
+  const groupBarEl = document.getElementById('bbGroupBar');
+  if (groupBarEl) {
+    if (['bb','center','completed'].includes(currentPhase)) {
+      if (bbGroupInfo && bbGroupInfo.telegram_group_id && bbGroupInfo.telegram_group_id > 0) {
+        // Group đã gắn → nút mở group
+        const groupTitle = bbGroupInfo.telegram_group_title || 'Group BB';
+        groupBarEl.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:var(--radius-sm);">
+            <span style="font-size:18px;">💬</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:1px;">Group BB đã gắn</div>
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${groupTitle}</div>
+            </div>
+            <a href="https://t.me/c/${String(bbGroupInfo.telegram_group_id).replace('-100','')}" target="_blank"
+               style="flex-shrink:0;padding:6px 14px;border-radius:20px;background:var(--green);color:white;font-size:12px;font-weight:700;text-decoration:none;">
+              Mở Group →
+            </a>
+          </div>`;
+      } else {
+        // Chưa gắn group → hướng dẫn
+        groupBarEl.innerHTML = `
+          <div style="padding:8px 12px;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);">
+            💬 Chưa gắn Group BB — Tạo group Telegram, thêm bot rồi gõ <code>/link ${profileId}</code> trong group
+          </div>`;
+      }
+      groupBarEl.style.display = 'block';
+    } else {
+      groupBarEl.style.display = 'none';
+    }
+  }
+
+
 
   try {
     const [sessRes, recRes, hjRes] = await Promise.all([
