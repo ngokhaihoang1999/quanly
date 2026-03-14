@@ -11,9 +11,15 @@ Mở qua: Telegram WebApp button từ Bot `/start`
 
 ```
 mini-app/
-├── index.html    # HTML template — chỉ markup
-├── styles.css    # Design system — CSS variables, components
-└── app.js        # Business logic — auth, data, UI
+├── index.html       # HTML template — chỉ markup
+├── styles.css       # Design system — CSS variables, components
+├── core.js          # Khởi tạo, helpers, globals, config, split logic chung
+├── dashboard.js     # Logic tab Đơn vị & Cá nhân, thống kê
+├── profiles.js      # Danh sách hồ sơ Trái quả, lọc, thông tin Trang bìa
+├── hapja.js         # Xử lý phiếu Check Hapja (Tạo, Duyệt)
+├── records.js       # Báo cáo Tư vấn, BB, và Phiếu Hành chính
+├── staff.js         # Tab Nhân sự TĐ
+└── structure.js     # Tab Cơ cấu tổ chức
 ```
 
 ---
@@ -42,8 +48,9 @@ mini-app/
 | GGN/SGN | Cả Khu vực (nơi mình thuộc) |
 | TĐ | Tổ mình thuộc |
 
-Metrics: TĐ trong đơn vị, Trái quả, Group, Hapja chờ  
-Danh sách trái quả trong đơn vị (deduplicated, max 8)
+Metrics: TĐ trong đơn vị, Trái Hapja đã duyệt, Trái TV, Trái BB, Group BB.
+Bảng số liệu cho phép bấm vào từng metric để mở popup xem chi tiết danh sách trái/group tương ứng. Hiển thị dấu hiệu Alive (🟢) và Drop-out (🔴) trên từng thẻ trái quả.
+Danh sách hồ sơ trái quả có thanh lọc theo tình trạng (Tất cả / Alive / Drop-out).
 
 ### Tab Cá nhân — Luôn là dữ liệu cá nhân
 - Trái tôi chăm (fruit_roles của staff_code)

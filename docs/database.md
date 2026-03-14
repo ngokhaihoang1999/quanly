@@ -60,8 +60,9 @@ Migrations: `supabase/migrations/` (7 files, chạy theo thứ tự timestamp)
 | phone_number | text | SĐT |
 | ndd_staff_code | text | Mã TĐ của NDD |
 | info_sheet | jsonb | Dữ liệu mở rộng (tvv_name, gvbb_name, la_name,...) |
-| status | text | `active` |
-| created_at | timestamptz | |
+| status | text | Trạng thái kỹ thuật: `active` |
+| fruit_status | text | Tình trạng trái quả: `alive` (mặc định) hoặc `dropout` |
+| created_at | timestamptz | Ngày tạo |
 
 ### `fruit_groups` — Group Chat gắn hồ sơ
 | Cột | Kiểu | Ghi chú |
