@@ -16,7 +16,7 @@ function renderProfiles(profiles) {
     const statusLabel = isDropout ? 'Drop-out' : 'Alive';
     // Drop-out: show phone number | Alive: show birth_year
     const metaExtra = isDropout
-      ? (p.dropout_reason || 'Không rõ lý do')
+      ? (p.dropout_reason || '')
       : (p.birth_year || '');
     return `
     <div class="profile-card" onclick="openProfileById('${p.id}')">

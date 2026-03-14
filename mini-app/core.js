@@ -275,8 +275,9 @@ async function toggleFruitStatus(profileId, current) {
   
   let reason = '';
   if (newStatus === 'dropout') {
-    reason = prompt('Nhập lý do Drop-out:');
-    if (reason === null) return;
+    reason = prompt('Nhập lý do Drop-out (có thể để trống):');
+    if (reason === null) return; // Chỉ huỷ khi bấm Cancel
+    reason = reason.trim();
   }
 
   if (!confirm(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
