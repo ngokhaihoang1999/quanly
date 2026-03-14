@@ -144,24 +144,56 @@ async function loadDashboard() {
     // ── SECTION 1: ĐƠN VỊ ──
     document.getElementById('dashUnitTitle').textContent = '🏢 ' + (unitLabel || 'Đơn vị');
     let unitFruits = 0, unitGroups = 0, unitHapja = 0, unitRoles = [];
+    let approvedHapjaList = [], tvvFruits = [], gvbbFruits = [], bbGroups = [];
     if (unitStaffCodes.length > 0) {
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
-      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code),fruit_roles(staff_code,role_type))`);
+      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code,fruit_status),fruit_roles(staff_code,role_type))`);
       unitRoles = await urRes.json();
-      unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id)).size;
-      unitGroups = new Set(unitRoles.map(r => r.fruit_group_id)).size;
+      unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
+      // Approved Hapja by unit members
+      const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc`);
+      approvedHapjaList = await ahRes.json();
+      // TVV fruits (role_type=tvv by unit members)
+      const tvvSeen = new Set();
+      unitRoles.forEach(r => {
+        if (r.role_type === 'tvv' && unitStaffCodes.includes(r.staff_code) && r.fruit_groups?.profile_id && !tvvSeen.has(r.fruit_groups.profile_id)) {
+          tvvSeen.add(r.fruit_groups.profile_id);
+          tvvFruits.push(r);
+        }
+      });
+      // GVBB fruits (role_type=gvbb by unit members)
+      const gvbbSeen = new Set();
+      unitRoles.forEach(r => {
+        if (r.role_type === 'gvbb' && unitStaffCodes.includes(r.staff_code) && r.fruit_groups?.profile_id && !gvbbSeen.has(r.fruit_groups.profile_id)) {
+          gvbbSeen.add(r.fruit_groups.profile_id);
+          gvbbFruits.push(r);
+        }
+      });
+      // BB groups where NDD is a unit member
+      const bbSeen = new Set();
+      unitRoles.forEach(r => {
+        if (r.role_type === 'ndd' && unitStaffCodes.includes(r.staff_code) && r.fruit_groups?.level === 'bb' && !bbSeen.has(r.fruit_group_id)) {
+          bbSeen.add(r.fruit_group_id);
+          bbGroups.push(r);
+        }
+      });
+      // Pending hapja for section below
       const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20`);
       unitHapja = (await uhRes.json()).length;
     }
-    const unitStaffCount = unitStaffCodes.length;
+    // Store for popup use
+    window._unitApprovedHapja = approvedHapjaList;
+    window._unitTvvFruits = tvvFruits;
+    window._unitGvbbFruits = gvbbFruits;
+    window._unitBbGroups = bbGroups;
     document.getElementById('dashUnitMetrics').innerHTML = `
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num">${unitStaffCount}</div><div class="lbl">TĐ</div></div>
-        <div class="dash-stat"><div class="num">${unitFruits}</div><div class="lbl">Trái quả</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('hapja')"><div class="num">${approvedHapjaList.length}</div><div class="lbl">Trái Hapja</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('tvv')"><div class="num" style="color:var(--accent);">${tvvFruits.length}</div><div class="lbl">Trái TV</div></div>
       </div>
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num" style="color:var(--green);">${unitGroups}</div><div class="lbl">Group</div></div>
-        <div class="dash-stat"><div class="num" style="color:var(--yellow);">${unitHapja}</div><div class="lbl">Hapja chờ</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('gvbb')"><div class="num" style="color:var(--green);">${gvbbFruits.length}</div><div class="lbl">Trái BB</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('bbgroup')"><div class="num" style="color:var(--yellow);">${bbGroups.length}</div><div class="lbl">Group BB</div></div>
       </div>`;
 
     // Pre-fetch latest sessions + records for all unit fruits
@@ -202,9 +234,11 @@ async function loadDashboard() {
         const lr = recordMap[pid], ls = sessionMap[pid];
         if (lr) { const isTV=lr.record_type==='tu_van'; const num=lr.content?.lan_thu||lr.content?.buoi_thu||''; latest=isTV?`TV lần ${num}`:`BB buổi ${num}`; }
         else if (ls) { latest = `Chốt TV lần ${ls.session_number}`; }
+        const fStatus = p?.fruit_status || 'alive';
+        const sDot = fStatus === 'dropout' ? '🔴' : '🟢';
         return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <div style="font-weight:700;font-size:13px;">${name}</div>
+            <div style="font-weight:700;font-size:13px;">${sDot} ${name}</div>
             <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;font-size:10px;color:var(--text2);">
@@ -290,13 +324,18 @@ async function loadDashboard() {
     const unitListEl = document.getElementById('dashUnitList');
     unitListEl.innerHTML = '';
 
-    // ── HAPJA (all visible based on permission) ──
+    // ── HAPJA (filter by unit scope) ──
     const canApprove = ['admin','yjyn','ggn_jondo','ggn_chakki'].includes(pos);
     let hapjaQuery = '/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20';
-    if (!canApprove && myCode) hapjaQuery += `&created_by=eq.${myCode}`;
+    if (canApprove && unitStaffCodes.length > 0 && pos !== 'admin') {
+      const codeFilter2 = unitStaffCodes.map(c => `"${c}"`).join(',');
+      hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20`;
+    } else if (!canApprove && myCode) {
+      hapjaQuery += `&created_by=eq.${myCode}`;
+    }
     const hRes = await sbFetch(hapjaQuery);
     const hapjas = await hRes.json();
-    document.getElementById('dashHapjaTitle').textContent = canApprove ? '📋 Cần duyệt Hapja' : '📋 Hapja của tôi';
+    document.getElementById('dashHapjaTitle').textContent = '📋 Check Hapja đang chờ';
     const hList = document.getElementById('dashHapjaList');
     if (hapjas.length === 0) {
       hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu chờ duyệt</div>';
@@ -428,18 +467,35 @@ function renderProfiles(profiles) {
   const el = document.getElementById('profileList');
   document.getElementById('profileCount').textContent = profiles.length + ' hồ sơ';
   if (!profiles.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Chưa có hồ sơ</div><div class="empty-sub">Nhấn ➕ để thêm</div></div>'; return; }
-  el.innerHTML = profiles.map(p => `
+  el.innerHTML = profiles.map(p => {
+    const statusColor = p.fruit_status === 'dropout' ? 'var(--red)' : 'var(--green)';
+    const statusLabel = p.fruit_status === 'dropout' ? 'Drop-out' : 'Alive';
+    return `
     <div class="profile-card" onclick="openProfileById('${p.id}')">
       <div class="avatar">${(p.full_name||'?')[0]}</div>
       <div class="profile-info">
         <div class="profile-name">${p.full_name}</div>
-        <div class="profile-meta"><span class="status-dot status-active"></span>${p.phone_number||'Chưa có SĐT'}</div>
+        <div class="profile-meta"><span class="status-dot" style="background:${statusColor};"></span>${statusLabel} · ${p.phone_number||'Chưa có SĐT'}</div>
       </div>
       <div class="profile-arrow">›</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
-function filterProfiles() { const q=document.getElementById('searchInput').value.toLowerCase(); renderProfiles(allProfiles.filter(p=>p.full_name.toLowerCase().includes(q)||(p.phone_number||'').includes(q))); }
+let currentStatusFilter = 'all';
+function setStatusFilter(filter, el) {
+  currentStatusFilter = filter;
+  document.querySelectorAll('#statusFilter .chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  filterProfiles();
+}
+function filterProfiles() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderProfiles(allProfiles.filter(p => {
+    const matchName = p.full_name.toLowerCase().includes(q) || (p.phone_number||'').includes(q);
+    const matchStatus = currentStatusFilter === 'all' || (p.fruit_status || 'alive') === currentStatusFilter;
+    return matchName && matchStatus;
+  }));
+}
 
 // ============ PROFILE DETAIL ============
 async function openProfileById(id) {
@@ -484,10 +540,21 @@ async function openProfile(p) {
     if (ss[0]) latestInfo = `TV lần ${ss[0].session_number} (${ss[0].tool||'—'})`;
   } catch(e) {}
   // Summary card
+  const fruitStatus = p.fruit_status || 'alive';
+  const statusBg = fruitStatus === 'dropout' ? 'var(--red)' : 'var(--green)';
+  const statusText = fruitStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+  // Check if current user can toggle status (NDD/GYJN/BGYJN)
+  const myCode2 = getEffectiveStaffCode();
+  const pos2 = getCurrentPosition();
+  const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
+  const statusBtn = canToggleStatus ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fruitStatus}')" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>` : `<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
   document.getElementById('profileSummaryCard').innerHTML = `
     <div style="background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px 14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:12px;color:var(--text2);">${p.birth_year||'—'} · ${p.gender||'—'}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${statusBtn}
+          <span style="font-size:12px;color:var(--text2);">${p.birth_year||'—'} · ${p.gender||'—'}</span>
+        </div>
         <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${phaseColor[ph]};color:white;">${phaseMap[ph]||ph}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;">
@@ -1674,6 +1741,77 @@ function applyPermissions() {
   if (fabBtn) fabBtn.style.display = (canCreateHapja(pos) && (activeTab==='dashboard'||activeTab==='profiles')) ? 'flex' : 'none';
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
+}
+
+// ============ UNIT POPUP ============
+function showUnitPopup(type) {
+  const phMap = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
+  const phColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
+  let title = '', items = [];
+  if (type === 'hapja') {
+    title = '🍎 Trái Hapja (đã duyệt)';
+    const list = window._unitApprovedHapja || [];
+    items = list.map(h => `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="${h.profile_id ? `openProfileById('${h.profile_id}');closeModal('unitPopupModal')` : ''}">
+      <div style="font-weight:700;font-size:13px;">${h.full_name}</div>
+      <div style="font-size:11px;color:var(--text2);">NDD: ${h.data?.ndd_staff_code||h.created_by} · ${new Date(h.created_at).toLocaleDateString('vi-VN')}</div>
+    </div>`);
+  } else if (type === 'tvv') {
+    title = '💬 Trái TV';
+    const list = window._unitTvvFruits || [];
+    items = list.map(r => {
+      const p = r.fruit_groups?.profiles;
+      const ph = p?.phase || 'chakki';
+      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">TVV: ${r.staff_code}</div>
+      </div>`;
+    });
+  } else if (type === 'gvbb') {
+    title = '🎓 Trái BB';
+    const list = window._unitGvbbFruits || [];
+    items = list.map(r => {
+      const p = r.fruit_groups?.profiles;
+      const ph = p?.phase || 'bb';
+      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">GVBB: ${r.staff_code}</div>
+      </div>`;
+    });
+  } else if (type === 'bbgroup') {
+    title = '💬 Group BB';
+    const list = window._unitBbGroups || [];
+    items = list.map(r => `<div style="padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;">
+      <div style="font-weight:700;font-size:13px;">${r.fruit_groups?.telegram_group_title || 'Group'}</div>
+      <div style="font-size:11px;color:var(--text2);">NDD: ${r.staff_code} · ${r.fruit_groups?.profiles?.full_name || ''}</div>
+    </div>`);
+  }
+  document.getElementById('unitPopupTitle').textContent = title;
+  document.getElementById('unitPopupBody').innerHTML = items.length ? items.join('') : '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có dữ liệu</div>';
+  document.getElementById('unitPopupModal').classList.add('open');
+}
+
+// ============ FRUIT STATUS TOGGLE ============
+async function toggleFruitStatus(profileId, current) {
+  const newStatus = current === 'alive' ? 'dropout' : 'alive';
+  const label = newStatus === 'dropout' ? 'Drop-out' : 'Alive';
+  if (!confirm(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
+  try {
+    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify({ fruit_status: newStatus }) });
+    showToast(`✅ Đã chuyển sang ${label}`);
+    // Update local cache
+    const idx = allProfiles.findIndex(x => x.id === profileId);
+    if (idx >= 0) {
+      allProfiles[idx].fruit_status = newStatus;
+      openProfile(allProfiles[idx]);
+    }
+    filterProfiles();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
 // ============ THEME TOGGLE ============

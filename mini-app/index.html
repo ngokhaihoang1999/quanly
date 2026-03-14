@@ -55,6 +55,11 @@
     <div id="dashHapjaList"><div class="empty-state"><div class="empty-sub">Đang tải...</div></div></div>
 
     <div class="section-header" style="margin-top:16px;"><div class="section-title">📁 Hồ sơ Trái quả</div><div class="section-count" id="profileCount">--</div></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;" id="statusFilter">
+      <div class="chip active" onclick="setStatusFilter('all',this)">Tất cả</div>
+      <div class="chip" onclick="setStatusFilter('alive',this)">🟢 Alive</div>
+      <div class="chip" onclick="setStatusFilter('dropout',this)">🔴 Drop-out</div>
+    </div>
     <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm kiếm theo tên..." id="searchInput" oninput="filterProfiles()" /></div>
     <div id="profileList">
       <div class="profile-card skeleton" style="height:68px;"></div>
@@ -311,6 +316,16 @@
   <div id="hapjaDetailBody" style="display:flex;flex-direction:column;gap:12px;"></div>
   <div id="hapjaDetailActions" style="display:flex;gap:8px;margin-top:16px;"></div>
   <button onclick="closeModal('hapjaDetailModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
+</div>
+</div>
+
+<!-- Unit Metric Popup -->
+<div class="modal-overlay" id="unitPopupModal">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="unitPopupTitle">📊 Chi tiết</div>
+  <div id="unitPopupBody" style="max-height:60vh;overflow-y:auto;"></div>
+  <button onclick="closeModal('unitPopupModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:8px;width:100%;text-align:center;">Đóng</button>
 </div>
 </div>
 
