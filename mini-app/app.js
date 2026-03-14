@@ -893,11 +893,20 @@ async function rejectHapja(id) {
 async function deleteProfile() {
   if (!currentProfileId || !confirm('Xác nhận xoá hồ sơ?')) return;
   try {
+    // Xoá child tables trước (đúng thứ tự FK)
+    await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
     await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
     await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
+    // Xoá fruit_roles trước fruit_groups
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
+    const fgs = await fgRes.json();
+    for (const fg of fgs) {
+      await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fg.id}`, {method:'DELETE'});
+    }
+    await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {method:'DELETE'});
     showToast('✅ Đã xoá!'); backToList(); await loadProfiles();
-  } catch { showToast('❌ Lỗi'); }
+  } catch(e) { showToast('❌ Lỗi xoá hồ sơ'); console.error(e); }
 }
 async function deleteRecord(id, type) {
   if (!confirm('Xoá phiếu này?')) return;
