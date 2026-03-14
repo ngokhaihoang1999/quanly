@@ -188,6 +188,15 @@ export async function handleGroupChat(update: any) {
 
   // /menu — Menu lệnh cho group
   if (text === '/menu' || text.startsWith('/menu@')) {
+    // Try to refresh invite link in background
+    exportChatInviteLink(chatId).then(link => {
+      if (link) {
+        supabase.from('fruit_groups')
+          .update({ invite_link: link, telegram_group_title: chatTitle, updated_at: new Date().toISOString() })
+          .eq('telegram_group_id', chatId).then(() => {});
+      }
+    }).catch(() => {});
+
     const keyboard = [
       [{ text: '📋 Xem thông tin Group', callback_data: 'menu_info' }],
       [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
