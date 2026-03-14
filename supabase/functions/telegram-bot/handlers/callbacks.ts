@@ -1,5 +1,5 @@
-import { supabase, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS } from "../config.ts";
-import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition } from "../permissions.ts";
+import { supabase, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
+import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
 import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getStaffByTelegramId } from "../telegram.ts";
 
 // ============ CALLBACK QUERY HANDLER ============
@@ -13,7 +13,65 @@ export async function handleCallback(update: any, staffData: any) {
   const pos = staffData.position || 'td';
   const isAdmin = pos === 'admin' || staffData.staff_code === ADMIN_STAFF_CODE;
 
+  // ============ PRIVATE MENU BUTTON CALLBACKS ============
+
+  // btn_assign_pos — Chỉ định chức vụ (pick staff first)
+  if (cbData === 'btn_assign_pos') {
+    if (!canAssignPosition(pos)) return sendText(chatId, `⛔ Không có quyền chỉ định chức vụ.`);
+    const { data: staffList } = await supabase.from('staff')
+      .select('staff_code, full_name, position')
+      .order('staff_code', { ascending: true })
+      .limit(30);
+    if (!staffList || staffList.length === 0) return sendText(chatId, `❌ Chưa có TĐ nào.`);
+    const kb = staffList.map((s: any) => [{
+      text: `${s.full_name} (${s.staff_code}) — ${POSITION_LABELS[s.position] || s.position}`,
+      callback_data: `assign_pos_pick_${s.staff_code}`
+    }]);
+    await sendKeyboard(chatId, `Chọn TĐ để chỉ định chức vụ:`, kb);
+    return;
+  }
+
+  // assign_pos_pick_{code} — Chọn chức vụ mới cho TĐ
+  if (cbData.startsWith('assign_pos_pick_')) {
+    if (!canAssignPosition(pos)) return sendText(chatId, `⛔ Không có quyền.`);
+    const targetCode = cbData.replace('assign_pos_pick_', '');
+    const { data: target } = await supabase.from('staff').select('*').eq('staff_code', targetCode).single();
+    if (!target) return sendText(chatId, `❌ Không tìm thấy mã *${targetCode}*.`);
+    const assignable = Object.keys(POSITION_LEVELS).filter(p => posLevel(p) < posLevel(pos) && p !== 'admin');
+    const kb = assignable.map(p => [{ text: POSITION_LABELS[p] || p, callback_data: `setpos_${targetCode}_${p}` }]);
+    await sendKeyboard(chatId,
+      `Chọn chức vụ mới cho *${target.full_name}* (${targetCode}):\n(Hiện tại: ${POSITION_LABELS[target.position || 'td']})`, kb);
+    return;
+  }
+
+  // btn_structure — Xem cơ cấu tổ chức
+  if (cbData === 'btn_structure') {
+    if (!canDefineStructure(pos)) return sendText(chatId, `⛔ Chỉ Admin/YJYN được xem cơ cấu.`);
+    const { data: areas } = await supabase.from('areas').select('*, org_groups(*, teams(*))');
+    if (!areas || areas.length === 0) return sendText(chatId, `📐 *Cơ cấu tổ chức*\n\nChưa có khu vực nào.\nTạo khu vực/nhóm/tổ trong Mini App.`);
+    let msg = `📐 *Cơ cấu tổ chức*\n\n`;
+    for (const area of areas) {
+      msg += `🏢 *${area.name}*\n`;
+      if (area.org_groups) {
+        for (const g of area.org_groups) {
+          msg += `  📁 ${g.name}\n`;
+          if (g.teams) { for (const t of g.teams) msg += `    👥 ${t.name}\n`; }
+        }
+      }
+    }
+    await sendText(chatId, msg);
+    return;
+  }
+
+  // btn_support — Liên hệ Admin (prompt user to type message)
+  if (cbData === 'btn_support') {
+    await sendText(chatId,
+      `💬 *Liên hệ Admin*\n\nĐể gửi tin nhắn đến Admin, hãy gõ:\n\`/support [nội dung]\`\n\nVD: \`/support Tôi không đăng nhập được\``);
+    return;
+  }
+
   // ============ GROUP MENU CALLBACKS ============
+
 
   // menu_info — Xem thông tin group
   if (cbData === 'menu_info') {

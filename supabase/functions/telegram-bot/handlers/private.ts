@@ -12,27 +12,34 @@ export async function handlePrivateChat(update: any, staffData: any) {
   const messageId = msg.message_id;
   const pos = staffData.position || 'td';
 
-  // /start or /menu — Main menu
   if (text === '/start' || text === '/menu') {
     const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html`;
     const posLabel = POSITION_LABELS[pos] || pos;
-    const keyboard = [
-      [{ text: "📋 Danh bạ & Hồ sơ", callback_data: "list_profiles" }],
-      [{ text: "🖥 Mở Quản Lý (Mini App)", web_app: { url: miniAppUrl } }]
+
+    // Build keyboard based on position
+    const keyboard: any[] = [
+      [{ text: "🖥️ Mở Quản Lý (Mini App)", web_app: { url: miniAppUrl } }],
     ];
+
+    // Assign position — for managers
+    if (canAssignPosition(pos)) {
+      keyboard.push([{ text: "👤 Chỉ định chức vụ TĐ", callback_data: "btn_assign_pos" }]);
+    }
+    // Structure — for admin/yjyn
+    if (canDefineStructure(pos)) {
+      keyboard.push([{ text: "🏗️ Xem cơ cấu tổ chức", callback_data: "btn_structure" }]);
+    }
+    // Support — everyone
+    keyboard.push([{ text: "💬 Liên hệ Admin", callback_data: "btn_support" }]);
+
     await sendKeyboard(chatId,
       `Xin chào, *${staffData.full_name}* (${staffData.staff_code})\n` +
       `Chức vụ: *${posLabel}*\n\n` +
-      `🔹 Bot: Tra cứu, Check Hapja, phân quyền\n` +
-      `🔹 Mini App: Quản lý hồ sơ đầy đủ\n` +
-      `🔹 /support [nội dung] để liên hệ Admin\n\n` +
-      `📌 Lệnh:\n` +
-      `• /search [tên] — Tìm hồ sơ\n` +
-      `• /check\\_hapja — Tạo phiếu sàng lọc\n` +
-      `• /assign\\_pos [mã] — Chỉ định chức vụ\n` +
-      `• /structure — Quản lý cấu trúc`, keyboard);
+      `Mọi thao tác quản lý hồ sơ làm qua Mini App 👆`,
+      keyboard);
     return;
   }
+
 
   // /search — Tìm hồ sơ
   if (text.startsWith('/search ')) {
