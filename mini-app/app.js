@@ -245,7 +245,7 @@ async function loadDashboard() {
     }
 
     // ── HAPJA (all visible based on permission) ──
-    const canApprove = ['admin','yjyn','ggn_jondo'].includes(pos);
+    const canApprove = ['admin','yjyn','ggn_jondo','ggn_chakki'].includes(pos);
     let hapjaQuery = '/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20';
     if (!canApprove && myCode) hapjaQuery += `&created_by=eq.${myCode}`;
     const hRes = await sbFetch(hapjaQuery);
@@ -885,7 +885,7 @@ async function openHapjaDetail(id) {
     const d = h.data || {};
     const date = new Date(h.created_at).toLocaleDateString('vi-VN');
     const pos = getCurrentPosition();
-    const canApprove = ['admin','yjyn','ggn_jondo'].includes(pos) && h.status === 'pending';
+    const canApprove = ['admin','yjyn','ggn_jondo','ggn_chakki'].includes(pos) && h.status === 'pending';
     const body = document.getElementById('hapjaDetailBody');
     const fields = [
       ['Họ tên', h.full_name],
