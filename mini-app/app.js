@@ -146,7 +146,7 @@ async function loadDashboard() {
     let unitFruits = 0, unitGroups = 0, unitHapja = 0, unitRoles = [];
     if (unitStaffCodes.length > 0) {
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
-      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
+      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code),fruit_roles(staff_code,role_type))`);
       unitRoles = await urRes.json();
       unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id)).size;
       unitGroups = new Set(unitRoles.map(r => r.fruit_group_id)).size;
@@ -227,20 +227,63 @@ async function loadDashboard() {
     }
     subEl.innerHTML = subHtml ? `<div class="section-header" style="margin-top:8px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">📊 Đơn vị cấp dưới</div></div>${subHtml}` : '';
 
-    // Unit fruit list
+    // Unit fruit list — detailed cards
     const unitListEl = document.getElementById('dashUnitList');
     if (unitRoles.length === 0) {
       unitListEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái quả trong đơn vị</div>';
     } else {
       const seen = new Set();
-      unitListEl.innerHTML = unitRoles.filter(r => {
+      const uniqueRoles = unitRoles.filter(r => {
         const pid = r.fruit_groups?.profile_id;
         if (!pid || seen.has(pid)) return false;
         seen.add(pid); return true;
-      }).slice(0, 8).map(r => {
-        const name = r.fruit_groups?.profiles?.full_name || 'N/A';
-        const lvl2 = r.fruit_groups?.level || 'tu_van';
-        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl2==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${lvl2==='bb'?'BB':'Tư vấn'}</div></div><div class="profile-arrow">\u203a</div></div>`;
+      });
+      // Fetch latest sessions + records for all profiles at once
+      const pids = [...seen];
+      let sessionMap = {}, recordMap = {};
+      if (pids.length > 0) {
+        const idsStr = pids.map(id=>`"${id}"`).join(',');
+        try {
+          const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=*&order=session_number.desc`);
+          const ss = await sRes.json();
+          ss.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
+          const rRes = await sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=*&order=created_at.desc`);
+          const recs = await rRes.json();
+          recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+        } catch(e) { console.warn('unit fruit fetch:', e); }
+      }
+      const phMap = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
+      const phColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
+      unitListEl.innerHTML = uniqueRoles.map(r => {
+        const p = r.fruit_groups?.profiles;
+        const pid = r.fruit_groups?.profile_id;
+        const name = p?.full_name || 'N/A';
+        const ph = p?.phase || 'chakki';
+        const allR = r.fruit_groups?.fruit_roles || [];
+        const ndd = allR.find(x=>x.role_type==='ndd')?.staff_code || p?.ndd_staff_code || '—';
+        const tvv = allR.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ') || '—';
+        const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
+        let latest = '';
+        const ls = sessionMap[pid], lr = recordMap[pid];
+        if (lr) {
+          const isTV = lr.record_type === 'tu_van';
+          const num = lr.content?.lan_thu || lr.content?.buoi_thu || '';
+          latest = isTV ? `TV lần ${num}` : `BB buổi ${num}`;
+        } else if (ls) {
+          latest = `Chốt TV lần ${ls.session_number}`;
+        }
+        return `<div style="cursor:pointer;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;" onclick="openProfileById('${pid}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:14px;">${name}</div>
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--text2);">
+            <div>NDD: <b style="color:var(--text);">${ndd}</b></div>
+            <div>TVV: <b style="color:var(--text);">${tvv}</b></div>
+            <div>GVBB: <b style="color:var(--text);">${gvbb}</b></div>
+            ${latest ? `<div style="color:var(--accent);">⏱ ${latest}</div>` : ''}
+          </div>
+        </div>`;
       }).join('');
     }
 
