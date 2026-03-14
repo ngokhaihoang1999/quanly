@@ -977,10 +977,11 @@ async function approveHapja(id) {
     if (!hapjas.length || hapjas[0].status !== 'pending') { showToast('⚠️ Phiếu đã xử lý'); return; }
     const h = hapjas[0];
     const nddCode = h.data?.ndd_staff_code || h.created_by;
-    // Create profile with NDD + phase chakki
+    const d = h.data || {};
+    // Create profile with NDD + phase chakki + phone
     const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
       full_name: h.full_name, birth_year: h.birth_year, gender: h.gender,
-      ndd_staff_code: nddCode, created_by: h.created_by, phase: 'chakki'
+      phone_number: d.sdt || '', ndd_staff_code: nddCode, created_by: h.created_by, phase: 'chakki'
     })});
     const newProfile = await pRes.json();
     const newPid = newProfile?.[0]?.id;
@@ -997,6 +998,26 @@ async function approveHapja(id) {
           })});
         }
       } catch(e) { console.warn('NDD role creation:', e); }
+    }
+    // Auto-create form_hanh_chinh (Phiếu Thông tin) from Hapja data
+    if (newPid) {
+      try {
+        const infoData = {
+          t2_ho_ten: h.full_name || '',
+          t2_gioi_tinh: h.gender || '',
+          t2_nam_sinh: h.birth_year || '',
+          t2_sdt: d.sdt || '',
+          t2_nghe_nghiep: d.nghe_nghiep || '',
+          t2_tinh_cach: d.tinh_cach || '',
+          t2_dia_chi: d.noi_o || '',
+          t2_que_quan: '',
+          t2_khung_ranh: d.tg_ranh || '',
+          t2_so_thich: '',
+          t2_chuyen_cu: d.hoan_canh || '',
+          t2_luu_y: d.noi_lo || '',
+        };
+        await sbFetch('/rest/v1/form_hanh_chinh', { method:'POST', body: JSON.stringify({ profile_id: newPid, data: infoData }) });
+      } catch(e) { console.warn('form_hanh_chinh creation:', e); }
     }
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newPid }) });
     showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
