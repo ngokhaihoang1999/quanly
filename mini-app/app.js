@@ -316,8 +316,8 @@ async function loadDashboard() {
         const name = p?.full_name || 'N/A';
         const pid = r.fruit_groups?.profile_id;
         const ph = p?.phase || 'new';
-        const phaseLabel = {new:'🌱 Mới',tu_van:'💬 TV',bb:'🎓 BB',completed:'✅'}[ph]||ph;
-        const phaseColor = {new:'var(--text2)',tu_van:'var(--accent)',bb:'var(--green)',completed:'var(--green)'}[ph]||'var(--text2)';
+        const phaseLabel = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'}[ph]||ph;
+        const phaseColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'}[ph]||'#f59e0b';
         // Caregivers from all roles of this fruit_group
         const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
         const tvvList = allRolesInGroup.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ');
@@ -411,20 +411,61 @@ async function openProfile(p) {
     <div class="profile-detail-avatar">${(p.full_name||'?')[0]}</div>
     <div class="profile-detail-name">${p.full_name}</div>
     <div class="profile-detail-meta">${p.phone_number||''} · ${p.status||'active'}</div>`;
-  // Phase badge
-  const phaseMap = {new:'🌱 Mới', tu_van:'💬 Tư vấn', bb:'🎓 BB', completed:'✅ Hoàn thành'};
-  const phaseColor = {new:'var(--text2)', tu_van:'var(--accent)', bb:'var(--green)', completed:'var(--green)'};
-  const ph = p.phase || 'new';
-  document.getElementById('profilePhaseBar').innerHTML = `<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:${phaseColor[ph]||'var(--text2)'};color:white;">${phaseMap[ph]||ph}</span><span style="font-size:11px;color:var(--text2);">ID: ${p.id?.slice(0,8)}</span>`;
+  // Phase
+  const phaseMap = {new:'🟡 Chakki', chakki:'🟡 Chakki', tu_van:'💬 Tư vấn', bb:'🎓 BB', center:'🏛️ Center', completed:'✅'};
+  const phaseColor = {new:'#f59e0b', chakki:'#f59e0b', tu_van:'var(--accent)', bb:'var(--green)', center:'#8b5cf6', completed:'var(--green)'};
+  const ph = p.phase || 'chakki';
+  // Fetch roles for this profile
+  let rolesInfo = {ndd:'', tvv:[], gvbb:'', la:''};
+  try {
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,fruit_roles(staff_code,role_type)`);
+    const fgs = await fgRes.json();
+    (fgs||[]).forEach(fg => (fg.fruit_roles||[]).forEach(r => {
+      if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
+      if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
+      if (r.role_type==='gvbb' && !rolesInfo.gvbb) rolesInfo.gvbb = r.staff_code;
+      if (r.role_type==='la' && !rolesInfo.la) rolesInfo.la = r.staff_code;
+    }));
+  } catch(e) {}
+  const nddDisplay = p.ndd_staff_code || rolesInfo.ndd || '—';
+  const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
+  const gvbbDisplay = rolesInfo.gvbb || '—';
+  // Latest session
+  let latestInfo = '';
+  try {
+    const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=*&order=session_number.desc&limit=1`);
+    const ss = await sRes.json();
+    if (ss[0]) latestInfo = `TV lần ${ss[0].session_number} (${ss[0].tool||'—'})`;
+  } catch(e) {}
+  // Summary card
+  document.getElementById('profileSummaryCard').innerHTML = `
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px 14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--text2);">${p.birth_year||'—'} · ${p.gender||'—'}</span>
+        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${phaseColor[ph]};color:white;">${phaseMap[ph]||ph}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;">
+        <div><span style="color:var(--text3);">NDD:</span> <b>${nddDisplay}</b></div>
+        <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>
+        <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
+        <div><span style="color:var(--text3);">GĐ:</span> <b>${phaseMap[ph]||ph}</b></div>
+      </div>
+      ${latestInfo ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;">⏱ ${latestInfo}</div>` : ''}
+    </div>`;
+  // Tab visibility
+  const tabTV = document.getElementById('tabTV');
+  const tabBB = document.getElementById('tabBB');
+  if (tabTV) tabTV.style.display = ['tu_van','bb','center','completed'].includes(ph) ? '' : 'none';
+  if (tabBB) tabBB.style.display = ['bb','center','completed'].includes(ph) ? '' : 'none';
   clearFormFields();
-  loadCover(p);
   loadInfoSheet(p.id);
-  loadSessions(p.id);
+  loadJourney(p.id, ph);
   loadRecords(p.id, 'tu_van', 'tvList', 'tvCount');
   loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount');
-  // Reset tabs
-  document.querySelectorAll('.form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  document.querySelectorAll('.form-card').forEach((c,i)=>c.classList.toggle('active',i===0));
+  // Reset tabs — first tab = Thông tin (infoSheet)
+  document.querySelectorAll('#profileTabs .form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
+  document.getElementById('infoSheet')?.classList.add('active');
 }
 function clearFormFields() {
   ['cv_ten','cv_nam_sinh','cv_gioi_tinh','cv_ndd','cv_tvv','cv_gvbb','cv_la','t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -614,62 +655,49 @@ function switchMainTab(el, tab) {
 }
 
 // ============ CONSULTATION SESSIONS ============
-async function loadSessions(profileId) {
-  const el = document.getElementById('sessionsList');
+async function loadJourney(profileId, currentPhase) {
+  const phBtnEl = document.getElementById('phaseButtons');
   const tlEl = document.getElementById('timelineList');
+  // Phase buttons based on current phase
+  let btnHtml = '';
+  if (['new','chakki'].includes(currentPhase)) {
+    btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn</button>`;
+  } else if (currentPhase === 'tu_van') {
+    btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
+      <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>`;
+  } else if (currentPhase === 'bb') {
+    btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
+  }
+  phBtnEl.innerHTML = btnHtml;
   try {
     const res = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`);
     const sessions = await res.json();
-    if (!sessions.length) {
-      el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có buổi tư vấn nào. Bấm "Chốt Tư vấn" để bắt đầu.</div>';
-    } else {
-      el.innerHTML = sessions.map(s => {
-        const statusMap = {scheduled:'⏳ Đã lên lịch', completed:'✅ Hoàn thành', reported:'📝 Đã báo cáo'};
-        const statusColor = {scheduled:'var(--yellow)', completed:'var(--green)', reported:'var(--accent)'};
-        const date = s.scheduled_at ? new Date(s.scheduled_at).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Chưa xếp lịch';
-        const actions = s.status === 'scheduled' ? `<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="completeSession('${s.id}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--green);background:rgba(52,211,153,0.15);color:var(--green);font-size:11px;font-weight:600;cursor:pointer;">✅ Hoàn thành</button></div>` :
-          s.status === 'completed' ? `<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="createTVFromSession('${s.id}',${s.session_number},'${s.tool||''}')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--accent);background:rgba(99,102,241,0.15);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;">📝 Tạo báo cáo TV</button></div>` : '';
-        return `<div style="padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-weight:700;font-size:13px;">Lần ${s.session_number}</div>
-            <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:${statusColor[s.status]};color:white;">${statusMap[s.status]}</span>
-          </div>
-          <div style="font-size:12px;color:var(--text2);margin-top:4px;">🛠️ ${s.tool||'—'} · 📅 ${date}</div>
-          ${s.tvv_staff_code ? `<div style="font-size:11px;color:var(--text2);margin-top:2px;">TVV: ${s.tvv_staff_code}</div>` : ''}
-          ${s.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${s.notes}</div>` : ''}
-          ${actions}
-        </div>`;
-      }).join('');
-    }
     // Timeline
     let events = [];
-    // Add sessions to timeline
     sessions.forEach(s => {
       events.push({date: s.created_at, icon:'📅', text:`Chốt TV lần ${s.session_number} (${s.tool||'—'})`});
       if (s.status !== 'scheduled') events.push({date: s.scheduled_at||s.created_at, icon:'✅', text:`TV lần ${s.session_number} hoàn thành`});
     });
-    // Add records to timeline
     const recRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`);
     const recs = await recRes.json();
     recs.forEach(r => {
-      const type = r.record_type === 'tu_van' ? 'Báo cáo TV' : 'Báo cáo BB';
+      const isTV = r.record_type === 'tu_van';
       const num = r.content?.lan_thu || r.content?.buoi_thu || '';
-      events.push({date: r.created_at, icon: r.record_type==='tu_van'?'📝':'📋', text:`${type}${num?' lần '+num:''}`});
+      events.push({date: r.created_at, icon: isTV?'📝':'📋', text:`${isTV?'BC TV':'BC BB'}${num?' lần '+num:''}`});
     });
-    // Sort by date
     events.sort((a,b) => new Date(a.date) - new Date(b.date));
     if (events.length === 0) {
-      tlEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:12px;">Chưa có sự kiện</div>';
+      tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
       tlEl.innerHTML = events.map(e => {
         const d = new Date(e.date).toLocaleDateString('vi-VN');
-        return `<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-left:2px solid var(--border);margin-left:8px;padding-left:14px;">
-          <div style="font-size:14px;">${e.icon}</div>
-          <div><div style="font-size:12px;font-weight:600;">${e.text}</div><div style="font-size:10px;color:var(--text3);">${d}</div></div>
+        return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-left:3px solid var(--border);margin-left:10px;padding-left:16px;">
+          <div style="font-size:16px;margin-top:-2px;">${e.icon}</div>
+          <div><div style="font-size:12px;font-weight:600;">${e.text}</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">${d}</div></div>
         </div>`;
       }).join('');
     }
-  } catch(e) { console.error('Sessions error:', e); }
+  } catch(e) { console.error('Journey error:', e); }
 }
 function openScheduleTVModal() {
   if (!currentProfileId) return;
@@ -771,12 +799,41 @@ async function saveChotBB() {
     if (ps[0]) { const idx = allProfiles.findIndex(x=>x.id===currentProfileId); if (idx>=0) allProfiles[idx]=ps[0]; openProfile(ps[0]); }
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
+async function chotCenter() {
+  if (!currentProfileId) return;
+  const pos = getCurrentPosition();
+  const myCode = getEffectiveStaffCode();
+  const p = allProfiles.find(x=>x.id===currentProfileId);
+  // Permission: NDD, GYJN of NDD, BGYJN of NDD, or GVBB of this fruit
+  const isNDD = p?.ndd_staff_code === myCode;
+  const isAdmin = pos === 'admin';
+  const isGYJN = pos === 'gyjn' || pos === 'bgyjn';
+  // Check GVBB role
+  let isGVBB = false;
+  try {
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id,fruit_roles(staff_code,role_type)`);
+    const fgs = await fgRes.json();
+    (fgs||[]).forEach(fg => (fg.fruit_roles||[]).forEach(r => {
+      if (r.role_type==='gvbb' && r.staff_code===myCode) isGVBB = true;
+    }));
+  } catch(e) {}
+  if (!isNDD && !isAdmin && !isGYJN && !isGVBB) {
+    showToast('⚠️ Chỉ NDD/GYJN/BGYJN/GVBB được chốt Center');
+    return;
+  }
+  if (!confirm('Xác nhận trái quả nhập học Center?')) return;
+  try {
+    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'center' })});
+    showToast('🏛️ Đã chốt Center!');
+    const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
+    const ps = await pRes.json();
+    if (ps[0]) { const idx = allProfiles.findIndex(x=>x.id===currentProfileId); if (idx>=0) allProfiles[idx]=ps[0]; openProfile(ps[0]); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
 
 // ============ CHECK HAPJA ============
-function canCreateHapja(pos) { return ['admin','yjyn','tjn','gyjn','bgyjn','ggn_jondo','ggn_chakki'].includes(pos); }
+function canCreateHapja(pos) { return true; } // Ai cũng có thể tạo Hapja
 function openCheckHapjaModal() {
-  const pos = getCurrentPosition();
-  if (!canCreateHapja(pos)) { showToast('\u26d4 Ch\u1ee9c v\u1ee5 kh\u00f4ng \u0111\u01b0\u1ee3c t\u1ea1o Hapja'); return; }
   document.getElementById('checkHapjaModal').classList.add('open');
   // Populate NDD select with staff codes
   const sel = document.getElementById('hj_ndd');
@@ -858,13 +915,15 @@ async function openHapjaDetail(id) {
       </div>`
     ).join('');
     const actions = document.getElementById('hapjaDetailActions');
-    if (canApprove) {
-      actions.innerHTML = `
-        <button onclick="approveHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;">✅ Duyệt</button>
+    let actHtml = '';
+    if (canApprove && h.status === 'pending') {
+      actHtml += `<button onclick="approveHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;">✅ Duyệt</button>
         <button onclick="rejectHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--red);color:white;font-size:14px;font-weight:700;cursor:pointer;">❌ Từ chối</button>`;
-    } else {
-      actions.innerHTML = '';
     }
+    if (h.created_by === getEffectiveStaffCode() && h.status === 'pending') {
+      actHtml += `<button onclick="deleteHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--text2);color:white;font-size:14px;font-weight:700;cursor:pointer;">🗑️ Xoá</button>`;
+    }
+    actions.innerHTML = actHtml;
     document.getElementById('hapjaDetailModal').classList.add('open');
   } catch(e) { showToast('❌ Lỗi tải phiếu'); console.error(e); }
 }
@@ -874,13 +933,42 @@ async function approveHapja(id) {
     const hapjas = await hRes.json();
     if (!hapjas.length || hapjas[0].status !== 'pending') { showToast('⚠️ Phiếu đã xử lý'); return; }
     const h = hapjas[0];
-    const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ full_name: h.full_name, birth_year: h.birth_year, gender: h.gender, created_by: h.created_by }) });
+    const nddCode = h.data?.ndd_staff_code || h.created_by;
+    // Create profile with NDD + phase chakki
+    const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+      full_name: h.full_name, birth_year: h.birth_year, gender: h.gender,
+      ndd_staff_code: nddCode, created_by: h.created_by, phase: 'chakki'
+    })});
     const newProfile = await pRes.json();
-    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newProfile?.[0]?.id }) });
+    const newPid = newProfile?.[0]?.id;
+    // Create fruit_group + NDD role
+    if (newPid && nddCode) {
+      try {
+        const fgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+          telegram_group_id: 0, profile_id: newPid, level: 'tu_van'
+        })});
+        const fgs = await fgRes.json();
+        if (fgs[0]?.id) {
+          await sbFetch('/rest/v1/fruit_roles', { method:'POST', body: JSON.stringify({
+            fruit_group_id: fgs[0].id, staff_code: nddCode, role_type: 'ndd', assigned_by: getEffectiveStaffCode()
+          })});
+        }
+      } catch(e) { console.warn('NDD role creation:', e); }
+    }
+    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newPid }) });
     showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
     closeModal('hapjaDetailModal');
     loadDashboard(); loadProfiles();
   } catch(e) { showToast('❌ Lỗi khi duyệt'); console.error(e); }
+}
+async function deleteHapja(id) {
+  if (!confirm('Xác nhận xoá phiếu Check Hapja?')) return;
+  try {
+    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, {method:'DELETE'});
+    showToast('✅ Đã xoá phiếu');
+    closeModal('hapjaDetailModal');
+    loadDashboard();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 async function rejectHapja(id) {
   try {

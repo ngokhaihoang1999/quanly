@@ -91,33 +91,13 @@
   <div id="detailView" class="detail-view">
     <button class="back-btn" onclick="backToList()">← Quay lại</button>
     <div class="profile-detail-header" id="profileDetailHeader"></div>
-    <div id="profilePhaseBar" style="padding:0 16px 8px;display:flex;gap:8px;align-items:center;"></div>
-    <div class="form-tabs">
-      <div class="form-tab active" onclick="switchFormTab(this,'coverPage')">📄 Bìa</div>
-      <div class="form-tab" onclick="switchFormTab(this,'infoSheet')">📋 TT</div>
-      <div class="form-tab" onclick="switchFormTab(this,'journeyTab')">📜 Hành trình</div>
-      <div class="form-tab" onclick="switchFormTab(this,'tuVan')">💬 TV</div>
-      <div class="form-tab" onclick="switchFormTab(this,'bienBan')">📝 BB</div>
-    </div>
-
-    <!-- TRANG BÌA -->
-    <div class="form-card active" id="coverPage">
-      <div class="form-card-header"><div class="form-card-title">📄 TRANG BÌA HỒ SƠ</div></div>
-      <div class="form-card-body">
-        <div class="field-group"><label>🌱 Tên trái quả</label><input type="text" id="cv_ten" placeholder="Tên..." /></div>
-        <div class="grid-2">
-          <div class="field-group"><label>🎂 Năm sinh</label><input type="text" id="cv_nam_sinh" placeholder="YYYY" /></div>
-          <div class="field-group"><label>⚧ Giới tính</label><select id="cv_gioi_tinh"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
-        </div>
-        <div class="section-title" style="margin-top:8px;">Vai trò được gắn</div>
-        <div class="cover-role-row"><span class="cover-role-label">NDD</span><input type="text" class="cover-role-input" id="cv_ndd" placeholder="Tên NDD..." list="staffSuggest" /></div>
-        <div class="cover-role-row"><span class="cover-role-label">TVV</span><input type="text" class="cover-role-input" id="cv_tvv" placeholder="Tên TVV..." list="staffSuggest" /></div>
-        <div class="cover-role-row"><span class="cover-role-label">GVBB</span><input type="text" class="cover-role-input" id="cv_gvbb" placeholder="Tên GVBB..." list="staffSuggest" /></div>
-        <div class="cover-role-row"><span class="cover-role-label">Lá</span><input type="text" class="cover-role-input" id="cv_la" placeholder="Tên Lá..." list="staffSuggest" /></div>
-        <datalist id="staffSuggest"></datalist>
-        <button class="save-btn" onclick="saveCover()">💾 Lưu Trang bìa</button>
-        <div id="cv_group_link" style="margin-top:12px;"></div>
-      </div>
+    <div id="profileSummaryCard" style="padding:0 16px 12px;"></div>
+    <datalist id="staffSuggest"></datalist>
+    <div class="form-tabs" id="profileTabs">
+      <div class="form-tab active" onclick="switchFormTab(this,'infoSheet')">📋 Thông tin</div>
+      <div class="form-tab" onclick="switchFormTab(this,'journeyTab')">🔄 Giai đoạn</div>
+      <div class="form-tab" onclick="switchFormTab(this,'tuVan')" id="tabTV" style="display:none;">💬 TV</div>
+      <div class="form-tab" onclick="switchFormTab(this,'bienBan')" id="tabBB" style="display:none;">📝 BB</div>
     </div>
 
     <!-- PHIẾU THÔNG TIN (1 duy nhất) -->
@@ -152,16 +132,12 @@
       </div>
     </div>
 
-    <!-- HÀNH TRÌNH -->
+    <!-- CHUYỂN GIAI ĐOẠN -->
     <div class="form-card" id="journeyTab">
-      <div class="form-card-header"><div class="form-card-title">📜 HÀNH TRÌNH</div></div>
+      <div class="form-card-header"><div class="form-card-title">🔄 CHUYỂN GIAI ĐOẠN</div></div>
       <div class="form-card-body">
-        <div id="sessionsList" style="margin-bottom:12px;"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn</button>
-          <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>
-        </div>
-        <div class="section-header" style="margin-top:16px;"><div class="section-title" style="font-size:13px;">📜 Dòng thời gian</div></div>
+        <div id="phaseButtons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+        <div class="section-header" style="margin-bottom:8px;"><div class="section-title" style="font-size:13px;">📜 Dòng thời gian</div></div>
         <div id="timelineList"></div>
       </div>
     </div>
@@ -300,7 +276,7 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title">📅 Chốt Tư vấn</div>
-  <div class="field-group"><label>Lần thứ</label><input type="number" id="stv_session_num" readonly style="background:var(--surface2);" /></div>
+  <div class="field-group" style="margin-top:8px;"><label>Lần thứ</label><input type="number" id="stv_session_num" min="1" /></div>
   <div class="field-group"><label>Công cụ tư vấn</label><input type="text" id="stv_tool" placeholder="VD: Sinh trắc vân tay, MBTI, Trực tiếp..." /></div>
   <div class="field-group"><label>Thời gian dự kiến</label><input type="datetime-local" id="stv_datetime" /></div>
   <div class="field-group"><label>TVV phụ trách</label><input type="text" id="stv_tvv" list="staffSuggest" placeholder="Chọn TVV..." /></div>
