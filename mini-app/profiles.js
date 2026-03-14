@@ -59,17 +59,18 @@ async function openProfile(p) {
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
 
-  const fStatus = p.fruit_status || 'alive';
-  const statusLabel = fStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+  // Clear old header (now unused)
+  document.getElementById('profileDetailHeader').innerHTML = '';
 
-  document.getElementById('profileDetailHeader').innerHTML = `
-    <div class="profile-detail-avatar">${(p.full_name||'?')[0]}</div>
-    <div class="profile-detail-name">${p.full_name}</div>
-    <div class="profile-detail-meta">${p.birth_year ? p.birth_year + ' · ' : ''}${statusLabel}</div>`;
-  // Phase
   const ph = p.phase || 'chakki';
-  // Fetch roles for this profile
-  let rolesInfo = {ndd:'', tvv:[], gvbb:'', la:''};
+  const fStatus = p.fruit_status || 'alive';
+  const statusBg = fStatus === 'dropout' ? 'var(--red)' : 'var(--green)';
+  const statusText = fStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+  const myCode2 = getEffectiveStaffCode();
+  const pos2 = getCurrentPosition();
+
+  // Fetch roles
+  let rolesInfo = {ndd:'', tvv:[], gvbb:''};
   try {
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,fruit_roles(staff_code,role_type)`);
     const fgs = await fgRes.json();
@@ -77,46 +78,47 @@ async function openProfile(p) {
       if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
       if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
       if (r.role_type==='gvbb' && !rolesInfo.gvbb) rolesInfo.gvbb = r.staff_code;
-      if (r.role_type==='la' && !rolesInfo.la) rolesInfo.la = r.staff_code;
     }));
   } catch(e) {}
   const nddDisplay = p.ndd_staff_code || rolesInfo.ndd || '—';
   const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
   const gvbbDisplay = rolesInfo.gvbb || '—';
-  // Latest activity — shared latestActivityLabel() helper (records + sessions, most recent wins)
+
+  // Latest activity
   let latestInfo = '';
   try {
     const [rRes, sRes] = await Promise.all([
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&select=record_type,content,created_at&order=created_at.desc&limit=1`),
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`)
     ]);
-    const recs = await rRes.json();
-    const sess = await sRes.json();
-    latestInfo = latestActivityLabel(recs[0]||null, sess[0]||null);
+    latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
   } catch(e) {}
-  // Summary card
-  const fruitStatus = p.fruit_status || 'alive';
-  const statusBg = fruitStatus === 'dropout' ? 'var(--red)' : 'var(--green)';
-  const statusText = fruitStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
-  const reasonHtml = (fruitStatus === 'dropout' && p.dropout_reason) ? `<div style="font-size:11px;color:var(--red);margin-top:2px;padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-bottom:8px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
-  
-  // Check if current user can toggle status (NDD/GYJN/BGYJN)
-  const myCode2 = getEffectiveStaffCode();
-  const pos2 = getCurrentPosition();
-  const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
-  const statusBtn = canToggleStatus ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fruitStatus}')" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>` : `<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
 
+  const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
+  const statusBtn = canToggleStatus
+    ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`
+    : `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
+  const reasonHtml = (fStatus==='dropout' && p.dropout_reason)
+    ? `<div style="font-size:11px;color:var(--red);padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-top:4px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
+
+  // ONE unified card
   document.getElementById('profileSummaryCard').innerHTML = `
-    <div style="background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px 14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="display:flex;gap:6px;align-items:center;">
-          ${statusBtn}
-          <span style="font-size:12px;color:var(--text2);">${p.birth_year||'—'} · ${p.gender||'—'}</span>
+    <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;">
+      <!-- Top: avatar + name + badges -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+        <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#ec4899);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0;box-shadow:0 4px 16px rgba(124,106,247,0.3);">${(p.full_name||'?')[0]}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.full_name}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            ${statusBtn}
+            <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
+            ${p.birth_year ? `<span style="font-size:11px;color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px;color:var(--text2);">${p.gender}</span>` : '')}
+          </div>
+          ${reasonHtml}
         </div>
-        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
       </div>
-      ${reasonHtml}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;">
+      <!-- Bottom: roles grid + latest -->
+      <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
         <div><span style="color:var(--text3);">NDD:</span> <b>${nddDisplay}</b></div>
         <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>
         <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
@@ -134,7 +136,6 @@ async function openProfile(p) {
   loadJourney(p.id, ph);
   loadRecords(p.id, 'tu_van', 'tvList', 'tvCount');
   loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount');
-  // Reset tabs — first tab = Thông tin (infoSheet)
   document.querySelectorAll('#profileTabs .form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
   document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
   document.getElementById('infoSheet')?.classList.add('active');
@@ -168,8 +169,36 @@ async function saveInfoSheet() {
   data.t2_quan_he_ndd = getChipValues('chips_quan_he_ndd');
   data.t2_khong_gian_song = getChipValues('chips_khong_gian_song');
   try {
+    // 1. Save info sheet
     await sbFetch('/rest/v1/form_hanh_chinh', { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ profile_id: currentProfileId, data: data }) });
-    showToast('✅ Đã lưu Phiếu Thông tin!');
+
+    // 2. Sync key fields to profiles table (name, birth_year, gender, phone)
+    const profilePatch = {};
+    if (data.t2_ho_ten)    profilePatch.full_name    = data.t2_ho_ten;
+    if (data.t2_nam_sinh)  profilePatch.birth_year   = data.t2_nam_sinh;
+    if (data.t2_gioi_tinh) profilePatch.gender       = data.t2_gioi_tinh;
+    if (data.t2_sdt)       profilePatch.phone_number = data.t2_sdt;
+    if (Object.keys(profilePatch).length > 0) {
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify(profilePatch) });
+      // 3. Update local cache
+      const idx = allProfiles.findIndex(x => x.id === currentProfileId);
+      if (idx >= 0) {
+        Object.assign(allProfiles[idx], profilePatch);
+        // Re-render summary card with updated data
+        const p = allProfiles[idx];
+        const fStatus = p.fruit_status || 'alive';
+        const statusLabel = fStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+        // Update just the name+meta in the card without full reload
+        const nameEl = document.querySelector('#profileSummaryCard [data-field="name"]');
+        if (nameEl) nameEl.textContent = p.full_name;
+        // Trigger full re-render of summary card
+        openProfile(p);
+      }
+      // 4. Refresh profile list
+      filterProfiles();
+    }
+
+    showToast('✅ Đã lưu Phữu Thông tin!');
   } catch { showToast('❌ Lỗi khi lưu'); }
 }
 
