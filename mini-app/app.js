@@ -159,8 +159,7 @@ async function loadDashboard() {
         const date = new Date(h.created_at).toLocaleDateString('vi-VN');
         const fname = h.full_name;
         const ndd = h.data?.ndd_staff_code || h.created_by;
-        const approveBtn = canApprove ? `<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="event.stopPropagation();approveHapja('${h.id}')" style="padding:4px 12px;border-radius:6px;border:1px solid var(--green);background:rgba(52,211,153,0.15);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">\u2705 Duy\u1ec7t</button><button onclick="event.stopPropagation();rejectHapja('${h.id}')" style="padding:4px 12px;border-radius:6px;border:1px solid var(--red);background:rgba(248,113,113,0.15);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">\u274c T\u1eeb ch\u1ed1i</button></div>` : '';
-        return `<div class="dash-list-item" style="flex-wrap:wrap;"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${fname}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${ndd}</div>${approveBtn}</div></div>`;
+        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${fname}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${ndd}</div></div><div class="profile-arrow">\u203a</div></div>`;
       }).join('');
     }
   } catch(e) { console.error('Dashboard error:', e); }
@@ -449,28 +448,74 @@ async function saveCheckHapja() {
     loadDashboard();
   } catch(e) { showToast('\u274c L\u1ed7i khi g\u1eedi'); console.error(e); }
 }
-async function approveHapja(id) {
-  if (!confirm('Duyệt phiếu Check Hapja này?')) return;
+async function openHapjaDetail(id) {
   try {
-    // Get hapja data
     const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=*`);
     const hapjas = await hRes.json();
-    if (!hapjas.length || hapjas[0].status !== 'pending') { showToast('⚠️ Phiếu không tồn tại hoặc đã xử lý'); return; }
+    if (!hapjas.length) { showToast('⚠️ Không tìm thấy phiếu'); return; }
     const h = hapjas[0];
-    // Create profile
+    const d = h.data || {};
+    const date = new Date(h.created_at).toLocaleDateString('vi-VN');
+    const pos = getCurrentPosition();
+    const canApprove = ['admin','yjyn','ggn_jondo'].includes(pos) && h.status === 'pending';
+    const body = document.getElementById('hapjaDetailBody');
+    const fields = [
+      ['Họ tên', h.full_name],
+      ['NDD', d.ndd_staff_code || h.created_by],
+      ['Ngày Chakki', d.ngay_chakki],
+      ['Concept', d.concept],
+      ['Hình thức', Array.isArray(d.hinh_thuc) ? d.hinh_thuc.join(', ') : d.hinh_thuc],
+      ['Mức thân thiết', Array.isArray(d.than_thiet) ? d.than_thiet.join(', ') : d.than_thiet],
+      ['Nơi ở', d.noi_o],
+      ['Nghề nghiệp', d.nghe_nghiep],
+      ['Tính cách', d.tinh_cach],
+      ['Kết nối', Array.isArray(d.ket_noi) ? d.ket_noi.join(', ') : d.ket_noi],
+      ['Thời gian rảnh', d.tg_ranh],
+      ['Thân tình', Array.isArray(d.than_tinh) ? d.than_tinh.join(', ') : d.than_tinh],
+      ['Hoàn cảnh', d.hoan_canh],
+      ['Học kì', d.hoc_ki],
+      ['Nỗi lo', d.noi_lo],
+      ['SĐT', d.sdt],
+      ['Trạng thái', h.status === 'pending' ? '⏳ Chờ duyệt' : h.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'],
+      ['Ngày tạo', date],
+      ['Người tạo', h.created_by],
+    ];
+    body.innerHTML = fields.filter(([,v]) => v).map(([label, val]) =>
+      `<div style="display:flex;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);min-width:100px;">${label}</div>
+        <div style="font-size:13px;color:var(--text);flex:1;">${val}</div>
+      </div>`
+    ).join('');
+    const actions = document.getElementById('hapjaDetailActions');
+    if (canApprove) {
+      actions.innerHTML = `
+        <button onclick="approveHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;">✅ Duyệt</button>
+        <button onclick="rejectHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--red);color:white;font-size:14px;font-weight:700;cursor:pointer;">❌ Từ chối</button>`;
+    } else {
+      actions.innerHTML = '';
+    }
+    document.getElementById('hapjaDetailModal').classList.add('open');
+  } catch(e) { showToast('❌ Lỗi tải phiếu'); console.error(e); }
+}
+async function approveHapja(id) {
+  try {
+    const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=*`);
+    const hapjas = await hRes.json();
+    if (!hapjas.length || hapjas[0].status !== 'pending') { showToast('⚠️ Phiếu đã xử lý'); return; }
+    const h = hapjas[0];
     const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ full_name: h.full_name, birth_year: h.birth_year, gender: h.gender, created_by: h.created_by }) });
     const newProfile = await pRes.json();
-    // Update hapja
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newProfile?.[0]?.id }) });
     showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
+    closeModal('hapjaDetailModal');
     loadDashboard(); loadProfiles();
   } catch(e) { showToast('❌ Lỗi khi duyệt'); console.error(e); }
 }
 async function rejectHapja(id) {
-  if (!confirm('Từ chối phiếu Check Hapja này?')) return;
   try {
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'rejected', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString() }) });
     showToast('❌ Đã từ chối phiếu.');
+    closeModal('hapjaDetailModal');
     loadDashboard();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
@@ -636,11 +681,12 @@ async function loadStructure() {
           html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">${members.length} TV</div></div>`;
           if (members.length) {
             members.forEach(m => {
-              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">\ud83d\udc64 ${m.staff_code}</span></div>`;
+              const posBadge = m.position && m.position !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(m.position)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(m.position)}</span>` : '';
+              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}</div>`;
             });
           }
         });
-        if (canGrp) html += `<div class="tree-node team tree-add" onclick="openAddTeamModal('${g.id}')"><div class="tree-label">+ T\u1ed5</div></div>`;
+        if (canGrp) html += `<div class="tree-node group tree-add" onclick="openAddTeamModal('${g.id}')"><div class="tree-label">+ T\u1ed5</div></div>`;
       });
       if (canArea) html += `<div class="tree-node group tree-add" onclick="openAddGroupModal('${a.id}')"><div class="tree-label">+ Nh\u00f3m</div></div>`;
     });
@@ -837,19 +883,31 @@ function openEditStructModal(type, id) {
 function renderTeamMembers(teamItem) {
   const members = teamItem.staff||[];
   const listEl = document.getElementById('edit_members_list');
+  const pos = getCurrentPosition();
+  const canAssignPos = ['admin','yjyn'].includes(pos);
   if (!members.length) {
     listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;">Ch\u01b0a c\u00f3 th\u00e0nh vi\u00ean</div>';
   } else {
-    listEl.innerHTML = members.map(m => `
+    listEl.innerHTML = members.map(m => {
+      const posBadge = `<span class="staff-role-badge ${getBadgeClass(m.position)}" style="font-size:9px;padding:1px 6px;">${getPositionName(m.position)}</span>`;
+      const assignHtml = canAssignPos ? `
+        <select onchange="assignMemberPos('${m.staff_code}',this.value)" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;">
+          <option value="td" ${m.position==='td'?'selected':''}>T\u0110</option>
+          <option value="ggn_jondo" ${m.position==='ggn_jondo'?'selected':''}>GGN Jondo</option>
+          <option value="ggn_chakki" ${m.position==='ggn_chakki'?'selected':''}>GGN Chakki</option>
+          <option value="sgn_jondo" ${m.position==='sgn_jondo'?'selected':''}>SGN Jondo</option>
+          <option value="bgyjn" ${m.position==='bgyjn'?'selected':''}>BGYJN</option>
+          <option value="gyjn" ${m.position==='gyjn'?'selected':''}>GYJN</option>
+        </select>` : '';
+      return `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
-        <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">${(m.full_name||'?')[0]}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;">${m.full_name}</div>
-          <div style="font-size:10px;color:var(--text3);">${m.staff_code} \u00b7 ${getPositionName(m.position)}</div>
+          <div style="font-size:13px;font-weight:600;">${m.staff_code} ${posBadge}</div>
+          ${assignHtml}
         </div>
         <button onclick="removeMemberFromTeam('${m.staff_code}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;" title="G\u1ee1 kh\u1ecfi t\u1ed5">\u2716</button>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
   // Populate add-member dropdown with staff NOT already in this team
   const teamId = document.getElementById('edit_struct_id').value;
@@ -923,6 +981,17 @@ async function removeMemberFromTeam(staffCode) {
   try {
     await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify({team_id:null}) });
     showToast('\u2705 \u0110\u00e3 g\u1ee1');
+    await loadStructure();
+    const item = findStructItem('team', teamId);
+    if (item) renderTeamMembers(item);
+    await loadStaff();
+  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+}
+async function assignMemberPos(staffCode, newPos) {
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', body: JSON.stringify({ position: newPos }) });
+    showToast(`\u2705 \u0110\u00e3 ch\u1ec9 \u0111\u1ecbnh ${getPositionName(newPos)} cho ${staffCode}`);
+    const teamId = document.getElementById('edit_struct_id').value;
     await loadStructure();
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);

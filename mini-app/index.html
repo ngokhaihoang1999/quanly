@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
@@ -271,6 +271,17 @@
     <button onclick="closeModal('editStructModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
+
+<!-- Hapja Detail Modal -->
+<div class="modal-overlay" id="hapjaDetailModal">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="hapjaDetailTitle">📋 Chi tiết Check Hapja</div>
+  <div id="hapjaDetailBody" style="display:flex;flex-direction:column;gap:12px;"></div>
+  <div id="hapjaDetailActions" style="display:flex;gap:8px;margin-top:16px;"></div>
+  <button onclick="closeModal('hapjaDetailModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
+</div>
+</div>
 
 <div class="toast" id="toast"></div>
 <script src="app.js"></script>
