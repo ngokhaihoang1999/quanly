@@ -146,7 +146,7 @@ async function openProfile(p) {
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${realGroupTitle}</div>
         </div>
-        <button onclick="(function(){var link='${realGroupInviteLink}';if(!link&&${JSON.stringify(realGroupId)}){var id=String(${JSON.stringify(realGroupId)});link=id.startsWith('-100')?'https://t.me/c/'+id.replace('-100',''):''}if(!link){alert('Bot cần quyền admin trong group để tạo link. Gõ /menu trong group để cập nhật.');return;}if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.openTelegramLink(link)}else{window.open(link,'_blank')}})()"
+        <button onclick="openBBGroup('${realGroupId}','${realGroupInviteLink}')"
            style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;">Mở Group →</button>
       </div>` : ''}
       </div>
@@ -265,3 +265,27 @@ async function openRecord(recordId, type) {
   openAddRecordModal(type || r.record_type, r.content);
 }
 
+function openBBGroup(groupId, inviteLink) {
+  // Priority 1: stored invite link
+  if (inviteLink) {
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.openTelegramLink(inviteLink);
+    } else {
+      window.open(inviteLink, '_blank');
+    }
+    return;
+  }
+  // Priority 2: supergroup → t.me/c/ link
+  const idStr = String(groupId);
+  if (idStr.startsWith('-100')) {
+    const link = 'https://t.me/c/' + idStr.replace('-100', '');
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.openTelegramLink(link);
+    } else {
+      window.open(link, '_blank');
+    }
+    return;
+  }
+  // Priority 3: tg:// deep link — opens group chat directly if user is member
+  window.location.href = 'tg://openmessage?chat_id=' + groupId;
+}
