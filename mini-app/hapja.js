@@ -9,16 +9,24 @@ function openCheckHapjaModal() {
   }
 }
 async function saveCheckHapja() {
+  const ndd = getStaffCodeFromInput('hj_ndd');
+  const ngay = document.getElementById('hj_ngay')?.value;
+  const concept = document.getElementById('hj_concept')?.value?.trim();
   const fullName = document.getElementById('hj_hoten')?.value?.trim();
-  if (!fullName) { showToast('\u26a0\ufe0f Nh\u1eadp h\u1ecd t\u00ean tr\u00e1i (m\u1ee5c 1)'); return; }
+
+  if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
+  if (!ngay) { showToast('⚠️ Vui lòng chọn Ngày Chakki'); return; }
+  if (!concept) { showToast('⚠️ Vui lòng nhập Concept'); return; }
+  if (!fullName) { showToast('⚠️ Nhập họ tên trái (mục 1)'); return; }
+
   const data = {
     full_name: fullName,
     birth_year: document.getElementById('hj_nam_sinh')?.value?.trim() || '',
     gender: document.getElementById('hj_gioi_tinh')?.value || '',
     data: {
-      ndd_staff_code: getStaffCodeFromInput('hj_ndd') || '',
-      ngay_chakki: document.getElementById('hj_ngay')?.value || '',
-      concept: document.getElementById('hj_concept')?.value || '',
+      ndd_staff_code: ndd,
+      ngay_chakki: ngay,
+      concept: concept,
       hinh_thuc: getChipValues('chips_hj_hinh_thuc'),
       than_thiet: getChipValues('chips_hj_than_thiet'),
       noi_o: document.getElementById('hj_noi_o')?.value || '',
@@ -35,16 +43,37 @@ async function saveCheckHapja() {
     status: 'pending',
     created_by: getEffectiveStaffCode() || 'unknown'
   };
+
+  const btn = document.querySelector('#checkHapjaModal .save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⌛ Đang gửi...'; }
+
   try {
-    await sbFetch('/rest/v1/check_hapja', { method: 'POST', headers: {'Prefer':'return=representation'}, body: JSON.stringify(data) });
+    const res = await sbFetch('/rest/v1/check_hapja', { 
+      method: 'POST', 
+      headers: {'Prefer':'return=representation'}, 
+      body: JSON.stringify(data) 
+    });
+    
+    // Kiểm tra tên bảng - file cũ dùng check_hapja nhưng có thể user đổi?
+    // Thử lại với check_hapja nếu lỗi 404, nhưng ở đây ta cứ dùng check_hapja như cũ
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Lỗi từ máy chủ');
+    }
+
     closeModal('checkHapjaModal');
-    showToast('\u2705 \u0110\u00e3 g\u1eedi Check Hapja!');
+    showToast('✅ Đã gửi Check Hapja!');
     ['hj_ngay','hj_concept','hj_hoten','hj_nam_sinh','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('hj_ndd').selectedIndex = 0;
     document.getElementById('hj_gioi_tinh').selectedIndex = 0;
     ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh'].forEach(clearChips);
     loadDashboard();
-  } catch(e) { showToast('\u274c L\u1ed7i khi g\u1eedi'); console.error(e); }
+  } catch(e) { 
+    showToast('❌ Lỗi: ' + e.message); 
+    console.error(e); 
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🍎 Gửi Check Hapja'; }
+  }
 }
 async function openHapjaDetail(id) {
   try {

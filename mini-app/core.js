@@ -23,6 +23,36 @@ function toggleChip(el) { el.classList.toggle('selected'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
+function getStaffCodeFromInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  let val = el.value.trim();
+  if (!val) return '';
+  // Handle "CODE - NAME"
+  if (val.includes(' - ')) return val.split(' - ')[0].trim();
+  // Handle "NAME (CODE)"
+  const match = val.match(/\(([^)]+)\)$/);
+  if (match) return match[1].trim();
+  return val;
+}
+
+function setStaffInputValue(id, code) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!code) { el.value = ''; return; }
+  const s = allStaff.find(x => x.staff_code === code);
+  if (s) {
+    // If it's the structure edit modal, it likely uses the "CODE - NAME" format
+    if (id.startsWith('edit_') || id.startsWith('struct_')) {
+      el.value = `${s.staff_code} - ${s.full_name}`;
+    } else {
+      el.value = `${s.full_name} (${s.staff_code})`;
+    }
+  } else {
+    el.value = code;
+  }
+}
+
 async function sbFetch(path, opts={}) {
   return fetch(SUPABASE_URL + path, { ...opts, headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': opts.method==='POST'?'return=representation':undefined, ...opts.headers } });
 }
