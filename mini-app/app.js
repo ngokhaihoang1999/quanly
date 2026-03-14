@@ -104,7 +104,7 @@ async function loadDashboard() {
           <div class="dash-stat"><div class="num" style="color:var(--green);">${totalGroups}</div><div class="lbl">T\u1ed5ng Group</div></div>
         </div>
       `;
-    } else if (['tjn','gyjn','bgyjn'].includes(pos)) {
+    } else if (['tjn','gyjn','bgyjn','ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
       // MANAGER METRICS
       metricsHtml = `
         <div class="dash-card-row">
@@ -149,8 +149,9 @@ async function loadDashboard() {
     }
 
     // Check Hapja list
+    const canApprove = ['admin','yjyn','ggn_jondo'].includes(pos);
     const hList = document.getElementById('dashHapjaList');
-    document.getElementById('dashHapjaTitle').textContent = ['admin','yjyn','tjn','gyjn','bgyjn'].includes(pos) ? '\ud83d\udccb C\u1ea7n duy\u1ec7t Hapja' : '\ud83d\udccb Ti\u1ebfn \u0111\u1ed9 Hapja c\u1ee7a t\u00f4i';
+    document.getElementById('dashHapjaTitle').textContent = canApprove ? '\ud83d\udccb C\u1ea7n duy\u1ec7t Hapja' : '\ud83d\udccb Ti\u1ebfn \u0111\u1ed9 Hapja c\u1ee7a t\u00f4i';
     if (hapjas.length === 0) {
       hList.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Kh\u00f4ng c\u00f3 phi\u1ebfu ch\u1edd duy\u1ec7t</div>';
     } else {
@@ -158,7 +159,8 @@ async function loadDashboard() {
         const date = new Date(h.created_at).toLocaleDateString('vi-VN');
         const fname = h.full_name;
         const ndd = h.data?.ndd_staff_code || h.created_by;
-        return `<div class="dash-list-item"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${fname}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${ndd}</div></div></div>`;
+        const approveBtn = canApprove ? `<div style="display:flex;gap:6px;margin-top:6px;"><button onclick="event.stopPropagation();approveHapja('${h.id}')" style="padding:4px 12px;border-radius:6px;border:1px solid var(--green);background:rgba(52,211,153,0.15);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;">\u2705 Duy\u1ec7t</button><button onclick="event.stopPropagation();rejectHapja('${h.id}')" style="padding:4px 12px;border-radius:6px;border:1px solid var(--red);background:rgba(248,113,113,0.15);color:var(--red);font-size:12px;font-weight:600;cursor:pointer;">\u274c T\u1eeb ch\u1ed1i</button></div>` : '';
+        return `<div class="dash-list-item" style="flex-wrap:wrap;"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${fname}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${ndd}</div>${approveBtn}</div></div>`;
       }).join('');
     }
   } catch(e) { console.error('Dashboard error:', e); }
@@ -447,6 +449,31 @@ async function saveCheckHapja() {
     loadDashboard();
   } catch(e) { showToast('\u274c L\u1ed7i khi g\u1eedi'); console.error(e); }
 }
+async function approveHapja(id) {
+  if (!confirm('Duyệt phiếu Check Hapja này?')) return;
+  try {
+    // Get hapja data
+    const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=*`);
+    const hapjas = await hRes.json();
+    if (!hapjas.length || hapjas[0].status !== 'pending') { showToast('⚠️ Phiếu không tồn tại hoặc đã xử lý'); return; }
+    const h = hapjas[0];
+    // Create profile
+    const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ full_name: h.full_name, birth_year: h.birth_year, gender: h.gender, created_by: h.created_by }) });
+    const newProfile = await pRes.json();
+    // Update hapja
+    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newProfile?.[0]?.id }) });
+    showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
+    loadDashboard(); loadProfiles();
+  } catch(e) { showToast('❌ Lỗi khi duyệt'); console.error(e); }
+}
+async function rejectHapja(id) {
+  if (!confirm('Từ chối phiếu Check Hapja này?')) return;
+  try {
+    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'rejected', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString() }) });
+    showToast('❌ Đã từ chối phiếu.');
+    loadDashboard();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
 async function deleteProfile() {
   if (!currentProfileId || !confirm('Xác nhận xoá hồ sơ?')) return;
   try {
@@ -590,27 +617,26 @@ async function loadStructure() {
     const myCode = getEffectiveStaffCode();
     const isAdmin = pos === 'admin';
     if (!structureData.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udfe2</div><div class="empty-title">Ch\u01b0a c\u00f3</div><div class="empty-sub">B\u1ea5m + Khu v\u1ef1c</div></div>'; return; }
-    const sMap = {}; allStaff.forEach(s => sMap[s.staff_code] = s.full_name);
     let html = '<div class="tree-container">';
     structureData.forEach(a => {
-      const aY = a.yjyn_staff_code ? '\ud83d\udc51 '+(sMap[a.yjyn_staff_code]||a.yjyn_staff_code) : '';
+      const aY = a.yjyn_staff_code ? '\ud83d\udc51 ' + a.yjyn_staff_code : '';
       const canArea = isAdmin || (pos==='yjyn' && a.yjyn_staff_code===myCode);
       const aClick = canArea ? ` style="cursor:pointer" onclick="openEditStructModal('area','${a.id}')"` : '';
       html += `<div class="tree-node area"${aClick}><div><div class="tree-label">\ud83c\udfe2 ${a.name}${canArea?' \u270f\ufe0f':''}</div>${aY?`<div class="tree-manager">${aY}</div>`:''}</div><div class="tree-meta">Khu v\u1ef1c</div></div>`;
       (a.org_groups||[]).forEach(g => {
-        const gT = g.tjn_staff_code ? '\ud83d\udc51 '+(sMap[g.tjn_staff_code]||g.tjn_staff_code) : '';
+        const gT = g.tjn_staff_code ? '\ud83d\udc51 ' + g.tjn_staff_code : '';
         const canGrp = canArea || (pos==='tjn' && g.tjn_staff_code===myCode);
         const gClick = canGrp ? ` style="cursor:pointer" onclick="openEditStructModal('group','${g.id}')"` : '';
         html += `<div class="tree-node group"${gClick}><div><div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?' \u270f\ufe0f':''}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
         (g.teams||[]).forEach(t => {
-          const tM = [t.gyjn_staff_code,t.bgyjn_staff_code].filter(Boolean).map(c=>sMap[c]||c).join(', ');
+          const tM = [t.gyjn_staff_code,t.bgyjn_staff_code].filter(Boolean).join(', ');
           const members = t.staff||[];
           const canTeam = canGrp || (['gyjn','bgyjn'].includes(pos) && (t.gyjn_staff_code===myCode||t.bgyjn_staff_code===myCode));
           const tClick = canTeam ? ` style="cursor:pointer" onclick="openEditStructModal('team','${t.id}')"` : '';
           html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">${members.length} TV</div></div>`;
           if (members.length) {
             members.forEach(m => {
-              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">\ud83d\udc64 ${m.full_name}</span> <span style="color:var(--text3);font-size:10px;">${m.staff_code} \u00b7 ${getPositionName(m.position)}</span></div>`;
+              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">\ud83d\udc64 ${m.staff_code}</span></div>`;
             });
           }
         });
