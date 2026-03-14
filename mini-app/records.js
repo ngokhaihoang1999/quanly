@@ -17,28 +17,27 @@ async function loadJourney(profileId, currentPhase) {
 
   try {
     // Collect all events in parallel for better performance
-    const [sessRes, recRes, pRes] = await Promise.all([
+    const [sessRes, recRes, hjRes] = await Promise.all([
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/profiles?id=eq.${profileId}&select=created_at,check_hapja(data)`)
+      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`)
     ]);
 
     const sessions = await sessRes.json();
     const recs = await recRes.json();
-    const profiles = await pRes.json();
-    const p = profiles[0];
+    const hapjas = await hjRes.json();
 
     // Timeline events
     let events = [];
 
-    // 1. Add Chakki Date from Profile/Hapja data
-    if (p) {
-      const hjData = p.check_hapja?.[0]?.data || {};
+    // 1. Add Chakki Date from Hapja data
+    if (hapjas.length > 0) {
+      const hjData = hapjas[0].data || {};
       const chakkiDateStr = hjData.ngay_chakki;
       if (chakkiDateStr) {
         events.push({ date: chakkiDateStr, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: new Date(chakkiDateStr) });
       } else {
-        events.push({ date: p.created_at, icon: '🆕', text: 'Khởi tạo hồ sơ', sortDate: new Date(p.created_at) });
+        events.push({ date: hapjas[0].created_at, icon: '🆕', text: 'Khởi tạo hồ sơ', sortDate: new Date(hapjas[0].created_at) });
       }
     }
 
@@ -121,7 +120,7 @@ async function saveScheduleTV() {
         let fgId = fgs[0]?.id;
         if (!fgId) {
           const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-            telegram_group_id: 0, profile_id: currentProfileId, level: 'tu_van'
+            telegram_group_id: -Date.now(), profile_id: currentProfileId, level: 'tu_van'
           })});
           const newFgs = await newFgRes.json();
           fgId = newFgs[0]?.id;

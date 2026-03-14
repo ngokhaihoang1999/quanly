@@ -57,8 +57,6 @@ async function openProfile(p) {
     <div class="profile-detail-name">${p.full_name}</div>
     <div class="profile-detail-meta">${p.phone_number||''} · ${p.status||'active'}</div>`;
   // Phase
-  const phaseMap = {new:'🟡 Chakki', chakki:'🟡 Chakki', tu_van:'💬 Tư vấn', bb:'🎓 BB', center:'🏛️ Center', completed:'✅'};
-  const phaseColor = {new:'#f59e0b', chakki:'#f59e0b', tu_van:'var(--accent)', bb:'var(--green)', center:'#8b5cf6', completed:'var(--green)'};
   const ph = p.phase || 'chakki';
   // Fetch roles for this profile
   let rolesInfo = {ndd:'', tvv:[], gvbb:'', la:''};
@@ -101,14 +99,14 @@ async function openProfile(p) {
           ${statusBtn}
           <span style="font-size:12px;color:var(--text2);">${p.birth_year||'—'} · ${p.gender||'—'}</span>
         </div>
-        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${phaseColor[ph]};color:white;">${phaseMap[ph]||ph}</span>
+        <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
       </div>
       ${reasonHtml}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;">
         <div><span style="color:var(--text3);">NDD:</span> <b>${nddDisplay}</b></div>
         <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>
         <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
-        <div><span style="color:var(--text3);">GĐ:</span> <b>${phaseMap[ph]||ph}</b></div>
+        <div><span style="color:var(--text3);">GĐ:</span> <b>${PHASE_LABELS[ph]||ph}</b></div>
       </div>
       ${latestInfo ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;">⏱ ${latestInfo}</div>` : ''}
     </div>`;
@@ -128,100 +126,10 @@ async function openProfile(p) {
   document.getElementById('infoSheet')?.classList.add('active');
 }
 function clearFormFields() {
-  ['cv_ten','cv_nam_sinh','cv_gioi_tinh','cv_ndd','cv_tvv','cv_gvbb','cv_la','t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   ['chips_ton_giao','chips_hon_nhan','chips_quan_he_ndd','chips_khong_gian_song'].forEach(clearChips);
 }
 
-// Cover page
-async function loadCover(p) {
-  if (p.full_name) document.getElementById('cv_ten').value = p.full_name;
-  if (p.birth_year) document.getElementById('cv_nam_sinh').value = p.birth_year;
-  if (p.gender) document.getElementById('cv_gioi_tinh').value = p.gender;
-  if (p.ndd_staff_code) setStaffInputValue('cv_ndd', p.ndd_staff_code);
-  // Load role names from info_sheet
-  const info = p.info_sheet || {};
-  if (info.tvv_name) document.getElementById('cv_tvv').value = info.tvv_name;
-  if (info.la_name) document.getElementById('cv_la').value = info.la_name;
-  // Also load GVBB from fruit_roles (may have been assigned via Telegram bot)
-  try {
-    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id`);
-    const fgs = await fgRes.json();
-    if (fgs && fgs.length) {
-      const fgId = fgs[0].id;
-      const rolesRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&select=*`);
-      const roles = await rolesRes.json();
-      const gvbbRole = roles.find(r => r.role_type === 'gvbb');
-      const tvvRole = roles.find(r => r.role_type === 'tvv');
-      const nddRole = roles.find(r => r.role_type === 'ndd');
-      if (gvbbRole) {
-        const gvbbStaff = allStaff.find(s => s.staff_code === gvbbRole.staff_code);
-        document.getElementById('cv_gvbb').value = gvbbStaff ? gvbbStaff.full_name : gvbbRole.staff_code;
-      } else if (info.gvbb_name) {
-        document.getElementById('cv_gvbb').value = info.gvbb_name;
-      }
-      if (tvvRole && !info.tvv_name) {
-        const tvvStaff = allStaff.find(s => s.staff_code === tvvRole.staff_code);
-        if (tvvStaff) document.getElementById('cv_tvv').value = tvvStaff.full_name;
-      }
-      if (nddRole && !p.ndd_staff_code) setStaffInputValue('cv_ndd', nddRole.staff_code);
-    }
-  } catch(e) { console.warn('loadCover roles:', e); }
-
-  // Fetch linked Telegram group
-  const groupLinkEl = document.getElementById('cv_group_link');
-  if (groupLinkEl) {
-    groupLinkEl.innerHTML = '';
-    try {
-      const fgRes2 = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=telegram_group_id,telegram_group_title`);
-      const fgs2 = await fgRes2.json();
-      if (fgs2 && fgs2.length && fgs2[0].telegram_group_id) {
-        const gid = String(fgs2[0].telegram_group_id);
-        const title = fgs2[0].telegram_group_title || 'Group Trái quả';
-        // Build deep link: supergroups start with -100
-        let tgLink = null;
-        if (gid.startsWith('-100')) {
-          tgLink = `https://t.me/c/${gid.replace('-100','')}/1`;
-        }
-        if (tgLink) {
-          groupLinkEl.innerHTML = `
-            <button onclick="openGroupChat('${tgLink}')" style="
-              width:100%;padding:12px;border-radius:var(--radius-sm);
-              background:linear-gradient(135deg,#229ed9,#1a86c9);
-              color:white;font-weight:600;font-size:14px;
-              border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-              ✈️ Truy cập group: ${title}
-            </button>`;
-        }
-      }
-    } catch(e2) { console.warn('group link:', e2); }
-  }
-}
-function openGroupChat(url) {
-  if (window.Telegram?.WebApp?.openTelegramLink) {
-    window.Telegram.WebApp.openTelegramLink(url);
-  } else {
-    window.open(url, '_blank');
-  }
-}
-async function saveCover() {
-  const data = {
-    full_name: document.getElementById('cv_ten').value,
-    birth_year: document.getElementById('cv_nam_sinh').value,
-    gender: document.getElementById('cv_gioi_tinh').value,
-    ndd_staff_code: getStaffCodeFromInput('cv_ndd'),
-    info_sheet: {
-      ...(allProfiles.find(p=>p.id===currentProfileId)?.info_sheet || {}),
-      tvv_name: document.getElementById('cv_tvv').value,
-      gvbb_name: document.getElementById('cv_gvbb').value,
-      la_name: document.getElementById('cv_la').value,
-    }
-  };
-  try {
-    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify(data) });
-    showToast('✅ Đã lưu Trang bìa!');
-    await loadProfiles();
-  } catch { showToast('❌ Lỗi khi lưu'); }
-}
 
 // Info sheet (Phiếu Thông tin - stored in form_hanh_chinh)
 async function loadInfoSheet(profileId) {

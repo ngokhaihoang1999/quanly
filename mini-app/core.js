@@ -54,7 +54,9 @@ function setStaffInputValue(id, code) {
 }
 
 async function sbFetch(path, opts={}) {
-  return fetch(SUPABASE_URL + path, { ...opts, headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': opts.method==='POST'?'return=representation':undefined, ...opts.headers } });
+  const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...opts.headers };
+  if (opts.method === 'POST' && !headers['Prefer']) headers['Prefer'] = 'return=representation';
+  return fetch(SUPABASE_URL + path, { ...opts, headers });
 }
 
 // ============ INIT ============
@@ -208,15 +210,15 @@ function applyPermissions() {
   // FAB: only for those who can create Hapja
   const fabBtn = document.getElementById('fabBtn');
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
-  if (fabBtn) fabBtn.style.display = (canCreateHapja(pos) && (activeTab==='dashboard'||activeTab==='profiles')) ? 'flex' : 'none';
+  if (fabBtn) fabBtn.style.display = (canCreateHapja(pos) && (activeTab==='unit'||activeTab==='personal')) ? 'flex' : 'none';
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
 }
 
 // ============ UNIT POPUP ============
 function showUnitPopup(type) {
-  const phMap = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
-  const phColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
+  const phMap = PHASE_LABELS;
+  const phColor = PHASE_COLORS;
   let title = '', items = [];
   if (type === 'hapja') {
     title = '🍎 Trái Hapja (đã duyệt)';

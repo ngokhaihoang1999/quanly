@@ -17,7 +17,7 @@ Migrations: `supabase/migrations/` (7 files, chạy theo thứ tự timestamp)
 | full_name | text | Họ tên |
 | position | text | Chức vụ: `td`, `bgyjn`, `gyjn`, `tjn`, `yjyn`, `admin`,... |
 | telegram_id | bigint | Telegram user ID (liên kết qua `/register`) |
-| phone_number | text | SĐT |
+| phone | text | SĐT |
 | email | text | Email |
 | team_id | uuid (FK) | Thuộc Tổ nào |
 | pending_telegram_id | bigint | Chờ Admin duyệt liên kết Telegram |

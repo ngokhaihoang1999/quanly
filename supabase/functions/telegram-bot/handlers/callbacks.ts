@@ -167,8 +167,8 @@ export async function handleCallback(update: any, staffData: any) {
     const profileId = cbData.replace("view_p_", "");
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', profileId).single();
     if (!profile) { await sendText(chatId, "❌ Không tìm thấy."); return; }
-    const { count: tvvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', profileId).eq('record_type', 'to_3');
-    const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', profileId).eq('record_type', 'to_4');
+    const { count: tvvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', profileId).eq('record_type', 'tu_van');
+    const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', profileId).eq('record_type', 'bien_ban');
     let m = `👤 *${profile.full_name}*\n`;
     m += `📱 SĐT: ${profile.phone_number || 'Chưa có'}\n`;
     m += `🎂 Năm sinh: ${profile.birth_year || 'N/A'}\n`;
@@ -185,7 +185,7 @@ export async function handleCallback(update: any, staffData: any) {
     if (!hapja || hapja.status !== 'pending') { await sendText(chatId, `⚠️ Phiếu không tồn tại hoặc đã xử lý.`); return; }
     const { data: newProfile } = await supabase.from('profiles').insert({
       full_name: hapja.full_name, birth_year: hapja.birth_year, gender: hapja.gender,
-      created_by: hapja.created_by
+      created_by: hapja.created_by, phase: 'chakki'
     }).select().single();
     await supabase.from('check_hapja').update({
       status: 'approved', approved_by: staffData.staff_code,
@@ -237,7 +237,11 @@ export async function handleCallback(update: any, staffData: any) {
 
   // setpos_{code}_{pos} — Assign position
   if (cbData.startsWith('setpos_')) {
-    const [_, targetCode, newPos] = cbData.split('_');
+    // Parse: setpos_CODE_position (position may contain '_' like ggn_jondo)
+    const payload = cbData.replace('setpos_', '');
+    const sepIdx = payload.indexOf('_');
+    const targetCode = payload.substring(0, sepIdx);
+    const newPos = payload.substring(sepIdx + 1);
     if (!canAssignPosition(pos)) { await sendText(chatId, `⛔ Không có quyền.`); return; }
     if (posLevel(newPos) >= posLevel(pos)) { await sendText(chatId, `⛔ Không thể gán chức vụ bằng/cao hơn mình.`); return; }
     await supabase.from('staff').update({ position: newPos }).eq('staff_code', targetCode);

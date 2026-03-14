@@ -1,3 +1,7 @@
+// Phase display constants (shared across dashboard)
+const PHASE_LABELS = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
+const PHASE_COLORS = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
+
 // ============ DASHBOARD ============
 async function loadDashboard() {
   try {
@@ -135,7 +139,7 @@ async function loadDashboard() {
 
     // Pre-fetch latest sessions + records for all unit fruits
     const allPids = [...new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean))];
-    let sessionMap = {}, recordMap = {};
+    const sessionMap = {}, recordMap = {};
     if (allPids.length > 0) {
       const idsStr = allPids.map(id=>`"${id}"`).join(',');
       try {
@@ -147,8 +151,6 @@ async function loadDashboard() {
         recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
       } catch(e) {}
     }
-    const phMap = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
-    const phColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
     // Helper: render fruit cards for a list of staff_codes
     function fruitCardsForCodes(codes) {
       const seen = new Set();
@@ -178,7 +180,7 @@ async function loadDashboard() {
         return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <div style="font-weight:700;font-size:13px;">${sDot} ${name}</div>
-            <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+            <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;font-size:10px;color:var(--text2);">
             <div>NDD: <b style="color:var(--text);">${ndd}</b></div>
@@ -315,12 +317,11 @@ async function loadDashboard() {
     if (nddRoles.length === 0) {
       listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
     } else {
-      // Fetch latest session for each NDD profile
+      // Supplement sessionMap/recordMap with any NDD-only profile IDs not yet fetched
       const nddProfileIds = [...new Set(nddRoles.map(r=>r.fruit_groups?.profile_id).filter(Boolean))];
-      let sessionMap = {};
-      let recordMap = {};
-      if (nddProfileIds.length > 0) {
-        const ids = nddProfileIds.map(id=>`"${id}"`).join(',');
+      const missingIds = nddProfileIds.filter(id => !sessionMap[id] && !recordMap[id]);
+      if (missingIds.length > 0) {
+        const ids = missingIds.map(id=>`"${id}"`).join(',');
         try {
           const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=*&order=session_number.desc`);
           const sessions = await sRes.json();
@@ -342,8 +343,8 @@ async function loadDashboard() {
         const name = p?.full_name || 'N/A';
         const pid = r.fruit_groups?.profile_id;
         const ph = p?.phase || 'new';
-        const phaseLabel = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'}[ph]||ph;
-        const phaseColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'}[ph]||'#f59e0b';
+        const phaseLabel = PHASE_LABELS[ph]||ph;
+        const phaseColor = PHASE_COLORS[ph]||'#f59e0b';
         // Caregivers from all roles of this fruit_group
         const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
         const tvvList = allRolesInGroup.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ');
