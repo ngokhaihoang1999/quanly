@@ -62,6 +62,7 @@ Migrations: `supabase/migrations/` (7 files, chạy theo thứ tự timestamp)
 | info_sheet | jsonb | Dữ liệu mở rộng (tvv_name, gvbb_name, la_name,...) |
 | status | text | Trạng thái kỹ thuật: `active` |
 | fruit_status | text | Tình trạng trái quả: `alive` (mặc định) hoặc `dropout` |
+| dropout_reason | text | Lý do drop-out (nhập khi chuyển sang dropout) |
 | created_at | timestamptz | Ngày tạo |
 
 ### `fruit_groups` — Group Chat gắn hồ sơ

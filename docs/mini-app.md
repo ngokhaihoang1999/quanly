@@ -49,7 +49,7 @@ mini-app/
 | TĐ | Tổ mình thuộc |
 
 Metrics: TĐ trong đơn vị, Trái Hapja đã duyệt, Trái TV, Trái BB, Group BB.
-Bảng số liệu cho phép bấm vào từng metric để mở popup xem chi tiết danh sách trái/group tương ứng. Hiển thị dấu hiệu Alive (🟢) và Drop-out (🔴) trên từng thẻ trái quả.
+Bảng số liệu cho phép bấm vào từng metric để mở popup xem chi tiết danh sách trái/group tương ứng. Hiển thị dấu hiệu Alive (🟢) và Drop-out (🔴) trên từng thẻ trái quả. Các thẻ cá đã Drop-out sẽ tự động bị ẩn khỏi danh sách theo dõi trực tiếp để tập trung vào các cá đang hoạt động.  
 Danh sách hồ sơ trái quả có thanh lọc theo tình trạng (Tất cả / Alive / Drop-out).
 
 ### Tab Cá nhân — Luôn là dữ liệu cá nhân
@@ -57,6 +57,7 @@ Danh sách hồ sơ trái quả có thanh lọc theo tình trạng (Tất cả /
 - Group tham gia
 - Hapja tôi tạo
 - Danh sách trái với vai trò (NDD/TVV/GVBB/Lá)
+- **Lưu ý**: Các cá trạng thái Drop-out sẽ được lọc bỏ khỏi danh sách theo dõi cá nhân.
 
 ---
 
@@ -65,6 +66,8 @@ Danh sách hồ sơ trái quả có thanh lọc theo tình trạng (Tất cả /
 Bấm vào phiếu Hapja trên Dashboard → mở modal chi tiết hiện tất cả trường (16 mục).  
 Nếu là YJYN/GGN Jondo + status=pending → hiện nút **Duyệt** / **Từ chối** ở dưới modal.  
 Duyệt → tự tạo hồ sơ Trái quả.
+- **Xóa hồ sơ**: Khi thực hiện xóa hồ sơ trái quả, hệ thống thực hiện xóa vĩnh viễn (Hard Delete) bản ghi Check Hapja tương ứng để không còn tính vào dữ liệu Metrics.
+- **Drop-out**: Chuyển trạng thái sang Drop-out yêu cầu nhập lý do. Lý do này được hiển thị rõ ràng trong thẻ tóm tắt hồ sơ (Profile Summary).
 
 ---
 
