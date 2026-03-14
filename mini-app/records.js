@@ -76,8 +76,11 @@ async function saveScheduleTV() {
       scheduled_at: dt || null, tvv_staff_code: tvv || null, notes: notes || null,
       created_by: getEffectiveStaffCode()
     })});
-    // Update phase to tu_van if still new
-    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&phase=eq.new`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
+    // Update phase to tu_van if currently new or chakki
+    const p = allProfiles.find(x => x.id === currentProfileId);
+    if (p && (p.phase === 'new' || p.phase === 'chakki')) {
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
+    }
     // If TVV assigned, create fruit_role so TVV sees this fruit in their dashboard
     if (tvv) {
       try {
@@ -101,17 +104,27 @@ async function saveScheduleTV() {
     }
     closeModal('scheduleTVModal');
     showToast('✅ Đã chốt Tư vấn lần ' + num);
-    loadSessions(currentProfileId);
+    
+    // Refresh the profile data to update UI
     const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
     const ps = await pRes.json();
-    if (ps[0]) { const idx = allProfiles.findIndex(x=>x.id===currentProfileId); if (idx>=0) allProfiles[idx]=ps[0]; openProfile(ps[0]); }
-  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+    if (ps[0]) { 
+      const idx = allProfiles.findIndex(x=>x.id===currentProfileId); 
+      if (idx>=0) allProfiles[idx]=ps[0]; 
+      openProfile(ps[0]); 
+    }
+  } catch(e) { 
+    showToast('❌ Lỗi: ' + (e.message || 'Không xác định')); 
+    console.error('saveScheduleTV Error:', e); 
+  }
 }
 async function completeSession(sessionId) {
   try {
     await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'PATCH', body: JSON.stringify({ status: 'completed' })});
     showToast('✅ Đã hoàn thành buổi tư vấn');
-    loadSessions(currentProfileId);
+    // Refresh journey and profile
+    const p = allProfiles.find(x => x.id === currentProfileId);
+    if (p) loadJourney(currentProfileId, p.phase);
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 function createTVFromSession(sessionId, num, tool) {
