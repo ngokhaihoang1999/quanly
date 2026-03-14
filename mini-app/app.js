@@ -145,16 +145,13 @@ async function loadDashboard() {
     document.getElementById('dashUnitTitle').textContent = '🏢 ' + (unitLabel || 'Đơn vị');
     let unitFruits = 0, unitGroups = 0, unitHapja = 0, unitRoles = [];
     if (unitStaffCodes.length > 0) {
-      // Fruit roles in unit
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
       const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
       unitRoles = await urRes.json();
       unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id)).size;
       unitGroups = new Set(unitRoles.map(r => r.fruit_group_id)).size;
-      // Hapja in unit
       const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20`);
-      const unitHapjas = await uhRes.json();
-      unitHapja = unitHapjas.length;
+      unitHapja = (await uhRes.json()).length;
     }
     const unitStaffCount = unitStaffCodes.length;
     document.getElementById('dashUnitMetrics').innerHTML = `
@@ -166,6 +163,70 @@ async function loadDashboard() {
         <div class="dash-stat"><div class="num" style="color:var(--green);">${unitGroups}</div><div class="lbl">Group</div></div>
         <div class="dash-stat"><div class="num" style="color:var(--yellow);">${unitHapja}</div><div class="lbl">Hapja chờ</div></div>
       </div>`;
+
+    // ── Sub-unit breakdown (for managers) ──
+    const subEl = document.getElementById('dashSubUnits');
+    let subHtml = '';
+    function countForCodes(codes) {
+      const fr = unitRoles.filter(r => codes.includes(r.staff_code));
+      return {
+        td: codes.length,
+        fruits: new Set(fr.map(r => r.fruit_groups?.profile_id)).size,
+        groups: new Set(fr.map(r => r.fruit_group_id)).size,
+      };
+    }
+    if (['admin','yjyn','ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
+      // Show breakdown by Group → Team
+      const myAreas = pos === 'admin' ? (structureData||[]) :
+        (structureData||[]).filter(a => a.yjyn_staff_code === myCode || ['ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos));
+      myAreas.forEach(a => {
+        (a.org_groups||[]).forEach(g => {
+          const gCodes = [];
+          (g.teams||[]).forEach(t => (t.staff||[]).forEach(m => gCodes.push(m.staff_code)));
+          const gS = countForCodes(gCodes);
+          const gid = 'subgrp_' + g.id;
+          subHtml += `<div style="margin-bottom:4px;">
+            <div onclick="document.getElementById('${gid}').style.display=document.getElementById('${gid}').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+              <div style="font-weight:700;font-size:13px;">👥 ${g.name}</div>
+              <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);">
+                <span>${gS.td} TĐ</span><span style="color:var(--accent);">${gS.fruits} 🍎</span><span style="color:var(--green);">${gS.groups} 💬</span>
+              </div>
+            </div>
+            <div id="${gid}" style="display:none;padding-left:16px;">`;
+          (g.teams||[]).forEach(t => {
+            const tCodes = (t.staff||[]).map(m => m.staff_code);
+            const tS = countForCodes(tCodes);
+            subHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-left:3px solid var(--accent);margin:4px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--surface);">
+              <div style="font-size:12px;font-weight:600;">📌 ${t.name}</div>
+              <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
+                <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span><span style="color:var(--green);">${tS.groups} 💬</span>
+              </div>
+            </div>`;
+          });
+          subHtml += '</div></div>';
+        });
+      });
+    } else if (pos === 'tjn') {
+      // Show breakdown by Team only
+      for (const a of (structureData||[])) {
+        const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
+        if (myGrp) {
+          (myGrp.teams||[]).forEach(t => {
+            const tCodes = (t.staff||[]).map(m => m.staff_code);
+            const tS = countForCodes(tCodes);
+            subHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px;">
+              <div style="font-size:13px;font-weight:700;">📌 ${t.name}</div>
+              <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
+                <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span><span style="color:var(--green);">${tS.groups} 💬</span>
+              </div>
+            </div>`;
+          });
+          break;
+        }
+      }
+    }
+    subEl.innerHTML = subHtml ? `<div class="section-header" style="margin-top:8px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">📊 Đơn vị cấp dưới</div></div>${subHtml}` : '';
+
     // Unit fruit list
     const unitListEl = document.getElementById('dashUnitList');
     if (unitRoles.length === 0) {
