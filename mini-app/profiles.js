@@ -70,12 +70,18 @@ async function openProfile(p) {
   // Fetch roles + check real BB group
   let rolesInfo = {ndd:'', tvv:[], gvbb:''};
   let hasRealBBGroup = false;
+  let realGroupId = null;
+  let realGroupTitle = '';
   try {
-    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,fruit_roles(staff_code,role_type)`);
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,fruit_roles(staff_code,role_type)`);
     const fgs = await fgRes.json();
     (fgs||[]).forEach(fg => {
       // Real group has a telegram_group_id (not null)
-      if (fg.telegram_group_id) hasRealBBGroup = true;
+      if (fg.telegram_group_id) {
+        hasRealBBGroup = true;
+        realGroupId = fg.telegram_group_id;
+        realGroupTitle = fg.telegram_group_title || 'Group BB';
+      }
       (fg.fruit_roles||[]).forEach(r => {
         if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
         if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
@@ -133,6 +139,16 @@ async function openProfile(p) {
         <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>
         <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
         ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
+      </div>
+      ${hasRealBBGroup && realGroupId ? `
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:15px;">💬</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${realGroupTitle}</div>
+        </div>
+        <a href="https://t.me/c/${String(realGroupId).replace('-100','')}" target="_blank"
+           style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">Mở Group →</a>
+      </div>` : ''}
       </div>
     </div>`;
 
