@@ -281,26 +281,47 @@ async function toggleFruitStatus(profileId, current) {
 
   if (!confirm(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
   try {
-    const body = { fruit_status: newStatus };
-    if (newStatus === 'dropout') body.dropout_reason = reason;
-    else body.dropout_reason = null;
+    const patchBody = { fruit_status: newStatus };
+    if (newStatus === 'dropout') patchBody.dropout_reason = reason;
+    else patchBody.dropout_reason = null;
 
-    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    // PATCH with return=representation to verify the change
+    const patchRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(patchBody)
+    });
 
-    // Re-fetch from DB to confirm the change persisted
-    const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}&select=*`);
-    const ps = await pRes.json();
-    if (ps[0]) {
-      const idx = allProfiles.findIndex(x => x.id === profileId);
-      if (idx >= 0) allProfiles[idx] = ps[0];
-      openProfile(ps[0]);
+    if (!patchRes.ok) {
+      const errText = await patchRes.text();
+      console.error('PATCH failed:', patchRes.status, errText);
+      showToast('❌ Lỗi cập nhật: ' + (errText || patchRes.status));
+      return;
+    }
+
+    // Try to use the representation response
+    let updatedProfile = null;
+    try {
+      const patchData = await patchRes.json();
+      if (Array.isArray(patchData) && patchData[0]) updatedProfile = patchData[0];
+    } catch(e) {}
+
+    // If no representation, update local cache directly
+    const idx = allProfiles.findIndex(x => x.id === profileId);
+    if (idx >= 0) {
+      if (updatedProfile) {
+        allProfiles[idx] = updatedProfile;
+      } else {
+        allProfiles[idx].fruit_status = newStatus;
+        allProfiles[idx].dropout_reason = patchBody.dropout_reason;
+      }
+      openProfile(allProfiles[idx]);
     }
 
     showToast(`✅ Đã chuyển sang ${label}`);
-    // Refresh dashboard + profile list to reflect status change everywhere
     filterProfiles();
     loadDashboard();
-  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleFruitStatus:', e); }
 }
 
 // ============ THEME TOGGLE ============
