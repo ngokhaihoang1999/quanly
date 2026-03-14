@@ -893,20 +893,25 @@ async function rejectHapja(id) {
 async function deleteProfile() {
   if (!currentProfileId || !confirm('Xác nhận xoá hồ sơ?')) return;
   try {
-    // Xoá child tables trước (đúng thứ tự FK)
+    // 1. Unlink check_hapja (has FK → profiles, no CASCADE)
+    await sbFetch(`/rest/v1/check_hapja?profile_id=eq.${currentProfileId}`, {method:'PATCH', body: JSON.stringify({profile_id: null})});
+    // 2. Xoá consultation_sessions
     await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
+    // 3. Xoá records
     await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
+    // 4. Xoá form_hanh_chinh
     await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
-    // Xoá fruit_roles trước fruit_groups
+    // 5. Xoá fruit_roles → fruit_groups
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
     const fgs = await fgRes.json();
     for (const fg of fgs) {
       await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fg.id}`, {method:'DELETE'});
     }
     await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}`, {method:'DELETE'});
+    // 6. Xoá profile
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {method:'DELETE'});
     showToast('✅ Đã xoá!'); backToList(); await loadProfiles();
-  } catch(e) { showToast('❌ Lỗi xoá hồ sơ'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi xoá hồ sơ'); console.error('deleteProfile error:', e); }
 }
 async function deleteRecord(id, type) {
   if (!confirm('Xoá phiếu này?')) return;
