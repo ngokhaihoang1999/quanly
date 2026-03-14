@@ -1,0 +1,39 @@
+// ============ STAFF ============
+async function loadStaff() {
+  try {
+    const res = await sbFetch('/rest/v1/staff?select=*&order=created_at.desc');
+    allStaff = await res.json();
+    renderStaff(allStaff);
+  } catch { document.getElementById('staffList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải</div></div>'; }
+}
+function renderStaff(list) {
+  const el = document.getElementById('staffList');
+  document.getElementById('staffCount').textContent = list.length + ' TĐ';
+  if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Chưa có TĐ</div></div>'; return; }
+  el.innerHTML = list.map(s => `
+    <div class="staff-card">
+      <div class="staff-avatar">${(s.full_name||'?')[0]}</div>
+      <div class="profile-info">
+        <div class="profile-name">${s.full_name} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
+        <div class="profile-meta">
+          <span class="staff-role-badge ${getBadgeClass(s.position)}">${getPositionName(s.position)}</span>
+          ${s.telegram_id ? '🟢 Đã kết nối' : '⚪ Chưa kết nối'}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+function filterStaff() { const q=document.getElementById('staffSearchInput').value.toLowerCase(); renderStaff(allStaff.filter(s=>s.full_name.toLowerCase().includes(q)||s.staff_code.toLowerCase().includes(q)||(s.position||'').includes(q))); }
+function openAddStaffModal() { document.getElementById('addStaffModal').classList.add('open'); }
+async function addStaff() {
+  const name = document.getElementById('new_staff_name').value.trim();
+  const code = document.getElementById('new_staff_code').value.trim();
+  if (!name||!code) { showToast('⚠️ Nhập họ tên và mã TĐ'); return; }
+  try {
+    await sbFetch('/rest/v1/staff', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ full_name: name, staff_code: code, position: document.getElementById('new_staff_position').value, phone: document.getElementById('new_staff_phone').value.trim()||null, email: document.getElementById('new_staff_email').value.trim()||null }) });
+    closeModal('addStaffModal'); showToast('✅ Đã đăng ký!');
+    ['new_staff_name','new_staff_code','new_staff_phone','new_staff_email'].forEach(id=>document.getElementById(id).value='');
+    await loadStaff();
+  } catch { showToast('❌ Lỗi'); }
+}
+
