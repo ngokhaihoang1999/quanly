@@ -262,34 +262,110 @@ async function loadDashboard() {
     }
 
     // ── SECTION 2: CÁ NHÂN ──
-    let myRoles = [], myFruits = 0, myGroups = 0, myHapja = 0;
+    let myRoles = [], myHapja = 0;
     if (myCode) {
-      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name))`);
+      // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
+      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase),fruit_roles(staff_code,role_type))`);
       myRoles = await rRes.json();
-      myFruits = myRoles.length;
-      myGroups = new Set(myRoles.map(r => r.fruit_group_id)).size;
       const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id`);
       myHapja = (await mhRes.json()).length;
     }
+    const nddRoles = myRoles.filter(r => r.role_type === 'ndd');
+    const tvvRoles = myRoles.filter(r => r.role_type === 'tvv');
+    const gvbbRoles = myRoles.filter(r => r.role_type === 'gvbb');
+    // Count unique profiles per role
+    const countUniq = arr => new Set(arr.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
     document.getElementById('dashPersonalMetrics').innerHTML = `
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num">${myFruits}</div><div class="lbl">Trái tôi chăm</div></div>
-        <div class="dash-stat"><div class="num">${myGroups}</div><div class="lbl">Group tham gia</div></div>
+        <div class="dash-stat"><div class="num" style="color:var(--accent);">${countUniq(nddRoles)}</div><div class="lbl">Trái NDD</div></div>
+        <div class="dash-stat"><div class="num" style="color:var(--green);">${countUniq(tvvRoles)}</div><div class="lbl">Trái TV</div></div>
       </div>
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num" style="color:var(--accent);">${myHapja}</div><div class="lbl">Hapja tôi tạo</div></div>
+        <div class="dash-stat"><div class="num" style="color:#f59e0b;">${countUniq(gvbbRoles)}</div><div class="lbl">Trái BB</div></div>
+        <div class="dash-stat"><div class="num" style="color:var(--text2);">${myHapja}</div><div class="lbl">Hapja tôi tạo</div></div>
       </div>`;
-    // Personal fruit list
+
+    // ── NDD DETAIL LIST ──
     const listEl = document.getElementById('dashMyList');
-    if (myRoles.length === 0) {
-      listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa được gắn vai trò nào</div>';
+    document.getElementById('dashMyListTitle').textContent = '🍎 Trái tôi làm NDD';
+    if (nddRoles.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
     } else {
-      listEl.innerHTML = myRoles.map(r => {
-        const name = r.fruit_groups?.profiles?.full_name || 'N/A';
-        const role = {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'Lá'}[r.role_type] || r.role_type;
-        const lvl2 = r.fruit_groups?.level || 'tu_van';
-        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openProfileById('${r.fruit_groups?.profile_id}')"><div class="dash-dot ${lvl2==='bb'?'bb':'tv'}"></div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${role} \u00b7 ${lvl2==='bb'?'BB':'Tư vấn'}</div></div><div class="profile-arrow">\u203a</div></div>`;
+      // Fetch latest session for each NDD profile
+      const nddProfileIds = [...new Set(nddRoles.map(r=>r.fruit_groups?.profile_id).filter(Boolean))];
+      let sessionMap = {};
+      let recordMap = {};
+      if (nddProfileIds.length > 0) {
+        const ids = nddProfileIds.map(id=>`"${id}"`).join(',');
+        try {
+          const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=*&order=session_number.desc`);
+          const sessions = await sRes.json();
+          sessions.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
+          const recRes = await sbFetch(`/rest/v1/records?profile_id=in.(${ids})&select=*&order=created_at.desc`);
+          const recs = await recRes.json();
+          recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+        } catch(e) { console.warn('Session fetch:', e); }
+      }
+      const seenP = new Set();
+      listEl.innerHTML = nddRoles.filter(r => {
+        const pid = r.fruit_groups?.profile_id;
+        if (!pid || seenP.has(pid)) return false;
+        seenP.add(pid); return true;
+      }).map(r => {
+        const p = r.fruit_groups?.profiles;
+        const name = p?.full_name || 'N/A';
+        const pid = r.fruit_groups?.profile_id;
+        const ph = p?.phase || 'new';
+        const phaseLabel = {new:'🌱 Mới',tu_van:'💬 TV',bb:'🎓 BB',completed:'✅'}[ph]||ph;
+        const phaseColor = {new:'var(--text2)',tu_van:'var(--accent)',bb:'var(--green)',completed:'var(--green)'}[ph]||'var(--text2)';
+        // Caregivers from all roles of this fruit_group
+        const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
+        const tvvList = allRolesInGroup.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ');
+        const gvbbList = allRolesInGroup.filter(x=>x.role_type==='gvbb').map(x=>x.staff_code).join(', ');
+        // Latest activity
+        const latestSess = sessionMap[pid];
+        const latestRec = recordMap[pid];
+        let latestActivity = '';
+        if (latestSess) latestActivity = `Chốt TV lần ${latestSess.session_number} (${latestSess.tool||'—'})`;
+        if (latestRec) {
+          const isTV = latestRec.record_type === 'tu_van';
+          const num = latestRec.content?.lan_thu || latestRec.content?.buoi_thu || '';
+          const recLabel = isTV ? `BC TV lần ${num}` : `BC BB buổi ${num}`;
+          if (!latestSess || new Date(latestRec.created_at) > new Date(latestSess.created_at)) {
+            latestActivity = recLabel;
+          }
+        }
+        return `<div style="cursor:pointer;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;" onclick="openProfileById('${pid}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-weight:700;font-size:14px;">${name}</div>
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${phaseColor};color:white;">${phaseLabel}</span>
+          </div>
+          ${tvvList ? `<div style="font-size:11px;color:var(--text2);">💬 TVV: ${tvvList}</div>` : ''}
+          ${gvbbList ? `<div style="font-size:11px;color:var(--text2);">🎓 GVBB: ${gvbbList}</div>` : ''}
+          ${latestActivity ? `<div style="font-size:11px;color:var(--accent);margin-top:4px;">⏱ ${latestActivity}</div>` : ''}
+          <div style="text-align:right;font-size:11px;color:var(--text3);margin-top:2px;">Bấm để xem hồ sơ ›</div>
+        </div>`;
       }).join('');
+    }
+
+    // TVV / GVBB summary (compact)
+    const myListEl = document.getElementById('dashMyList');
+    if (tvvRoles.length > 0 || gvbbRoles.length > 0) {
+      const seen2 = new Set();
+      const otherItems = [...tvvRoles, ...gvbbRoles].filter(r => {
+        const pid = r.fruit_groups?.profile_id;
+        if (!pid || seen2.has(pid)) return false;
+        seen2.add(pid); return true;
+      }).map(r => {
+        const name = r.fruit_groups?.profiles?.full_name || 'N/A';
+        const role = {ndd:'NDD',tvv:'💬 TVV',gvbb:'🎓 GVBB',la:'Lá'}[r.role_type]||r.role_type;
+        return `<div style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px;" onclick="openProfileById('${r.fruit_groups?.profile_id}')">
+          <div style="font-size:13px;font-weight:600;flex:1;">${name}</div>
+          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);">${role}</span>
+          <span style="color:var(--text3);">›</span>
+        </div>`;
+      }).join('');
+      if (otherItems) myListEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
     }
   } catch(e) { console.error('Dashboard error:', e); }
 }
