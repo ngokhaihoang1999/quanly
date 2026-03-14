@@ -65,7 +65,7 @@ async function openProfile(p) {
   document.getElementById('profileDetailHeader').innerHTML = `
     <div class="profile-detail-avatar">${(p.full_name||'?')[0]}</div>
     <div class="profile-detail-name">${p.full_name}</div>
-    <div class="profile-detail-meta">${p.phone_number||'Chưa có SĐT'} · ${statusLabel}</div>`;
+    <div class="profile-detail-meta">${p.birth_year ? p.birth_year + ' · ' : ''}${statusLabel}</div>`;
   // Phase
   const ph = p.phase || 'chakki';
   // Fetch roles for this profile
@@ -120,10 +120,10 @@ async function openProfile(p) {
         <div><span style="color:var(--text3);">NDD:</span> <b>${nddDisplay}</b></div>
         <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>
         <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
-        <div><span style="color:var(--text3);">GĐ:</span> <b>${PHASE_LABELS[ph]||ph}</b></div>
+        ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
       </div>
-      ${latestInfo ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;">⏱ ${latestInfo}</div>` : ''}
     </div>`;
+
   // Tab visibility
   const tabTV = document.getElementById('tabTV');
   const tabBB = document.getElementById('tabBB');

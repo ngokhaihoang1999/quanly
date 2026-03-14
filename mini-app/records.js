@@ -350,18 +350,39 @@ function createTVFromSession(sessionId, num, tool) {
 function openChotBBModal() {
   if (!currentProfileId) return;
   document.getElementById('cbb_gvbb').value = '';
-  document.getElementById('cbb_notes').value = '';
   document.getElementById('chotBBModal').classList.add('open');
 }
 
 async function saveChotBB() {
   try {
+    const gvbb = getStaffCodeFromInput('cbb_gvbb');
+    // 1. Update phase
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'bb' })});
+    // 2. Record chot_bb event on timeline
     await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
       profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Chốt BB', phase: 'bb' }
     })});
+    // 3. Save GVBB to fruit_roles if provided
+    if (gvbb) {
+      try {
+        const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
+        const fgs = await fgRes.json();
+        let fgId = fgs[0]?.id;
+        if (!fgId) {
+          const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+            telegram_group_id: -Date.now(), profile_id: currentProfileId, level: 'bb'
+          })});
+          fgId = (await newFgRes.json())[0]?.id;
+        }
+        if (fgId) {
+          await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify({
+            fruit_group_id: fgId, staff_code: gvbb, role_type: 'gvbb', assigned_by: getEffectiveStaffCode()
+          })});
+        }
+      } catch(e) { console.warn('Assign GVBB fail:', e); }
+    }
     closeModal('chotBBModal');
-    showToast('🎓 Đã chốt BB! Hãy tạo group Telegram và gắn hồ sơ.');
+    showToast('🎓 Đã chốt BB!' + (gvbb ? ` GVBB: ${gvbb}` : ' Hãy tạo group Telegram và gắn hồ sơ.'));
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
