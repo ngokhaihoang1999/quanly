@@ -328,7 +328,7 @@ async function openProfileById(id) {
 }
 async function openProfile(p) {
   currentProfileId = p.id;
-  ['tab-dashboard','tab-profiles','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
   document.getElementById('profileDetailHeader').innerHTML = `
