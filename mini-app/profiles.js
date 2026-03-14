@@ -59,8 +59,6 @@ async function openProfile(p) {
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
 
-  // Clear old header (now unused)
-  document.getElementById('profileDetailHeader').innerHTML = '';
 
   const ph = p.phase || 'chakki';
   const fStatus = p.fruit_status || 'alive';
