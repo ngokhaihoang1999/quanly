@@ -22,3 +22,13 @@ jobs:
           SUPABASE_PROJECT_ID: smzoomekyvllsgppgvxw
         run: |
           supabase functions deploy telegram-bot --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
+
+      - name: Re-register Telegram Webhook (enable my_chat_member)
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SUPABASE_PROJECT_ID: smzoomekyvllsgppgvxw
+        run: |
+          WEBHOOK_URL="https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/telegram-bot"
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+            -H "Content-Type: application/json" \
+            -d "{\"url\":\"${WEBHOOK_URL}\",\"allowed_updates\":[\"message\",\"callback_query\",\"my_chat_member\"]}"

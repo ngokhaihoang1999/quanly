@@ -28,8 +28,25 @@ Deno.serve(async (req) => {
     const update = await req.json();
 
     // Detect chat type
-    const chatType = update.message?.chat?.type || update.callback_query?.message?.chat?.type || 'private';
+    const chatType = update.message?.chat?.type
+      || update.callback_query?.message?.chat?.type
+      || update.my_chat_member?.chat?.type
+      || 'private';
     const isGroup = chatType === 'group' || chatType === 'supergroup';
+
+    // ── Bot kicked/left from a group → unlink group ──
+    if (update.my_chat_member) {
+      const mcm = update.my_chat_member;
+      const newStatus = mcm.new_chat_member?.status;
+      const groupId = mcm.chat?.id;
+      if (groupId && (newStatus === 'kicked' || newStatus === 'left')) {
+        // Reset telegram_group_id to 0 so the profile shows "Chưa gắn group"
+        await supabase.from('fruit_groups')
+          .update({ telegram_group_id: 0, telegram_group_title: null, updated_at: new Date().toISOString() })
+          .eq('telegram_group_id', groupId);
+      }
+      return new Response("OK");
+    }
 
     // ── Group message → delegate to group handler ──
     if (isGroup && update.message) {
