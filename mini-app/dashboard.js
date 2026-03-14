@@ -194,9 +194,14 @@ async function loadDashboard() {
     let subHtml = '';
     function countForCodes(codes) {
       const fr = unitRoles.filter(r => codes.includes(r.staff_code));
+      // Only count Alive fruits (exclude dropout)
+      const alivePids = new Set(
+        fr.filter(r => r.fruit_groups?.profiles?.fruit_status !== 'dropout')
+          .map(r => r.fruit_groups?.profile_id).filter(Boolean)
+      );
       return {
         td: codes.length,
-        fruits: new Set(fr.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size,
+        fruits: alivePids.size,
         groups: new Set(fr.map(r => r.fruit_group_id)).size,
       };
     }
