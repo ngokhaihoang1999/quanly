@@ -19,18 +19,8 @@ export async function handlePrivateChat(update: any, staffData: any) {
     // Build keyboard based on position
     const keyboard: any[] = [
       [{ text: "🖥️ Mở Quản Lý (Mini App)", web_app: { url: miniAppUrl } }],
+      [{ text: "💬 Liên hệ Admin", callback_data: "btn_support" }],
     ];
-
-    // Assign position — for managers
-    if (canAssignPosition(pos)) {
-      keyboard.push([{ text: "👤 Chỉ định chức vụ TĐ", callback_data: "btn_assign_pos" }]);
-    }
-    // Structure — for admin/yjyn
-    if (canDefineStructure(pos)) {
-      keyboard.push([{ text: "🏗️ Xem cơ cấu tổ chức", callback_data: "btn_structure" }]);
-    }
-    // Support — everyone
-    keyboard.push([{ text: "💬 Liên hệ Admin", callback_data: "btn_support" }]);
 
     await sendKeyboard(chatId,
       `Xin chào, *${staffData.full_name}* (${staffData.staff_code})\n` +

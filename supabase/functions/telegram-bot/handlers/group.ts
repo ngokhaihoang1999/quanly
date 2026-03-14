@@ -34,8 +34,9 @@ export async function handleGroupChat(update: any) {
         `🍎 *Bot Checking Jondo đã vào group!*\n\nGroup này đã được đăng ký làm Group Trái quả.\nĐể quản lý, gõ lệnh: /menu`
       );
 
-      // Fetch unlinked BB-phase profiles
-      const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
+      // Fetch unlinked BB-phase profiles (exclude those with a REAL telegram group)
+      const { data: linkedGroups } = await supabase.from('fruit_groups')
+        .select('profile_id').not('profile_id', 'is', null).gt('telegram_group_id', 0);
       const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
 
       let query = supabase.from('profiles')

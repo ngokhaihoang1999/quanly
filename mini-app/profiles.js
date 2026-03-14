@@ -67,20 +67,31 @@ async function openProfile(p) {
   const myCode2 = getEffectiveStaffCode();
   const pos2 = getCurrentPosition();
 
-  // Fetch roles
+  // Fetch roles + check real BB group
   let rolesInfo = {ndd:'', tvv:[], gvbb:''};
+  let hasRealBBGroup = false;
   try {
-    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,fruit_roles(staff_code,role_type)`);
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,fruit_roles(staff_code,role_type)`);
     const fgs = await fgRes.json();
-    (fgs||[]).forEach(fg => (fg.fruit_roles||[]).forEach(r => {
-      if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
-      if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
-      if (r.role_type==='gvbb' && !rolesInfo.gvbb) rolesInfo.gvbb = r.staff_code;
-    }));
+    (fgs||[]).forEach(fg => {
+      // Check for real group (positive telegram_group_id)
+      if (fg.telegram_group_id && fg.telegram_group_id > 0) hasRealBBGroup = true;
+      (fg.fruit_roles||[]).forEach(r => {
+        if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
+        if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
+        if (r.role_type==='gvbb' && !rolesInfo.gvbb) rolesInfo.gvbb = r.staff_code;
+      });
+    });
   } catch(e) {}
   const nddDisplay = p.ndd_staff_code || rolesInfo.ndd || '—';
   const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
   const gvbbDisplay = rolesInfo.gvbb || '—';
+
+  // Warning: BB phase but no real Telegram group
+  const bbNoGroupWarning = ['bb','center'].includes(ph) && !hasRealBBGroup
+    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;">
+        ⚠️ Chưa tạo Group BB
+       </div>` : '';
 
   // Latest activity
   let latestInfo = '';
@@ -113,6 +124,7 @@ async function openProfile(p) {
             ${p.birth_year ? `<span style="font-size:11px;color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px;color:var(--text2);">${p.gender}</span>` : '')}
           </div>
           ${reasonHtml}
+          ${bbNoGroupWarning}
         </div>
       </div>
       <!-- Bottom: roles grid + latest -->
