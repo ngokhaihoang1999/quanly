@@ -73,10 +73,10 @@ async function loadJourney(profileId, currentPhase) {
               <div style="font-size:11px;color:var(--text3);margin-bottom:1px;">Group BB đã gắn</div>
               <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${groupTitle}</div>
             </div>
-            <a href="https://t.me/c/${String(bbGroupInfo.telegram_group_id).replace('-100','')}" target="_blank"
-               style="flex-shrink:0;padding:6px 14px;border-radius:20px;background:var(--green);color:white;font-size:12px;font-weight:700;text-decoration:none;">
+            <button onclick="if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.openTelegramLink('https://t.me/c/${String(bbGroupInfo.telegram_group_id).replace('-100','')}')}else{window.open('https://t.me/c/${String(bbGroupInfo.telegram_group_id).replace('-100','')}','_blank')}"
+               style="flex-shrink:0;padding:6px 14px;border-radius:20px;background:var(--green);color:white;font-size:12px;font-weight:700;border:none;cursor:pointer;">
               Mở Group →
-            </a>
+            </button>
           </div>`;
       } else {
         // Chưa gắn group → hướng dẫn

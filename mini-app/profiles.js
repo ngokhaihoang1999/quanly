@@ -146,8 +146,8 @@ async function openProfile(p) {
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${realGroupTitle}</div>
         </div>
-        <a href="https://t.me/c/${String(realGroupId).replace('-100','')}" target="_blank"
-           style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">Mở Group →</a>
+        <button onclick="if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.openTelegramLink('https://t.me/c/${String(realGroupId).replace('-100','')}')}else{window.open('https://t.me/c/${String(realGroupId).replace('-100','')}','_blank')}"
+           style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;">Mở Group →</button>
       </div>` : ''}
       </div>
     </div>`;
