@@ -753,7 +753,10 @@ async function loadStructure() {
           html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">${members.length} TV</div></div>`;
           if (members.length) {
             members.forEach(m => {
-              const posBadge = m.position && m.position !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(m.position)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(m.position)}</span>` : '';
+              let ep = m.position || 'td';
+              if (m.staff_code === t.gyjn_staff_code) ep = 'gyjn';
+              else if (m.staff_code === t.bgyjn_staff_code) ep = 'bgyjn';
+              const posBadge = ep && ep !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(ep)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(ep)}</span>` : '';
               html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}</div>`;
             });
           }
@@ -961,15 +964,19 @@ function renderTeamMembers(teamItem) {
     listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;">Ch\u01b0a c\u00f3 th\u00e0nh vi\u00ean</div>';
   } else {
     listEl.innerHTML = members.map(m => {
-      const posBadge = `<span class="staff-role-badge ${getBadgeClass(m.position)}" style="font-size:9px;padding:1px 6px;">${getPositionName(m.position)}</span>`;
+      // Effective position: check team role first, then staff.position
+      let effectivePos = m.position || 'td';
+      if (m.staff_code === teamItem.gyjn_staff_code) effectivePos = 'gyjn';
+      else if (m.staff_code === teamItem.bgyjn_staff_code) effectivePos = 'bgyjn';
+      const posBadge = `<span class="staff-role-badge ${getBadgeClass(effectivePos)}" style="font-size:9px;padding:1px 6px;">${getPositionName(effectivePos)}</span>`;
       const assignHtml = canAssignPos ? `
         <select onchange="assignMemberPos('${m.staff_code}',this.value)" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;">
-          <option value="td" ${m.position==='td'?'selected':''}>T\u0110</option>
-          <option value="ggn_jondo" ${m.position==='ggn_jondo'?'selected':''}>GGN Jondo</option>
-          <option value="ggn_chakki" ${m.position==='ggn_chakki'?'selected':''}>GGN Chakki</option>
-          <option value="sgn_jondo" ${m.position==='sgn_jondo'?'selected':''}>SGN Jondo</option>
-          <option value="bgyjn" ${m.position==='bgyjn'?'selected':''}>BGYJN</option>
-          <option value="gyjn" ${m.position==='gyjn'?'selected':''}>GYJN</option>
+          <option value="td" ${effectivePos==='td'?'selected':''}>T\u0110</option>
+          <option value="ggn_jondo" ${effectivePos==='ggn_jondo'?'selected':''}>GGN Jondo</option>
+          <option value="ggn_chakki" ${effectivePos==='ggn_chakki'?'selected':''}>GGN Chakki</option>
+          <option value="sgn_jondo" ${effectivePos==='sgn_jondo'?'selected':''}>SGN Jondo</option>
+          <option value="bgyjn" ${effectivePos==='bgyjn'?'selected':''}>BGYJN</option>
+          <option value="gyjn" ${effectivePos==='gyjn'?'selected':''}>GYJN</option>
         </select>` : '';
       return `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
