@@ -34,11 +34,15 @@ export async function handleGroupChat(update: any) {
         `🍎 *Bot Checking Jondo đã vào group!*\n\nGroup này đã được đăng ký làm Group Trái quả.\nĐể quản lý, gõ lệnh: /menu`
       );
 
-      // Fetch unlinked profiles
+      // Fetch unlinked BB-phase profiles
       const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
       const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
 
-      let query = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(10);
+      let query = supabase.from('profiles')
+        .select('id, full_name, phase')
+        .in('phase', ['bb', 'center'])
+        .order('created_at', { ascending: false })
+        .limit(10);
       if (linkedProfileIds.length > 0) {
         query = query.not('id', 'in', `(${linkedProfileIds.join(',')})`);
       }
@@ -46,8 +50,10 @@ export async function handleGroupChat(update: any) {
       const { data: unlinkedProfiles } = await query;
 
       if (unlinkedProfiles && unlinkedProfiles.length > 0) {
-        const keyboard = unlinkedProfiles.map((p: any) => [{ text: `🍎 Gắn: ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
-        await sendKeyboard(chatId, `Danh sách hồ sơ chưa có group (Bấm để gắn ngay):`, keyboard);
+        const keyboard = unlinkedProfiles.map((p: any) => [{ text: `🎓 Gắn: ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
+        await sendKeyboard(chatId, `Danh sách hồ sơ BB chưa có group (Bấm để gắn ngay):`, keyboard);
+      } else {
+        await sendText(chatId, `ℹ️ Chưa có hồ sơ nào ở giai đoạn BB cần gắn group.`);
       }
       return;
     }
@@ -71,9 +77,12 @@ export async function handleGroupChat(update: any) {
       return;
     }
     const { data: profiles } = await supabase.from('profiles')
-      .select('*').ilike('full_name', `%${fruitName}%`).limit(5);
+      .select('id, full_name, phase')
+      .ilike('full_name', `%${fruitName}%`)
+      .in('phase', ['bb', 'center'])
+      .limit(5);
     if (!profiles || profiles.length === 0) {
-      await sendText(chatId, `❌ Không tìm thấy hồ sơ "${fruitName}".`);
+      await sendText(chatId, `❌ Không tìm thấy hồ sơ "${fruitName}" ở giai đoạn BB.`);
       return;
     }
     const keyboard = profiles.map((p: any) => [{ text: `🍎 ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);

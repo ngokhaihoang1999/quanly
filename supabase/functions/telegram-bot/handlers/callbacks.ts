@@ -66,11 +66,22 @@ export async function handleCallback(update: any, staffData: any) {
 
   // menu_link_profile — Gắn hồ sơ
   if (cbData === 'menu_link_profile') {
-    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền gắn hồ sơ.`);
-    const { data: profiles } = await supabase.from('profiles').select('id, full_name').order('created_at', { ascending: false }).limit(20);
-    if (!profiles || profiles.length === 0) return sendText(chatId, `❌ Chưa có hồ sơ nào trong hệ thống.`);
-    const keyboard = profiles.map((p: any) => [{ text: `🍎 ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
-    await sendKeyboard(chatId, `Chọn hồ sơ để gắn cho group này.\n(Có thể chọn lại nếu bấm nhầm.)`, keyboard);
+    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
+    // Lấy danh sách profile BB chưa gắn group
+    const { data: linkedGroups } = await supabase.from('fruit_groups').select('profile_id').not('profile_id', 'is', null);
+    const linkedIds = linkedGroups?.map((g: any) => g.profile_id).filter(Boolean) || [];
+    let query = supabase.from('profiles')
+      .select('id, full_name, phase')
+      .in('phase', ['bb', 'center'])
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (linkedIds.length > 0) {
+      query = query.not('id', 'in', `(${linkedIds.join(',')})`);
+    }
+    const { data: profiles } = await query;
+    if (!profiles || profiles.length === 0) return sendText(chatId, `ℹ️ Chưa có hồ sơ nào ở giai đoạn BB cần gắn group.`);
+    const keyboard = profiles.map((p: any) => [{ text: `🎓 ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
+    await sendKeyboard(chatId, `Chọn hồ sơ BB để gắn cho group này:`, keyboard);
     return;
   }
 
@@ -115,12 +126,18 @@ export async function handleCallback(update: any, staffData: any) {
   // link_fg_{profileId} — Gắn hồ sơ cho group
   if (cbData.startsWith('link_fg_')) {
     const profileId = cbData.replace('link_fg_', '');
+    // Validate profile is BB phase
+    const { data: profile } = await supabase.from('profiles').select('full_name, phase').eq('id', profileId).single();
+    if (!profile) return sendText(chatId, `❌ Không tìm thấy hồ sơ.`);
+    if (!['bb', 'center', 'completed'].includes(profile.phase)) {
+      await editMessageReplyMarkup(chatId, messageId, null);
+      return sendText(chatId, `⚠️ Hồ sơ *${profile.full_name}* chưa ở giai đoạn BB — không thể gắn group BB.`);
+    }
     await editMessageReplyMarkup(chatId, messageId, null);
     const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
     if (!fg) return sendText(chatId, `❌ Group chưa đăng ký.`);
-    await supabase.from('fruit_groups').update({ profile_id: profileId, updated_at: new Date().toISOString() }).eq('id', fg.id);
-    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', profileId).single();
-    await sendText(chatId, `✅ Đã gắn hồ sơ *${profile?.full_name}* cho group này.`);
+    await supabase.from('fruit_groups').update({ profile_id: profileId, level: 'bb', updated_at: new Date().toISOString() }).eq('id', fg.id);
+    await sendText(chatId, `✅ Đã gắn hồ sơ *${profile.full_name}* cho group này.`);
     return;
   }
 
