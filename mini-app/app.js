@@ -754,8 +754,10 @@ async function loadStructure() {
           if (members.length) {
             members.forEach(m => {
               let ep = m.position || 'td';
+              if (m.staff_code === a.yjyn_staff_code) ep = 'yjyn';
+              if (m.staff_code === g.tjn_staff_code) ep = 'tjn';
               if (m.staff_code === t.gyjn_staff_code) ep = 'gyjn';
-              else if (m.staff_code === t.bgyjn_staff_code) ep = 'bgyjn';
+              if (m.staff_code === t.bgyjn_staff_code) ep = 'bgyjn';
               const posBadge = ep && ep !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(ep)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(ep)}</span>` : '';
               html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}</div>`;
             });
@@ -960,14 +962,26 @@ function renderTeamMembers(teamItem) {
   const listEl = document.getElementById('edit_members_list');
   const pos = getCurrentPosition();
   const canAssignPos = ['admin','yjyn'].includes(pos);
+  // Find parent area/group for YJYN/TJN cross-reference
+  let parentArea = null, parentGroup = null;
+  for (const a of (structureData||[])) {
+    for (const g of (a.org_groups||[])) {
+      for (const t of (g.teams||[])) {
+        if (t.id === teamItem.id) { parentArea = a; parentGroup = g; break; }
+      }
+      if (parentGroup) break;
+    }
+    if (parentArea) break;
+  }
   if (!members.length) {
     listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;">Ch\u01b0a c\u00f3 th\u00e0nh vi\u00ean</div>';
   } else {
     listEl.innerHTML = members.map(m => {
-      // Effective position: check team role first, then staff.position
       let effectivePos = m.position || 'td';
+      if (parentArea && m.staff_code === parentArea.yjyn_staff_code) effectivePos = 'yjyn';
+      if (parentGroup && m.staff_code === parentGroup.tjn_staff_code) effectivePos = 'tjn';
       if (m.staff_code === teamItem.gyjn_staff_code) effectivePos = 'gyjn';
-      else if (m.staff_code === teamItem.bgyjn_staff_code) effectivePos = 'bgyjn';
+      if (m.staff_code === teamItem.bgyjn_staff_code) effectivePos = 'bgyjn';
       const posBadge = `<span class="staff-role-badge ${getBadgeClass(effectivePos)}" style="font-size:9px;padding:1px 6px;">${getPositionName(effectivePos)}</span>`;
       const assignHtml = canAssignPos ? `
         <select onchange="assignMemberPos('${m.staff_code}',this.value)" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;">
