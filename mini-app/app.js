@@ -892,6 +892,8 @@ async function saveCheckHapja() {
   if (!fullName) { showToast('\u26a0\ufe0f Nh\u1eadp h\u1ecd t\u00ean tr\u00e1i (m\u1ee5c 1)'); return; }
   const data = {
     full_name: fullName,
+    birth_year: document.getElementById('hj_nam_sinh')?.value?.trim() || '',
+    gender: document.getElementById('hj_gioi_tinh')?.value || '',
     data: {
       ndd_staff_code: getStaffCodeFromInput('hj_ndd') || '',
       ngay_chakki: document.getElementById('hj_ngay')?.value || '',
@@ -916,8 +918,9 @@ async function saveCheckHapja() {
     await sbFetch('/rest/v1/check_hapja', { method: 'POST', headers: {'Prefer':'return=representation'}, body: JSON.stringify(data) });
     closeModal('checkHapjaModal');
     showToast('\u2705 \u0110\u00e3 g\u1eedi Check Hapja!');
-    ['hj_ngay','hj_concept','hj_hoten','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['hj_ngay','hj_concept','hj_hoten','hj_nam_sinh','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('hj_ndd').selectedIndex = 0;
+    document.getElementById('hj_gioi_tinh').selectedIndex = 0;
     ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh'].forEach(clearChips);
     loadDashboard();
   } catch(e) { showToast('\u274c L\u1ed7i khi g\u1eedi'); console.error(e); }
@@ -935,6 +938,8 @@ async function openHapjaDetail(id) {
     const body = document.getElementById('hapjaDetailBody');
     const fields = [
       ['Họ tên', h.full_name],
+      ['Năm sinh', h.birth_year],
+      ['Giới tính', h.gender],
       ['NDD', d.ndd_staff_code || h.created_by],
       ['Ngày Chakki', d.ngay_chakki],
       ['Concept', d.concept],

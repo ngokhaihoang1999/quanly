@@ -172,7 +172,11 @@
       <div class="field-group"><label>* Ngày Chakki</label><input type="date" id="hj_ngay" /></div>
       <div class="field-group"><label>* Concept</label><input type="text" id="hj_concept" placeholder="..." /></div>
     </div>
-    <div class="field-group"><label>1. Họ tên cá (Năm sinh / Giới tính)</label><input type="text" id="hj_hoten" placeholder="VD: Nguyễn Văn A (2000) / Nam" /></div>
+    <div class="field-group"><label>1. Họ tên cá</label><input type="text" id="hj_hoten" placeholder="VD: Nguyễn Văn A" /></div>
+    <div class="grid-2">
+      <div class="field-group"><label>Năm sinh</label><input type="text" id="hj_nam_sinh" placeholder="VD: 2000" /></div>
+      <div class="field-group"><label>Giới tính</label><select id="hj_gioi_tinh"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
+    </div>
     <div class="field-group"><label>2. Hình thức Chakki</label>
       <div class="chips" id="chips_hj_hinh_thuc"><div class="chip" onclick="toggleChip(this)">Online</div><div class="chip" onclick="toggleChip(this)">Offline</div><div class="chip" onclick="toggleChip(this)">Bạn</div><div class="chip" onclick="toggleChip(this)">Gia đình</div></div>
       <label style="margin-top:6px;">Mức độ thân thiết</label>
