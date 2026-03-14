@@ -164,6 +164,59 @@ async function loadDashboard() {
         <div class="dash-stat"><div class="num" style="color:var(--yellow);">${unitHapja}</div><div class="lbl">Hapja chờ</div></div>
       </div>`;
 
+    // Pre-fetch latest sessions + records for all unit fruits
+    const allPids = [...new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean))];
+    let sessionMap = {}, recordMap = {};
+    if (allPids.length > 0) {
+      const idsStr = allPids.map(id=>`"${id}"`).join(',');
+      try {
+        const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=*&order=session_number.desc`);
+        const ss = await sRes.json();
+        ss.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
+        const rRes = await sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=*&order=created_at.desc`);
+        const recs = await rRes.json();
+        recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+      } catch(e) {}
+    }
+    const phMap = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
+    const phColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
+    // Helper: render fruit cards for a list of staff_codes
+    function fruitCardsForCodes(codes) {
+      const seen = new Set();
+      const matching = unitRoles.filter(r => {
+        const pid = r.fruit_groups?.profile_id;
+        if (!pid || !codes.includes(r.staff_code) || seen.has(pid)) return false;
+        seen.add(pid); return true;
+      });
+      if (!matching.length) return '';
+      return matching.map(r => {
+        const p = r.fruit_groups?.profiles;
+        const pid = r.fruit_groups?.profile_id;
+        const name = p?.full_name || 'N/A';
+        const ph = p?.phase || 'chakki';
+        const allR = r.fruit_groups?.fruit_roles || [];
+        const ndd = allR.find(x=>x.role_type==='ndd')?.staff_code || p?.ndd_staff_code || '—';
+        const tvv = allR.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ') || '—';
+        const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
+        let latest = '';
+        const lr = recordMap[pid], ls = sessionMap[pid];
+        if (lr) { const isTV=lr.record_type==='tu_van'; const num=lr.content?.lan_thu||lr.content?.buoi_thu||''; latest=isTV?`TV lần ${num}`:`BB buổi ${num}`; }
+        else if (ls) { latest = `Chốt TV lần ${ls.session_number}`; }
+        return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-weight:700;font-size:13px;">${name}</div>
+            <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;font-size:10px;color:var(--text2);">
+            <div>NDD: <b style="color:var(--text);">${ndd}</b></div>
+            <div>TVV: <b style="color:var(--text);">${tvv}</b></div>
+            <div>GVBB: <b style="color:var(--text);">${gvbb}</b></div>
+            ${latest ? `<div style="color:var(--accent);">⏱ ${latest}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
     // ── Sub-unit breakdown (for managers) ──
     const subEl = document.getElementById('dashSubUnits');
     let subHtml = '';
@@ -171,12 +224,11 @@ async function loadDashboard() {
       const fr = unitRoles.filter(r => codes.includes(r.staff_code));
       return {
         td: codes.length,
-        fruits: new Set(fr.map(r => r.fruit_groups?.profile_id)).size,
+        fruits: new Set(fr.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size,
         groups: new Set(fr.map(r => r.fruit_group_id)).size,
       };
     }
     if (['admin','yjyn','ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
-      // Show breakdown by Group → Team
       const myAreas = pos === 'admin' ? (structureData||[]) :
         (structureData||[]).filter(a => a.yjyn_staff_code === myCode || ['ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos));
       myAreas.forEach(a => {
@@ -189,36 +241,43 @@ async function loadDashboard() {
             <div onclick="document.getElementById('${gid}').style.display=document.getElementById('${gid}').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
               <div style="font-weight:700;font-size:13px;">👥 ${g.name}</div>
               <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);">
-                <span>${gS.td} TĐ</span><span style="color:var(--accent);">${gS.fruits} 🍎</span><span style="color:var(--green);">${gS.groups} 💬</span>
+                <span>${gS.td} TĐ</span><span style="color:var(--accent);">${gS.fruits} 🍎</span>
               </div>
             </div>
             <div id="${gid}" style="display:none;padding-left:16px;">`;
           (g.teams||[]).forEach(t => {
             const tCodes = (t.staff||[]).map(m => m.staff_code);
             const tS = countForCodes(tCodes);
-            subHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-left:3px solid var(--accent);margin:4px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--surface);">
-              <div style="font-size:12px;font-weight:600;">📌 ${t.name}</div>
-              <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
-                <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span><span style="color:var(--green);">${tS.groups} 💬</span>
+            const tid = 'subteam_' + t.id;
+            subHtml += `<div style="margin:4px 0;">
+              <div onclick="document.getElementById('${tid}').style.display=document.getElementById('${tid}').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-left:3px solid var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--surface);">
+                <div style="font-size:12px;font-weight:600;">📌 ${t.name}</div>
+                <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
+                  <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span>
+                </div>
               </div>
+              <div id="${tid}" style="display:none;padding-left:12px;">${fruitCardsForCodes(tCodes)}</div>
             </div>`;
           });
           subHtml += '</div></div>';
         });
       });
     } else if (pos === 'tjn') {
-      // Show breakdown by Team only
       for (const a of (structureData||[])) {
         const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
         if (myGrp) {
           (myGrp.teams||[]).forEach(t => {
             const tCodes = (t.staff||[]).map(m => m.staff_code);
             const tS = countForCodes(tCodes);
-            subHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px;">
-              <div style="font-size:13px;font-weight:700;">📌 ${t.name}</div>
-              <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
-                <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span><span style="color:var(--green);">${tS.groups} 💬</span>
+            const tid = 'subteam_' + t.id;
+            subHtml += `<div style="margin-bottom:4px;">
+              <div onclick="document.getElementById('${tid}').style.display=document.getElementById('${tid}').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+                <div style="font-size:13px;font-weight:700;">📌 ${t.name}</div>
+                <div style="display:flex;gap:10px;font-size:11px;color:var(--text2);">
+                  <span>${tS.td} TĐ</span><span style="color:var(--accent);">${tS.fruits} 🍎</span>
+                </div>
               </div>
+              <div id="${tid}" style="display:none;padding-left:12px;">${fruitCardsForCodes(tCodes)}</div>
             </div>`;
           });
           break;
@@ -227,65 +286,9 @@ async function loadDashboard() {
     }
     subEl.innerHTML = subHtml ? `<div class="section-header" style="margin-top:8px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">📊 Đơn vị cấp dưới</div></div>${subHtml}` : '';
 
-    // Unit fruit list — detailed cards
+    // Remove old separate unit fruit list
     const unitListEl = document.getElementById('dashUnitList');
-    if (unitRoles.length === 0) {
-      unitListEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái quả trong đơn vị</div>';
-    } else {
-      const seen = new Set();
-      const uniqueRoles = unitRoles.filter(r => {
-        const pid = r.fruit_groups?.profile_id;
-        if (!pid || seen.has(pid)) return false;
-        seen.add(pid); return true;
-      });
-      // Fetch latest sessions + records for all profiles at once
-      const pids = [...seen];
-      let sessionMap = {}, recordMap = {};
-      if (pids.length > 0) {
-        const idsStr = pids.map(id=>`"${id}"`).join(',');
-        try {
-          const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=*&order=session_number.desc`);
-          const ss = await sRes.json();
-          ss.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
-          const rRes = await sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=*&order=created_at.desc`);
-          const recs = await rRes.json();
-          recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
-        } catch(e) { console.warn('unit fruit fetch:', e); }
-      }
-      const phMap = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
-      const phColor = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
-      unitListEl.innerHTML = uniqueRoles.map(r => {
-        const p = r.fruit_groups?.profiles;
-        const pid = r.fruit_groups?.profile_id;
-        const name = p?.full_name || 'N/A';
-        const ph = p?.phase || 'chakki';
-        const allR = r.fruit_groups?.fruit_roles || [];
-        const ndd = allR.find(x=>x.role_type==='ndd')?.staff_code || p?.ndd_staff_code || '—';
-        const tvv = allR.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ') || '—';
-        const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
-        let latest = '';
-        const ls = sessionMap[pid], lr = recordMap[pid];
-        if (lr) {
-          const isTV = lr.record_type === 'tu_van';
-          const num = lr.content?.lan_thu || lr.content?.buoi_thu || '';
-          latest = isTV ? `TV lần ${num}` : `BB buổi ${num}`;
-        } else if (ls) {
-          latest = `Chốt TV lần ${ls.session_number}`;
-        }
-        return `<div style="cursor:pointer;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;" onclick="openProfileById('${pid}')">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div style="font-weight:700;font-size:14px;">${name}</div>
-            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:11px;color:var(--text2);">
-            <div>NDD: <b style="color:var(--text);">${ndd}</b></div>
-            <div>TVV: <b style="color:var(--text);">${tvv}</b></div>
-            <div>GVBB: <b style="color:var(--text);">${gvbb}</b></div>
-            ${latest ? `<div style="color:var(--accent);">⏱ ${latest}</div>` : ''}
-          </div>
-        </div>`;
-      }).join('');
-    }
+    unitListEl.innerHTML = '';
 
     // ── HAPJA (all visible based on permission) ──
     const canApprove = ['admin','yjyn','ggn_jondo','ggn_chakki'].includes(pos);
