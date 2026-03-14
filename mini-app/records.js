@@ -29,9 +29,10 @@ async function loadJourney(profileId, currentPhase) {
   let bbGroupInfo = null;
   if (['bb','center','completed'].includes(currentPhase)) {
     try {
-      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title&limit=1`);
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title`);
       const fgs = await fgRes.json();
-      if (fgs[0]) bbGroupInfo = fgs[0];
+      // Find the one with a real Telegram group (not null and not 0)
+      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id != null && g.telegram_group_id !== 0) || null;
     } catch(e) {}
   }
 
@@ -62,7 +63,7 @@ async function loadJourney(profileId, currentPhase) {
   const groupBarEl = document.getElementById('bbGroupBar');
   if (groupBarEl) {
     if (['bb','center','completed'].includes(currentPhase)) {
-      if (bbGroupInfo && bbGroupInfo.telegram_group_id && bbGroupInfo.telegram_group_id > 0) {
+      if (bbGroupInfo && bbGroupInfo.telegram_group_id != null && bbGroupInfo.telegram_group_id !== 0) {
         // Group đã gắn → nút mở group
         const groupTitle = bbGroupInfo.telegram_group_title || 'Group BB';
         groupBarEl.innerHTML = `
@@ -337,7 +338,7 @@ async function saveScheduleTV() {
         let fgId = fgs[0]?.id;
         if (!fgId) {
           const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-            telegram_group_id: -Date.now(), profile_id: currentProfileId, level: 'tu_van'
+            telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
           })});
           const newFgs = await newFgRes.json();
           fgId = newFgs[0]?.id;
@@ -414,7 +415,7 @@ async function saveChotBB() {
         let fgId = fgs[0]?.id;
         if (!fgId) {
           const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-            telegram_group_id: -Date.now(), profile_id: currentProfileId, level: 'bb'
+            telegram_group_id: null, profile_id: currentProfileId, level: 'bb'
           })});
           fgId = (await newFgRes.json())[0]?.id;
         }

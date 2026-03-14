@@ -75,7 +75,7 @@ async function openProfile(p) {
     const fgs = await fgRes.json();
     (fgs||[]).forEach(fg => {
       // Check for real group (positive telegram_group_id)
-      if (fg.telegram_group_id && fg.telegram_group_id > 0) hasRealBBGroup = true;
+      if (fg.telegram_group_id != null && fg.telegram_group_id !== 0) hasRealBBGroup = true;
       (fg.fruit_roles||[]).forEach(r => {
         if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
         if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
