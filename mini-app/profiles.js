@@ -146,8 +146,8 @@ async function openProfile(p) {
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${realGroupTitle}</div>
         </div>
-        ${realGroupInviteLink ? `<button onclick="if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.openTelegramLink('${realGroupInviteLink}')}else{window.open('${realGroupInviteLink}','_blank')}"
-           style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;">Mở Group →</button>` : ''}
+        <button onclick="(function(){var link='${realGroupInviteLink}';if(!link&&${JSON.stringify(realGroupId)}){var id=String(${JSON.stringify(realGroupId)});link=id.startsWith('-100')?'https://t.me/c/'+id.replace('-100',''):''}if(!link){alert('Bot cần quyền admin trong group để tạo link. Gõ /menu trong group để cập nhật.');return;}if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.openTelegramLink(link)}else{window.open(link,'_blank')}})()"
+           style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;">Mở Group →</button>
       </div>` : ''}
       </div>
     </div>`;
