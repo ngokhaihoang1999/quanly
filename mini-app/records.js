@@ -34,6 +34,17 @@ async function loadJourney(profileId, currentPhase) {
   } else if (currentPhase === 'bb') {
     btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
   }
+  // Undo button — shows for any phase past Chakki
+  if (!['new','chakki','completed'].includes(currentPhase)) {
+    const phaseLabels = { tu_van:'Chốt TV', bb:'Chốt BB', center:'Chốt Center' };
+    btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[currentPhase]||currentPhase}' gần nhất" style="
+      flex:0 0 auto;padding:10px 14px;border-radius:var(--radius-sm);border:1px dashed var(--text3);
+      background:transparent;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;
+      transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+      onmouseout="this.style.borderColor='var(--text3)';this.style.color='var(--text2)'">
+      ↩️ Hoàn tác
+    </button>`;
+  }
   phBtnEl.innerHTML = btnHtml;
 
   try {
@@ -48,34 +59,36 @@ async function loadJourney(profileId, currentPhase) {
 
     let events = [];
 
-    // 1. Chakki — always the very first event
-    //    FIX: parse date string as LOCAL time (append no 'Z' or offset) to avoid UTC midnight shift
+    // 1. Chakki — always first, not undoable
     if (hapjas.length > 0) {
       const hjData = hapjas[0].data || {};
       const chakkiStr = hjData.ngay_chakki;
-      // Parse as local midnight so it always precedes same-day sessions (which are timestamped in UTC+7)
       const chakkiMs = chakkiStr ? new Date(chakkiStr.includes('T') ? chakkiStr : chakkiStr + 'T00:00:00').getTime() : new Date(hapjas[0].created_at).getTime();
       const chakkiDate = chakkiStr || hapjas[0].created_at;
-      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1 }); // -1 ensures it always leads
+      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1, undoable: false });
     }
 
-    // 2. Consultation sessions (Chốt TV)
+    // 2. Consultation sessions (Chốt TV) — undoable: delete session row
     sessions.forEach(s => {
-      events.push({ date: s.created_at, icon: '📅', text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`, sortDate: new Date(s.created_at).getTime() });
+      events.push({ date: s.created_at, icon: '📅',
+        text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`,
+        sortDate: new Date(s.created_at).getTime(), undoable: true,
+        undoFn: `deleteEventSession('${s.id}',${s.session_number})`
+      });
     });
 
-    // 3. Records (BC TV, BC BB, Chốt BB, Chốt Center)
+    // 3. Records — undoable: delete record row, revert phase if phase-change type
     recs.forEach(r => {
       let icon, text;
-      if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';   icon='📝'; text=`BC TV${n?' lần '+n:''}`; }
-      else if (r.record_type === 'bien_ban')    { const n=r.content?.buoi_thu||''; icon='📋'; text=`BC BB${n?' buổi '+n:''}`; }
-      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; }
-      else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; }
+      if      (r.record_type==='tu_van')     { const n=r.content?.lan_thu||'';  icon='📝'; text=`BC TV${n?' lần '+n:''}`; }
+      else if (r.record_type==='bien_ban')   { const n=r.content?.buoi_thu||''; icon='📋'; text=`BC BB${n?' buổi '+n:''}`; }
+      else if (r.record_type==='chot_bb')    { icon='🎓'; text='Chốt BB'; }
+      else if (r.record_type==='chot_center'){ icon='🏛️'; text='Chốt Center'; }
       else { icon='📌'; text=r.record_type; }
-      events.push({ date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime() });
+      events.push({ date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime(),
+        undoable: true, undoFn: `deleteEventRecord('${r.id}','${r.record_type}')` });
     });
 
-    // Sort ascending: oldest (top) → newest (bottom)
     events.sort((a,b) => a.sortDate - b.sortDate);
 
     if (events.length === 0) {
@@ -84,13 +97,103 @@ async function loadJourney(profileId, currentPhase) {
       tlEl.innerHTML = events.map((e, i) => {
         const d = new Date(e.date).toLocaleDateString('vi-VN');
         const isLast = i === events.length - 1;
-        return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-left:3px solid ${isLast?'var(--accent)':'var(--border)'};margin-left:10px;padding-left:16px;">
-          <div style="font-size:16px;margin-top:-2px;">${e.icon}</div>
-          <div><div style="font-size:12px;font-weight:600;${isLast?'color:var(--accent);':''} ">${e.text}</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">${d}</div></div>
+        const delBtn = e.undoable ? `<button onclick="event.stopPropagation();${e.undoFn}" title="Xóa sự kiện này" class="event-del-btn" style="
+          flex-shrink:0;padding:3px 9px;border:1px solid var(--text3);border-radius:6px;background:transparent;
+          color:var(--text3);font-size:11px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>` : '';
+        return `<div class="timeline-event" style="display:flex;gap:10px;align-items:center;
+            padding:8px 12px 8px 16px;border-left:3px solid ${isLast?'var(--accent)':'var(--border)'};
+            margin-left:10px;border-radius:0 6px 6px 0;"
+            onmouseenter="this.querySelector?.('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='1')"
+            onmouseleave="this.querySelector?.('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='0')">
+          <div style="font-size:16px;flex-shrink:0;">${e.icon}</div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;${isLast?'color:var(--accent);':''}">${e.text}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:1px;">${d}</div>
+          </div>
+          ${delBtn}
         </div>`;
       }).join('');
     }
   } catch(e) { console.error('Journey error:', e); }
+}
+
+// Helper: reload current profile after an undo/delete action
+async function _refreshCurrentProfile() {
+  const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
+  const ps = await pRes.json();
+  if (ps[0]) { const idx = allProfiles.findIndex(x=>x.id===currentProfileId); if (idx>=0) allProfiles[idx]=ps[0]; openProfile(ps[0]); }
+}
+
+// Delete a single session (Chót TV) event from timeline
+async function deleteEventSession(sessionId, sessionNum) {
+  if (!confirm(`Xóa sự kiện "Chốt TV lần ${sessionNum}"?\nNếu là lần TV đầu tiên, giai đoạn sẽ về Chakki.`)) return;
+  try {
+    await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'DELETE' });
+    // If no sessions left, revert phase to chakki
+    const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=id&limit=1`);
+    const rem = await remRes.json();
+    if (rem.length === 0) await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
+    showToast('✅ Đã xóa sự kiện Chốt TV');
+    await _refreshCurrentProfile();
+  } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
+}
+
+// Delete a single record event from timeline + auto-revert phase if it was a phase-change
+async function deleteEventRecord(recordId, recordType) {
+  const labels = { tu_van:'BC TV', bien_ban:'BC BB', chot_bb:'Chốt BB', chot_center:'Chốt Center' };
+  const label = labels[recordType] || recordType;
+  const isPhaseChange = ['chot_bb','chot_center'].includes(recordType);
+  if (!confirm(`Xóa sự kiện "${label}"?${isPhaseChange?'\nGiai đoạn sẽ bị hoàn tác về trước.':''}`)) return;
+  try {
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
+    if (recordType==='chot_bb')     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van' }) });
+    if (recordType==='chot_center') await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'bb' }) });
+    showToast(`✅ Đã xóa ${label}`);
+    await _refreshCurrentProfile();
+  } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
+}
+
+// Smart undo: revert the latest phase-change event for the current profile
+async function undoLastPhaseChange() {
+  const p = allProfiles.find(x=>x.id===currentProfileId);
+  if (!p) return;
+  const phase = p.phase;
+  let confirmMsg, actionFn;
+  if (phase === 'tu_van') {
+    confirmMsg = 'Hoàn tác bước Chốt TV gần nhất?\nSẽ xóa buổi Chốt TV cuối cùng.';
+    actionFn = async () => {
+      const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=id,session_number&order=created_at.desc&limit=1`);
+      const ss = await sRes.json();
+      if (!ss[0]) { showToast('⚠️ Không tìm thấy buổi TV'); return; }
+      await sbFetch(`/rest/v1/consultation_sessions?id=eq.${ss[0].id}`, { method:'DELETE' });
+      const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=id&limit=1`);
+      const rem = await remRes.json();
+      if (rem.length===0) await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
+    };
+  } else if (phase === 'bb') {
+    confirmMsg = 'Hoàn tác Chốt BB? Giai đoạn sẽ về lại 💬 TV.';
+    actionFn = async () => {
+      const rRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_bb&select=id&order=created_at.desc&limit=1`);
+      const recs = await rRes.json();
+      if (recs[0]) await sbFetch(`/rest/v1/records?id=eq.${recs[0].id}`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van' }) });
+    };
+  } else if (phase === 'center') {
+    confirmMsg = 'Hoàn tác Chốt Center? Giai đoạn sẽ về lại 🎓 BB.';
+    actionFn = async () => {
+      const rRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_center&select=id&order=created_at.desc&limit=1`);
+      const recs = await rRes.json();
+      if (recs[0]) await sbFetch(`/rest/v1/records?id=eq.${recs[0].id}`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'bb' }) });
+    };
+  } else { showToast('⚠️ Không có gì để hoàn tác'); return; }
+
+  if (!confirm(confirmMsg)) return;
+  try {
+    await actionFn();
+    showToast('↩️ Đã hoàn tác thành công!');
+    await _refreshCurrentProfile();
+  } catch(e) { showToast('❌ Lỗi hoàn tác'); console.error(e); }
 }
 async function openScheduleTVModal() {
   if (!currentProfileId) return;
