@@ -137,16 +137,13 @@ async function loadDashboard() {
         <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('bbgroup')"><div class="num" style="color:var(--yellow);">${bbGroups.length}</div><div class="lbl">Group BB</div></div>
       </div>`;
 
-    // Pre-fetch latest sessions + records for all unit fruits
+    // Pre-fetch latest records (BC TV/BB) for all unit fruits — unified source for "latest activity"
     const allPids = [...new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean))];
-    const sessionMap = {}, recordMap = {};
+    const recordMap = {};
     if (allPids.length > 0) {
       const idsStr = allPids.map(id=>`"${id}"`).join(',');
       try {
-        const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=*&order=session_number.desc`);
-        const ss = await sRes.json();
-        ss.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
-        const rRes = await sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=*&order=created_at.desc`);
+        const rRes = await sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=profile_id,record_type,content,created_at&order=created_at.desc`);
         const recs = await rRes.json();
         recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
       } catch(e) {}
@@ -172,9 +169,8 @@ async function loadDashboard() {
         const tvv = allR.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ') || '—';
         const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
         let latest = '';
-        const lr = recordMap[pid], ls = sessionMap[pid];
-        if (lr) { const isTV=lr.record_type==='tu_van'; const num=lr.content?.lan_thu||lr.content?.buoi_thu||''; latest=isTV?`TV lần ${num}`:`BB buổi ${num}`; }
-        else if (ls) { latest = `Chốt TV lần ${ls.session_number}`; }
+        const lr = recordMap[pid];
+        if (lr) { const isTV=lr.record_type==='tu_van'; const num=lr.content?.lan_thu||lr.content?.buoi_thu||''; latest=isTV?`BC TV lần ${num}`:`BC BB buổi ${num}`; }
         const fStatus = p?.fruit_status || 'alive';
         const sDot = fStatus === 'dropout' ? '🔴' : '🟢';
         return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
@@ -317,19 +313,16 @@ async function loadDashboard() {
     if (nddRoles.length === 0) {
       listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
     } else {
-      // Supplement sessionMap/recordMap with any NDD-only profile IDs not yet fetched
+      // Supplement recordMap with any NDD-only profile IDs not yet fetched
       const nddProfileIds = [...new Set(nddRoles.map(r=>r.fruit_groups?.profile_id).filter(Boolean))];
-      const missingIds = nddProfileIds.filter(id => !sessionMap[id] && !recordMap[id]);
+      const missingIds = nddProfileIds.filter(id => !recordMap[id]);
       if (missingIds.length > 0) {
         const ids = missingIds.map(id=>`"${id}"`).join(',');
         try {
-          const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=*&order=session_number.desc`);
-          const sessions = await sRes.json();
-          sessions.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
-          const recRes = await sbFetch(`/rest/v1/records?profile_id=in.(${ids})&select=*&order=created_at.desc`);
+          const recRes = await sbFetch(`/rest/v1/records?profile_id=in.(${ids})&select=profile_id,record_type,content,created_at&order=created_at.desc`);
           const recs = await recRes.json();
           recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
-        } catch(e) { console.warn('Session fetch:', e); }
+        } catch(e) { console.warn('Record fetch:', e); }
       }
       const seenP = new Set();
       listEl.innerHTML = nddRoles.filter(r => {
@@ -349,18 +342,13 @@ async function loadDashboard() {
         const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
         const tvvList = allRolesInGroup.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ');
         const gvbbList = allRolesInGroup.filter(x=>x.role_type==='gvbb').map(x=>x.staff_code).join(', ');
-        // Latest activity
-        const latestSess = sessionMap[pid];
+        // Latest activity — records only (BC TV/BB most recent)
         const latestRec = recordMap[pid];
         let latestActivity = '';
-        if (latestSess) latestActivity = `Chốt TV lần ${latestSess.session_number} (${latestSess.tool||'—'})`;
         if (latestRec) {
           const isTV = latestRec.record_type === 'tu_van';
           const num = latestRec.content?.lan_thu || latestRec.content?.buoi_thu || '';
-          const recLabel = isTV ? `BC TV lần ${num}` : `BC BB buổi ${num}`;
-          if (!latestSess || new Date(latestRec.created_at) > new Date(latestSess.created_at)) {
-            latestActivity = recLabel;
-          }
+          latestActivity = isTV ? `BC TV lần ${num}` : `BC BB buổi ${num}`;
         }
         return `<div style="cursor:pointer;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;" onclick="openProfileById('${pid}')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">

@@ -282,16 +282,38 @@
 
 <!-- Chốt Tư vấn Modal -->
 <div class="modal-overlay" id="scheduleTVModal">
-<div class="modal">
-  <div class="modal-handle"></div>
-  <div class="modal-title">📅 Chốt Tư vấn</div>
-  <div class="field-group" style="margin-top:8px;"><label>Lần thứ</label><input type="number" id="stv_session_num" min="1" /></div>
-  <div class="field-group"><label>Công cụ tư vấn</label><input type="text" id="stv_tool" placeholder="VD: Sinh trắc vân tay, MBTI, Trực tiếp..." /></div>
-  <div class="field-group"><label>Thời gian dự kiến</label><input type="datetime-local" id="stv_datetime" /></div>
-  <div class="field-group"><label>TVV phụ trách</label><input type="text" id="stv_tvv" list="staffSuggest" placeholder="Chọn TVV..." /></div>
-  <div class="field-group"><label>Ghi chú</label><textarea id="stv_notes" rows="2" placeholder="Ghi chú..."></textarea></div>
-  <button class="save-btn" onclick="saveScheduleTV()">📅 Lưu Chốt TV</button>
-  <button onclick="closeModal('scheduleTVModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
+<div class="modal" style="padding:0;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,var(--accent),var(--accent2));padding:20px 20px 16px;">
+    <div class="modal-handle" style="background:rgba(255,255,255,0.35);margin-bottom:12px;"></div>
+    <div style="color:white;font-size:18px;font-weight:700;">📅 Chốt Tư Vấn</div>
+    <div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:2px;" id="stv_subtitle">Ghi nhận buổi tư vấn mới</div>
+  </div>
+  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field-group">
+        <label>Lần thứ</label>
+        <input type="number" id="stv_session_num" min="1" style="font-size:20px;font-weight:700;text-align:center;padding:10px;" />
+      </div>
+      <div class="field-group">
+        <label>Thời gian</label>
+        <input type="datetime-local" id="stv_datetime" />
+      </div>
+    </div>
+    <div class="field-group">
+      <label>🔧 Công cụ tư vấn <span style="color:var(--red);">*</span></label>
+      <input type="text" id="stv_tool" placeholder="VD: Sinh trắc vân tay, MBTI, Ennea, Trực tiếp..." />
+    </div>
+    <div class="field-group">
+      <label>👤 TVV phụ trách</label>
+      <input type="text" id="stv_tvv" list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+    </div>
+    <div class="field-group">
+      <label>📝 Ghi chú</label>
+      <textarea id="stv_notes" rows="2" placeholder="Ghi chú thêm..."></textarea>
+    </div>
+    <button class="save-btn" onclick="saveScheduleTV()" style="margin-top:4px;">✅ Chốt Tư Vấn</button>
+    <button onclick="closeModal('scheduleTVModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:6px;width:100%;text-align:center;">Huỷ</button>
+  </div>
 </div>
 </div>
 

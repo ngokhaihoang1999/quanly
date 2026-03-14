@@ -69,16 +69,23 @@ async function loadJourney(profileId, currentPhase) {
     }
   } catch(e) { console.error('Journey error:', e); }
 }
-function openScheduleTVModal() {
+async function openScheduleTVModal() {
   if (!currentProfileId) return;
   const p = allProfiles.find(x=>x.id===currentProfileId);
-  // Pre-fill next session number based on existing dots in journey
-  const existingCount = document.querySelectorAll('#timelineList > div').length;
-  document.getElementById('stv_session_num').value = existingCount + 1;
+  // Pre-fill next session number from DB (not DOM count)
+  let nextNum = 1;
+  try {
+    const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
+    const ss = await sRes.json();
+    if (ss[0]) nextNum = (ss[0].session_number || 0) + 1;
+  } catch(e) {}
+  document.getElementById('stv_session_num').value = nextNum;
   document.getElementById('stv_tool').value = '';
   document.getElementById('stv_datetime').value = '';
   document.getElementById('stv_tvv').value = '';
   document.getElementById('stv_notes').value = '';
+  const subtitleEl = document.getElementById('stv_subtitle');
+  if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Lần ${nextNum}` : `Lần ${nextNum}`;
   document.getElementById('scheduleTVModal').classList.add('open');
 }
 async function saveScheduleTV() {
@@ -152,7 +159,7 @@ async function saveScheduleTV() {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = '📅 Chốt TV';
+        btn.textContent = '✅ Chốt Tư Vấn';
       }
     }
 }

@@ -73,12 +73,17 @@ async function openProfile(p) {
   const nddDisplay = p.ndd_staff_code || rolesInfo.ndd || '—';
   const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
   const gvbbDisplay = rolesInfo.gvbb || '—';
-  // Latest session
+  // Latest activity — from records only (BC TV/BB most recent) — unified with dashboard cards
   let latestInfo = '';
   try {
-    const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=*&order=session_number.desc&limit=1`);
-    const ss = await sRes.json();
-    if (ss[0]) latestInfo = `TV lần ${ss[0].session_number} (${ss[0].tool||'—'})`;
+    const rRes = await sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&select=record_type,content,created_at&order=created_at.desc&limit=1`);
+    const recs = await rRes.json();
+    if (recs[0]) {
+      const r = recs[0];
+      const isTV = r.record_type === 'tu_van';
+      const num = r.content?.lan_thu || r.content?.buoi_thu || '';
+      latestInfo = isTV ? `BC TV lần ${num}` : `BC BB buổi ${num}`;
+    }
   } catch(e) {}
   // Summary card
   const fruitStatus = p.fruit_status || 'alive';
