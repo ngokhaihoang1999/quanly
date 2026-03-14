@@ -188,14 +188,27 @@ export async function handleGroupChat(update: any) {
 
   // /menu — Menu lệnh cho group
   if (text === '/menu' || text.startsWith('/menu@')) {
-    // Try to refresh invite link in background
-    exportChatInviteLink(chatId).then(link => {
-      if (link) {
-        supabase.from('fruit_groups')
-          .update({ invite_link: link, telegram_group_title: chatTitle, updated_at: new Date().toISOString() })
-          .eq('telegram_group_id', chatId).then(() => {});
-      }
-    }).catch(() => {});
+    // Auto-register group if not yet registered
+    const { data: existingFg } = await supabase.from('fruit_groups')
+      .select('id').eq('telegram_group_id', chatId).single();
+    if (!existingFg) {
+      const inviteLink = await exportChatInviteLink(chatId);
+      await supabase.from('fruit_groups').insert({
+        telegram_group_id: chatId,
+        telegram_group_title: chatTitle,
+        invite_link: inviteLink,
+        level: 'tu_van'
+      });
+    } else {
+      // Try to refresh invite link in background
+      exportChatInviteLink(chatId).then(link => {
+        if (link) {
+          supabase.from('fruit_groups')
+            .update({ invite_link: link, telegram_group_title: chatTitle, updated_at: new Date().toISOString() })
+            .eq('telegram_group_id', chatId).then(() => {});
+        }
+      }).catch(() => {});
+    }
 
     const keyboard = [
       [{ text: '📋 Xem thông tin Group', callback_data: 'menu_info' }],
