@@ -122,6 +122,21 @@ async function loadDashboard() {
         }
         if (unitLabel) break;
       }
+    } else {
+      // TĐ → see their own Team
+      for (const a of (structureData||[])) {
+        for (const g of (a.org_groups||[])) {
+          for (const t of (g.teams||[])) {
+            if ((t.staff||[]).some(m => m.staff_code === myCode)) {
+              unitLabel = 'Tổ: ' + t.name;
+              (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code));
+              break;
+            }
+          }
+          if (unitLabel) break;
+        }
+        if (unitLabel) break;
+      }
     }
     // Deduplicate
     unitStaffCodes = [...new Set(unitStaffCodes)];
@@ -432,11 +447,11 @@ async function openRecord(recordId, type) {
 
 // ============ NAVIGATION ============
 function backToList() {
-  const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
-  ['tab-dashboard','tab-profiles','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
+  ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+activeTab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
-  document.getElementById('fabBtn').style.display = activeTab==='profiles'?'flex':'none';
+  document.getElementById('fabBtn').style.display = (activeTab==='unit'||activeTab==='personal')?'flex':'none';
   currentProfileId = null;
 }
 function switchFormTab(el, cardId) {
@@ -445,13 +460,14 @@ function switchFormTab(el, cardId) {
 }
 function switchMainTab(el, tab) {
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  ['tab-dashboard','tab-profiles','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+tab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
-  document.getElementById('fabBtn').style.display = (tab==='dashboard'||tab==='profiles') ? 'flex' : 'none';
+  document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
+  if (tab==='unit') { loadDashboard(); loadProfiles(); }
+  if (tab==='personal') loadDashboard();
   if (tab==='staff') loadStaff();
   if (tab==='structure') loadStructure();
-  if (tab==='dashboard') loadDashboard();
 }
 
 // ============ CHECK HAPJA ============
@@ -717,17 +733,20 @@ async function loadStructure() {
     if (!structureData.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udfe2</div><div class="empty-title">Ch\u01b0a c\u00f3</div><div class="empty-sub">B\u1ea5m + Khu v\u1ef1c</div></div>'; return; }
     let html = '<div class="tree-container">';
     structureData.forEach(a => {
-      const aY = a.yjyn_staff_code ? '\ud83d\udc51 ' + a.yjyn_staff_code : '';
+      const aY = a.yjyn_staff_code ? '\ud83d\udc51 ' + a.yjyn_staff_code + ' <span class="staff-role-badge badge-yjyn" style="font-size:9px;padding:1px 6px;">YJYN</span>' : '';
       const canArea = isAdmin || (pos==='yjyn' && a.yjyn_staff_code===myCode);
       const aClick = canArea ? ` style="cursor:pointer" onclick="openEditStructModal('area','${a.id}')"` : '';
       html += `<div class="tree-node area"${aClick}><div><div class="tree-label">\ud83c\udfe2 ${a.name}${canArea?' \u270f\ufe0f':''}</div>${aY?`<div class="tree-manager">${aY}</div>`:''}</div><div class="tree-meta">Khu v\u1ef1c</div></div>`;
       (a.org_groups||[]).forEach(g => {
-        const gT = g.tjn_staff_code ? '\ud83d\udc51 ' + g.tjn_staff_code : '';
+        const gT = g.tjn_staff_code ? '\ud83d\udc51 ' + g.tjn_staff_code + ' <span class="staff-role-badge badge-tjn" style="font-size:9px;padding:1px 6px;">TJN</span>' : '';
         const canGrp = canArea || (pos==='tjn' && g.tjn_staff_code===myCode);
         const gClick = canGrp ? ` style="cursor:pointer" onclick="openEditStructModal('group','${g.id}')"` : '';
         html += `<div class="tree-node group"${gClick}><div><div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?' \u270f\ufe0f':''}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
         (g.teams||[]).forEach(t => {
-          const tM = [t.gyjn_staff_code,t.bgyjn_staff_code].filter(Boolean).join(', ');
+          const tMArr = [];
+          if (t.gyjn_staff_code) tMArr.push(t.gyjn_staff_code + ' <span class="staff-role-badge badge-gyjn" style="font-size:9px;padding:1px 6px;">GYJN</span>');
+          if (t.bgyjn_staff_code) tMArr.push(t.bgyjn_staff_code + ' <span class="staff-role-badge badge-bgyjn" style="font-size:9px;padding:1px 6px;">BGYJN</span>');
+          const tM = tMArr.join(', ');
           const members = t.staff||[];
           const canTeam = canGrp || (['gyjn','bgyjn'].includes(pos) && (t.gyjn_staff_code===myCode||t.bgyjn_staff_code===myCode));
           const tClick = canTeam ? ` style="cursor:pointer" onclick="openEditStructModal('team','${t.id}')"` : '';
