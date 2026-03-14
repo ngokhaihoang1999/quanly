@@ -137,15 +137,18 @@ async function loadDashboard() {
         <div class="dash-stat" style="cursor:pointer;" onclick="showUnitPopup('bbgroup')"><div class="num" style="color:var(--yellow);">${bbGroups.length}</div><div class="lbl">Group BB</div></div>
       </div>`;
 
-    // Pre-fetch latest records (BC TV/BB) for all unit fruits — unified source for "latest activity"
+    // Pre-fetch latest records AND sessions per profile — both needed for latestActivityLabel()
     const allPids = [...new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean))];
-    const recordMap = {};
+    const recordMap = {}, sessionMap = {};
     if (allPids.length > 0) {
       const idsStr = allPids.map(id=>`"${id}"`).join(',');
       try {
-        const rRes = await sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=profile_id,record_type,content,created_at&order=created_at.desc`);
-        const recs = await rRes.json();
-        recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+        const [rRes, sRes] = await Promise.all([
+          sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+          sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
+        ]);
+        const recs = await rRes.json(); recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+        const ss   = await sRes.json(); ss.forEach(s =>   { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
       } catch(e) {}
     }
     // Helper: render fruit cards for a list of staff_codes
@@ -168,9 +171,7 @@ async function loadDashboard() {
         const ndd = allR.find(x=>x.role_type==='ndd')?.staff_code || p?.ndd_staff_code || '—';
         const tvv = allR.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ') || '—';
         const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
-        let latest = '';
-        const lr = recordMap[pid];
-        if (lr) { const isTV=lr.record_type==='tu_van'; const num=lr.content?.lan_thu||lr.content?.buoi_thu||''; latest=isTV?`BC TV lần ${num}`:`BC BB buổi ${num}`; }
+        const latest = latestActivityLabel(recordMap[pid], sessionMap[pid]);
         const fStatus = p?.fruit_status || 'alive';
         const sDot = fStatus === 'dropout' ? '🔴' : '🟢';
         return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
@@ -313,16 +314,19 @@ async function loadDashboard() {
     if (nddRoles.length === 0) {
       listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
     } else {
-      // Supplement recordMap with any NDD-only profile IDs not yet fetched
+      // Supplement recordMap + sessionMap with NDD-only profile IDs not yet fetched
       const nddProfileIds = [...new Set(nddRoles.map(r=>r.fruit_groups?.profile_id).filter(Boolean))];
-      const missingIds = nddProfileIds.filter(id => !recordMap[id]);
+      const missingIds = nddProfileIds.filter(id => !recordMap[id] && !sessionMap[id]);
       if (missingIds.length > 0) {
         const ids = missingIds.map(id=>`"${id}"`).join(',');
         try {
-          const recRes = await sbFetch(`/rest/v1/records?profile_id=in.(${ids})&select=profile_id,record_type,content,created_at&order=created_at.desc`);
-          const recs = await recRes.json();
-          recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
-        } catch(e) { console.warn('Record fetch:', e); }
+          const [recRes, sRes2] = await Promise.all([
+            sbFetch(`/rest/v1/records?profile_id=in.(${ids})&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+            sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
+          ]);
+          const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+          const ss2   = await sRes2.json(); ss2.forEach(s =>   { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
+        } catch(e) { console.warn('Supplement fetch:', e); }
       }
       const seenP = new Set();
       listEl.innerHTML = nddRoles.filter(r => {
@@ -342,14 +346,8 @@ async function loadDashboard() {
         const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
         const tvvList = allRolesInGroup.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ');
         const gvbbList = allRolesInGroup.filter(x=>x.role_type==='gvbb').map(x=>x.staff_code).join(', ');
-        // Latest activity — records only (BC TV/BB most recent)
-        const latestRec = recordMap[pid];
-        let latestActivity = '';
-        if (latestRec) {
-          const isTV = latestRec.record_type === 'tu_van';
-          const num = latestRec.content?.lan_thu || latestRec.content?.buoi_thu || '';
-          latestActivity = isTV ? `BC TV lần ${num}` : `BC BB buổi ${num}`;
-        }
+        // Latest activity — unified via latestActivityLabel()
+        const latestActivity = latestActivityLabel(recordMap[pid], sessionMap[pid]);
         return `<div style="cursor:pointer;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;" onclick="openProfileById('${pid}')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <div style="font-weight:700;font-size:14px;">${name}</div>

@@ -1,8 +1,29 @@
+// ── Shared utility: label for the latest activity of a profile ──────────────
+// rec = latest record row, sess = latest consultation_session row (either can be null)
+function latestActivityLabel(rec, sess) {
+  // Pick whichever is more recent
+  const recTime = rec ? new Date(rec.created_at).getTime() : 0;
+  const sessTime = sess ? new Date(sess.created_at).getTime() : 0;
+  if (!rec && !sess) return '';
+  if (recTime >= sessTime) {
+    // Record wins
+    const { record_type: rt, content: c } = rec;
+    if (rt === 'tu_van')      return `BC TV lần ${c?.lan_thu||''}`;
+    if (rt === 'bien_ban')    return `BC BB buổi ${c?.buoi_thu||''}`;
+    if (rt === 'chot_bb')     return '🎓 Chốt BB';
+    if (rt === 'chot_center') return '🏛️ Chốt Center';
+    return rt;
+  } else {
+    // Session wins
+    return `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
+  }
+}
+
 async function loadJourney(profileId, currentPhase) {
   const phBtnEl = document.getElementById('phaseButtons');
   const tlEl = document.getElementById('timelineList');
   if (!phBtnEl || !tlEl) return;
-  
+
   // Phase buttons based on current phase
   let btnHtml = '';
   if (['new','chakki'].includes(currentPhase)) {
@@ -16,54 +37,56 @@ async function loadJourney(profileId, currentPhase) {
   phBtnEl.innerHTML = btnHtml;
 
   try {
-    // Collect all events in parallel for better performance
     const [sessRes, recRes, hjRes] = await Promise.all([
-      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`)
     ]);
-
     const sessions = await sessRes.json();
     const recs = await recRes.json();
     const hapjas = await hjRes.json();
 
-    // Timeline events
     let events = [];
 
-    // 1. Add Chakki Date from Hapja data
+    // 1. Chakki — always the very first event
+    //    FIX: parse date string as LOCAL time (append no 'Z' or offset) to avoid UTC midnight shift
     if (hapjas.length > 0) {
       const hjData = hapjas[0].data || {};
-      const chakkiDateStr = hjData.ngay_chakki;
-      if (chakkiDateStr) {
-        events.push({ date: chakkiDateStr, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: new Date(chakkiDateStr) });
-      } else {
-        events.push({ date: hapjas[0].created_at, icon: '🆕', text: 'Khởi tạo hồ sơ', sortDate: new Date(hapjas[0].created_at) });
-      }
+      const chakkiStr = hjData.ngay_chakki;
+      // Parse as local midnight so it always precedes same-day sessions (which are timestamped in UTC+7)
+      const chakkiMs = chakkiStr ? new Date(chakkiStr.includes('T') ? chakkiStr : chakkiStr + 'T00:00:00').getTime() : new Date(hapjas[0].created_at).getTime();
+      const chakkiDate = chakkiStr || hapjas[0].created_at;
+      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1 }); // -1 ensures it always leads
     }
 
+    // 2. Consultation sessions (Chốt TV)
     sessions.forEach(s => {
-      events.push({ date: s.created_at, icon: '📅', text: `Chốt TV lần ${s.session_number} (${s.tool||'—'})`, sortDate: new Date(s.created_at) });
-      if (s.status !== 'scheduled') {
-        events.push({ date: s.scheduled_at || s.created_at, icon: '✅', text: `TV lần ${s.session_number} hoàn thành`, sortDate: new Date(s.scheduled_at || s.created_at) });
-      }
+      events.push({ date: s.created_at, icon: '📅', text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`, sortDate: new Date(s.created_at).getTime() });
     });
 
+    // 3. Records (BC TV, BC BB, Chốt BB, Chốt Center)
     recs.forEach(r => {
-      const isTV = r.record_type === 'tu_van';
-      const num = r.content?.lan_thu || r.content?.buoi_thu || '';
-      events.push({ date: r.created_at, icon: isTV ? '📝' : '📋', text: `${isTV ? 'BC TV' : 'BC BB'}${num ? ' lần ' + num : ''}`, sortDate: new Date(r.created_at) });
+      let icon, text;
+      if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';   icon='📝'; text=`BC TV${n?' lần '+n:''}`; }
+      else if (r.record_type === 'bien_ban')    { const n=r.content?.buoi_thu||''; icon='📋'; text=`BC BB${n?' buổi '+n:''}`; }
+      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; }
+      else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; }
+      else { icon='📌'; text=r.record_type; }
+      events.push({ date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime() });
     });
 
+    // Sort ascending: oldest (top) → newest (bottom)
     events.sort((a,b) => a.sortDate - b.sortDate);
 
     if (events.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
-      tlEl.innerHTML = events.map(e => {
+      tlEl.innerHTML = events.map((e, i) => {
         const d = new Date(e.date).toLocaleDateString('vi-VN');
-        return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-left:3px solid var(--border);margin-left:10px;padding-left:16px;">
+        const isLast = i === events.length - 1;
+        return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-left:3px solid ${isLast?'var(--accent)':'var(--border)'};margin-left:10px;padding-left:16px;">
           <div style="font-size:16px;margin-top:-2px;">${e.icon}</div>
-          <div><div style="font-size:12px;font-weight:600;">${e.text}</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">${d}</div></div>
+          <div><div style="font-size:12px;font-weight:600;${isLast?'color:var(--accent);':''} ">${e.text}</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">${d}</div></div>
         </div>`;
       }).join('');
     }
@@ -189,13 +212,15 @@ function openChotBBModal() {
   document.getElementById('chotBBModal').classList.add('open');
 }
 async function saveChotBB() {
-  const gvbb = getStaffCodeFromInput('cbb_gvbb'); // optional
   try {
-    // Update phase to bb
+    // 1. Update phase
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'bb' })});
+    // 2. Record phase change on timeline (so it shows up)
+    await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
+      profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Chốt BB', phase: 'bb' }
+    })});
     closeModal('chotBBModal');
     showToast('🎓 Đã chốt BB! Hãy tạo group Telegram và gắn hồ sơ.');
-    // Refresh
     const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
     const ps = await pRes.json();
     if (ps[0]) { const idx = allProfiles.findIndex(x=>x.id===currentProfileId); if (idx>=0) allProfiles[idx]=ps[0]; openProfile(ps[0]); }
@@ -226,6 +251,10 @@ async function chotCenter() {
   if (!confirm('Xác nhận trái quả nhập học Center?')) return;
   try {
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'center' })});
+    // Record phase change on timeline
+    await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
+      profile_id: currentProfileId, record_type: 'chot_center', content: { label: 'Chốt Center', phase: 'center' }
+    })});
     showToast('🏛️ Đã chốt Center!');
     const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
     const ps = await pRes.json();

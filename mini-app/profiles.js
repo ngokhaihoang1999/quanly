@@ -73,17 +73,16 @@ async function openProfile(p) {
   const nddDisplay = p.ndd_staff_code || rolesInfo.ndd || '—';
   const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
   const gvbbDisplay = rolesInfo.gvbb || '—';
-  // Latest activity — from records only (BC TV/BB most recent) — unified with dashboard cards
+  // Latest activity — shared latestActivityLabel() helper (records + sessions, most recent wins)
   let latestInfo = '';
   try {
-    const rRes = await sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&select=record_type,content,created_at&order=created_at.desc&limit=1`);
+    const [rRes, sRes] = await Promise.all([
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&select=record_type,content,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`)
+    ]);
     const recs = await rRes.json();
-    if (recs[0]) {
-      const r = recs[0];
-      const isTV = r.record_type === 'tu_van';
-      const num = r.content?.lan_thu || r.content?.buoi_thu || '';
-      latestInfo = isTV ? `BC TV lần ${num}` : `BC BB buổi ${num}`;
-    }
+    const sess = await sRes.json();
+    latestInfo = latestActivityLabel(recs[0]||null, sess[0]||null);
   } catch(e) {}
   // Summary card
   const fruitStatus = p.fruit_status || 'alive';
