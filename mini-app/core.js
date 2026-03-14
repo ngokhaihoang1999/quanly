@@ -276,7 +276,7 @@ async function toggleFruitStatus(profileId, current) {
   let reason = '';
   if (newStatus === 'dropout') {
     reason = prompt('Nhập lý do Drop-out:');
-    if (reason === null) return; // User cancelled
+    if (reason === null) return;
   }
 
   if (!confirm(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
@@ -286,15 +286,20 @@ async function toggleFruitStatus(profileId, current) {
     else body.dropout_reason = null;
 
     await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify(body) });
-    showToast(`✅ Đã chuyển sang ${label}`);
-    // Update local cache
-    const idx = allProfiles.findIndex(x => x.id === profileId);
-    if (idx >= 0) {
-      allProfiles[idx].fruit_status = newStatus;
-      allProfiles[idx].dropout_reason = body.dropout_reason;
-      openProfile(allProfiles[idx]);
+
+    // Re-fetch from DB to confirm the change persisted
+    const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}&select=*`);
+    const ps = await pRes.json();
+    if (ps[0]) {
+      const idx = allProfiles.findIndex(x => x.id === profileId);
+      if (idx >= 0) allProfiles[idx] = ps[0];
+      openProfile(ps[0]);
     }
+
+    showToast(`✅ Đã chuyển sang ${label}`);
+    // Refresh dashboard + profile list to reflect status change everywhere
     filterProfiles();
+    loadDashboard();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 

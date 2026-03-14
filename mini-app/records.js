@@ -6,8 +6,8 @@ function latestActivityLabel(rec, sess) {
   if (!rec && !sess) return '';
   if (recTime >= sessTime) {
     const { record_type: rt, content: c } = rec;
-    if (rt === 'tu_van')      return `BC TV lần ${c?.lan_thu||''}`;
-    if (rt === 'bien_ban')    return `BC BB buổi ${c?.buoi_thu||''}`;
+    if (rt === 'tu_van')      return `Báo cáo TV lần ${c?.lan_thu||''}`;
+    if (rt === 'bien_ban')    return `Báo cáo BB buổi ${c?.buoi_thu||''}`;
     if (rt === 'chot_bb')     return '🎓 Chốt BB';
     if (rt === 'chot_center') return '🏛️ Chốt Center';
     return rt;
@@ -84,8 +84,8 @@ async function loadJourney(profileId, currentPhase) {
     // 3. Records (BC TV, BC BB, Chốt BB, Chốt Center)
     recs.forEach(r => {
       let icon, text;
-      if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`BC TV${n?' lần '+n:''}`; }
-      else if (r.record_type === 'bien_ban')    { const n=r.content?.buoi_thu||''; icon='📋'; text=`BC BB${n?' buổi '+n:''}`; }
+      if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
+      else if (r.record_type === 'bien_ban')    { const n=r.content?.buoi_thu||''; icon='📋'; text=`Báo cáo BB${n?' buổi '+n:''}`; }
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; }
       else { icon='📌'; text=r.record_type; }
@@ -187,7 +187,7 @@ async function deleteEventSession(sessionId, sessionNum) {
 
 // ── Delete single BC record (newest of current phase only) ──
 async function deleteEventRecord(recordId, recordType) {
-  const labels = { tu_van:'BC TV', bien_ban:'BC BB' };
+  const labels = { tu_van:'Báo cáo TV', bien_ban:'Báo cáo BB' };
   const label = labels[recordType] || recordType;
   if (!confirm(`Xóa "${label}" mới nhất?`)) return;
   try {
@@ -457,6 +457,22 @@ async function saveRecord() {
     };
   }
   try {
+    // Validation for new records (not edits)
+    if (!currentRecordId) {
+      if (isTV) {
+        const lanThu = parseInt(data.lan_thu);
+        if (lanThu) {
+          // Check if Chốt TV lần N exists
+          const checkRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=eq.${lanThu}&select=id&limit=1`);
+          const checkData = await checkRes.json();
+          if (checkData.length === 0) {
+            showToast(`⚠️ Chưa có Chốt TV lần ${lanThu}. Hãy chốt TV trước!`);
+            return;
+          }
+        }
+      }
+    }
+
     if (currentRecordId) {
       await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify({ content: data }) });
       showToast('✅ Đã cập nhật phiếu!');
