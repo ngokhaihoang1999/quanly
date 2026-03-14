@@ -1,7 +1,7 @@
 import { supabase } from "../config.ts";
 import { ROLE_LABELS } from "../config.ts";
 import { canLinkProfile, canAssignRole, canChangeLevel } from "../permissions.ts";
-import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getBotId } from "../telegram.ts";
+import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getBotId, exportChatInviteLink } from "../telegram.ts";
 
 // ============ GROUP CHAT HANDLER ============
 
@@ -19,14 +19,25 @@ export async function handleGroupChat(update: any) {
     const botId = await getBotId();
     const botAdded = msg.new_chat_members.some((m: any) => m.id === botId);
     if (botAdded) {
+      // Try to get invite link (bot needs admin rights)
+      const inviteLink = await exportChatInviteLink(chatId);
+
       const { data: existing } = await supabase.from('fruit_groups')
         .select('*').eq('telegram_group_id', chatId).single();
       if (!existing) {
         await supabase.from('fruit_groups').insert({
           telegram_group_id: chatId,
           telegram_group_title: chatTitle,
+          invite_link: inviteLink,
           level: 'tu_van'
         });
+      } else {
+        // Update title and invite link
+        await supabase.from('fruit_groups').update({
+          telegram_group_title: chatTitle,
+          invite_link: inviteLink,
+          updated_at: new Date().toISOString()
+        }).eq('id', existing.id);
       }
 
       // Send welcome message

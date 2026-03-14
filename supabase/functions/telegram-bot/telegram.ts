@@ -40,6 +40,16 @@ export async function getBotId(): Promise<number | null> {
   return res.result?.id || null;
 }
 
+export async function exportChatInviteLink(chatId: number): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/exportChatInviteLink`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId })
+    }).then(r => r.json());
+    return res.ok ? res.result : null;
+  } catch { return null; }
+}
+
 // ============ DATA HELPERS ============
 
 export async function getAdminTelegramId(): Promise<number | null> {
