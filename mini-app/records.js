@@ -1,11 +1,12 @@
-// ============ CONSULTATION SESSIONS ============
 async function loadJourney(profileId, currentPhase) {
   const phBtnEl = document.getElementById('phaseButtons');
   const tlEl = document.getElementById('timelineList');
+  if (!phBtnEl || !tlEl) return;
+  
   // Phase buttons based on current phase
   let btnHtml = '';
   if (['new','chakki'].includes(currentPhase)) {
-    btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn</button>`;
+    btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV</button>`;
   } else if (currentPhase === 'tu_van') {
     btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
       <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>`;
@@ -13,23 +14,49 @@ async function loadJourney(profileId, currentPhase) {
     btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
   }
   phBtnEl.innerHTML = btnHtml;
+
   try {
-    const res = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`);
-    const sessions = await res.json();
-    // Timeline
-    let events = [];
-    sessions.forEach(s => {
-      events.push({date: s.created_at, icon:'📅', text:`Chốt TV lần ${s.session_number} (${s.tool||'—'})`});
-      if (s.status !== 'scheduled') events.push({date: s.scheduled_at||s.created_at, icon:'✅', text:`TV lần ${s.session_number} hoàn thành`});
-    });
-    const recRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`);
+    // Collect all events in parallel for better performance
+    const [sessRes, recRes, pRes] = await Promise.all([
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
+      sbFetch(`/rest/v1/profiles?id=eq.${profileId}&select=created_at,check_hapja(data)`)
+    ]);
+
+    const sessions = await sessRes.json();
     const recs = await recRes.json();
+    const profiles = await pRes.json();
+    const p = profiles[0];
+
+    // Timeline events
+    let events = [];
+
+    // 1. Add Chakki Date from Profile/Hapja data
+    if (p) {
+      const hjData = p.check_hapja?.[0]?.data || {};
+      const chakkiDateStr = hjData.ngay_chakki;
+      if (chakkiDateStr) {
+        events.push({ date: chakkiDateStr, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: new Date(chakkiDateStr) });
+      } else {
+        events.push({ date: p.created_at, icon: '🆕', text: 'Khởi tạo hồ sơ', sortDate: new Date(p.created_at) });
+      }
+    }
+
+    sessions.forEach(s => {
+      events.push({ date: s.created_at, icon: '📅', text: `Chốt TV lần ${s.session_number} (${s.tool||'—'})`, sortDate: new Date(s.created_at) });
+      if (s.status !== 'scheduled') {
+        events.push({ date: s.scheduled_at || s.created_at, icon: '✅', text: `TV lần ${s.session_number} hoàn thành`, sortDate: new Date(s.scheduled_at || s.created_at) });
+      }
+    });
+
     recs.forEach(r => {
       const isTV = r.record_type === 'tu_van';
       const num = r.content?.lan_thu || r.content?.buoi_thu || '';
-      events.push({date: r.created_at, icon: isTV?'📝':'📋', text:`${isTV?'BC TV':'BC BB'}${num?' lần '+num:''}`});
+      events.push({ date: r.created_at, icon: isTV ? '📝' : '📋', text: `${isTV ? 'BC TV' : 'BC BB'}${num ? ' lần ' + num : ''}`, sortDate: new Date(r.created_at) });
     });
-    events.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    events.sort((a,b) => a.sortDate - b.sortDate);
+
     if (events.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
@@ -45,18 +72,10 @@ async function loadJourney(profileId, currentPhase) {
 }
 function openScheduleTVModal() {
   if (!currentProfileId) return;
-  const pos = getCurrentPosition();
-  if (!['admin','gyjn','bgyjn'].includes(pos)) {
-    // Check if user is NDD of this profile
-    const p = allProfiles.find(x=>x.id===currentProfileId);
-    if (!p || p.ndd_staff_code !== getEffectiveStaffCode()) {
-      showToast('⚠️ Chỉ NDD/GYJN/BGYJN được chốt TV');
-      return;
-    }
-  }
-  // Auto-increment session number
-  const existing = document.querySelectorAll('#sessionsList > div').length;
-  document.getElementById('stv_session_num').value = existing + 1;
+  const p = allProfiles.find(x=>x.id===currentProfileId);
+  // Pre-fill next session number based on existing dots in journey
+  const existingCount = document.querySelectorAll('#timelineList > div').length;
+  document.getElementById('stv_session_num').value = existingCount + 1;
   document.getElementById('stv_tool').value = '';
   document.getElementById('stv_datetime').value = '';
   document.getElementById('stv_tvv').value = '';
@@ -64,35 +83,47 @@ function openScheduleTVModal() {
   document.getElementById('scheduleTVModal').classList.add('open');
 }
 async function saveScheduleTV() {
+  const btn = document.querySelector('#scheduleTVModal .save-btn');
+  if (btn && btn.disabled) return; // Prevent double click
+  
   const num = parseInt(document.getElementById('stv_session_num').value)||1;
   const tool = document.getElementById('stv_tool').value.trim();
   const dt = document.getElementById('stv_datetime').value;
   const tvv = getStaffCodeFromInput('stv_tvv');
   const notes = document.getElementById('stv_notes').value;
+
   if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
+  
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⌛ Đang lưu...';
+  }
+
   try {
+    // 1. Create session
     await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
       profile_id: currentProfileId, session_number: num, tool,
       scheduled_at: dt || null, tvv_staff_code: tvv || null, notes: notes || null,
       created_by: getEffectiveStaffCode()
     })});
-    // Update phase to tu_van if currently new or chakki
+
+    // 2. Update phase
     const p = allProfiles.find(x => x.id === currentProfileId);
-    if (p && (p.phase === 'new' || p.phase === 'chakki')) {
+    if (p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
     }
-    // If TVV assigned, create fruit_role so TVV sees this fruit in their dashboard
+
+    // 3. Assign role if TVV
     if (tvv) {
       try {
-        // Find or create fruit_group for this profile
         const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
         const fgs = await fgRes.json();
         let fgId = fgs[0]?.id;
         if (!fgId) {
-          const newFg = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+          const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
             telegram_group_id: 0, profile_id: currentProfileId, level: 'tu_van'
           })});
-          const newFgs = await newFg.json();
+          const newFgs = await newFgRes.json();
           fgId = newFgs[0]?.id;
         }
         if (fgId) {
@@ -100,23 +131,31 @@ async function saveScheduleTV() {
             fruit_group_id: fgId, staff_code: tvv, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
           })});
         }
-      } catch(e) { console.warn('TVV role assign warning:', e); }
+      } catch(e) { console.warn('Assign role fail:', e); }
     }
+
     closeModal('scheduleTVModal');
-    showToast('✅ Đã chốt Tư vấn lần ' + num);
+    showToast('✅ Đã chốt Tư vấn');
     
-    // Refresh the profile data to update UI
-    const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
-    const ps = await pRes.json();
-    if (ps[0]) { 
-      const idx = allProfiles.findIndex(x=>x.id===currentProfileId); 
-      if (idx>=0) allProfiles[idx]=ps[0]; 
-      openProfile(ps[0]); 
-    }
+    // 4. Full Refresh UI
+    setTimeout(async () => {
+      const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
+      const ps = await pRes.json();
+      if (ps[0]) {
+        const idx = allProfiles.findIndex(x=>x.id===currentProfileId);
+        if (idx>=0) allProfiles[idx]=ps[0];
+        openProfile(ps[0]);
+      }
+    }, 200);
   } catch(e) { 
-    showToast('❌ Lỗi: ' + (e.message || 'Không xác định')); 
-    console.error('saveScheduleTV Error:', e); 
-  }
+    showToast('❌ Lỗi: ' + (e.message || 'Hệ thống bận'));
+    console.error('saveScheduleTV:', e);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '📅 Chốt TV';
+      }
+    }
 }
 async function completeSession(sessionId) {
   try {
