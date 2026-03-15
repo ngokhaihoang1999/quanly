@@ -129,7 +129,7 @@ async function openProfile(p) {
   // ONE unified card
   document.getElementById('profileSummaryCard').innerHTML = `
     <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;">
-      <!-- Top: avatar + name + badges -->
+      <!-- Top: avatar + name + badges + refresh -->
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
         <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#ec4899);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0;box-shadow:0 4px 16px rgba(124,106,247,0.3);">${(p.full_name||'?')[0]}</div>
         <div style="flex:1;min-width:0;">
@@ -143,6 +143,11 @@ async function openProfile(p) {
           ${reasonHtml}
           ${bbNoGroupWarning}
         </div>
+        <button id="profileRefreshBtn" onclick="refreshProfileInPlace()" title="Đồng bộ dữ liệu mới nhất" style="
+          flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
+          background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
+          ">🔄</button>
       </div>
       <!-- Bottom: roles grid + latest -->
       <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
@@ -178,6 +183,57 @@ async function openProfile(p) {
   document.querySelectorAll('#profileTabs .form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
   document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
   document.getElementById('infoSheet')?.classList.add('active');
+}
+
+// ── Refresh in-place: sync dữ liệu mới nhất, giữ nguyên tab đang mở ──
+async function refreshProfileInPlace() {
+  if (!currentProfileId) return;
+  const btn = document.getElementById('profileRefreshBtn');
+  if (btn) { btn.style.transform = 'rotate(360deg)'; btn.style.transition = 'transform 0.5s ease'; }
+  // Nhớ tab đang active
+  const activeTab = document.querySelector('#profileTabs .form-tab.active');
+  const activeCard = document.querySelector('.form-card.active');
+  const activeTabId = activeTab?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || null;
+
+  try {
+    // Fetch profile mới nhất
+    const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
+    const ps = await pRes.json();
+    if (!ps[0]) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
+    const p = ps[0];
+    // Cập nhật cache
+    const idx = allProfiles.findIndex(x => x.id === currentProfileId);
+    if (idx >= 0) allProfiles[idx] = p;
+
+    const ph = p.phase || 'chakki';
+    // Refresh timeline + records (phần thay đổi nhiều nhất)
+    await Promise.all([
+      loadJourney(p.id, ph),
+      loadRecords(p.id, 'tu_van', 'tvList', 'tvCount'),
+      loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount')
+    ]);
+
+    // Refresh summary card (cập nhật phase badge, KT badge, roles)
+    await openProfile(p);
+
+    // Khôi phục tab đang mở
+    if (activeTabId) {
+      const targetTab = [...document.querySelectorAll('#profileTabs .form-tab')]
+        .find(t => t.getAttribute('onclick')?.includes(activeTabId));
+      const targetCard = document.getElementById(activeTabId);
+      if (targetTab && targetCard) {
+        document.querySelectorAll('#profileTabs .form-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form-card').forEach(c => c.classList.remove('active'));
+        targetTab.classList.add('active');
+        targetCard.classList.add('active');
+      }
+    }
+    showToast('✅ Đã đồng bộ dữ liệu');
+  } catch(e) {
+    showToast('❌ Lỗi đồng bộ'); console.error(e);
+  } finally {
+    if (btn) { setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 520); }
+  }
 }
 function clearFormFields() {
   ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
