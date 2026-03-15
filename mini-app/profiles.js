@@ -150,7 +150,9 @@ async function openProfile(p) {
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${realGroupTitle}</div>
         </div>
-        <button onclick="openBBGroup('${realGroupId}','${realGroupInviteLink}')"
+        <button onclick="openBBGroup(this)"
+           data-gid="${realGroupId}"
+           data-link="${(realGroupInviteLink||'').replace(/"/g,'&quot;')}"
            style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;">Mở Group →</button>
       </div>` : ''}
       </div>
@@ -269,10 +271,12 @@ async function openRecord(recordId, type) {
   openAddRecordModal(type || r.record_type, r.content);
 }
 
-function openBBGroup(groupId, inviteLink) {
+function openBBGroup(btnEl) {
+  const groupId = btnEl.dataset.gid;
+  const inviteLink = btnEl.dataset.link;
   // Priority 1: stored invite link
   if (inviteLink) {
-    if (window.Telegram && Telegram.WebApp) {
+    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
       Telegram.WebApp.openTelegramLink(inviteLink);
     } else {
       window.open(inviteLink, '_blank');
@@ -283,13 +287,18 @@ function openBBGroup(groupId, inviteLink) {
   const idStr = String(groupId);
   if (idStr.startsWith('-100')) {
     const link = 'https://t.me/c/' + idStr.replace('-100', '');
-    if (window.Telegram && Telegram.WebApp) {
+    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
       Telegram.WebApp.openTelegramLink(link);
     } else {
       window.open(link, '_blank');
     }
     return;
   }
-  // Priority 3: tg:// deep link — opens group chat directly if user is member
-  window.location.href = 'tg://openmessage?chat_id=' + groupId;
+  // Priority 3: tg:// deep link (regular group, user must be member)
+  const tgLink = 'https://t.me/c/' + Math.abs(parseInt(idStr));
+  if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
+    Telegram.WebApp.openTelegramLink(tgLink);
+  } else {
+    alert('Ⓜ️ Không thể mở group tự động. Hãy yêu cầu NDD/GVBB cấp invite link.');
+  }
 }

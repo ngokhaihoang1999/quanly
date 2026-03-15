@@ -92,14 +92,22 @@ export async function handleCallback(update: any, staffData: any) {
     const p = fg.profiles;
     const info = p.info_sheet || {};
     
+    // Fetch ALL roles for this profile (across all fruit_group rows)
     const { data: roles } = await supabase.from('fruit_roles')
-      .select('role_type, staff_code').eq('fruit_group_id', fg.id);
+      .select('role_type, staff_code')
+      .in('fruit_group_id',
+        (await supabase.from('fruit_groups').select('id').eq('profile_id', p.id)).data?.map((g:any) => g.id) || [fg.id]
+      );
     
-    const getRoleCode = (rt: string) => roles?.find((r: any) => r.role_type === rt)?.staff_code || info[`${rt}_name`] || 'Chưa xác nhận';
+    const getNddCode = () => p.ndd_staff_code || roles?.find((r: any) => r.role_type === 'ndd')?.staff_code || 'Chưa xác nhận';
+    const getTvvCodes = () => {
+      const tvvList = roles?.filter((r: any) => r.role_type === 'tvv').map((r: any) => r.staff_code) || [];
+      return tvvList.length > 0 ? tvvList.join(', ') : 'Chưa xác nhận';
+    };
+    const getGvbbCode = () => roles?.find((r: any) => r.role_type === 'gvbb')?.staff_code || 'Chưa xác nhận';
     
-    const genderMap: Record<string,string> = { nam: 'Nam', nu: 'Nữ' };
-    const genderLabel = genderMap[p.gender] || p.gender || 'N/A';
-    const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
+    const genderLabel = p.gender || 'N/A';
+    const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : fg.level === 'bb' ? 'BB' : fg.level || 'N/A';
     
     const { data: tvRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'tu_van');
     const { data: bbRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'bien_ban');
@@ -111,12 +119,10 @@ export async function handleCallback(update: any, staffData: any) {
       `*Sinh năm:* ${p.birth_year || 'N/A'}   *Giới tính:* ${genderLabel}\n` +
       `*Giai đoạn:* ${levelLabel}\n\n` +
       `👥 *Đội ngũ chăm sóc:*\n` +
-      `  NDD: ${p.ndd_staff_code || getRoleCode('ndd')}\n` +
-      `  TVV: ${getRoleCode('tvv')}\n` +
-      `  GVBB: ${getRoleCode('gvbb')}\n\n` +
-      `📝 *Báo cáo:* ${tvRecords?.length || 0} Tư vấn | ${bbRecords?.length || 0} Biên bản BB\n` +
-      (info.tinh_cach ? `\n🔍 *Tính cách:* ${info.tinh_cach}` : '') +
-      (info.nghe_nghiep ? `\n💼 *Nghề nghiệp:* ${info.nghe_nghiep}` : '');
+      `  NDD: ${getNddCode()}\n` +
+      `  TVV: ${getTvvCodes()}\n` +
+      `  GVBB: ${getGvbbCode()}\n\n` +
+      `📝 *Báo cáo:* ${tvRecords?.length || 0} Tư vấn | ${bbRecords?.length || 0} Biên bản BB\n`;
     
     await sendText(chatId, profileText);
     return;

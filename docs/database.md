@@ -128,11 +128,12 @@ Migrations: `supabase/migrations/` (chạy theo thứ tự timestamp)
 | profile_id | uuid (FK→profiles) | |
 | session_number | int | Lần thứ N |
 | tool | text | Công cụ tư vấn |
-| tvv_staff_code | text | TVV phụ trách |
-| session_date | timestamptz | Thời gian chốt |
+| tvv_staff_code | text | TVV phụ trách (1 TVV/lần chốt; nhiều TVV lưu qua fruit_roles) |
+| scheduled_at | timestamptz | Thời gian chốt (nullable) |
 | created_at | timestamptz | |
 
 > **Validation:** Báo cáo TV lần N chỉ tạo được khi `consultation_sessions` có `session_number=N` cho profile đó.
+> **TVV nhiều người:** TVV lấy từ cả `tvv_staff_code` (session) và `fruit_roles` (role_type='tvv'). Mini App và bot hiển thị tất cả TVV join bằng dấu phẩy.
 
 ### `support_messages` — Kênh hỗ trợ
 | Cột | Kiểu | Ghi chú |
@@ -160,6 +161,21 @@ profiles ──1:1──> check_hapja (profile_id, ON DELETE CASCADE)
 
 ---
 
+## Logic mở Group BB (Mini App)
+
+Nút **"Mở Group →"** chỉ hiện khi:
+- `phase` ∈ `['bb', 'center', 'completed']`
+- `fruit_groups.telegram_group_id IS NOT NULL` **và** `> -1e12` (loại bỏ placeholder cũ `-Date.now()`)
+
+Thứ tự ưu tiên mở:
+1. `invite_link` (bot lưu khi join group với quyền admin Invite Users)
+2. `t.me/c/` nếu supergroup (ID bắt đầu bằng `-100`)
+3. Alert thông báo nếu không có link
+
+> ⚠️ Button dùng `data-gid` và `data-link` attribute (không inline template string) để tránh lỗi escaping với ký tự đặc biệt trong invite link (`+`, `=`).
+
+---
+
 ## Migrations (theo thứ tự)
 
 | File | Nội dung |
@@ -171,6 +187,9 @@ profiles ──1:1──> check_hapja (profile_id, ON DELETE CASCADE)
 | `20240322000000_allow_delete_records.sql` | RLS policy DELETE cho records và consultation_sessions |
 | `20240323000000_cleanup_orphan_hapja.sql` | ON DELETE CASCADE cho check_hapja.profile_id |
 | `20240324000000_add_dropout_reason.sql` | Cột dropout_reason cho profiles |
+| `20240325000000_allow_null_group_id.sql` | telegram_group_id cho phép NULL; partial unique index |
+| `20240326000000_add_invite_link.sql` | Cột invite_link cho fruit_groups |
+
 
 ---
 
