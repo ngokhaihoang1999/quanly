@@ -330,59 +330,103 @@ async function toggleFruitStatus(profileId, current) {
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleFruitStatus:', e); }
 }
 
+window._currentKTProfileId = null;
+
 async function toggleKTStatus(profileId, newState) {
   const p = allProfiles.find(x => x.id === profileId);
   if (!p) return;
-  const pos = getCurrentPosition();
   const myCode = getEffectiveStaffCode();
+  const pos = getCurrentPosition();
   
-  // NDD, GVBB, or admin can toggle
-  let isGVBB = false;
-  try {
-    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=fruit_roles(staff_code,role_type)`);
-    const fgs = await fgRes.json();
-    (fgs||[]).forEach(fg => (fg.fruit_roles||[]).forEach(r => {
-      if (r.role_type === 'gvbb' && r.staff_code === myCode) isGVBB = true;
-    }));
-  } catch(e) {}
+  // Permission Check
+  let hasPerm = false;
+  if (['admin', 'yjyn', 'tjn', 'gyjn', 'bgyjn'].includes(pos)) hasPerm = true;
+  if (!hasPerm && p.ndd_staff_code === myCode) hasPerm = true;
+  if (!hasPerm) {
+    try {
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=fruit_roles(staff_code,role_type)`);
+      const fgData = await fgRes.json();
+      if (fgData && fgData[0]) {
+        if (fgData[0].fruit_roles.some(r => r.role_type === 'gvbb' && r.staff_code === myCode)) {
+          hasPerm = true;
+        }
+      }
+    } catch(e) {}
+  }
   
-  if (p.ndd_staff_code !== myCode && !isGVBB && !['admin', 'yjyn', 'tjn', 'gyjn', 'bgyjn'].includes(pos)) {
+  if (!hasPerm) {
     showToast('⚠️ Không có quyền thay đổi trạng thái KT.');
     return;
   }
   
-  const actionName = newState ? 'Mở KT' : 'Đóng KT';
-  if (!confirm(`Xác nhận ${actionName.toLowerCase()} cho hồ sơ này?`)) return;
-
-  try {
-    // We send payload
-    const patchBody = { is_kt_opened: newState };
-    const patchRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
-      method: 'PATCH',
-      headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify(patchBody)
-    });
-    if (!patchRes.ok) throw new Error(await patchRes.text());
-
-    let updatedProfile = null;
+  if (!newState) {
+    if (!confirm('Hủy trạng thái Đã mở KT? Sự kiện Mở KT trên Dòng thời gian cũng sẽ bị xóa.')) return;
+    executeKTToggle(profileId, false, null);
+  } else {
+    window._currentKTProfileId = profileId;
     try {
-      const patchData = await patchRes.json();
-      if (Array.isArray(patchData) && patchData[0]) updatedProfile = patchData[0];
-    } catch(e) {}
-
-    const idx = allProfiles.findIndex(x => x.id === profileId);
-    if (idx >= 0) {
-      if (updatedProfile) {
-        allProfiles[idx] = updatedProfile;
-      } else {
-        allProfiles[idx].is_kt_opened = newState;
-      }
-      openProfile(allProfiles[idx]);
+      const bRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=content`);
+      const bbs = await bRes.json();
+      const buois = bbs.map(b => b.content?.buoi_thu).filter(Boolean).map(x => parseInt(x)).sort((a,b) => a-b);
+      
+      let opts = buois.map(b => `<option value="${b}">Báo cáo BB buổi ${b}</option>`).join('');
+      if (!opts) opts = `<option value="">Chưa có Báo cáo BB nào</option>`;
+      
+      const html = `
+        <div class="field-group">
+          <label>Mở KT ở buổi BB thứ mấy?</label>
+          <select id="kt_buoi_select" style="padding:10px; width:100%; border-radius:6px; border:1px solid var(--border);">${opts}</select>
+          <div style="font-size:11px; color:var(--text3); margin-top:8px;">* Nếu không thấy thứ tự buổi bạn cần, xin hãy cập nhật thêm Báo Cáo BB.</div>
+        </div>
+      `;
+      document.getElementById('ktModalBody').innerHTML = html;
+      document.getElementById('ktModal').classList.add('open');
+      document.getElementById('ktConfirmBtn').onclick = () => {
+         const val = document.getElementById('kt_buoi_select').value;
+         if (!val) return showToast('Vui lòng chọn hoặc tạo báo cáo BB trước.');
+         closeModal('ktModal');
+         executeKTToggle(profileId, true, val);
+      };
+    } catch(e) {
+      console.error(e); showToast('❌ Lỗi tải danh sách Báo cáo BB.');
     }
-    showToast(`✅ Đã ${actionName.toLowerCase()} thành công!`);
-    filterProfiles();
-    loadDashboard();
-  } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleKTStatus:', e); }
+  }
+}
+
+async function executeKTToggle(profileId, newState, buoiThu) {
+  try {
+    const myCode = getEffectiveStaffCode();
+    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ is_kt_opened: newState })
+    });
+    
+    if (newState) {
+      await sbFetch('/rest/v1/records', {
+         method: 'POST',
+         body: JSON.stringify({
+            profile_id: profileId,
+            record_type: 'mo_kt',
+            content: { buoi_thu: parseInt(buoiThu) },
+            created_by: myCode
+         })
+      });
+      showToast('✅ Đã xác nhận Mở KT!');
+    } else {
+      await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.mo_kt`, { method: 'DELETE' });
+      showToast('❌ Đã đóng KT!');
+    }
+    
+    const idx = allProfiles.findIndex(x => x.id === profileId);
+    if (idx >= 0) allProfiles[idx].is_kt_opened = newState;
+    
+    if (typeof _refreshCurrentProfile === 'function' && window.currentProfileId === profileId) {
+       _refreshCurrentProfile();
+    } else {
+       filterProfiles(); loadDashboard();
+    }
+  } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('executeKTToggle:', e); }
 }
 
 // ============ THEME TOGGLE ============
