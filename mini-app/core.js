@@ -248,7 +248,7 @@ function showUnitPopup(type) {
       const p = r.fruit_groups?.profiles;
       const ph = p?.phase || 'bb';
       const isKT = p?.is_kt_opened;
-      const ktLabel = `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT'}</span>`;
+      const ktLabel = `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`;
       return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>

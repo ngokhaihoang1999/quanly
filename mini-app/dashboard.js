@@ -183,7 +183,7 @@ async function loadDashboard() {
         
         const isKT = p?.is_kt_opened;
         const showKT = ['bb', 'center', 'completed'].includes(ph);
-        const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT'}</span>` : '';
+        const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>` : '';
         
         return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -364,7 +364,7 @@ async function loadDashboard() {
         
         const isKT = p?.is_kt_opened;
         const showKT = ['bb', 'center', 'completed'].includes(ph);
-        const ktLabel = showKT ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT'}</span>` : '';
+        const ktLabel = showKT ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>` : '';
 
         // Caregivers from all roles of this fruit_group
         const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
@@ -405,7 +405,7 @@ async function loadDashboard() {
         const ph = p?.phase || 'new';
         const isKT = p?.is_kt_opened;
         const showKT = ['bb', 'center', 'completed'].includes(ph);
-        const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-right:6px;">${isKT ? '🔓 KT' : '🔒 Chưa KT'}</span>` : '';
+        const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-right:6px;">${isKT ? '📖 KT' : '📕 Chưa KT'}</span>` : '';
         return `<div style="cursor:pointer;display:flex;align-items:center;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px;" onclick="openProfileById('${r.fruit_groups?.profile_id}')">
           <div style="font-size:13px;font-weight:600;flex:1;">${name}</div>
           ${ktLabel}

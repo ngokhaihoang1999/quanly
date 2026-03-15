@@ -110,7 +110,7 @@ export async function handleCallback(update: any, staffData: any) {
     const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : fg.level === 'bb' ? 'BB' : fg.level || 'N/A';
     const isKT = p.is_kt_opened;
     const showKT = ['bb', 'center', 'completed'].includes(p.phase);
-    const ktText = showKT ? (isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT') : '';
+    const ktText = showKT ? (isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT') : '';
     
     const { data: tvRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'tu_van');
     const { data: bbRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'bien_ban');

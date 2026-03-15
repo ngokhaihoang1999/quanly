@@ -224,7 +224,7 @@ export async function handleGroupChat(update: any) {
       [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
-      [{ text: '🔓 Xác nhận mở KT', callback_data: 'menu_open_kt' }]
+      [{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]
     ];
     await sendKeyboard(chatId, `🛠 *Menu Quản lý Group*`, keyboard);
     return;

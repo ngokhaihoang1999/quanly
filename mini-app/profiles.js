@@ -123,7 +123,7 @@ async function openProfile(p) {
   const isKT = p.is_kt_opened === true;
   const showKT = ['bb', 'center', 'completed'].includes(ph);
   const ktHtml = showKT
-    ? `<span onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT'}</span>`
+    ? `<span onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
   // ONE unified card
