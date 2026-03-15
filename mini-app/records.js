@@ -238,21 +238,25 @@ async function loadJourney(profileId, currentPhase) {
           : '';
         const dateUi = (e.hideDate || !d) ? '' : `<div style="font-size:10px;color:var(--text3);margin-top:1px;">${d}</div>`;
 
-        // KT row: indented like a minor event alongside bien_ban
-        const leftPad = e.isMajor ? '16px' : '44px';
-        const fontW = e.isMajor ? '700' : '600';
+        // 2-column layout:
+        //   Column 1 (major): padding-left 14px — Chakki, Chốt TV, Chốt BB, Đã mở KT, Chốt Center
+        //   Column 2 (minor): padding-left 48px — Báo cáo TV, Báo cáo BB
+        const leftPad = e.isMajor ? '14px' : '48px';
+        const fontW = e.isMajor ? '700' : '500';
+        const fontSize = e.isMajor ? '13px' : '12px';
+        const iconSize = e.isMajor ? '18px' : '14px';
         const accentColor = isHighlight ? 'color:var(--accent);' : '';
         const borderColor = isHighlight ? 'var(--accent)' : 'var(--border)';
         const ktBg = isKT ? 'background:color-mix(in srgb,var(--green) 10%,transparent);' : '';
 
-        return `<div class="timeline-event" ${clickEdit} style="display:flex;gap:10px;align-items:center;
-            padding:8px 12px 8px ${leftPad};border-left:3px solid ${borderColor};
-            margin-left:10px;border-radius:0 6px 6px 0;${ktBg}${e._type==='session'?'cursor:pointer;':''}"
+        return `<div class="timeline-event" ${clickEdit} style="display:flex;gap:8px;align-items:center;
+            padding:8px 10px 8px ${leftPad};border-left:3px solid ${borderColor};
+            margin-left:12px;border-radius:0 6px 6px 0;${ktBg}${e._type==='session'?'cursor:pointer;':''}"
             onmouseenter="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='1')"
             onmouseleave="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='0')">
-          <div style="font-size:${e.isMajor ? '16' : '14'}px;flex-shrink:0;">${e.icon}</div>
-          <div style="flex:1;">
-            <div style="font-size:12px;font-weight:${fontW};${accentColor}${isKT?'color:var(--green);':''}">${e.text}</div>
+          <div style="font-size:${iconSize};flex-shrink:0;width:22px;text-align:center;">${e.icon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:${fontSize};font-weight:${fontW};${accentColor}${isKT?'color:var(--green);':''}">${e.text}</div>
             ${dateUi}
           </div>
           ${delBtn}

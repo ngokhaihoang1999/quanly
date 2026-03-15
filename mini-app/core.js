@@ -405,8 +405,7 @@ async function executeKTToggle(profileId, newState, buoiThu) {
          body: JSON.stringify({
             profile_id: profileId,
             record_type: 'mo_kt',
-            content: { buoi_thu: parseInt(buoiThu) },
-            created_by: myCode
+            content: { buoi_thu: parseInt(buoiThu) }
          })
       });
       const postData = await postRes.text();
