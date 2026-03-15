@@ -268,14 +268,15 @@ async function openScheduleTVModal() {
     const ss = await sRes.json();
     if (ss[0]) nextNum = (ss[0].session_number || 0) + 1;
   } catch(e) {}
-  document.getElementById('stv_session_num').value = nextNum;
-  document.getElementById('stv_tool').value = '';
-  document.getElementById('stv_datetime').value = '';
-  document.getElementById('stv_tvv').value = '';
-  document.getElementById('stv_notes').value = '';
-  const subtitleEl = document.getElementById('stv_subtitle');
+  const el = id => document.getElementById(id);
+  if (el('stv_session_num')) el('stv_session_num').value = nextNum;
+  if (el('stv_tool')) el('stv_tool').value = '';
+  if (el('stv_datetime')) el('stv_datetime').value = '';
+  if (el('stv_tvv')) el('stv_tvv').value = '';
+  if (el('stv_notes')) el('stv_notes').value = '';
+  const subtitleEl = el('stv_subtitle');
   if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Lần ${nextNum}` : `Lần ${nextNum}`;
-  document.getElementById('scheduleTVModal').classList.add('open');
+  el('scheduleTVModal')?.classList.add('open');
 }
 
 async function saveScheduleTV() {

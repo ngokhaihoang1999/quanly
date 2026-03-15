@@ -71,10 +71,11 @@ Migrations: `supabase/migrations/` (chạy theo thứ tự timestamp)
 | Cột | Kiểu | Ghi chú |
 |-----|------|---------|
 | id | uuid (PK) | |
-| telegram_group_id | bigint (UNIQUE) | Telegram group ID |
+| telegram_group_id | bigint (UNIQUE partial) | Telegram group ID. NULL = placeholder (chưa gắn group thật) |
 | telegram_group_title | text | Tên group |
 | profile_id | uuid (FK→profiles) | Hồ sơ gắn (ON DELETE CASCADE) |
 | level | text | `tu_van` hoặc `bb` |
+| invite_link | text | Link mời vào group (bot tự lấy khi là admin) |
 | created_at / updated_at | timestamptz | |
 
 ### `fruit_roles` — Vai trò trong Group
