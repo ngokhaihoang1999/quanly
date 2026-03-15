@@ -89,13 +89,14 @@ async function loadJourney(profileId, currentPhase) {
       events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1, deletable: false });
     }
 
-    // 2. Sessions (Chốt TV)
+    // 2. Sessions (Chốt TV) — clickable for editing
     sessions.forEach(s => {
       events.push({
         date: s.created_at, icon: '📅',
         text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`,
         sortDate: new Date(s.created_at).getTime(),
-        deletable: false, _type: 'session', _id: s.id, _num: s.session_number
+        deletable: false, _type: 'session', _id: s.id, _num: s.session_number,
+        _session: s
       });
     });
 
@@ -160,9 +161,12 @@ async function loadJourney(profileId, currentPhase) {
             flex-shrink:0;padding:3px 9px;border:1px solid var(--text3);border-radius:6px;background:transparent;
             color:var(--text3);font-size:11px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>`;
         }
-        return `<div class="timeline-event" style="display:flex;gap:10px;align-items:center;
+        const clickEdit = e._type === 'session' && e._session
+          ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
+          : '';
+        return `<div class="timeline-event" ${clickEdit} style="display:flex;gap:10px;align-items:center;
             padding:8px 12px 8px 16px;border-left:3px solid ${isLast?'var(--accent)':'var(--border)'};
-            margin-left:10px;border-radius:0 6px 6px 0;"
+            margin-left:10px;border-radius:0 6px 6px 0;${e._type==='session'?'cursor:pointer;':''}"
             onmouseenter="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='1')"
             onmouseleave="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='0')">
           <div style="font-size:16px;flex-shrink:0;">${e.icon}</div>
@@ -259,24 +263,59 @@ async function undoLastPhaseChange() {
 // ══════════════════════════════════════════════════════════════════════════════
 // SCHEDULE TV (Chốt Tư Vấn)
 // ══════════════════════════════════════════════════════════════════════════════
-async function openScheduleTVModal() {
+let editingSessionId = null; // null = new, string = editing existing
+
+async function openScheduleTVModal(existingSession) {
   if (!currentProfileId) return;
   const p = allProfiles.find(x => x.id === currentProfileId);
-  let nextNum = 1;
-  try {
-    const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
-    const ss = await sRes.json();
-    if (ss[0]) nextNum = (ss[0].session_number || 0) + 1;
-  } catch(e) {}
   const el = id => document.getElementById(id);
-  if (el('stv_session_num')) el('stv_session_num').value = nextNum;
-  if (el('stv_tool')) el('stv_tool').value = '';
-  if (el('stv_datetime')) el('stv_datetime').value = '';
-  if (el('stv_tvv')) el('stv_tvv').value = '';
-  if (el('stv_notes')) el('stv_notes').value = '';
-  const subtitleEl = el('stv_subtitle');
-  if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Lần ${nextNum}` : `Lần ${nextNum}`;
+
+  if (existingSession) {
+    // Edit mode
+    editingSessionId = existingSession.id;
+    if (el('stv_session_num')) el('stv_session_num').value = existingSession.session_number || 1;
+    if (el('stv_tool')) el('stv_tool').value = existingSession.tool || '';
+    if (el('stv_datetime')) {
+      // Format datetime-local: YYYY-MM-DDTHH:MM
+      const dt = existingSession.scheduled_at || existingSession.created_at;
+      if (dt) {
+        const d = new Date(dt);
+        const pad = n => String(n).padStart(2,'0');
+        el('stv_datetime').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } else el('stv_datetime').value = '';
+    }
+    if (el('stv_tvv')) el('stv_tvv').value = existingSession.tvv_staff_code || '';
+    const subtitleEl = el('stv_subtitle');
+    if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Chỉnh sửa lần ${existingSession.session_number}` : `Chỉnh sửa`;
+    const btn = document.querySelector('#scheduleTVModal .save-btn');
+    if (btn) btn.textContent = '💾 Cập nhật Chốt TV';
+  } else {
+    // New mode
+    editingSessionId = null;
+    let nextNum = 1;
+    try {
+      const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
+      const ss = await sRes.json();
+      if (ss[0]) nextNum = (ss[0].session_number || 0) + 1;
+    } catch(e) {}
+    if (el('stv_session_num')) el('stv_session_num').value = nextNum;
+    if (el('stv_tool')) el('stv_tool').value = '';
+    if (el('stv_datetime')) el('stv_datetime').value = '';
+    if (el('stv_tvv')) el('stv_tvv').value = '';
+    const subtitleEl = el('stv_subtitle');
+    if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Lần ${nextNum}` : `Lần ${nextNum}`;
+    const btn = document.querySelector('#scheduleTVModal .save-btn');
+    if (btn) btn.textContent = '✅ Chốt Tư Vấn';
+  }
   el('scheduleTVModal')?.classList.add('open');
+}
+
+async function editSession(sessionId) {
+  try {
+    const res = await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}&select=*`);
+    const rows = await res.json();
+    if (rows[0]) openScheduleTVModal(rows[0]);
+  } catch(e) { showToast('❌ Lỗi tải phiên TV'); }
 }
 
 async function saveScheduleTV() {
@@ -287,24 +326,33 @@ async function saveScheduleTV() {
   const tool = document.getElementById('stv_tool').value.trim();
   const dt = document.getElementById('stv_datetime').value;
   const tvv = getStaffCodeFromInput('stv_tvv');
-  const notes = document.getElementById('stv_notes').value;
 
   if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
 
   if (btn) { btn.disabled = true; btn.textContent = '⌛ Đang lưu...'; }
 
   try {
-    await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
-      profile_id: currentProfileId, session_number: num, tool,
-      scheduled_at: dt || null, tvv_staff_code: tvv || null, notes: notes || null,
-      created_by: getEffectiveStaffCode()
-    })});
+    if (editingSessionId) {
+      // UPDATE existing session
+      await sbFetch(`/rest/v1/consultation_sessions?id=eq.${editingSessionId}`, { method:'PATCH', body: JSON.stringify({
+        session_number: num, tool,
+        scheduled_at: dt || null, tvv_staff_code: tvv || null
+      })});
+    } else {
+      // CREATE new session
+      await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
+        profile_id: currentProfileId, session_number: num, tool,
+        scheduled_at: dt || null, tvv_staff_code: tvv || null,
+        created_by: getEffectiveStaffCode()
+      })});
 
-    const p = allProfiles.find(x => x.id === currentProfileId);
-    if (p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
+      const p = allProfiles.find(x => x.id === currentProfileId);
+      if (p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
+        await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
+      }
     }
 
+    // Assign TVV role if provided (both create & edit)
     if (tvv) {
       try {
         const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
@@ -326,7 +374,8 @@ async function saveScheduleTV() {
     }
 
     closeModal('scheduleTVModal');
-    showToast('✅ Đã chốt Tư vấn');
+    showToast(editingSessionId ? '✅ Đã cập nhật Chốt TV' : '✅ Đã chốt Tư vấn');
+    editingSessionId = null;
     setTimeout(async () => {
       const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
       const ps = await pRes.json();
@@ -340,7 +389,7 @@ async function saveScheduleTV() {
     showToast('❌ Lỗi: ' + (e.message || 'Hệ thống bận'));
     console.error('saveScheduleTV:', e);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '✅ Chốt Tư Vấn'; }
+    if (btn) { btn.disabled = false; btn.textContent = editingSessionId ? '💾 Cập nhật Chốt TV' : '✅ Chốt Tư Vấn'; }
   }
 }
 
