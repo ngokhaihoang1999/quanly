@@ -75,7 +75,6 @@ async function loadJourney(profileId, currentPhase) {
     const sessions = await sessRes.json();
     const recs = await recRes.json();
     const hapjas = await hjRes.json();
-    console.log('[TIMELINE DEBUG] sessions:', sessions.length, 'recs:', recs.length, 'hapjas:', hapjas.length);
 
     let events = [];
 
@@ -127,66 +126,53 @@ async function loadJourney(profileId, currentPhase) {
     // Sort descending: newest (top) → oldest (bottom)
     events.sort((a,b) => b.sortDate - a.sortDate);
 
-    // ─── Inject KT events right AFTER their matching bien_ban ───
-    // (In descending list, "after" means the next row below the bien_ban)
-    console.log('[KT DEBUG] moKtRecords:', JSON.stringify(moKtRecords.map(m => ({id:m.id, buoi:m.content?.buoi_thu, type: typeof m.content?.buoi_thu}))));
+    // ─── Inject "Đã mở KT" right BEFORE the matching bien_ban ───
+    // In descending list, KT above buổi X means KT is inserted before buổi X in the array
     const finalEvents = [];
     for (const e of events) {
-      finalEvents.push(e);
-      // Check if this is a bien_ban with buoi number
+      // Before pushing this bien_ban, check if KT matches it
       if (e._rtype === 'bien_ban' && e._buoiThu != null && e._buoiThu !== '') {
-        // Match: compare as numbers (handles "5" vs 5)
         const eBuoi = Number(e._buoiThu);
         const ktMatch = moKtRecords.find(m => Number(m.content?.buoi_thu) === eBuoi);
         if (ktMatch) {
-          console.log('[KT DEBUG] ✅ MATCHED buoi', eBuoi, 'with mo_kt', ktMatch.id);
           matchedMoKtIds.add(ktMatch.id);
+          // Push KT BEFORE this bien_ban
           finalEvents.push({
-            date: ktMatch.created_at,
-            icon: '📖', text: 'Đã mở KT',
-            sortDate: new Date(e.date).getTime() - 1,
+            date: ktMatch.created_at, icon: '📖', text: 'Đã mở KT',
+            sortDate: new Date(e.date).getTime() + 1,
             deletable: false, _type: 'kt', _id: ktMatch.id, isMajor: true,
-            ktRecordId: ktMatch.id, ktStandalone: false
+            ktRecordId: ktMatch.id, hideDate: true
           });
         }
       }
+      finalEvents.push(e);
     }
 
-    // Handle unmatched mo_kt: find the best position based on buoi_thu
+    // Handle unmatched mo_kt: find closest position
     moKtRecords.forEach(m => {
       if (!matchedMoKtIds.has(m.id)) {
-        console.log('[KT DEBUG] ❌ unmatched mo_kt:', m.id, 'buoi:', m.content?.buoi_thu);
-        // Find the bien_ban with closest buoi_thu <= this one, insert after it
         const ktBuoi = Number(m.content?.buoi_thu) || 0;
         let insertIdx = -1;
+        // Find first bien_ban with buoi <= ktBuoi (descending order)
         for (let i = 0; i < finalEvents.length; i++) {
           if (finalEvents[i]._rtype === 'bien_ban') {
             const bb = Number(finalEvents[i]._buoiThu) || 0;
-            if (bb <= ktBuoi) { insertIdx = i + 1; break; } // descending order: first bb <= ktBuoi
+            if (bb <= ktBuoi) { insertIdx = i; break; }
           }
         }
         const ktEvent = {
-          date: m.created_at, icon: '📖', text: `Đã mở KT`,
-          sortDate: 0,
-          deletable: false, _type: 'kt', _id: m.id, isMajor: true, hideDate: true,
-          ktRecordId: m.id, ktStandalone: true
+          date: m.created_at, icon: '📖', text: 'Đã mở KT',
+          sortDate: 0, deletable: false, _type: 'kt', _id: m.id, isMajor: true,
+          hideDate: true, ktRecordId: m.id, ktStandalone: true
         };
-        if (insertIdx >= 0) {
-          finalEvents.splice(insertIdx, 0, ktEvent);
-        } else {
-          // No matching position found — put after all bien_ban (near top of BB section)
-          let lastBBIdx = -1;
-          for (let i = 0; i < finalEvents.length; i++) {
-            if (finalEvents[i]._rtype === 'bien_ban') lastBBIdx = i;
-          }
-          if (lastBBIdx >= 0) finalEvents.splice(lastBBIdx + 1, 0, ktEvent);
-          else finalEvents.unshift(ktEvent); // absolute fallback
+        if (insertIdx >= 0) finalEvents.splice(insertIdx, 0, ktEvent);
+        else {
+          // Put after last bien_ban
+          let lastBB = finalEvents.map((e,i) => e._rtype==='bien_ban'?i:-1).filter(i=>i>=0);
+          if (lastBB.length) finalEvents.splice(lastBB[lastBB.length-1]+1, 0, ktEvent);
         }
       }
     });
-
-    // NOTE: No legacy fallback — if is_kt_opened=true but no mo_kt record, 
-    // KT tag still shows on profile header; user can re-click to create proper record
 
     // ── Determine which SINGLE event gets the 🗑 delete button ──
     if (currentPhase === 'bb') {
