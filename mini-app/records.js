@@ -83,15 +83,13 @@ async function loadJourney(profileId, currentPhase) {
     const moKtRecords = recs.filter(r => r.record_type === 'mo_kt');
     const matchedMoKtIds = new Set();
 
-    // 1. Chakki — oldest anchor
+    // 1. Chakki — ALWAYS at bottom (oldest anchor)
     if (hapjas.length > 0) {
       const hjData = hapjas[0].data || {};
       const chakkiStr = hjData.ngay_chakki;
-      const chakkiMs = chakkiStr
-        ? new Date(chakkiStr.includes('T') ? chakkiStr : chakkiStr + 'T00:00:00').getTime()
-        : new Date(hapjas[0].created_at).getTime();
       const chakkiDate = chakkiStr || hapjas[0].created_at;
-      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1, deletable: false, isMajor: true, _type: 'chakki' });
+      // sortDate = 0 forces Chakki to always be last in descending sort
+      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: 0, deletable: false, isMajor: true, _type: 'chakki' });
     }
 
     // 2. Sessions (Chốt TV) — major events, clickable for editing
@@ -112,9 +110,8 @@ async function loadJourney(profileId, currentPhase) {
 
       if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
       else if (r.record_type === 'bien_ban')    { 
-        const n=r.content?.buoi_thu||''; 
-        icon='📋'; text=`Báo cáo BB${n?' buổi '+n:''}`;
-        _buoiThu = n;  // store original buoi_thu for KT matching
+        _buoiThu = r.content?.buoi_thu;  // store RAW value (could be number or string)
+        icon='📋'; text=`Báo cáo BB${_buoiThu?' buổi '+_buoiThu:''}`;
       }
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
@@ -130,16 +127,19 @@ async function loadJourney(profileId, currentPhase) {
     // Sort descending: newest (top) → oldest (bottom)
     events.sort((a,b) => b.sortDate - a.sortDate);
 
-    // ─── NOW inject KT events right after their matching bien_ban ───
-    console.log('[KT DEBUG] moKtRecords:', JSON.stringify(moKtRecords.map(m => ({id:m.id, buoi:m.content?.buoi_thu, buoi_type: typeof m.content?.buoi_thu}))));
-    console.log('[KT DEBUG] bien_ban events:', JSON.stringify(events.filter(e=>e._rtype==='bien_ban').map(e=>({buoi:e._buoiThu, buoi_type: typeof e._buoiThu}))));
+    // ─── Inject KT events right AFTER their matching bien_ban ───
+    // (In descending list, "after" means the next row below the bien_ban)
+    console.log('[KT DEBUG] moKtRecords:', JSON.stringify(moKtRecords.map(m => ({id:m.id, buoi:m.content?.buoi_thu, type: typeof m.content?.buoi_thu}))));
     const finalEvents = [];
     for (const e of events) {
       finalEvents.push(e);
-      if (e._rtype === 'bien_ban' && e._buoiThu) {
-        const ktMatch = moKtRecords.find(m => String(m.content?.buoi_thu) === String(e._buoiThu));
-        console.log('[KT DEBUG] checking bien_ban buoi', e._buoiThu, typeof e._buoiThu, '→ ktMatch:', !!ktMatch);
+      // Check if this is a bien_ban with buoi number
+      if (e._rtype === 'bien_ban' && e._buoiThu != null && e._buoiThu !== '') {
+        // Match: compare as numbers (handles "5" vs 5)
+        const eBuoi = Number(e._buoiThu);
+        const ktMatch = moKtRecords.find(m => Number(m.content?.buoi_thu) === eBuoi);
         if (ktMatch) {
+          console.log('[KT DEBUG] ✅ MATCHED buoi', eBuoi, 'with mo_kt', ktMatch.id);
           matchedMoKtIds.add(ktMatch.id);
           finalEvents.push({
             date: ktMatch.created_at,
@@ -152,10 +152,10 @@ async function loadJourney(profileId, currentPhase) {
       }
     }
 
-    // Append any unmatched mo_kt
+    // Append any unmatched mo_kt (show at top with buổi label)
     moKtRecords.forEach(m => {
       if (!matchedMoKtIds.has(m.id)) {
-        console.log('[KT DEBUG] unmatched mo_kt:', m.id, 'buoi:', m.content?.buoi_thu);
+        console.log('[KT DEBUG] ❌ unmatched mo_kt:', m.id, 'buoi:', m.content?.buoi_thu);
         finalEvents.unshift({
           date: m.created_at, icon: '📖', text: `Đã mở KT (buổi ${m.content?.buoi_thu || '?'})`,
           sortDate: Number.MAX_SAFE_INTEGER,
@@ -165,7 +165,7 @@ async function loadJourney(profileId, currentPhase) {
       }
     });
 
-    // If KT is set but no mo_kt record exists (legacy / bot-set), show at top
+    // Legacy fallback: KT is set via bot but no mo_kt record in DB
     const pInfo = allProfiles.find(x => x.id === profileId);
     if (pInfo?.is_kt_opened && moKtRecords.length === 0) {
       finalEvents.unshift({
