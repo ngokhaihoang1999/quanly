@@ -301,7 +301,9 @@ function openBBGroup(btnEl) {
   }
 
   // Priority 4: try to refresh invite link from DB (bypassing cache) then alert
-  sbFetch(`/rest/v1/fruit_groups?telegram_group_id=eq.${groupId}&select=invite_link&_t=${Date.now()}`).then(async r => {
+  sbFetch(`/rest/v1/fruit_groups?telegram_group_id=eq.${groupId}&select=invite_link`, {
+    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+  }).then(async r => {
     const rows = await r.json();
     const fresh = rows?.[0]?.invite_link;
     if (fresh) {
