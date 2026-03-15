@@ -152,28 +152,41 @@ async function loadJourney(profileId, currentPhase) {
       }
     }
 
-    // Append any unmatched mo_kt (show at top with buổi label)
+    // Handle unmatched mo_kt: find the best position based on buoi_thu
     moKtRecords.forEach(m => {
       if (!matchedMoKtIds.has(m.id)) {
         console.log('[KT DEBUG] ❌ unmatched mo_kt:', m.id, 'buoi:', m.content?.buoi_thu);
-        finalEvents.unshift({
-          date: m.created_at, icon: '📖', text: `Đã mở KT (buổi ${m.content?.buoi_thu || '?'})`,
-          sortDate: Number.MAX_SAFE_INTEGER,
+        // Find the bien_ban with closest buoi_thu <= this one, insert after it
+        const ktBuoi = Number(m.content?.buoi_thu) || 0;
+        let insertIdx = -1;
+        for (let i = 0; i < finalEvents.length; i++) {
+          if (finalEvents[i]._rtype === 'bien_ban') {
+            const bb = Number(finalEvents[i]._buoiThu) || 0;
+            if (bb <= ktBuoi) { insertIdx = i + 1; break; } // descending order: first bb <= ktBuoi
+          }
+        }
+        const ktEvent = {
+          date: m.created_at, icon: '📖', text: `Đã mở KT`,
+          sortDate: 0,
           deletable: false, _type: 'kt', _id: m.id, isMajor: true, hideDate: true,
           ktRecordId: m.id, ktStandalone: true
-        });
+        };
+        if (insertIdx >= 0) {
+          finalEvents.splice(insertIdx, 0, ktEvent);
+        } else {
+          // No matching position found — put after all bien_ban (near top of BB section)
+          let lastBBIdx = -1;
+          for (let i = 0; i < finalEvents.length; i++) {
+            if (finalEvents[i]._rtype === 'bien_ban') lastBBIdx = i;
+          }
+          if (lastBBIdx >= 0) finalEvents.splice(lastBBIdx + 1, 0, ktEvent);
+          else finalEvents.unshift(ktEvent); // absolute fallback
+        }
       }
     });
 
-    // Legacy fallback: KT is set via bot but no mo_kt record in DB
-    const pInfo = allProfiles.find(x => x.id === profileId);
-    if (pInfo?.is_kt_opened && moKtRecords.length === 0) {
-      finalEvents.unshift({
-        date: '', icon: '📖', text: 'Đã mở KT',
-        sortDate: Number.MAX_SAFE_INTEGER,
-        deletable: false, _type: 'kt', isMajor: true, hideDate: true, ktStandalone: true
-      });
-    }
+    // NOTE: No legacy fallback — if is_kt_opened=true but no mo_kt record, 
+    // KT tag still shows on profile header; user can re-click to create proper record
 
     // ── Determine which SINGLE event gets the 🗑 delete button ──
     if (currentPhase === 'bb') {

@@ -396,15 +396,12 @@ async function toggleKTStatus(profileId, newState) {
 async function executeKTToggle(profileId, newState, buoiThu) {
   try {
     const myCode = getEffectiveStaffCode();
-    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
-      method: 'PATCH',
-      headers: { 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ is_kt_opened: newState })
-    });
     
     if (newState) {
-      await sbFetch('/rest/v1/records', {
+      // STEP 1: Create mo_kt record FIRST
+      const postRes = await sbFetch('/rest/v1/records', {
          method: 'POST',
+         headers: { 'Prefer': 'return=representation' },
          body: JSON.stringify({
             profile_id: profileId,
             record_type: 'mo_kt',
@@ -412,10 +409,31 @@ async function executeKTToggle(profileId, newState, buoiThu) {
             created_by: myCode
          })
       });
+      const postData = await postRes.text();
+      console.log('[KT TOGGLE] POST mo_kt response:', postRes.status, postData);
+      if (!postRes.ok) {
+        showToast('❌ Lỗi tạo sự kiện Mở KT: ' + postData);
+        return;
+      }
+      
+      // STEP 2: Only update profile AFTER record is created successfully
+      const patchRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ is_kt_opened: true })
+      });
+      console.log('[KT TOGGLE] PATCH profile response:', patchRes.status);
+      
       showToast('✅ Đã xác nhận Mở KT!');
     } else {
+      // Delete mo_kt record and update profile
       await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.mo_kt`, { method: 'DELETE' });
-      showToast('❌ Đã đóng KT!');
+      await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ is_kt_opened: false })
+      });
+      showToast('✅ Đã hủy Mở KT!');
     }
     
     const idx = allProfiles.findIndex(x => x.id === profileId);
