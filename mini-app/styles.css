@@ -201,3 +201,63 @@
     .view-as-bar label { font-size: 11px; color: var(--red); font-weight: 600; margin: 0; white-space: nowrap; }
     .view-as-bar select { flex: 1; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(248,113,113,0.3); border-radius: 6px; color: var(--text); font-size: 12px; font-family: inherit; }
     .view-as-bar button { background: none; border: 1px solid rgba(248,113,113,0.3); color: var(--red); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+
+    /* ── Timeline Table ── */
+    .timeline-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .timeline-table td {
+      padding: 0;
+      border: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .tl-phase {
+      background: var(--surface2);
+      font-weight: 700;
+      white-space: nowrap;
+      padding: 0 !important;
+      min-width: 90px;
+      max-width: 160px;
+    }
+    .tl-phase-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+    }
+    .tl-phase-icon { font-size: 14px; flex-shrink: 0; }
+    .tl-phase-label { font-size: 12px; font-weight: 700; color: var(--text); }
+    .tl-phase-kt { background: color-mix(in srgb, var(--green) 10%, transparent); }
+    .tl-report {
+      padding: 0 !important;
+      min-height: 28px;
+    }
+    .tl-report-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+    }
+    .tl-report-icon { font-size: 12px; flex-shrink: 0; }
+    .tl-report-info { display: flex; align-items: baseline; gap: 6px; flex: 1; min-width: 0; }
+    .tl-report-label { font-size: 12px; font-weight: 500; color: var(--text); }
+    .tl-report-date { font-size: 10px; color: var(--text3); }
+    .tl-del-btn {
+      flex-shrink: 0;
+      padding: 2px 7px;
+      border: 1px solid var(--text3);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text3);
+      font-size: 10px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .tl-del-btn.visible { opacity: 1; }
+    .tl-del-btn:hover { color: var(--red); border-color: var(--red); }
+    .tl-row:hover .tl-del-btn { opacity: 1; }
+    .tl-row { transition: background 0.1s; }
+    .tl-row:hover td { background: color-mix(in srgb, var(--accent) 5%, transparent); }

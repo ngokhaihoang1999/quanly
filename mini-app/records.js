@@ -162,76 +162,97 @@ async function loadJourney(profileId, currentPhase) {
       }
     }
 
-    // Render
+    // ── Render as TABLE ──
     if (finalEvents.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
-      tlEl.innerHTML = finalEvents.map((e, i) => {
-        const d = e.date ? new Date(e.date).toLocaleDateString('vi-VN') : '';
-        const isHighlight = i === 0;
+      // Group events into sections: each major event starts a new section
+      // Reports (tu_van, bien_ban without KT) attach to the section above them
+      const sections = [];
+      for (const e of finalEvents) {
+        if (e.isMajor || e.hasKT || e._type === 'chakki') {
+          sections.push({ major: e, reports: [] });
+        } else {
+          // Attach to the last section, or create an orphan section
+          if (sections.length > 0) {
+            sections[sections.length - 1].reports.push(e);
+          } else {
+            sections.push({ major: null, reports: [e] });
+          }
+        }
+      }
 
-        let delBtn = '';
-        if (e.deletable) {
-          const fn = e._type === 'session'
-            ? `deleteEventSession('${e._id}',${e._num})`
-            : `deleteEventRecord('${e._id}','${e._rtype}')`;
-          delBtn = `<button onclick="event.stopPropagation();${fn}" title="Xóa sự kiện" class="event-del-btn" style="
-            flex-shrink:0;padding:3px 9px;border:1px solid var(--text3);border-radius:6px;background:transparent;
-            color:var(--text3);font-size:11px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>`;
+      // Helper: build a delete button
+      const makeDelBtn = (e, cls) => {
+        if (!e.deletable) return '';
+        const fn = e._type === 'session'
+          ? `deleteEventSession('${e._id}',${e._num})`
+          : `deleteEventRecord('${e._id}','${e._rtype}')`;
+        return `<button onclick="event.stopPropagation();${fn}" title="Xóa" class="${cls} tl-del-btn">🗑</button>`;
+      };
+
+      let rows = '';
+      sections.forEach((sec) => {
+        const m = sec.major;
+        const reps = sec.reports;
+        const totalRows = Math.max(1, reps.length);
+
+        // ── Phase cell (left column, rowspan) ──
+        let phaseCell = '';
+        if (m) {
+          let phaseContent = '';
+          const clickEdit = m._type === 'session' && m._session
+            ? `onclick="editSession('${m._id}')" style="cursor:pointer;"`
+            : '';
+
+          if (m.hasKT) {
+            // KT + BB combined
+            const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${m.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
+            phaseContent = `<div class="tl-phase-content tl-phase-kt" ${clickEdit}>
+              <span class="tl-phase-icon">📖</span>
+              <span class="tl-phase-label" style="color:var(--green);">Đã mở KT</span>
+              ${ktDel}
+            </div>`;
+          } else {
+            const delBtn = makeDelBtn(m, 'tl-phase-del');
+            phaseContent = `<div class="tl-phase-content" ${clickEdit}>
+              <span class="tl-phase-icon">${m.icon}</span>
+              <span class="tl-phase-label">${m.text}</span>
+              ${delBtn}
+            </div>`;
+          }
+          phaseCell = `<td class="tl-phase" rowspan="${totalRows}">${phaseContent}</td>`;
+        } else {
+          phaseCell = `<td class="tl-phase" rowspan="${totalRows}"></td>`;
         }
 
-        const clickEdit = e._type === 'session' && e._session
-          ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
-          : '';
-        const dateUi = (e.hideDate || !d) ? '' : `<div style="font-size:10px;color:var(--text3);margin-top:1px;">${d}</div>`;
-        const borderColor = isHighlight ? 'var(--accent)' : 'var(--border)';
-
-        // ── COMBINED KT+BB ROW: bien_ban that has KT ──
-        if (e.hasKT) {
-          const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="event-del-btn" style="
-            flex-shrink:0;padding:2px 7px;border:1px solid var(--text3);border-radius:6px;background:transparent;
-            color:var(--text3);font-size:10px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>`;
-          return `<div class="timeline-event" style="display:flex;align-items:center;
-              padding:7px 10px 7px 14px;border-left:3px solid ${borderColor};
-              margin-left:12px;border-radius:0 6px 6px 0;background:color-mix(in srgb,var(--green) 8%,transparent);"
-              onmouseenter="this.querySelectorAll('.event-del-btn').forEach(b=>b.style.opacity='1')"
-              onmouseleave="this.querySelectorAll('.event-del-btn').forEach(b=>b.style.opacity='0')">
-            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;min-width:100px;">
-              <span style="font-size:16px;">📖</span>
-              <span style="font-size:12px;font-weight:700;color:var(--green);">Đã mở KT</span>
-              ${ktDel}
-            </div>
-            <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
-              <span style="font-size:13px;">📋</span>
-              <div>
-                <div style="font-size:11px;font-weight:500;color:var(--text2);">${e.text}</div>
-                ${dateUi}
+        // ── Report rows (right column) ──
+        if (reps.length === 0) {
+          rows += `<tr class="tl-row" onmouseenter="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'))"
+            onmouseleave="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'))">
+            ${phaseCell}<td class="tl-report"></td></tr>`;
+        } else {
+          reps.forEach((r, ri) => {
+            const d = r.date ? new Date(r.date).toLocaleDateString('vi-VN') : '';
+            const delBtn = makeDelBtn(r, 'tl-report-del');
+            const reportContent = `<div class="tl-report-content">
+              <span class="tl-report-icon">${r.icon}</span>
+              <div class="tl-report-info">
+                <span class="tl-report-label">${r.text}</span>
+                ${d ? `<span class="tl-report-date">${d}</span>` : ''}
               </div>
               ${delBtn}
-            </div>
-          </div>`;
+            </div>`;
+            // First row of this section includes the phaseCell with rowspan
+            const phaseTd = ri === 0 ? phaseCell : '';
+            rows += `<tr class="tl-row" onmouseenter="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'));if(this.closest('tbody')){let g=this.closest('tbody').querySelectorAll('.tl-phase');g.forEach(c=>{if(c.rowSpan>1){let p=c.closest('tr');if(p)p.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'))}})}"
+              onmouseleave="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'));if(this.closest('tbody')){this.closest('tbody').querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'))}">
+              ${phaseTd}<td class="tl-report">${reportContent}</td></tr>`;
+          });
         }
+      });
 
-        // ── Normal rows ──
-        const leftPad = e.isMajor ? '14px' : '48px';
-        const fontW = e.isMajor ? '700' : '500';
-        const fontSize = e.isMajor ? '13px' : '12px';
-        const iconSize = e.isMajor ? '16px' : '14px';
-        const accentColor = isHighlight ? 'color:var(--accent);' : '';
-
-        return `<div class="timeline-event" ${clickEdit} style="display:flex;gap:8px;align-items:center;
-            padding:8px 10px 8px ${leftPad};border-left:3px solid ${borderColor};
-            margin-left:12px;border-radius:0 6px 6px 0;${e._type==='session'?'cursor:pointer;':''}"
-            onmouseenter="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='1')"
-            onmouseleave="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='0')">
-          <div style="font-size:${iconSize};flex-shrink:0;width:20px;text-align:center;">${e.icon}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:${fontSize};font-weight:${fontW};${accentColor}">${e.text}</div>
-            ${dateUi}
-          </div>
-          ${delBtn}
-        </div>`;
-      }).join('');
+      tlEl.innerHTML = `<table class="timeline-table"><tbody>${rows}</tbody></table>`;
     }
   } catch(e) { console.error('Journey error:', e); }
 }
