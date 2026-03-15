@@ -88,7 +88,7 @@ async function loadDashboard() {
     let approvedHapjaList = [], tvvFruits = [], gvbbFruits = [], bbGroups = [];
     if (unitStaffCodes.length > 0) {
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
-      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code,fruit_status),fruit_roles(staff_code,role_type))`);
+      const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code,fruit_status,is_kt_opened),fruit_roles(staff_code,role_type))`);
       unitRoles = await urRes.json();
       unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
       // Approved Hapja by unit members
@@ -150,7 +150,7 @@ async function loadDashboard() {
       const idsStr = allPids.map(id=>`"${id}"`).join(',');
       try {
         const [rRes, sRes] = await Promise.all([
-          sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+          sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&record_type=neq.mo_kt&select=profile_id,record_type,content,created_at&order=created_at.desc`),
           sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
         ]);
         const recs = await rRes.json(); recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
@@ -307,7 +307,7 @@ async function loadDashboard() {
     let myRoles = [], myHapja = 0;
     if (myCode) {
       // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
-      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase),fruit_roles(staff_code,role_type))`);
+      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened),fruit_roles(staff_code,role_type))`);
       myRoles = await rRes.json();
       const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id`);
       myHapja = (await mhRes.json()).length;
@@ -340,7 +340,7 @@ async function loadDashboard() {
         const ids = missingIds.map(id=>`"${id}"`).join(',');
         try {
           const [recRes, sRes2] = await Promise.all([
-            sbFetch(`/rest/v1/records?profile_id=in.(${ids})&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+            sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=neq.mo_kt&select=profile_id,record_type,content,created_at&order=created_at.desc`),
             sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
           ]);
           const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });

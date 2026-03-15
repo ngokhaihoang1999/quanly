@@ -10,6 +10,7 @@ function latestActivityLabel(rec, sess) {
     if (rt === 'bien_ban')    return `Báo cáo BB buổi ${c?.buoi_thu||''}`;
     if (rt === 'chot_bb')     return '🎓 Chốt BB';
     if (rt === 'chot_center') return '🏛️ Chốt Center';
+    if (rt === 'mo_kt')       return '📖 Đã mở KT';
     return rt;
   } else {
     return `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
