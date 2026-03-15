@@ -125,10 +125,11 @@ export async function handleCallback(update: any, staffData: any) {
   // menu_link_profile — Gắn hồ sơ
   if (cbData === 'menu_link_profile') {
     if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
-    // Lấy danh sách profile BB chưa gắn group
+    // Lấy danh sách profile BB chưa gắn group (exclude -Date.now() placeholders)
     const { data: linkedGroups } = await supabase.from('fruit_groups')
       .select('profile_id').not('profile_id', 'is', null)
-      .not('telegram_group_id', 'is', null);
+      .not('telegram_group_id', 'is', null)
+      .gt('telegram_group_id', -1000000000000);
     const linkedIds = linkedGroups?.map((g: any) => g.profile_id).filter(Boolean) || [];
     let query = supabase.from('profiles')
       .select('id, full_name, phase')

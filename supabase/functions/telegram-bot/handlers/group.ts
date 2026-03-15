@@ -45,10 +45,11 @@ export async function handleGroupChat(update: any) {
         `🍎 *Bot Checking Jondo đã vào group!*\n\nGroup này đã được đăng ký làm Group Trái quả.\nĐể quản lý, gõ lệnh: /menu`
       );
 
-      // Fetch unlinked BB-phase profiles (exclude those with a REAL telegram group)
+      // Fetch profiles with REAL group (exclude NULL and -Date.now() placeholders)
       const { data: linkedGroups } = await supabase.from('fruit_groups')
         .select('profile_id').not('profile_id', 'is', null)
-        .not('telegram_group_id', 'is', null);
+        .not('telegram_group_id', 'is', null)
+        .gt('telegram_group_id', -1000000000000);
       const linkedProfileIds = linkedGroups?.map((g: any) => g.profile_id) || [];
 
       let query = supabase.from('profiles')

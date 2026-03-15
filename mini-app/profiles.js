@@ -77,8 +77,10 @@ async function openProfile(p) {
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type)`);
     const fgs = await fgRes.json();
     (fgs||[]).forEach(fg => {
-      // Real group has a telegram_group_id (not null)
-      if (fg.telegram_group_id) {
+      // Real Telegram group ID: negative but > -1e12 (max ~13 digits)
+      // Old placeholder -Date.now() values are < -1e12 — skip those
+      const gid = fg.telegram_group_id;
+      if (gid && gid > -1000000000000) {
         hasRealBBGroup = true;
         realGroupId = fg.telegram_group_id;
         realGroupTitle = fg.telegram_group_title || 'Group BB';

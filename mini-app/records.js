@@ -31,8 +31,8 @@ async function loadJourney(profileId, currentPhase) {
     try {
       const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title`);
       const fgs = await fgRes.json();
-      // Find the one with a real Telegram group (not null)
-      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id) || null;
+      // Find real group (not null, not -Date.now() placeholder)
+      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id && g.telegram_group_id > -1000000000000) || null;
     } catch(e) {}
   }
 
