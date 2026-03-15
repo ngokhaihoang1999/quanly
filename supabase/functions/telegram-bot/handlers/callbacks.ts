@@ -1,6 +1,6 @@
 import { supabase, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
-import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getStaffByTelegramId } from "../telegram.ts";
+import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
 
 // ============ CALLBACK QUERY HANDLER ============
 
@@ -230,12 +230,27 @@ export async function handleCallback(update: any, staffData: any) {
       }
     }
 
-    // Update the real group row with profile_id
-    await supabase.from('fruit_groups').update({
-      profile_id: profileId, level: 'bb', updated_at: new Date().toISOString()
-    }).eq('id', fg.id);
+    // Try to auto-fetch invite link if not present
+    let finalLink = fg.invite_link;
+    if (!finalLink) {
+      finalLink = await exportChatInviteLink(chatId);
+    }
 
-    await sendText(chatId, `✅ Đã gắn hồ sơ *${profile.full_name}* cho group này.`);
+    // Update the real group row with profile_id and potential link
+    const updatePayload: any = {
+      profile_id: profileId, level: 'bb', updated_at: new Date().toISOString()
+    };
+    if (finalLink && finalLink !== fg.invite_link) {
+      updatePayload.invite_link = finalLink;
+    }
+
+    await supabase.from('fruit_groups').update(updatePayload).eq('id', fg.id);
+
+    let msg = `✅ Đã gắn hồ sơ *${profile.full_name}* cho group này.`;
+    if (!finalLink) {
+      msg += `\n\n⚠️ Bot chưa phải là admin (hoặc thiếu quyền Mời người dùng) nên không thể Tự Động lấy Link Group.\n\nHãy dùng lệnh sau để Mini App có thể mở Group:\n\`/setlink [Link_mời_vào_nhóm_này]\``;
+    }
+    await sendText(chatId, msg);
     return;
   }
 
