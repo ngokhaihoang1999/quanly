@@ -75,6 +75,7 @@ async function loadJourney(profileId, currentPhase) {
     const sessions = await sessRes.json();
     const recs = await recRes.json();
     const hapjas = await hjRes.json();
+    console.log('[TIMELINE DEBUG] sessions:', sessions.length, 'recs:', recs.length, 'hapjas:', hapjas.length);
 
     let events = [];
 
