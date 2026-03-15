@@ -114,8 +114,8 @@ async function loadJourney(profileId, currentPhase) {
       });
     });
 
-    // Sort ascending: oldest (top) → newest (bottom)
-    events.sort((a,b) => a.sortDate - b.sortDate);
+    // Sort descending: newest (top) → oldest (bottom)
+    events.sort((a,b) => b.sortDate - a.sortDate);
 
     // ── Determine which SINGLE event gets the 🗑 delete button ──
     // Rules:
@@ -124,20 +124,20 @@ async function loadJourney(profileId, currentPhase) {
     //   Phase center: no individual delete — use "Hoàn tác" button
     // Phase-change events (chot_bb, chot_center) are never individually deletable
     if (currentPhase === 'bb') {
-      for (let i = events.length - 1; i >= 0; i--) {
+      for (let i = 0; i < events.length; i++) {
         if (events[i]._type === 'record' && events[i]._rtype === 'bien_ban') {
           events[i].deletable = true; break;
         }
       }
     } else if (currentPhase === 'tu_van') {
       let found = false;
-      for (let i = events.length - 1; i >= 0; i--) {
+      for (let i = 0; i < events.length; i++) {
         if (events[i]._type === 'record' && events[i]._rtype === 'tu_van') {
           events[i].deletable = true; found = true; break;
         }
       }
       if (!found) {
-        for (let i = events.length - 1; i >= 0; i--) {
+        for (let i = 0; i < events.length; i++) {
           if (events[i]._type === 'session') {
             events[i].deletable = true; break;
           }
@@ -151,7 +151,7 @@ async function loadJourney(profileId, currentPhase) {
     } else {
       tlEl.innerHTML = events.map((e, i) => {
         const d = new Date(e.date).toLocaleDateString('vi-VN');
-        const isLast = i === events.length - 1;
+        const isLast = i === 0;
         let delBtn = '';
         if (e.deletable) {
           const fn = e._type === 'session'
