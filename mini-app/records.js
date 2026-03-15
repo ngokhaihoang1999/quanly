@@ -78,6 +78,16 @@ async function loadJourney(profileId, currentPhase) {
 
     let events = [];
 
+    // 0. "Đã mở KT" event if true
+    const pInfo = allProfiles.find(x => x.id === profileId);
+    if (pInfo?.is_kt_opened) {
+      events.push({
+        date: '', icon: '📖', text: 'Đã mở KT',
+        sortDate: Number.MAX_SAFE_INTEGER, // always on top
+        deletable: false, _type: 'kt', isMajor: true, hideDate: true
+      });
+    }
+
     // 1. Chakki — always first, never deletable
     if (hapjas.length > 0) {
       const hjData = hapjas[0].data || {};
@@ -86,7 +96,7 @@ async function loadJourney(profileId, currentPhase) {
         ? new Date(chakkiStr.includes('T') ? chakkiStr : chakkiStr + 'T00:00:00').getTime()
         : new Date(hapjas[0].created_at).getTime();
       const chakkiDate = chakkiStr || hapjas[0].created_at;
-      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1, deletable: false });
+      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: chakkiMs - 1, deletable: false, isMajor: true });
     }
 
     // 2. Sessions (Chốt TV) — clickable for editing
@@ -96,21 +106,21 @@ async function loadJourney(profileId, currentPhase) {
         text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`,
         sortDate: new Date(s.created_at).getTime(),
         deletable: false, _type: 'session', _id: s.id, _num: s.session_number,
-        _session: s
+        _session: s, isMajor: true
       });
     });
 
     // 3. Records (BC TV, BC BB, Chốt BB, Chốt Center)
     recs.forEach(r => {
-      let icon, text;
+      let icon, text, isMajor = false;
       if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
       else if (r.record_type === 'bien_ban')    { const n=r.content?.buoi_thu||''; icon='📋'; text=`Báo cáo BB${n?' buổi '+n:''}`; }
-      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; }
-      else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; }
+      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
+      else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else { icon='📌'; text=r.record_type; }
       events.push({
         date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime(),
-        deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type
+        deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type, isMajor
       });
     });
 
@@ -164,15 +174,16 @@ async function loadJourney(profileId, currentPhase) {
         const clickEdit = e._type === 'session' && e._session
           ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
           : '';
+        const dateUi = e.hideDate ? '' : `<div style="font-size:10px;color:var(--text3);margin-top:1px;">${d}</div>`;
         return `<div class="timeline-event" ${clickEdit} style="display:flex;gap:10px;align-items:center;
-            padding:8px 12px 8px 16px;border-left:3px solid ${isLast?'var(--accent)':'var(--border)'};
+            padding:8px 12px 8px ${e.isMajor ? '16px' : '44px'};border-left:3px solid ${isLast?'var(--accent)':'var(--border)'};
             margin-left:10px;border-radius:0 6px 6px 0;${e._type==='session'?'cursor:pointer;':''}"
             onmouseenter="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='1')"
             onmouseleave="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='0')">
           <div style="font-size:16px;flex-shrink:0;">${e.icon}</div>
           <div style="flex:1">
-            <div style="font-size:12px;font-weight:600;${isLast?'color:var(--accent);':''}">${e.text}</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:1px;">${d}</div>
+            <div style="font-size:12px;font-weight:${e.isMajor ? '700' : '600'};${isLast?'color:var(--accent);':''}">${e.text}</div>
+            ${dateUi}
           </div>
           ${delBtn}
         </div>`;
