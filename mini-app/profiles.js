@@ -300,16 +300,17 @@ function openBBGroup(btnEl) {
     } catch(e) {}
   }
 
-  // Priority 4: try to refresh invite link from DB then alert
-  sbFetch(`/rest/v1/fruit_groups?telegram_group_id=eq.${groupId}&select=invite_link`).then(async r => {
+  // Priority 4: try to refresh invite link from DB (bypassing cache) then alert
+  sbFetch(`/rest/v1/fruit_groups?telegram_group_id=eq.${groupId}&select=invite_link&_t=${Date.now()}`).then(async r => {
     const rows = await r.json();
     const fresh = rows?.[0]?.invite_link;
     if (fresh) {
+      btnEl.dataset.link = fresh; // Cập nhật luôn cho lần click sau đỡ fetch
       tgWA ? Telegram.WebApp.openTelegramLink(fresh) : window.open(fresh, '_blank');
     } else {
-      alert('⚠️ Chưa có link mời vào group.\nHãy nhờ admin gõ /menu trong group để bot lấy link.');
+      alert('⚠️ Chưa có link mời vào group.\n\nCách xử lý:\nTrong Group Telegram, Admin hãy copy Link Mời (Settings > Invite Link) và gửi lệnh:\n/setlink [Link_vừa_copy]');
     }
   }).catch(() => {
-    alert('⚠️ Chưa có link mời vào group.\nHãy nhờ admin gõ /menu trong group để bot lấy link.');
+    alert('⚠️ Lỗi kiểm tra link. Hãy thử đóng Mini App và mở lại.');
   });
 }
