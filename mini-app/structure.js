@@ -54,7 +54,7 @@ function populateStaffSelect(selId, ph) {
   if(!s) return;
   s.value = '';
   s.placeholder = ph || 'Nhập mã hoặc tên TĐ...';
-  s.setAttribute('list', 'staffSuggest');
+  s.setAttribute('data-list', 'staffSuggest');
 }
 
 function openAddAreaModal() {
@@ -259,7 +259,7 @@ function renderTeamMembers(teamItem) {
   
   if (addSel) {
     addSel.value = '';
-    addSel.setAttribute('list', dListId);
+    addSel.setAttribute('data-list', dListId);
   }
 }
 async function updateStructure() {

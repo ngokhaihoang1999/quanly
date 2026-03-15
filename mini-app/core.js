@@ -50,8 +50,8 @@ function setStaffInputValue(id, code) {
 
 function initCustomAutocomplete() {
   document.addEventListener('focusin', e => {
-    if (e.target.tagName === 'INPUT' && (e.target.hasAttribute('list') || e.target.dataset.acWrap)) {
-      const listA = e.target.getAttribute('list');
+    if (e.target.tagName === 'INPUT' && (e.target.hasAttribute('data-list') || e.target.dataset.acWrap)) {
+      const listA = e.target.getAttribute('data-list');
       if (listA === 'staffSuggest' || listA === 'teamAddDatalist' || e.target.dataset.acWrap) {
         attachAutocomplete(e.target);
       }
@@ -68,8 +68,7 @@ function attachAutocomplete(input) {
   input.parentNode.insertBefore(wrapper, input);
   wrapper.appendChild(input);
   
-  const listAttr = input.getAttribute('list') || 'staffSuggest';
-  input.removeAttribute('list');
+  const listAttr = input.getAttribute('data-list') || 'staffSuggest';
   input.setAttribute('autocomplete', 'off');
   
   const listEl = document.createElement('div');
@@ -107,8 +106,13 @@ function attachAutocomplete(input) {
     listEl.classList.add('show');
   };
   
-  input.addEventListener('focus', () => renderList(input.value));
-  input.addEventListener('input', () => renderList(input.value));
+  input.addEventListener('focus', () => {
+    if (input.value.trim().length > 0) renderList(input.value);
+  });
+  input.addEventListener('input', () => {
+    if (input.value.trim().length === 0) listEl.classList.remove('show');
+    else renderList(input.value);
+  });
   
   input.addEventListener('blur', () => {
     blurTimeout = setTimeout(() => listEl.classList.remove('show'), 200);
