@@ -182,8 +182,34 @@ export async function handleGroupChat(update: any) {
       `📋 *Thông tin Group Trái quả*\n\n` +
       `🍎 Trái: *${profileName}*\n` +
       `📊 Giai đoạn: *${levelLabel}*\n\n` +
-      `👥 Vai trò:\n${rolesText}`
+      `👥 Vai trò:\n${rolesText}` +
+      (fg.invite_link ? `\n\n🔗 Link: ${fg.invite_link}` : '\n\n⚠️ Chưa có link mời. Gõ `/setlink [link]` để thêm.')
     );
+    return;
+  }
+
+  // /setlink [url] — Cập nhật invite link thủ công (creator hoặc admin)
+  if (text.startsWith('/setlink') || text.startsWith('/setlink@')) {
+    const admins = await getChatAdmins(chatId);
+    const isGroupAdmin = admins.some((a: any) => a.user.id === telegramId);
+    if (!isGroupAdmin) {
+      await sendText(chatId, `⛔ Chỉ admin của group mới được cập nhật link.`);
+      return;
+    }
+    const parts = text.split(' ');
+    const link = parts[1]?.trim();
+    if (!link || !link.startsWith('https://t.me/')) {
+      await sendText(chatId, `❌ Link không hợp lệ.\nCú pháp: \`/setlink https://t.me/+xxxxxxxx\``);
+      return;
+    }
+    const { error } = await supabase.from('fruit_groups')
+      .update({ invite_link: link, updated_at: new Date().toISOString() })
+      .eq('telegram_group_id', chatId);
+    if (error) {
+      await sendText(chatId, `❌ Lỗi lưu link: ${error.message}`);
+    } else {
+      await sendText(chatId, `✅ Đã cập nhật link mời:\n${link}\n\nGiờ nút "Mở Group" trong Mini App sẽ hoạt động.`);
+    }
     return;
   }
 
