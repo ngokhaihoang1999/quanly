@@ -172,7 +172,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">🍎 Check Hapja - Bảng Thông Tin Về Trái</div>
   <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:72vh;">
-    <div class="field-group"><label>* NDD (mã TĐ)</label><select id="hj_ndd" style="padding:10px 12px;"><option value="">Chọn NDD...</option></select></div>
+    <div class="field-group"><label>* NDD (mã TĐ)</label><input type="text" id="hj_ndd" list="staffSuggest" style="padding:10px 12px;" placeholder="Tìm NDD (Mã/Tên)..." /></div>
     <div class="grid-2">
       <div class="field-group"><label>* Ngày Chakki</label><input type="date" id="hj_ngay" /></div>
       <div class="field-group"><label>* Concept</label><input type="text" id="hj_concept" placeholder="..." /></div>
@@ -256,8 +256,8 @@
   <div style="display:flex;flex-direction:column;gap:14px;">
     <div class="field-group"><label>Tên *</label><input type="text" id="struct_name" placeholder="Nhập tên..." /></div>
     <div class="field-group" id="struct_parent_wrap" style="display:none;"><label id="struct_parent_label">Thuộc</label><select id="struct_parent" style="padding:10px 12px;"><option value="">Chọn...</option></select></div>
-    <div class="field-group" id="struct_manager_wrap"><label id="struct_manager_label">Chỉ định YJYN</label><select id="struct_manager" style="padding:10px 12px;"><option value="">Chọn TĐ...</option></select></div>
-    <div class="field-group" id="struct_manager2_wrap" style="display:none;"><label id="struct_manager2_label">BGYJN (Tổ phó)</label><select id="struct_manager2" style="padding:10px 12px;"><option value="">Chọn TĐ...</option></select></div>
+    <div class="field-group" id="struct_manager_wrap"><label id="struct_manager_label">Chỉ định YJYN</label><input type="text" id="struct_manager" list="staffSuggest" style="padding:10px 12px;" placeholder="Chọn TĐ..." /></div>
+    <div class="field-group" id="struct_manager2_wrap" style="display:none;"><label id="struct_manager2_label">BGYJN (Tổ phó)</label><input type="text" id="struct_manager2" list="staffSuggest" style="padding:10px 12px;" placeholder="Chọn TĐ..." /></div>
     <input type="hidden" id="struct_type" value="area" />
     <button class="save-btn" onclick="saveStructure()">✅ Tạo</button>
     <button onclick="closeModal('structureModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
@@ -270,14 +270,14 @@
   <div class="modal-title" id="editStructTitle">✏️ Chỉnh sửa</div>
   <div style="display:flex;flex-direction:column;gap:14px;">
     <div class="field-group"><label>Tên</label><input type="text" id="edit_struct_name" /></div>
-    <div class="field-group" id="edit_mgr1_wrap"><label id="edit_mgr1_label">Quản lý</label><select id="edit_mgr1" style="padding:10px 12px;"><option value="">Không</option></select></div>
-    <div class="field-group" id="edit_mgr2_wrap" style="display:none;"><label id="edit_mgr2_label">BGYJN</label><select id="edit_mgr2" style="padding:10px 12px;"><option value="">Không</option></select></div>
+    <div class="field-group" id="edit_mgr1_wrap"><label id="edit_mgr1_label">Quản lý</label><input type="text" id="edit_mgr1" list="staffSuggest" style="padding:10px 12px;" placeholder="Tìm quản lý (Mã/Tên)..." /></div>
+    <div class="field-group" id="edit_mgr2_wrap" style="display:none;"><label id="edit_mgr2_label">BGYJN</label><input type="text" id="edit_mgr2" list="staffSuggest" style="padding:10px 12px;" placeholder="Tìm quản lý (Mã/Tên)..." /></div>
     <!-- Members section (only for teams) -->
     <div id="edit_members_wrap" style="display:none;">
       <label style="margin-bottom:8px;">👥 Thành viên</label>
       <div id="edit_members_list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
       <div style="display:flex;gap:8px;">
-        <select id="edit_add_member" style="flex:1;padding:8px 10px;font-size:13px;"><option value="">Chọn TĐ để thêm...</option></select>
+        <input type="text" id="edit_add_member" list="staffSuggest" style="flex:1;padding:8px 10px;font-size:13px;" placeholder="Tìm TĐ để thêm..." />
         <button onclick="addMemberToTeam()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Thêm</button>
       </div>
     </div>

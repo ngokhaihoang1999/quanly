@@ -52,28 +52,9 @@ async function loadStructure() {
 function populateStaffSelect(selId, ph) {
   let s = document.getElementById(selId);
   if(!s) return;
-  // Create global datalist once
-  if (!document.getElementById('globalStaffDatalist')) {
-    const dl = document.createElement('datalist');
-    dl.id = 'globalStaffDatalist';
-    document.body.appendChild(dl);
-  }
-  const dl = document.getElementById('globalStaffDatalist');
-  dl.innerHTML = allStaff.map(x=>`<option value="${x.staff_code} - ${x.full_name}"></option>`).join('');
-
-  if (s.tagName === 'SELECT') {
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.id = s.id;
-    inp.className = s.className;
-    inp.style.cssText = s.style.cssText;
-    inp.placeholder = ph || 'Nh\u1eadp T\u0110 k\u00ecm ki\u1ebfm...';
-    inp.setAttribute('list', 'globalStaffDatalist');
-    if(s.onchange) inp.onchange = s.onchange;
-    s.parentNode.replaceChild(inp, s);
-  } else {
-    s.placeholder = ph || 'Nh\u1eadp mã h\u1eb7c t\u00ean T\u0110...';
-  }
+  s.value = '';
+  s.placeholder = ph || 'Nhập mã hoặc tên TĐ...';
+  s.setAttribute('list', 'staffSuggest');
 }
 
 function openAddAreaModal() {
@@ -274,11 +255,12 @@ function renderTeamMembers(teamItem) {
   let addSel = document.getElementById('edit_add_member');
   const dListId = 'teamAddDatalist';
   if (!document.getElementById(dListId)) { const dl = document.createElement('datalist'); dl.id = dListId; document.body.appendChild(dl); }
-  document.getElementById(dListId).innerHTML = allStaff.filter(s => !memberCodes.includes(s.staff_code)).map(s => `<option value="${s.staff_code} - ${s.full_name}"></option>`).join('');
-  if (addSel.tagName === 'SELECT') {
-    const inp = document.createElement('input'); inp.type='text'; inp.id=addSel.id; inp.className=addSel.className; inp.style.cssText=addSel.style.cssText; inp.placeholder='Ch\u1ecdn T\u0110 k\u00ecm ki\u1ebfm...'; inp.setAttribute('list', dListId);
-    addSel.parentNode.replaceChild(inp, addSel);
-  } else { addSel.value = ''; }
+  document.getElementById(dListId).innerHTML = allStaff.filter(s => !memberCodes.includes(s.staff_code)).map(s => `<option value="${s.full_name} (${s.staff_code})"></option>`).join('');
+  
+  if (addSel) {
+    addSel.value = '';
+    addSel.setAttribute('list', dListId);
+  }
 }
 async function updateStructure() {
   const id = document.getElementById('edit_struct_id').value;

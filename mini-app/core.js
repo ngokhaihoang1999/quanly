@@ -42,12 +42,7 @@ function setStaffInputValue(id, code) {
   if (!code) { el.value = ''; return; }
   const s = allStaff.find(x => x.staff_code === code);
   if (s) {
-    // If it's the structure edit modal, it likely uses the "CODE - NAME" format
-    if (id.startsWith('edit_') || id.startsWith('struct_')) {
-      el.value = `${s.staff_code} - ${s.full_name}`;
-    } else {
-      el.value = `${s.full_name} (${s.staff_code})`;
-    }
+    el.value = `${s.full_name} (${s.staff_code})`;
   } else {
     el.value = code;
   }

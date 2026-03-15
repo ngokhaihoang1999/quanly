@@ -2,11 +2,8 @@
 function canCreateHapja(pos) { return true; } // Ai cũng có thể tạo Hapja
 function openCheckHapjaModal() {
   document.getElementById('checkHapjaModal').classList.add('open');
-  // Populate NDD select with staff codes
   const sel = document.getElementById('hj_ndd');
-  if (sel && allStaff.length) {
-    sel.innerHTML = '<option value="">Ch\u1ecdn NDD...</option>' + allStaff.map(s=>`<option value="${s.staff_code}">${s.full_name} (${s.staff_code})</option>`).join('');
-  }
+  if (sel) sel.value = '';
 }
 async function saveCheckHapja() {
   const ndd = getStaffCodeFromInput('hj_ndd');
