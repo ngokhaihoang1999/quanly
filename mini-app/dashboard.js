@@ -110,10 +110,12 @@ async function loadDashboard() {
           gvbbFruits.push(r);
         }
       });
-      // BB groups where NDD is a unit member
+      // BB groups (real telegram group) where ANY unit member has a role
       const bbSeen = new Set();
       unitRoles.forEach(r => {
-        if (r.role_type === 'ndd' && unitStaffCodes.includes(r.staff_code) && r.fruit_groups?.level === 'bb' && !bbSeen.has(r.fruit_group_id)) {
+        const fg = r.fruit_groups || {};
+        const isRealGroup = fg.telegram_group_id && fg.telegram_group_id > -1000000000000;
+        if (unitStaffCodes.includes(r.staff_code) && isRealGroup && fg.level === 'bb' && !bbSeen.has(r.fruit_group_id)) {
           bbSeen.add(r.fruit_group_id);
           bbGroups.push(r);
         }
