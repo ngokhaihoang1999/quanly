@@ -108,9 +108,14 @@ async function loadJourney(profileId, currentPhase) {
     // 3. Records (BC TV, BC BB, Chốt BB, Chốt Center)
     recs.forEach(r => {
       let icon, text, isMajor = false;
+      let _buoiThu = null;
 
       if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
-      else if (r.record_type === 'bien_ban')    { const n=r.content?.buoi_thu||''; icon='📋'; text=`Báo cáo BB${n?' buổi '+n:''}`; }
+      else if (r.record_type === 'bien_ban')    { 
+        const n=r.content?.buoi_thu||''; 
+        icon='📋'; text=`Báo cáo BB${n?' buổi '+n:''}`;
+        _buoiThu = n;  // store original buoi_thu for KT matching
+      }
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; /* handled separately below */ }
@@ -118,7 +123,7 @@ async function loadJourney(profileId, currentPhase) {
 
       events.push({
         date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime(),
-        deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type, isMajor
+        deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type, isMajor, _buoiThu
       });
     });
 
@@ -126,31 +131,33 @@ async function loadJourney(profileId, currentPhase) {
     events.sort((a,b) => b.sortDate - a.sortDate);
 
     // ─── NOW inject KT events right after their matching bien_ban ───
-    // We iterate a copy, build a final list
+    console.log('[KT DEBUG] moKtRecords:', JSON.stringify(moKtRecords.map(m => ({id:m.id, buoi:m.content?.buoi_thu, buoi_type: typeof m.content?.buoi_thu}))));
+    console.log('[KT DEBUG] bien_ban events:', JSON.stringify(events.filter(e=>e._rtype==='bien_ban').map(e=>({buoi:e._buoiThu, buoi_type: typeof e._buoiThu}))));
     const finalEvents = [];
     for (const e of events) {
       finalEvents.push(e);
-      if (e._type === 'record' && e._rtype === 'bien_ban') {
-        const buoiNum = e.text.match(/buổi (\d+)/)?.[1];
-        const ktMatch = moKtRecords.find(m => String(m.content?.buoi_thu) === String(buoiNum));
+      if (e._rtype === 'bien_ban' && e._buoiThu) {
+        const ktMatch = moKtRecords.find(m => String(m.content?.buoi_thu) === String(e._buoiThu));
+        console.log('[KT DEBUG] checking bien_ban buoi', e._buoiThu, typeof e._buoiThu, '→ ktMatch:', !!ktMatch);
         if (ktMatch) {
           matchedMoKtIds.add(ktMatch.id);
           finalEvents.push({
             date: ktMatch.created_at,
             icon: '📖', text: 'Đã mở KT',
-            sortDate: new Date(e.date).getTime() - 1, // just below bien_ban
-            deletable: false, _type: 'kt', _id: ktMatch.id, isMajor: false,
+            sortDate: new Date(e.date).getTime() - 1,
+            deletable: false, _type: 'kt', _id: ktMatch.id, isMajor: true,
             ktRecordId: ktMatch.id, ktStandalone: false
           });
         }
       }
     }
 
-    // Append any unmatched mo_kt (shouldn't happen normally)
+    // Append any unmatched mo_kt
     moKtRecords.forEach(m => {
       if (!matchedMoKtIds.has(m.id)) {
+        console.log('[KT DEBUG] unmatched mo_kt:', m.id, 'buoi:', m.content?.buoi_thu);
         finalEvents.unshift({
-          date: m.created_at, icon: '📖', text: 'Đã mở KT',
+          date: m.created_at, icon: '📖', text: `Đã mở KT (buổi ${m.content?.buoi_thu || '?'})`,
           sortDate: Number.MAX_SAFE_INTEGER,
           deletable: false, _type: 'kt', _id: m.id, isMajor: true, hideDate: true,
           ktRecordId: m.id, ktStandalone: true
