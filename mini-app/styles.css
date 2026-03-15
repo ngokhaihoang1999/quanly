@@ -243,7 +243,14 @@
     .tl-icon { font-size: 14px; flex-shrink: 0; }
     .tl-label { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
     .tl-label-kt { color: var(--green); font-weight: 700; }
+    .tl-left-info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; overflow: hidden; }
+    .tl-left-info .tl-label { overflow: hidden; text-overflow: ellipsis; }
     .tl-date { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+    /* Clickable reports */
+    .tl-clickable { cursor: pointer; }
+    .tl-clickable:hover .tl-label { color: var(--accent); text-decoration: underline; }
+    .tl-report-row[onclick] { cursor: pointer; }
+    .tl-report-row[onclick]:hover .tl-label { color: var(--accent); text-decoration: underline; }
     /* Delete button */
     .tl-del-btn {
       flex-shrink: 0;

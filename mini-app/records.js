@@ -187,19 +187,26 @@ async function loadJourney(profileId, currentPhase) {
           ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
           : '';
 
+        // Click-to-view for report records
+        const viewAttr = (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban'))
+          ? `onclick="viewRecord('${e._id}','${e._rtype}')" style="cursor:pointer;"`
+          : '';
+
         if (e.hasKT) {
           // ── SPLIT ROW: "Đã mở KT" left + BB report right ──
           const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
           html += `<div class="tl-item tl-kt" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
             <div class="tl-left">
               <span class="tl-icon">📖</span>
-              <span class="tl-label tl-label-kt">Đã mở KT</span>
+              <div class="tl-left-info">
+                <span class="tl-label tl-label-kt">Đã mở KT</span>
+                ${d ? `<span class="tl-date">${d}</span>` : ''}
+              </div>
               ${ktDel}
             </div>
-            <div class="tl-right">
+            <div class="tl-right tl-clickable" ${viewAttr}>
               <span class="tl-icon">${e.icon}</span>
               <span class="tl-label">${e.text}</span>
-              ${d ? `<span class="tl-date">${d}</span>` : ''}
               ${delBtn}
             </div>
           </div>`;
@@ -208,14 +215,17 @@ async function loadJourney(profileId, currentPhase) {
           html += `<div class="tl-item tl-major" ${clickAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
             <div class="tl-left">
               <span class="tl-icon">${e.icon}</span>
-              <span class="tl-label">${e.text}</span>
+              <div class="tl-left-info">
+                <span class="tl-label">${e.text}</span>
+                ${d ? `<span class="tl-date">${d}</span>` : ''}
+              </div>
               ${delBtn}
             </div>
             <div class="tl-right"></div>
           </div>`;
         } else {
           // ── REPORT: right column only ──
-          html += `<div class="tl-item tl-report-row" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          html += `<div class="tl-item tl-report-row" ${viewAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
             <div class="tl-left"></div>
             <div class="tl-right">
               <span class="tl-icon">${e.icon}</span>
@@ -231,6 +241,18 @@ async function loadJourney(profileId, currentPhase) {
       tlEl.innerHTML = html;
     }
   } catch(e) { console.error('Journey error:', e); }
+}
+
+// ── View a report record (fetch content & open modal) ──
+async function viewRecord(recordId, recordType) {
+  try {
+    const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
+    const rows = await res.json();
+    if (rows[0]) {
+      currentRecordId = rows[0].id;
+      openAddRecordModal(recordType, rows[0].content);
+    }
+  } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
 
 // ── Helper: refresh current profile view and global UI ──
