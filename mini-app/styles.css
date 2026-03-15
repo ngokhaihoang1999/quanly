@@ -268,3 +268,11 @@
     .tl-del-btn.visible { opacity: 1; }
     .tl-del-btn:hover { color: var(--red); border-color: var(--red); }
     .tl-item:hover .tl-del-btn { opacity: 1; }
+    
+    /* Custom Autocomplete */
+    .ac-wrap { position: relative; width: 100%; }
+    .ac-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none; }
+    .ac-list.show { display: block; }
+    .ac-item { padding: 10px 12px; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--border); cursor: pointer; }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent2); font-weight: 600; }

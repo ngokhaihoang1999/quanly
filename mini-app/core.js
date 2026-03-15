@@ -48,6 +48,85 @@ function setStaffInputValue(id, code) {
   }
 }
 
+function initCustomAutocomplete() {
+  document.addEventListener('focusin', e => {
+    if (e.target.tagName === 'INPUT' && (e.target.hasAttribute('list') || e.target.dataset.acWrap)) {
+      const listA = e.target.getAttribute('list');
+      if (listA === 'staffSuggest' || listA === 'teamAddDatalist' || e.target.dataset.acWrap) {
+        attachAutocomplete(e.target);
+      }
+    }
+  });
+}
+
+function attachAutocomplete(input) {
+  if (input.dataset.acWrap) return;
+  input.dataset.acWrap = '1';
+  
+  const wrapper = document.createElement('div');
+  wrapper.className = 'ac-wrap';
+  input.parentNode.insertBefore(wrapper, input);
+  wrapper.appendChild(input);
+  
+  const listAttr = input.getAttribute('list') || 'staffSuggest';
+  input.removeAttribute('list');
+  input.setAttribute('autocomplete', 'off');
+  
+  const listEl = document.createElement('div');
+  listEl.className = 'ac-list';
+  wrapper.appendChild(listEl);
+  
+  let blurTimeout;
+  const renderList = (filter = '') => {
+    const term = filter.toLowerCase().trim();
+    let data = allStaff;
+    if (listAttr === 'teamAddDatalist') {
+      const dl = document.getElementById('teamAddDatalist');
+      if (dl) {
+         data = Array.from(dl.options).map(o => {
+             const val = o.value || '';
+             const m = val.match(/\(([^)]+)\)$/);
+             const code = m ? m[1] : '';
+             const name = val.replace(` (${code})`, '');
+             return { staff_code: code, full_name: name };
+         });
+      }
+    }
+    
+    const filtered = data.filter(s => 
+      !term || 
+      (s.staff_code && s.staff_code.toLowerCase().includes(term)) || 
+      (s.full_name && s.full_name.toLowerCase().includes(term))
+    ).slice(0, 50);
+    
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="ac-item" style="color:var(--text3);text-align:center;">Không tìm thấy</div>';
+    } else {
+      listEl.innerHTML = filtered.map(s => `<div class="ac-item" data-val="${s.full_name} (${s.staff_code})">${s.full_name} <span style="color:var(--text3);font-size:11px;margin-left:4px;font-weight:600;">${s.staff_code}</span></div>`).join('');
+    }
+    listEl.classList.add('show');
+  };
+  
+  input.addEventListener('focus', () => renderList(input.value));
+  input.addEventListener('input', () => renderList(input.value));
+  
+  input.addEventListener('blur', () => {
+    blurTimeout = setTimeout(() => listEl.classList.remove('show'), 200);
+  });
+  
+  listEl.addEventListener('mousedown', e => {
+    const item = e.target.closest('.ac-item');
+    if (item && item.dataset.val) {
+      clearTimeout(blurTimeout);
+      input.value = item.dataset.val;
+      listEl.classList.remove('show');
+      input.dispatchEvent(new Event('change', {bubbles:true}));
+      // On mobile, blur the input to close keyboard after selection
+      setTimeout(() => input.blur(), 50);
+    }
+  });
+}
+
 async function sbFetch(path, opts={}) {
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...opts.headers };
   if (opts.method === 'POST' && !headers['Prefer']) headers['Prefer'] = 'return=representation';
@@ -57,6 +136,7 @@ async function sbFetch(path, opts={}) {
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) { tg.ready(); tg.expand(); }
+  initCustomAutocomplete();
   await loadStaffInfo();
   await Promise.all([loadProfiles(), loadDashboard(), loadStaff()]);
 });
