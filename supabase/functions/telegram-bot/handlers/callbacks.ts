@@ -196,9 +196,18 @@ export async function handleCallback(update: any, staffData: any) {
     }
     await editMessageReplyMarkup(chatId, messageId, null);
 
-    // Find the fruit_group row for THIS Telegram group
-    const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
-    if (!fg) return sendText(chatId, `❌ Group chưa đăng ký.`);
+    // Find or auto-register the fruit_group row for THIS Telegram group
+    let { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
+    if (!fg) {
+      // Auto-register group (admin didn't use /menu first)
+      const { data: newFg } = await supabase.from('fruit_groups').insert({
+        telegram_group_id: chatId,
+        telegram_group_title: cbQuery.message.chat.title || null,
+        level: 'bb'
+      }).select().single();
+      if (!newFg) return sendText(chatId, `❌ Không thể đăng ký group. Hãy thử gõ /menu trước.`);
+      fg = newFg;
+    }
 
     // Check if profile already has a placeholder fruit_group (telegram_group_id IS NULL)
     const { data: placeholders } = await supabase.from('fruit_groups')
