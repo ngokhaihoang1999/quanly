@@ -162,97 +162,73 @@ async function loadJourney(profileId, currentPhase) {
       }
     }
 
-    // ── Render as TABLE ──
+    // ── Render as TIMELINE ──
     if (finalEvents.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
-      // Group events into sections: each major event starts a new section
-      // Reports (tu_van, bien_ban without KT) attach to the section above them
-      const sections = [];
-      for (const e of finalEvents) {
-        if (e.isMajor || e.hasKT || e._type === 'chakki') {
-          sections.push({ major: e, reports: [] });
-        } else {
-          // Attach to the last section, or create an orphan section
-          if (sections.length > 0) {
-            sections[sections.length - 1].reports.push(e);
-          } else {
-            sections.push({ major: null, reports: [e] });
-          }
+      const hoverIn  = `this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'))`;
+      const hoverOut = `this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'))`;
+
+      let html = '<div class="tl-container">';
+
+      finalEvents.forEach((e) => {
+        const d = e.date ? new Date(e.date).toLocaleDateString('vi-VN') : '';
+
+        // Delete button helper
+        let delBtn = '';
+        if (e.deletable) {
+          const fn = e._type === 'session'
+            ? `deleteEventSession('${e._id}',${e._num})`
+            : `deleteEventRecord('${e._id}','${e._rtype}')`;
+          delBtn = `<button onclick="event.stopPropagation();${fn}" title="Xóa" class="tl-del-btn">🗑</button>`;
         }
-      }
 
-      // Helper: build a delete button
-      const makeDelBtn = (e, cls) => {
-        if (!e.deletable) return '';
-        const fn = e._type === 'session'
-          ? `deleteEventSession('${e._id}',${e._num})`
-          : `deleteEventRecord('${e._id}','${e._rtype}')`;
-        return `<button onclick="event.stopPropagation();${fn}" title="Xóa" class="${cls} tl-del-btn">🗑</button>`;
-      };
+        const clickAttr = (e._type === 'session' && e._session)
+          ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
+          : '';
 
-      let rows = '';
-      sections.forEach((sec) => {
-        const m = sec.major;
-        const reps = sec.reports;
-        const totalRows = Math.max(1, reps.length);
-
-        // ── Phase cell (left column, rowspan) ──
-        let phaseCell = '';
-        if (m) {
-          let phaseContent = '';
-          const clickEdit = m._type === 'session' && m._session
-            ? `onclick="editSession('${m._id}')" style="cursor:pointer;"`
-            : '';
-
-          if (m.hasKT) {
-            // KT + BB combined
-            const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${m.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
-            phaseContent = `<div class="tl-phase-content tl-phase-kt" ${clickEdit}>
-              <span class="tl-phase-icon">📖</span>
-              <span class="tl-phase-label" style="color:var(--green);">Đã mở KT</span>
+        if (e.hasKT) {
+          // ── SPLIT ROW: "Đã mở KT" left + BB report right ──
+          const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
+          html += `<div class="tl-item tl-kt" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+            <div class="tl-left">
+              <span class="tl-icon">📖</span>
+              <span class="tl-label tl-label-kt">Đã mở KT</span>
               ${ktDel}
-            </div>`;
-          } else {
-            const delBtn = makeDelBtn(m, 'tl-phase-del');
-            phaseContent = `<div class="tl-phase-content" ${clickEdit}>
-              <span class="tl-phase-icon">${m.icon}</span>
-              <span class="tl-phase-label">${m.text}</span>
+            </div>
+            <div class="tl-right">
+              <span class="tl-icon">${e.icon}</span>
+              <span class="tl-label">${e.text}</span>
+              ${d ? `<span class="tl-date">${d}</span>` : ''}
               ${delBtn}
-            </div>`;
-          }
-          phaseCell = `<td class="tl-phase" rowspan="${totalRows}">${phaseContent}</td>`;
-        } else {
-          phaseCell = `<td class="tl-phase" rowspan="${totalRows}"></td>`;
-        }
-
-        // ── Report rows (right column) ──
-        if (reps.length === 0) {
-          rows += `<tr class="tl-row" onmouseenter="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'))"
-            onmouseleave="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'))">
-            ${phaseCell}<td class="tl-report"></td></tr>`;
-        } else {
-          reps.forEach((r, ri) => {
-            const d = r.date ? new Date(r.date).toLocaleDateString('vi-VN') : '';
-            const delBtn = makeDelBtn(r, 'tl-report-del');
-            const reportContent = `<div class="tl-report-content">
-              <span class="tl-report-icon">${r.icon}</span>
-              <div class="tl-report-info">
-                <span class="tl-report-label">${r.text}</span>
-                ${d ? `<span class="tl-report-date">${d}</span>` : ''}
-              </div>
+            </div>
+          </div>`;
+        } else if (e.isMajor) {
+          // ── MAJOR EVENT: left column only ──
+          html += `<div class="tl-item tl-major" ${clickAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+            <div class="tl-left">
+              <span class="tl-icon">${e.icon}</span>
+              <span class="tl-label">${e.text}</span>
               ${delBtn}
-            </div>`;
-            // First row of this section includes the phaseCell with rowspan
-            const phaseTd = ri === 0 ? phaseCell : '';
-            rows += `<tr class="tl-row" onmouseenter="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'));if(this.closest('tbody')){let g=this.closest('tbody').querySelectorAll('.tl-phase');g.forEach(c=>{if(c.rowSpan>1){let p=c.closest('tr');if(p)p.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'))}})}"
-              onmouseleave="this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'));if(this.closest('tbody')){this.closest('tbody').querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'))}">
-              ${phaseTd}<td class="tl-report">${reportContent}</td></tr>`;
-          });
+            </div>
+            <div class="tl-right"></div>
+          </div>`;
+        } else {
+          // ── REPORT: right column only ──
+          html += `<div class="tl-item tl-report-row" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+            <div class="tl-left"></div>
+            <div class="tl-right">
+              <span class="tl-icon">${e.icon}</span>
+              <span class="tl-label">${e.text}</span>
+              ${d ? `<span class="tl-date">${d}</span>` : ''}
+              ${delBtn}
+            </div>
+          </div>`;
         }
       });
 
-      tlEl.innerHTML = `<table class="timeline-table"><tbody>${rows}</tbody></table>`;
+      html += '</div>';
+      tlEl.innerHTML = html;
     }
   } catch(e) { console.error('Journey error:', e); }
 }
