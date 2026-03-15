@@ -274,31 +274,42 @@ async function openRecord(recordId, type) {
 function openBBGroup(btnEl) {
   const groupId = btnEl.dataset.gid;
   const inviteLink = btnEl.dataset.link;
-  // Priority 1: stored invite link
+  const tgWA = window.Telegram && Telegram.WebApp;
+
+  // Priority 1: use stored invite link
   if (inviteLink) {
-    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
-      Telegram.WebApp.openTelegramLink(inviteLink);
-    } else {
-      window.open(inviteLink, '_blank');
-    }
+    tgWA ? Telegram.WebApp.openTelegramLink(inviteLink) : window.open(inviteLink, '_blank');
     return;
   }
-  // Priority 2: supergroup → t.me/c/ link
+
+  // Priority 2: supergroup → t.me/c/XXXXX
   const idStr = String(groupId);
   if (idStr.startsWith('-100')) {
-    const link = 'https://t.me/c/' + idStr.replace('-100', '');
-    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
-      Telegram.WebApp.openTelegramLink(link);
-    } else {
-      window.open(link, '_blank');
-    }
+    const link = 'https://t.me/c/' + idStr.slice(4); // remove '-100'
+    tgWA ? Telegram.WebApp.openTelegramLink(link) : window.open(link, '_blank');
     return;
   }
-  // Priority 3: tg:// deep link (regular group, user must be member)
-  const tgLink = 'https://t.me/c/' + Math.abs(parseInt(idStr));
-  if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
-    Telegram.WebApp.openTelegramLink(tgLink);
-  } else {
-    alert('Ⓜ️ Không thể mở group tự động. Hãy yêu cầu NDD/GVBB cấp invite link.');
+
+  // Priority 3: basic group → tg:// deep link (works if user is member)
+  // Use openLink (not openTelegramLink) for tg:// scheme
+  const tgDeep = 'tg://openmessage?chat_id=' + groupId;
+  if (tgWA && Telegram.WebApp.openLink) {
+    try {
+      Telegram.WebApp.openLink(tgDeep);
+      return;
+    } catch(e) {}
   }
+
+  // Priority 4: try to refresh invite link from DB then alert
+  sbFetch(`/rest/v1/fruit_groups?telegram_group_id=eq.${groupId}&select=invite_link`).then(async r => {
+    const rows = await r.json();
+    const fresh = rows?.[0]?.invite_link;
+    if (fresh) {
+      tgWA ? Telegram.WebApp.openTelegramLink(fresh) : window.open(fresh, '_blank');
+    } else {
+      alert('⚠️ Chưa có link mời vào group.\nHãy nhờ admin gõ /menu trong group để bot lấy link.');
+    }
+  }).catch(() => {
+    alert('⚠️ Chưa có link mời vào group.\nHãy nhờ admin gõ /menu trong group để bot lấy link.');
+  });
 }
