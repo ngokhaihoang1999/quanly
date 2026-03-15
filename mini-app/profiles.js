@@ -142,7 +142,7 @@ async function openProfile(p) {
         <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
         ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
       </div>
-      ${hasRealBBGroup ? `
+      ${hasRealBBGroup && ['bb','center','completed'].includes(ph) ? `
       <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:10px;">
         <span style="font-size:15px;">💬</span>
         <div style="flex:1;min-width:0;">
