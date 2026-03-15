@@ -109,70 +109,37 @@ async function loadJourney(profileId, currentPhase) {
 
       if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
       else if (r.record_type === 'bien_ban')    { 
-        _buoiThu = r.content?.buoi_thu;  // store RAW value (could be number or string)
+        _buoiThu = r.content?.buoi_thu;
         icon='📋'; text=`Báo cáo BB${_buoiThu?' buổi '+_buoiThu:''}`;
       }
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
-      else if (r.record_type === 'mo_kt')       { return; /* handled separately below */ }
+      else if (r.record_type === 'mo_kt')       { return; }
       else { icon='📌'; text=r.record_type; }
+
+      // Check if this bien_ban has a matching KT
+      let hasKT = false, ktRecordId = null;
+      if (r.record_type === 'bien_ban' && _buoiThu != null) {
+        const ktMatch = moKtRecords.find(m => Number(m.content?.buoi_thu) === Number(_buoiThu));
+        if (ktMatch) {
+          hasKT = true;
+          ktRecordId = ktMatch.id;
+          matchedMoKtIds.add(ktMatch.id);
+        }
+      }
 
       events.push({
         date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime(),
-        deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type, isMajor, _buoiThu
+        deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type,
+        isMajor, _buoiThu, hasKT, ktRecordId
       });
     });
 
     // Sort descending: newest (top) → oldest (bottom)
     events.sort((a,b) => b.sortDate - a.sortDate);
 
-    // ─── Inject "Đã mở KT" right BEFORE the matching bien_ban ───
-    // In descending list, KT above buổi X means KT is inserted before buổi X in the array
-    const finalEvents = [];
-    for (const e of events) {
-      // Before pushing this bien_ban, check if KT matches it
-      if (e._rtype === 'bien_ban' && e._buoiThu != null && e._buoiThu !== '') {
-        const eBuoi = Number(e._buoiThu);
-        const ktMatch = moKtRecords.find(m => Number(m.content?.buoi_thu) === eBuoi);
-        if (ktMatch) {
-          matchedMoKtIds.add(ktMatch.id);
-          // Push KT BEFORE this bien_ban
-          finalEvents.push({
-            date: ktMatch.created_at, icon: '📖', text: 'Đã mở KT',
-            sortDate: new Date(e.date).getTime() + 1,
-            deletable: false, _type: 'kt', _id: ktMatch.id, isMajor: true,
-            ktRecordId: ktMatch.id, hideDate: true
-          });
-        }
-      }
-      finalEvents.push(e);
-    }
-
-    // Handle unmatched mo_kt: find closest position
-    moKtRecords.forEach(m => {
-      if (!matchedMoKtIds.has(m.id)) {
-        const ktBuoi = Number(m.content?.buoi_thu) || 0;
-        let insertIdx = -1;
-        // Find first bien_ban with buoi <= ktBuoi (descending order)
-        for (let i = 0; i < finalEvents.length; i++) {
-          if (finalEvents[i]._rtype === 'bien_ban') {
-            const bb = Number(finalEvents[i]._buoiThu) || 0;
-            if (bb <= ktBuoi) { insertIdx = i; break; }
-          }
-        }
-        const ktEvent = {
-          date: m.created_at, icon: '📖', text: 'Đã mở KT',
-          sortDate: 0, deletable: false, _type: 'kt', _id: m.id, isMajor: true,
-          hideDate: true, ktRecordId: m.id, ktStandalone: true
-        };
-        if (insertIdx >= 0) finalEvents.splice(insertIdx, 0, ktEvent);
-        else {
-          // Put after last bien_ban
-          let lastBB = finalEvents.map((e,i) => e._rtype==='bien_ban'?i:-1).filter(i=>i>=0);
-          if (lastBB.length) finalEvents.splice(lastBB[lastBB.length-1]+1, 0, ktEvent);
-        }
-      }
-    });
+    // No separate KT events needed — KT is annotated on the matching bien_ban
+    const finalEvents = [...events];
 
     // ── Determine which SINGLE event gets the 🗑 delete button ──
     if (currentPhase === 'bb') {
@@ -202,7 +169,6 @@ async function loadJourney(profileId, currentPhase) {
       tlEl.innerHTML = finalEvents.map((e, i) => {
         const d = e.date ? new Date(e.date).toLocaleDateString('vi-VN') : '';
         const isHighlight = i === 0;
-        const isKT = e._type === 'kt';
 
         let delBtn = '';
         if (e.deletable) {
@@ -213,36 +179,54 @@ async function loadJourney(profileId, currentPhase) {
             flex-shrink:0;padding:3px 9px;border:1px solid var(--text3);border-radius:6px;background:transparent;
             color:var(--text3);font-size:11px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>`;
         }
-        if (isKT) {
-          delBtn = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="event-del-btn" style="
-            flex-shrink:0;padding:3px 9px;border:1px solid var(--text3);border-radius:6px;background:transparent;
-            color:var(--text3);font-size:11px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>`;
-        }
 
         const clickEdit = e._type === 'session' && e._session
           ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
           : '';
         const dateUi = (e.hideDate || !d) ? '' : `<div style="font-size:10px;color:var(--text3);margin-top:1px;">${d}</div>`;
+        const borderColor = isHighlight ? 'var(--accent)' : 'var(--border)';
 
-        // 2-column layout:
-        //   Column 1 (major): padding-left 14px — Chakki, Chốt TV, Chốt BB, Đã mở KT, Chốt Center
-        //   Column 2 (minor): padding-left 48px — Báo cáo TV, Báo cáo BB
+        // ── COMBINED KT+BB ROW: bien_ban that has KT ──
+        if (e.hasKT) {
+          const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="event-del-btn" style="
+            flex-shrink:0;padding:2px 7px;border:1px solid var(--text3);border-radius:6px;background:transparent;
+            color:var(--text3);font-size:10px;cursor:pointer;opacity:0;transition:opacity 0.15s;">🗑</button>`;
+          return `<div class="timeline-event" style="display:flex;align-items:center;
+              padding:7px 10px 7px 14px;border-left:3px solid ${borderColor};
+              margin-left:12px;border-radius:0 6px 6px 0;background:color-mix(in srgb,var(--green) 8%,transparent);"
+              onmouseenter="this.querySelectorAll('.event-del-btn').forEach(b=>b.style.opacity='1')"
+              onmouseleave="this.querySelectorAll('.event-del-btn').forEach(b=>b.style.opacity='0')">
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;min-width:100px;">
+              <span style="font-size:16px;">📖</span>
+              <span style="font-size:12px;font-weight:700;color:var(--green);">Đã mở KT</span>
+              ${ktDel}
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;margin-left:auto;">
+              <span style="font-size:13px;">📋</span>
+              <div>
+                <div style="font-size:11px;font-weight:500;color:var(--text2);">${e.text}</div>
+                ${dateUi}
+              </div>
+              ${delBtn}
+            </div>
+          </div>`;
+        }
+
+        // ── Normal rows ──
         const leftPad = e.isMajor ? '14px' : '48px';
         const fontW = e.isMajor ? '700' : '500';
         const fontSize = e.isMajor ? '13px' : '12px';
-        const iconSize = e.isMajor ? '18px' : '14px';
+        const iconSize = e.isMajor ? '16px' : '14px';
         const accentColor = isHighlight ? 'color:var(--accent);' : '';
-        const borderColor = isHighlight ? 'var(--accent)' : 'var(--border)';
-        const ktBg = isKT ? 'background:color-mix(in srgb,var(--green) 10%,transparent);' : '';
 
         return `<div class="timeline-event" ${clickEdit} style="display:flex;gap:8px;align-items:center;
             padding:8px 10px 8px ${leftPad};border-left:3px solid ${borderColor};
-            margin-left:12px;border-radius:0 6px 6px 0;${ktBg}${e._type==='session'?'cursor:pointer;':''}"
+            margin-left:12px;border-radius:0 6px 6px 0;${e._type==='session'?'cursor:pointer;':''}"
             onmouseenter="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='1')"
             onmouseleave="this.querySelector&&this.querySelector('.event-del-btn')&&(this.querySelector('.event-del-btn').style.opacity='0')">
-          <div style="font-size:${iconSize};flex-shrink:0;width:22px;text-align:center;">${e.icon}</div>
+          <div style="font-size:${iconSize};flex-shrink:0;width:20px;text-align:center;">${e.icon}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:${fontSize};font-weight:${fontW};${accentColor}${isKT?'color:var(--green);':''}">${e.text}</div>
+            <div style="font-size:${fontSize};font-weight:${fontW};${accentColor}">${e.text}</div>
             ${dateUi}
           </div>
           ${delBtn}
