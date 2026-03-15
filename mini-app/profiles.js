@@ -113,12 +113,18 @@ async function openProfile(p) {
     latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
   } catch(e) {}
 
-  const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
+    const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
   const statusBtn = canToggleStatus
     ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`
     : `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
   const reasonHtml = (fStatus==='dropout' && p.dropout_reason)
     ? `<div style="font-size:11px;color:var(--red);padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-top:4px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
+
+  const isKT = p.is_kt_opened === true;
+  const showKT = ['bb', 'center', 'completed'].includes(ph);
+  const ktHtml = showKT
+    ? `<span onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT'}</span>`
+    : '';
 
   // ONE unified card
   document.getElementById('profileSummaryCard').innerHTML = `
@@ -131,6 +137,7 @@ async function openProfile(p) {
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             ${statusBtn}
             <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
+            ${ktHtml}
             ${p.birth_year ? `<span style="font-size:11px;color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px;color:var(--text2);">${p.gender}</span>` : '')}
           </div>
           ${reasonHtml}

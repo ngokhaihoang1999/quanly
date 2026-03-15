@@ -181,7 +181,7 @@ async function loadJourney(profileId, currentPhase) {
   } catch(e) { console.error('Journey error:', e); }
 }
 
-// ── Helper: refresh current profile view ──
+// ── Helper: refresh current profile view and global UI ──
 async function _refreshCurrentProfile() {
   const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
   const ps = await pRes.json();
@@ -189,6 +189,9 @@ async function _refreshCurrentProfile() {
     const idx = allProfiles.findIndex(x => x.id === currentProfileId);
     if (idx >= 0) allProfiles[idx] = ps[0];
     openProfile(ps[0]);
+    // Ensure lists and dashboard metrics are never stale when navigating away
+    filterProfiles();
+    loadDashboard();
   }
 }
 
@@ -376,15 +379,7 @@ async function saveScheduleTV() {
     closeModal('scheduleTVModal');
     showToast(editingSessionId ? '✅ Đã cập nhật Chốt TV' : '✅ Đã chốt Tư vấn');
     editingSessionId = null;
-    setTimeout(async () => {
-      const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
-      const ps = await pRes.json();
-      if (ps[0]) {
-        const idx = allProfiles.findIndex(x => x.id === currentProfileId);
-        if (idx >= 0) allProfiles[idx] = ps[0];
-        openProfile(ps[0]);
-      }
-    }, 200);
+    await _refreshCurrentProfile();
   } catch(e) {
     showToast('❌ Lỗi: ' + (e.message || 'Hệ thống bận'));
     console.error('saveScheduleTV:', e);
@@ -397,8 +392,7 @@ async function completeSession(sessionId) {
   try {
     await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'PATCH', body: JSON.stringify({ status: 'completed' })});
     showToast('✅ Đã hoàn thành buổi tư vấn');
-    const p = allProfiles.find(x => x.id === currentProfileId);
-    if (p) loadJourney(currentProfileId, p.phase);
+    await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
@@ -571,7 +565,6 @@ async function saveRecord() {
     }
     closeModal('addRecordModal');
     currentRecordId = null;
-    if (isTV) loadRecords(currentProfileId, 'tu_van', 'tvList', 'tvCount');
-    else loadRecords(currentProfileId, 'bien_ban', 'bbList', 'bbCount');
+    await _refreshCurrentProfile();
   } catch { showToast('❌ Lỗi'); }
 }

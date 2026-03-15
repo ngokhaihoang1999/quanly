@@ -61,6 +61,7 @@ Migrations: `supabase/migrations/` (chạy theo thứ tự timestamp)
 | ndd_staff_code | text | Mã TĐ của NDD (NĐĐ chính) |
 | phase | text | Giai đoạn: `chakki` → `tu_van` → `bb` → `center` |
 | fruit_status | text | `alive` (mặc định) hoặc `dropout` |
+| is_kt_opened | boolean | Đã mở KT (áp dụng khi qua giai đoạn BB) |
 | dropout_reason | text | Lý do drop-out (tuỳ chọn, nhập khi chuyển sang dropout) |
 | status | text | `active` (kỹ thuật) |
 | info_sheet | jsonb | Deprecated — dữ liệu đã chuyển sang form_hanh_chinh |

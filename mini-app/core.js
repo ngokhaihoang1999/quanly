@@ -247,10 +247,15 @@ function showUnitPopup(type) {
     items = list.map(r => {
       const p = r.fruit_groups?.profiles;
       const ph = p?.phase || 'bb';
+      const isKT = p?.is_kt_opened;
+      const ktLabel = `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT'}</span>`;
       return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
-          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+          <div style="flex-shrink:0;">
+            <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
+            ${ktLabel}
+          </div>
         </div>
         <div style="font-size:11px;color:var(--text2);">GVBB: ${r.staff_code}</div>
       </div>`;
@@ -323,6 +328,61 @@ async function toggleFruitStatus(profileId, current) {
     filterProfiles();
     loadDashboard();
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleFruitStatus:', e); }
+}
+
+async function toggleKTStatus(profileId, newState) {
+  const p = allProfiles.find(x => x.id === profileId);
+  if (!p) return;
+  const pos = getCurrentPosition();
+  const myCode = getEffectiveStaffCode();
+  
+  // NDD, GVBB, or admin can toggle
+  let isGVBB = false;
+  try {
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=fruit_roles(staff_code,role_type)`);
+    const fgs = await fgRes.json();
+    (fgs||[]).forEach(fg => (fg.fruit_roles||[]).forEach(r => {
+      if (r.role_type === 'gvbb' && r.staff_code === myCode) isGVBB = true;
+    }));
+  } catch(e) {}
+  
+  if (p.ndd_staff_code !== myCode && !isGVBB && !['admin', 'yjyn', 'tjn', 'gyjn', 'bgyjn'].includes(pos)) {
+    showToast('⚠️ Không có quyền thay đổi trạng thái KT.');
+    return;
+  }
+  
+  const actionName = newState ? 'Mở KT' : 'Đóng KT';
+  if (!confirm(`Xác nhận ${actionName.toLowerCase()} cho hồ sơ này?`)) return;
+
+  try {
+    // We send payload
+    const patchBody = { is_kt_opened: newState };
+    const patchRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(patchBody)
+    });
+    if (!patchRes.ok) throw new Error(await patchRes.text());
+
+    let updatedProfile = null;
+    try {
+      const patchData = await patchRes.json();
+      if (Array.isArray(patchData) && patchData[0]) updatedProfile = patchData[0];
+    } catch(e) {}
+
+    const idx = allProfiles.findIndex(x => x.id === profileId);
+    if (idx >= 0) {
+      if (updatedProfile) {
+        allProfiles[idx] = updatedProfile;
+      } else {
+        allProfiles[idx].is_kt_opened = newState;
+      }
+      openProfile(allProfiles[idx]);
+    }
+    showToast(`✅ Đã ${actionName.toLowerCase()} thành công!`);
+    filterProfiles();
+    loadDashboard();
+  } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleKTStatus:', e); }
 }
 
 // ============ THEME TOGGLE ============

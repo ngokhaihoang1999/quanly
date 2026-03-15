@@ -108,6 +108,9 @@ export async function handleCallback(update: any, staffData: any) {
     
     const genderLabel = p.gender || 'N/A';
     const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : fg.level === 'bb' ? 'BB' : fg.level || 'N/A';
+    const isKT = p.is_kt_opened;
+    const showKT = ['bb', 'center', 'completed'].includes(p.phase);
+    const ktText = showKT ? (isKT ? '🔓 Đã mở KT' : '🔒 Chưa mở KT') : '';
     
     const { data: tvRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'tu_van');
     const { data: bbRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'bien_ban');
@@ -117,7 +120,7 @@ export async function handleCallback(update: any, staffData: any) {
       `───────────────────\n` +
       `*Tên:* ${p.full_name}\n` +
       `*Sinh năm:* ${p.birth_year || 'N/A'}   *Giới tính:* ${genderLabel}\n` +
-      `*Giai đoạn:* ${levelLabel}\n\n` +
+      `*Giai đoạn:* ${levelLabel}${ktText ? `   *Trạng thái:* ${ktText}` : ''}\n\n` +
       `👥 *Đội ngũ chăm sóc:*\n` +
       `  NDD: ${getNddCode()}\n` +
       `  TVV: ${getTvvCodes()}\n` +
@@ -152,14 +155,26 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // menu_set_level — Chuyển giai đoạn
-  if (cbData === 'menu_set_level') {
-    if (!canChangeLevel(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền chuyển giai đoạn.`);
+  // menu_open_kt — Xác nhận mở KT
+  if (cbData === 'menu_open_kt') {
+    // Check if group is registered and attached to a profile
+    const { data: fg } = await supabase.from('fruit_groups')
+      .select('profile_id, profiles(full_name, phase)').eq('telegram_group_id', chatId).single();
+    if (!fg || !fg.profile_id) {
+      return sendText(chatId, `❌ Group chưa gắn hồ sơ nào.`);
+    }
+    const p = fg.profiles;
+    if (!['bb', 'center', 'completed'].includes(p.phase)) {
+      return sendText(chatId, `⚠️ Hồ sơ *${p.full_name}* chưa đến giai đoạn BB. Bấm "Xem thông tin Group" để kiểm tra.`);
+    }
+    
+    // Check permission logic: similar to what we did in mini-app toggles.
+    // For simplicity, any admin/TVV/GVBB/NDD can toggle it if they can reach here.
     const keyboard = [
-      [{ text: '💬 Tư vấn', callback_data: 'action_set_level_tu_van' }],
-      [{ text: '📋 BB', callback_data: 'action_set_level_bb' }]
+      [{ text: '✅ Chắc chắn', callback_data: `action_confirm_kt_${fg.profile_id}` }],
+      [{ text: '❌ Huỷ bỏ', callback_data: 'action_cancel_kt' }]
     ];
-    await sendKeyboard(chatId, `Chọn giai đoạn mới cho group:`, keyboard);
+    await sendKeyboard(chatId, `❓ Bạn có chắc chắn muốn xác nhận đã Mở KT cho hồ sơ *${p.full_name}* không?`, keyboard);
     return;
   }
 
@@ -255,15 +270,26 @@ export async function handleCallback(update: any, staffData: any) {
   }
 
 
-  // action_set_level_{level} — Set group level
-  if (cbData.startsWith('action_set_level_')) {
-    const newLevel = cbData.replace('action_set_level_', '');
+  // action_cancel_kt
+  if (cbData === 'action_cancel_kt') {
     await editMessageReplyMarkup(chatId, messageId, null);
-    await supabase.from('fruit_groups')
-      .update({ level: newLevel, updated_at: new Date().toISOString() })
-      .eq('telegram_group_id', chatId);
-    const label = newLevel === 'tu_van' ? 'Tư vấn' : 'BB';
-    await sendText(chatId, `✅ Đã chuyển group sang giai đoạn *${label}*.`);
+    await sendText(chatId, `❌ Đã huỷ thao tác.`);
+    return;
+  }
+
+  // action_confirm_kt_{profileId}
+  if (cbData.startsWith('action_confirm_kt_')) {
+    const profileId = cbData.replace('action_confirm_kt_', '');
+    await editMessageReplyMarkup(chatId, messageId, null);
+    
+    const { data: p } = await supabase.from('profiles').select('full_name').eq('id', profileId).single();
+    if (!p) return sendText(chatId, '❌ Không tìm thấy hồ sơ.');
+
+    await supabase.from('profiles')
+      .update({ is_kt_opened: true })
+      .eq('id', profileId);
+      
+    await sendText(chatId, `✅ Đã xác nhận **Mở KT** cho hồ sơ *${p.full_name}*.`);
     return;
   }
 

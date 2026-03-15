@@ -141,24 +141,6 @@ export async function handleGroupChat(update: any) {
     return;
   }
 
-  // /set_level — Chuyển giai đoạn group
-  if (text.startsWith('/set_level')) {
-    if (!canChangeLevel(pos)) {
-      await sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
-      return;
-    }
-    const newLevel = text.split(/\s+/)[1]?.toLowerCase();
-    if (!newLevel || !['tu_van','bb'].includes(newLevel)) {
-      await sendText(chatId, `⚠️ Cú pháp: \`/set_level [tu_van/bb]\``);
-      return;
-    }
-    await supabase.from('fruit_groups')
-      .update({ level: newLevel, updated_at: new Date().toISOString() })
-      .eq('telegram_group_id', chatId);
-    const label = newLevel === 'tu_van' ? 'Tư vấn' : 'BB';
-    await sendText(chatId, `✅ Group đã chuyển sang giai đoạn *${label}*.`);
-    return;
-  }
 
   // /group_info — Xem thông tin group
   if (text === '/group_info' || text.startsWith('/group_info@')) {
@@ -242,7 +224,7 @@ export async function handleGroupChat(update: any) {
       [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
-      [{ text: '🔄 Chuyển giai đoạn', callback_data: 'menu_set_level' }]
+      [{ text: '🔓 Xác nhận mở KT', callback_data: 'menu_open_kt' }]
     ];
     await sendKeyboard(chatId, `🛠 *Menu Quản lý Group*`, keyboard);
     return;
