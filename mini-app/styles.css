@@ -207,6 +207,19 @@
       border-radius: var(--radius-sm);
       overflow: hidden;
       border: 1px solid var(--border);
+      position: relative;
+    }
+    /* Single continuous vertical line — 1 pseudo-element thay vì border-right từng row */
+    .tl-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(42% - 1px);
+      width: 3px;
+      background: var(--accent);
+      z-index: 2;
+      pointer-events: none;
     }
     .tl-item {
       display: flex;
@@ -225,8 +238,9 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 8px 8px 10px;
-      border-right: 3px solid var(--accent);
+      /* padding-right nhỏ lại để nhường chỗ cho đường kẻ giả */
+      padding: 8px 6px 8px 10px;
+      border-right: none;
       box-sizing: border-box;
       overflow: hidden;
     }
@@ -243,7 +257,7 @@
     .tl-major .tl-left { background: var(--surface2); font-weight: 700; }
     /* KT split row */
     .tl-kt { background: color-mix(in srgb, var(--green) 6%, transparent); }
-    .tl-kt .tl-left { background: color-mix(in srgb, var(--green) 12%, transparent); border-right-color: var(--green); }
+    .tl-kt .tl-left { background: color-mix(in srgb, var(--green) 12%, transparent); }
     /* Report-only row */
     .tl-report-row .tl-left { background: var(--surface2); }
     /* Icons & labels */
