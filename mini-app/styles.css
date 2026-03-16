@@ -211,7 +211,7 @@
     .tl-item {
       display: flex;
       align-items: stretch;
-      min-height: 34px;
+      min-height: 36px;
       border-bottom: 1px solid var(--border);
       transition: background 0.1s;
     }
@@ -219,18 +219,25 @@
     .tl-item:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
     .tl-left {
       flex: 0 0 42%;
+      width: 42%;
+      max-width: 42%;
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 7px 10px;
+      padding: 8px 8px 8px 10px;
       border-right: 3px solid var(--accent);
+      box-sizing: border-box;
+      overflow: hidden;
     }
     .tl-right {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 7px 10px;
+      padding: 8px 8px 8px 10px;
+      overflow: hidden;
     }
     /* Major milestone row */
     .tl-major .tl-left { background: var(--surface2); font-weight: 700; }
@@ -240,12 +247,45 @@
     /* Report-only row */
     .tl-report-row .tl-left { background: var(--surface2); }
     /* Icons & labels */
-    .tl-icon { font-size: 14px; flex-shrink: 0; }
-    .tl-label { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
+    .tl-icon { font-size: 14px; flex-shrink: 0; line-height: 1; }
+    .tl-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      line-height: 1.3;
+    }
     .tl-label-kt { color: var(--green); font-weight: 700; }
-    .tl-left-info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; overflow: hidden; }
-    .tl-left-info .tl-label { overflow: hidden; text-overflow: ellipsis; }
-    .tl-date { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+    .tl-left-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .tl-left-info .tl-label {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .tl-date { font-size: 10px; color: var(--text3); white-space: nowrap; flex-shrink: 0; display: block; }
+    .tl-right-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .tl-right-info .tl-label {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .tl-right-info .tl-date { display: block; }
     /* Clickable reports */
     .tl-clickable { cursor: pointer; }
     .tl-clickable:hover .tl-label { color: var(--accent); text-decoration: underline; }

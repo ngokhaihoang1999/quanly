@@ -206,8 +206,11 @@ async function loadJourney(profileId, currentPhase) {
               ${ktDel}
             </div>
             <div class="tl-right tl-clickable" ${viewAttr}>
-              <span class="tl-icon">${e.icon}</span>
-              <span class="tl-label">${e.text}</span>
+              <span class="tl-icon" style="flex-shrink:0">${e.icon}</span>
+              <div class="tl-right-info">
+                <span class="tl-label">${e.text}</span>
+                ${d ? `<span class="tl-date">${d}</span>` : ''}
+              </div>
               ${delBtn}
             </div>
           </div>`;
@@ -229,9 +232,11 @@ async function loadJourney(profileId, currentPhase) {
           html += `<div class="tl-item tl-report-row" ${viewAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
             <div class="tl-left"></div>
             <div class="tl-right">
-              <span class="tl-icon">${e.icon}</span>
-              <span class="tl-label">${e.text}</span>
-              ${d ? `<span class="tl-date">${d}</span>` : ''}
+              <span class="tl-icon" style="flex-shrink:0">${e.icon}</span>
+              <div class="tl-right-info">
+                <span class="tl-label">${e.text}</span>
+                ${d ? `<span class="tl-date">${d}</span>` : ''}
+              </div>
               ${delBtn}
             </div>
           </div>`;
