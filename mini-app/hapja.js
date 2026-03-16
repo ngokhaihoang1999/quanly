@@ -197,6 +197,43 @@ async function rejectHapja(id) {
     loadDashboard();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
+// Records (Tư vấn / BB)
+async function loadRecords(profileId, type, listElId, countElId) {
+  try {
+    // Sắp xếp ASC → hiển thị đúng thứ tự (#1 ở trên, mới nhất ở dưới)
+    const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.asc`);
+    const records = await res.json();
+    document.getElementById(countElId).textContent = records.length + ' phiếu';
+    const listEl = document.getElementById(listElId);
+    if (!records.length) { listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>'; return; }
+
+    // Chỉ record mới nhất (cuối cùng trong mảng ASC) được phép xóa
+    const newestId = records[records.length - 1].id;
+
+    listEl.innerHTML = records.map((r, i) => {
+      const c = r.content||{};
+      const title = c.lan_thu ? `Lần thứ ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` :
+                    c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
+                    c.ten_cong_cu || 'Phiếu #'+(i+1);
+      const preview = c.van_de || c.noi_dung || c.phan_hoi || '';
+      const date = new Date(r.created_at).toLocaleDateString('vi-VN');
+      // Chỉ hiện nút xóa cho record mới nhất (theo dòng thời gian)
+      const isNewest = r.id === newestId;
+      const delBtn = isNewest
+        ? `<button class="record-delete" onclick="event.stopPropagation();deleteRecord('${r.id}','${type}')" title="Xoá (chỉ xóa mới nhất)">🗑️</button>`
+        : `<button class="record-delete" onclick="event.stopPropagation();" title="Không thể xóa — hãy xóa phước theo dòng thời gian" style="opacity:0.25;cursor:not-allowed;">🔒</button>`;
+      return `<div class="record-item" onclick="openRecord('${r.id}','${type}')" style="cursor:pointer;">
+        <div class="record-number">${i+1}</div>
+        <div class="record-content">
+          <div class="record-date">📅 ${date}</div>
+          <div class="record-title">${title}</div>
+          <div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div>
+        </div>
+        ${delBtn}
+      </div>`;
+    }).join('');
+  } catch {}
+}
 async function deleteProfile() {
   if (!currentProfileId || !confirm('Xác nhận xoá hồ sơ này?')) return;
   const pid = currentProfileId;
@@ -232,12 +269,26 @@ async function deleteProfile() {
   } catch(e) { showToast('❌ Lỗi: ' + (e.message||'').slice(0,80)); console.error('deleteProfile:', e); }
 }
 async function deleteRecord(id, type) {
-  if (!confirm('Xoá phiếu này?')) return;
+  // Kiểm tra xem đây có phải record mới nhất (theo dòng thời gian) không
+  try {
+    const checkRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.${type}&select=id&order=created_at.desc&limit=1`);
+    const latest = await checkRes.json();
+    if (!latest || !latest[0] || latest[0].id !== id) {
+      showToast('⚠️ Chỉ có thể xóa báo cáo mới nhất theo dòng thời gian!');
+      return;
+    }
+  } catch { showToast('❌ Lỗi kiểm tra'); return; }
+
+  if (!confirm('Xóa phiếu mới nhất này?')) return;
   try {
     await sbFetch(`/rest/v1/records?id=eq.${id}`, {method:'DELETE'});
-    showToast('✅ Đã xoá!');
+    showToast('✅ Đã xóa!');
+    // Refresh cả timeline và danh sách tab
+    const p = allProfiles.find(x => x.id === currentProfileId);
+    if (p) {
+      loadJourney(p.id, p.phase || 'chakki');
+    }
     if (type==='tu_van') loadRecords(currentProfileId,'tu_van','tvList','tvCount');
     else loadRecords(currentProfileId,'bien_ban','bbList','bbCount');
   } catch { showToast('❌ Lỗi'); }
 }
-

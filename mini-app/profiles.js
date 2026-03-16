@@ -297,33 +297,7 @@ async function saveInfoSheet() {
   } catch { showToast('❌ Lỗi khi lưu'); }
 }
 
-// Records (Tư vấn / BB)
-async function loadRecords(profileId, type, listElId, countElId) {
-  try {
-    const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.desc`);
-    const records = await res.json();
-    document.getElementById(countElId).textContent = records.length + ' phiếu';
-    const listEl = document.getElementById(listElId);
-    if (!records.length) { listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>'; return; }
-    listEl.innerHTML = records.map((r,i) => {
-      const c = r.content||{};
-      const title = c.lan_thu ? `Lần thứ ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` :
-                    c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
-                    c.ten_cong_cu || 'Phiếu #'+(i+1);
-      const preview = c.van_de || c.noi_dung || c.phan_hoi || '';
-      const date = new Date(r.created_at).toLocaleDateString('vi-VN');
-      return `<div class="record-item" onclick="openRecord('${r.id}','${type}')" style="cursor:pointer;">
-        <div class="record-number">${i+1}</div>
-        <div class="record-content">
-          <div class="record-date">📅 ${date}</div>
-          <div class="record-title">${title}</div>
-          <div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div>
-        </div>
-        <button class="record-delete" onclick="event.stopPropagation();deleteRecord('${r.id}','${type}')" title="Xoá">🗑️</button>
-      </div>`;
-    }).join('');
-  } catch {}
-}
+// Records (Tư vấn / BB) → loadRecords() và deleteRecord() định nghĩa trong hapja.js
 async function openRecord(recordId, type) {
   // Fetch full record from server
   const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
