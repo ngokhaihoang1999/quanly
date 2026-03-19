@@ -28,7 +28,7 @@ async function loadJourney(profileId, currentPhase) {
 
   // Fetch group BB info (for BB/center phase)
   let bbGroupInfo = null;
-  if (['bb','center','completed'].includes(currentPhase)) {
+  if (['bb','center','completed'].includes(cp)) {
     try {
       const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title`);
       const fgs = await fgRes.json();
@@ -39,18 +39,20 @@ async function loadJourney(profileId, currentPhase) {
 
   // Phase action buttons
   let btnHtml = '';
-  if (['new','chakki'].includes(currentPhase)) {
+  const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
+  if (phBtnEl) phBtnEl.style.display = 'flex'; // Force display to be safe
+  if (['new','chakki'].includes(cp)) {
     btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV</button>`;
-  } else if (currentPhase === 'tu_van') {
+  } else if (cp === 'tu_van') {
     btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
       <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>`;
-  } else if (currentPhase === 'bb') {
+  } else if (cp === 'bb') {
     btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
   }
   // Undo button — visible for any phase past Chakki
-  if (!['new','chakki','completed'].includes(currentPhase)) {
+  if (!['new','chakki','completed'].includes(cp)) {
     const phaseLabels = { tu_van:'Chốt TV', bb:'Chốt BB', center:'Chốt Center' };
-    btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[currentPhase]||currentPhase}'" style="
+    btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[cp]||cp}'" style="
       flex:0 0 auto;padding:10px 14px;border-radius:var(--radius-sm);border:1px dashed var(--text3);
       background:transparent;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;
       transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
@@ -143,13 +145,13 @@ async function loadJourney(profileId, currentPhase) {
     const finalEvents = [...events];
 
     // ── Determine which SINGLE event gets the 🗑 delete button ──
-    if (currentPhase === 'bb') {
+    if (cp === 'bb') {
       for (let i = 0; i < finalEvents.length; i++) {
         if (finalEvents[i]._type === 'record' && finalEvents[i]._rtype === 'bien_ban') {
           finalEvents[i].deletable = true; break;
         }
       }
-    } else if (currentPhase === 'tu_van') {
+    } else if (cp === 'tu_van') {
       let found = false;
       for (let i = 0; i < finalEvents.length; i++) {
         if (finalEvents[i]._type === 'record' && finalEvents[i]._rtype === 'tu_van') {

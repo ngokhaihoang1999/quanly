@@ -317,7 +317,7 @@ function showUnitPopup(type) {
           <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
           <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
         </div>
-        <div style="font-size:11px;color:var(--text2);">TVV: ${r.staff_code}</div>
+        <div style="font-size:11px;color:var(--text2);">TĐ Q.Lý: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
       </div>`;
     });
   } else if (type === 'gvbb') {
@@ -336,7 +336,7 @@ function showUnitPopup(type) {
             ${ktLabel}
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text2);">GVBB: ${r.staff_code}</div>
+        <div style="font-size:11px;color:var(--text2);">TĐ Q.Lý: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
       </div>`;
     });
   } else if (type === 'bbgroup') {

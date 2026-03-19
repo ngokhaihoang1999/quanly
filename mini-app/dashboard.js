@@ -29,7 +29,12 @@ async function loadDashboard() {
         const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
         if (myGrp) {
           unitLabel = 'Nhóm: ' + myGrp.name;
-          (myGrp.teams||[]).forEach(t => { (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
+          unitStaffCodes.push(myGrp.tjn_staff_code); // Add TJN
+          (myGrp.teams||[]).forEach(t => { 
+            if (t.gyjn_staff_code) unitStaffCodes.push(t.gyjn_staff_code);
+            if (t.bgyjn_staff_code) unitStaffCodes.push(t.bgyjn_staff_code);
+            (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); 
+          });
           break;
         }
       }
@@ -94,22 +99,30 @@ async function loadDashboard() {
       // Approved Hapja by unit members
       const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc`);
       approvedHapjaList = await ahRes.json();
-      // TVV fruits (role_type=tvv by unit members)
-      const tvvSeen = new Set();
+      // Get all UNIQUE profiles that belong to the unit
+      const unitProfilesMap = new Map();
       unitRoles.forEach(r => {
-        if (r.role_type === 'tvv' && unitStaffCodes.includes(r.staff_code) && r.fruit_groups?.profile_id && !tvvSeen.has(r.fruit_groups.profile_id)) {
-          tvvSeen.add(r.fruit_groups.profile_id);
-          tvvFruits.push(r);
+        const p = r.fruit_groups?.profiles;
+        const pid = r.fruit_groups?.profile_id;
+        if (p && pid && p.fruit_status !== 'dropout') {
+          if (!unitProfilesMap.has(pid)) {
+            unitProfilesMap.set(pid, { profile: p, role: r });
+          } else {
+            // Prefer ndd role to show in popup, otherwise tvv, else keep existing
+            const existing = unitProfilesMap.get(pid).role;
+            if (r.role_type === 'ndd' && existing.role_type !== 'ndd') {
+              unitProfilesMap.set(pid, { profile: p, role: r });
+            }
+          }
         }
       });
-      // GVBB fruits (role_type=gvbb by unit members)
-      const gvbbSeen = new Set();
-      unitRoles.forEach(r => {
-        if (r.role_type === 'gvbb' && unitStaffCodes.includes(r.staff_code) && r.fruit_groups?.profile_id && !gvbbSeen.has(r.fruit_groups.profile_id)) {
-          gvbbSeen.add(r.fruit_groups.profile_id);
-          gvbbFruits.push(r);
-        }
-      });
+      const myUnitProfiles = Array.from(unitProfilesMap.values());
+      
+      // Trái TV (phase = tu_van)
+      tvvFruits = myUnitProfiles.filter(x => x.profile.phase === 'tu_van').map(x => x.role);
+      
+      // Trái BB (phase = bb, center, completed)
+      gvbbFruits = myUnitProfiles.filter(x => ['bb', 'center', 'completed'].includes(x.profile.phase)).map(x => x.role);
       // BB groups (real telegram group) where ANY unit member has a role
       const bbSeen = new Set();
       unitRoles.forEach(r => {
