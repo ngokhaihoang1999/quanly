@@ -187,6 +187,7 @@
       cursor: pointer; transition: all 0.2s; z-index: 2; line-height: 1;
     }
     .dash-stat .info-badge:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .dash-stat .info-badge-left { right: auto; left: 6px; }
     /* Dashboard grid 5 cards layout — circle overlaps center */
     .dash-grid-5 {
       display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;

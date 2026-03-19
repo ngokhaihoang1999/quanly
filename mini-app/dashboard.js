@@ -184,7 +184,10 @@ async function loadDashboard() {
       center_phase: 'Trái đã vào giai đoạn Center'
     };
     function infoBtn(key) {
-      return `<span class="info-badge" onclick="event.stopPropagation();alert('${infoDescs[key]}')">i</span>`;
+      return `<span class="info-badge" onclick="event.stopPropagation();alert('${infoDescs[key]}')" title="${infoDescs[key]}">i</span>`;
+    }
+    function infoBtnLeft(key) {
+      return `<span class="info-badge info-badge-left" onclick="event.stopPropagation();alert('${infoDescs[key]}')" title="${infoDescs[key]}">i</span>`;
     }
 
     // Save mode state
@@ -205,7 +208,7 @@ async function loadDashboard() {
             <div class="lbl">🏛️ Center</div>
           </div>
           <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup('hapja')">
-            ${infoBtn(isCum ? 'hapja_cum' : 'wait_tv')}
+            ${infoBtnLeft(isCum ? 'hapja_cum' : 'wait_tv')}
             <div class="num">${isCum ? approvedHapjaList.length : waitTVFruits.length}</div>
             <div class="lbl">${isCum ? '🍎 Trái Hapja' : '⏳ Chờ TV'}</div>
           </div>
@@ -215,7 +218,7 @@ async function loadDashboard() {
             <div class="lbl">💬 Trái TV</div>
           </div>
           <div class="dash-stat green" style="cursor:pointer;" onclick="showUnitPopup(${isCum ? "'gvbb'" : "'gvbb_phase'"})">
-            ${infoBtn(isCum ? 'bb_cum' : 'bb_phase')}
+            ${infoBtnLeft(isCum ? 'bb_cum' : 'bb_phase')}
             <div class="num">${isCum ? gvbbFruits.length : phaseBBFruits.length}</div>
             <div class="lbl">🎓 Trái BB</div>
           </div>
