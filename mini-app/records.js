@@ -167,8 +167,8 @@ async function loadJourney(profileId, currentPhase) {
     if (finalEvents.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
-      const hoverIn  = `this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.add('visible'))`;
-      const hoverOut = `this.querySelectorAll('.tl-del-btn').forEach(b=>b.classList.remove('visible'))`;
+      const hoverIn  = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.add('visible'))`;
+      const hoverOut = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.remove('visible'))`;
 
       let html = '<div class="tl-container">';
 
@@ -188,10 +188,16 @@ async function loadJourney(profileId, currentPhase) {
           ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
           : '';
 
-        // Click-to-view for report records
+        // Click-to-view for report records (read-only view)
         const viewAttr = (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban'))
           ? `onclick="viewRecord('${e._id}','${e._rtype}')" style="cursor:pointer;"`
           : '';
+
+        // Edit button for report records (always shown, not just when deletable)
+        let editBtn = '';
+        if (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban')) {
+          editBtn = `<button onclick="event.stopPropagation();editRecord('${e._id}','${e._rtype}')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>`;
+        }
 
         if (e.hasKT) {
           // ── SPLIT ROW: "Đã mở KT" left + BB report right ──
@@ -211,7 +217,7 @@ async function loadJourney(profileId, currentPhase) {
                 <span class="tl-label">${e.text}</span>
                 ${d ? `<span class="tl-date">${d}</span>` : ''}
               </div>
-              ${delBtn}
+              <div class="tl-btn-group">${editBtn}${delBtn}</div>
             </div>
           </div>`;
         } else if (e.isMajor) {
@@ -237,7 +243,7 @@ async function loadJourney(profileId, currentPhase) {
                 <span class="tl-label">${e.text}</span>
                 ${d ? `<span class="tl-date">${d}</span>` : ''}
               </div>
-              ${delBtn}
+              <div class="tl-btn-group">${editBtn}${delBtn}</div>
             </div>
           </div>`;
         }
@@ -249,14 +255,26 @@ async function loadJourney(profileId, currentPhase) {
   } catch(e) { console.error('Journey error:', e); }
 }
 
-// ── View a report record (fetch content & open modal) ──
+// ── View a report record (fetch content & open modal in READ-ONLY mode) ──
 async function viewRecord(recordId, recordType) {
   try {
     const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
     const rows = await res.json();
     if (rows[0]) {
-      currentRecordId = rows[0].id;
-      openAddRecordModal(recordType, rows[0].content);
+      currentRecordId = null; // null = read-only, no save
+      openAddRecordModal(recordType, rows[0].content, true); // true = readOnly
+    }
+  } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
+}
+
+// ── Edit a report record (fetch content & open modal in EDIT mode) ──
+async function editRecord(recordId, recordType) {
+  try {
+    const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
+    const rows = await res.json();
+    if (rows[0]) {
+      currentRecordId = rows[0].id; // set ID so saveRecord does PATCH
+      openAddRecordModal(recordType, rows[0].content, false); // false = editable
     }
   } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
@@ -401,6 +419,19 @@ async function openScheduleTVModal(existingSession) {
       const ss = await sRes.json();
       if (ss[0]) nextNum = (ss[0].session_number || 0) + 1;
     } catch(e) {}
+    // ⚠️ Kiểm tra: nếu đây là lần 2+, phải có Báo cáo TV lần (nextNum-1) rồi mới chốt tiếp
+    if (nextNum > 1) {
+      try {
+        const prevLan = nextNum - 1;
+        const bcCheckRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&select=id,content`);
+        const bcAllRows = await bcCheckRes.json();
+        const hasPrevBC = bcAllRows.some(r => Number(r.content?.lan_thu) === prevLan);
+        if (!hasPrevBC) {
+          showToast(`⚠️ Phải có Báo cáo TV lần ${prevLan} trước khi chốt TV lần ${nextNum}!`);
+          return;
+        }
+      } catch(e) { console.warn('Check BC TV order:', e); }
+    }
     if (el('stv_session_num')) el('stv_session_num').value = nextNum;
     if (el('stv_tool')) el('stv_tool').value = '';
     if (el('stv_datetime')) el('stv_datetime').value = '';
@@ -509,8 +540,25 @@ function createTVFromSession(sessionId, num, tool) {
 // ══════════════════════════════════════════════════════════════════════════════
 // CHỐT BB / CENTER
 // ══════════════════════════════════════════════════════════════════════════════
-function openChotBBModal() {
+async function openChotBBModal() {
   if (!currentProfileId) return;
+  // Kiểm tra: phải có Báo cáo TV ít nhất 1 lần trước khi chốt BB
+  try {
+    const sessRes = await sbFetch(/rest/v1/consultation_sessions?profile_id=eq.&select=session_number&order=session_number.desc&limit=1);
+    const sessList = await sessRes.json();
+    if (sessList && sessList.length > 0) {
+      const lastSessNum = sessList[0].session_number;
+      const bcRes = await sbFetch(/rest/v1/records?profile_id=eq.&record_type=eq.tu_van&content->>lan_thu=eq.&select=id&limit=1);
+      const bcRows = await bcRes.json();
+      if (!bcRows || bcRows.length === 0) {
+        showToast(⚠️ Phải có Báo cáo TV lần  rồi mới được Chốt BB!);
+        return;
+      }
+    } else {
+      showToast('⚠️ Phải Chốt TV ít nhất 1 lần và có Báo cáo TV trước khi Chốt BB!');
+      return;
+    }
+  } catch(e) { console.warn('Check BC TV for Chot BB:', e); }
   document.getElementById('cbb_gvbb').value = '';
   document.getElementById('chotBBModal').classList.add('open');
 }
@@ -582,13 +630,19 @@ async function chotCenter() {
 // ══════════════════════════════════════════════════════════════════════════════
 // ADD / EDIT RECORD MODAL
 // ══════════════════════════════════════════════════════════════════════════════
-function openAddRecordModal(type, existingContent = null) {
+function openAddRecordModal(type, existingContent = null, readOnly = false) {
   currentRecordType = type;
   if (!existingContent) currentRecordId = null;
   const isTV = type === 'tu_van';
-  document.getElementById('recordModalTitle').textContent = existingContent
-    ? (isTV ? '✏️ Chỉnh sửa Báo cáo Tư vấn' : '✏️ Chỉnh sửa Báo cáo BB')
-    : (isTV ? '💬 Báo cáo Tư vấn' : '📝 Báo cáo BB');
+  let titleText;
+  if (readOnly) {
+    titleText = isTV ? '📋 Xem Báo cáo Tư vấn' : '📋 Xem Báo cáo BB';
+  } else {
+    titleText = existingContent
+      ? (isTV ? '✏️ Chỉnh sửa Báo cáo Tư vấn' : '✏️ Chỉnh sửa Báo cáo BB')
+      : (isTV ? '💬 Báo cáo Tư vấn' : '📝 Báo cáo BB');
+  }
+  document.getElementById('recordModalTitle').textContent = titleText;
   const body = document.getElementById('recordModalBody');
   const c = existingContent || {};
   if (isTV) {
@@ -612,6 +666,19 @@ function openAddRecordModal(type, existingContent = null) {
       <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   }
   document.getElementById('addRecordModal').classList.add('open');
+  // Apply read-only state after rendering fields
+  setTimeout(() => {
+    const modal = document.getElementById('addRecordModal');
+    const saveBtn = modal ? modal.querySelector('.save-btn') : null;
+    const inputs = modal ? modal.querySelectorAll('input, textarea, select') : [];
+    if (readOnly) {
+      inputs.forEach(el => { el.disabled = true; el.style.opacity = '0.8'; });
+      if (saveBtn) saveBtn.style.display = 'none';
+    } else {
+      inputs.forEach(el => { el.disabled = false; el.style.opacity = ''; });
+      if (saveBtn) saveBtn.style.display = '';
+    }
+  }, 50);
 }
 
 async function saveRecord() {

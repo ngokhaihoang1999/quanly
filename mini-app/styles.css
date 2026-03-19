@@ -322,6 +322,29 @@
     .tl-del-btn.visible { opacity: 1; }
     .tl-del-btn:hover { color: var(--red); border-color: var(--red); }
     .tl-item:hover .tl-del-btn { opacity: 1; }
+    /* Edit button in timeline */
+    .tl-edit-btn {
+      flex-shrink: 0;
+      padding: 2px 7px;
+      border: 1px solid var(--text3);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text3);
+      font-size: 10px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .tl-edit-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .tl-item:hover .tl-edit-btn { opacity: 1; }
+    /* Button group for edit + delete */
+    .tl-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
     
     /* Custom Autocomplete */
     .ac-wrap { position: relative; width: 100%; }

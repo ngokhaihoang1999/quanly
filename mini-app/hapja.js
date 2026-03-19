@@ -10,11 +10,39 @@ async function saveCheckHapja() {
   const ngay = document.getElementById('hj_ngay')?.value;
   const concept = document.getElementById('hj_concept')?.value?.trim();
   const fullName = document.getElementById('hj_hoten')?.value?.trim();
+  const namSinh = document.getElementById('hj_nam_sinh')?.value?.trim();
+  const gioiTinh = document.getElementById('hj_gioi_tinh')?.value;
+  const hinhThuc = getChipValues('chips_hj_hinh_thuc');
+  const thanThiet = getChipValues('chips_hj_than_thiet');
+  const noiO = document.getElementById('hj_noi_o')?.value?.trim();
+  const ngheNghiep = document.getElementById('hj_nghe')?.value?.trim();
+  const tinhCach = document.getElementById('hj_tinh_cach')?.value?.trim();
+  const ketNoi = getChipValues('chips_hj_ket_noi');
+  const tgRanh = document.getElementById('hj_tg_ranh')?.value?.trim();
+  const thanTinh = getChipValues('chips_hj_than_tinh');
+  const hoanCanh = document.getElementById('hj_hoan_canh')?.value?.trim();
+  const hocKi = document.getElementById('hj_hoc_ki')?.value?.trim();
+  const noiLo = document.getElementById('hj_noi_lo')?.value?.trim();
+  const sdt = document.getElementById('hj_sdt')?.value?.trim();
 
   if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
   if (!ngay) { showToast('⚠️ Vui lòng chọn Ngày Chakki'); return; }
   if (!concept) { showToast('⚠️ Vui lòng nhập Concept'); return; }
   if (!fullName) { showToast('⚠️ Nhập họ tên trái (mục 1)'); return; }
+  if (!namSinh) { showToast('⚠️ Vui lòng nhập Năm sinh'); return; }
+  if (!gioiTinh) { showToast('⚠️ Vui lòng chọn Giới tính'); return; }
+  if (!hinhThuc || hinhThuc.length === 0) { showToast('⚠️ Vui lòng chọn Hình thức Chakki (mục 2)'); return; }
+  if (!thanThiet || thanThiet.length === 0) { showToast('⚠️ Vui lòng chọn Mức độ thân thiết'); return; }
+  if (!noiO) { showToast('⚠️ Vui lòng nhập Nơi ở (mục 3)'); return; }
+  if (!ngheNghiep) { showToast('⚠️ Vui lòng nhập Nghề nghiệp'); return; }
+  if (!tinhCach) { showToast('⚠️ Vui lòng nhập Tính cách'); return; }
+  if (!ketNoi || ketNoi.length === 0) { showToast('⚠️ Vui lòng chọn Kết nối'); return; }
+  if (!tgRanh) { showToast('⚠️ Vui lòng nhập Thời gian rảnh'); return; }
+  if (!thanTinh || thanTinh.length === 0) { showToast('⚠️ Vui lòng chọn Thân tình'); return; }
+  if (!hoanCanh) { showToast('⚠️ Vui lòng nhập Hoàn cảnh'); return; }
+  if (!hocKi) { showToast('⚠️ Vui lòng nhập Học kì'); return; }
+  if (!noiLo) { showToast('⚠️ Vui lòng nhập Nỗi lo'); return; }
+  if (!sdt) { showToast('⚠️ Vui lòng nhập Số điện thoại'); return; }
 
   const data = {
     full_name: fullName,
