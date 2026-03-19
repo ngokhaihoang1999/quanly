@@ -403,6 +403,17 @@ async function toggleFruitStatus(profileId, current) {
       openProfile(allProfiles[idx]);
     }
 
+    // Add timeline record for status change
+    try {
+      const recType = newStatus === 'dropout' ? 'drop_out' : 'alive';
+      const _cn = newStatus === 'dropout' ? { reason: reason || 'Không có lý do' } : { note: 'Chuyển lại trạng thái Alive' };
+      await sbFetch('/rest/v1/records', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ profile_id: profileId, record_type: recType, content: _cn })
+      });
+    } catch(err) { console.warn('Fail to record status change', err); }
+
     showToast(`✅ Đã chuyển sang ${label}`);
     filterProfiles();
     loadDashboard();

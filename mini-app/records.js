@@ -11,6 +11,8 @@ function latestActivityLabel(rec, sess) {
     if (rt === 'chot_bb')     return '🎓 Chốt BB';
     if (rt === 'chot_center') return '🏛️ Chốt Center';
     if (rt === 'mo_kt')       return '📖 Đã mở KT';
+    if (rt === 'drop_out')    return '🔴 Drop-out';
+    if (rt === 'alive')       return '🟢 Khôi phục Alive';
     return rt;
   } else {
     return `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
@@ -119,6 +121,8 @@ async function loadJourney(profileId, currentPhase) {
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; }
+      else if (r.record_type === 'drop_out')    { icon='🔴'; text=Drop-out: ; isMajor = true; }
+      else if (r.record_type === 'alive')       { icon='🟢'; text='Khôi phục Alive'; isMajor = true; }
       else { icon='📌'; text=r.record_type; }
 
       // Check if this bien_ban has a matching KT
