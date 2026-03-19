@@ -29,6 +29,7 @@ async function loadJourney(profileId, currentPhase) {
   if (!phBtnEl || !tlEl) return;
 
   const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
+  const isDropout = allProfiles.find(x => x.id === profileId)?.fruit_status === 'dropout';
 
   // Fetch group BB info (for BB/center phase)
   let bbGroupInfo = null;
@@ -43,25 +44,27 @@ async function loadJourney(profileId, currentPhase) {
 
   // Phase action buttons
   let btnHtml = '';
-  if (phBtnEl) phBtnEl.style.display = 'flex'; // Force display to be safe
-  if (['new','chakki'].includes(cp)) {
-    btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV</button>`;
-  } else if (cp === 'tu_van') {
-    btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
-      <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>`;
-  } else if (cp === 'bb') {
-    btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
-  }
-  // Undo button — visible for any phase past Chakki
-  if (!['new','chakki','completed'].includes(cp)) {
-    const phaseLabels = { tu_van:'Chốt TV', bb:'Chốt BB', center:'Chốt Center' };
-    btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[cp]||cp}'" style="
-      flex:0 0 auto;padding:10px 14px;border-radius:var(--radius-sm);border:1px dashed var(--text3);
-      background:transparent;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;
-      transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
-      onmouseout="this.style.borderColor='var(--text3)';this.style.color='var(--text2)'">
-      ↩️ Hoàn tác
-    </button>`;
+  if (phBtnEl) phBtnEl.style.display = isDropout ? 'none' : 'flex'; // Force display or hide
+  if (!isDropout) {
+    if (['new','chakki'].includes(cp)) {
+      btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV</button>`;
+    } else if (cp === 'tu_van') {
+      btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
+        <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>`;
+    } else if (cp === 'bb') {
+      btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
+    }
+    // Undo button — visible for any phase past Chakki
+    if (!['new','chakki','completed'].includes(cp)) {
+      const phaseLabels = { tu_van:'Chốt TV', bb:'Chốt BB', center:'Chốt Center' };
+      btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[cp]||cp}'" style="
+        flex:0 0 auto;padding:10px 14px;border-radius:var(--radius-sm);border:1px dashed var(--text3);
+        background:transparent;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;
+        transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+        onmouseout="this.style.borderColor='var(--text3)';this.style.color='var(--text2)'">
+        ↩️ Hoàn tác
+      </button>`;
+    }
   }
   phBtnEl.innerHTML = btnHtml;
 

@@ -123,7 +123,7 @@ async function openProfile(p) {
   const isKT = p.is_kt_opened === true;
   const showKT = ['bb', 'center', 'completed'].includes(ph);
   const ktHtml = showKT
-    ? `<span onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
+    ? `<span ${(fStatus!=='dropout') ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${(fStatus==='dropout')?'opacity:0.6;':''}cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
   // ONE unified card
@@ -183,6 +183,12 @@ async function openProfile(p) {
   document.querySelectorAll('#profileTabs .form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
   document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
   document.getElementById('infoSheet')?.classList.add('active');
+  
+  // Hide add buttons if dropout
+  document.querySelectorAll('.add-record-btn').forEach(b => {
+      if (fStatus === 'dropout') b.style.display = 'none';
+      else b.style.display = '';
+  });
 }
 
 // ── Refresh in-place: sync dữ liệu mới nhất, giữ nguyên tab đang mở ──
