@@ -199,11 +199,11 @@ async function loadDashboard() {
           <button class="dash-mode-btn ${isCum ? 'active' : ''}" onclick="window._dashMode='cumulative';renderDashMetrics('cumulative')">📊 Tích luỹ</button>
           <button class="dash-mode-btn ${!isCum ? 'active' : ''}" onclick="window._dashMode='phase';renderDashMetrics('phase')">📋 Theo giai đoạn</button>
         </div>
-        <div class="dash-center-circle" onclick="showUnitPopup('center')">
-          <div class="num">${isCum ? centerFruits.length : centerFruits.length}</div>
-          <div class="lbl">🏛️ Trái Center</div>
-        </div>
         <div class="dash-grid-5">
+          <div class="dash-center-circle" onclick="showUnitPopup('center')">
+            <div class="num">${centerFruits.length}</div>
+            <div class="lbl">🏛️ Center</div>
+          </div>
           <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup('hapja')">
             ${infoBtn(isCum ? 'hapja_cum' : 'wait_tv')}
             <div class="num">${isCum ? approvedHapjaList.length : waitTVFruits.length}</div>
