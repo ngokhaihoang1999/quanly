@@ -26,6 +26,8 @@ async function loadJourney(profileId, currentPhase) {
   const tlEl = document.getElementById('timelineList');
   if (!phBtnEl || !tlEl) return;
 
+  const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
+
   // Fetch group BB info (for BB/center phase)
   let bbGroupInfo = null;
   if (['bb','center','completed'].includes(cp)) {
@@ -39,7 +41,6 @@ async function loadJourney(profileId, currentPhase) {
 
   // Phase action buttons
   let btnHtml = '';
-  const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
   if (phBtnEl) phBtnEl.style.display = 'flex'; // Force display to be safe
   if (['new','chakki'].includes(cp)) {
     btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV</button>`;
@@ -546,14 +547,14 @@ async function openChotBBModal() {
   if (!currentProfileId) return;
   // Kiểm tra: phải có Báo cáo TV ít nhất 1 lần trước khi chốt BB
   try {
-    const sessRes = await sbFetch(/rest/v1/consultation_sessions?profile_id=eq.&select=session_number&order=session_number.desc&limit=1);
+    const sessRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
     const sessList = await sessRes.json();
     if (sessList && sessList.length > 0) {
       const lastSessNum = sessList[0].session_number;
-      const bcRes = await sbFetch(/rest/v1/records?profile_id=eq.&record_type=eq.tu_van&content->>lan_thu=eq.&select=id&limit=1);
+      const bcRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&content->>lan_thu=eq.${lastSessNum}&select=id&limit=1`);
       const bcRows = await bcRes.json();
       if (!bcRows || bcRows.length === 0) {
-        showToast(⚠️ Phải có Báo cáo TV lần  rồi mới được Chốt BB!);
+        showToast(`⚠️ Phải có Báo cáo TV lần ${lastSessNum} rồi mới được Chốt BB!`);
         return;
       }
     } else {
