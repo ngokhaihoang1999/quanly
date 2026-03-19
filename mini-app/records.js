@@ -121,7 +121,7 @@ async function loadJourney(profileId, currentPhase) {
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; }
-      else if (r.record_type === 'drop_out')    { icon='🔴'; text=Drop-out: ; isMajor = true; }
+      else if (r.record_type === 'drop_out')    { icon='🔴'; text=`Drop-out: ${r.content?.reason||'Không có lý do'}`; isMajor = true; }
       else if (r.record_type === 'alive')       { icon='🟢'; text='Khôi phục Alive'; isMajor = true; }
       else { icon='📌'; text=r.record_type; }
 
