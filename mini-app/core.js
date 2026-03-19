@@ -339,13 +339,52 @@ function showUnitPopup(type) {
         <div style="font-size:11px;color:var(--text2);">TĐ Q.Lý: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
       </div>`;
     });
-  } else if (type === 'bbgroup') {
-    title = '💬 Group BB';
-    const list = window._unitBbGroups || [];
+  } else if (type === 'bbgroup' || type === 'bbgroup_phase') {
+    title = type === 'bbgroup_phase' ? '👥 Group BB (giai đoạn BB)' : '👥 Group BB (tích luỹ)';
+    const list = type === 'bbgroup_phase' ? (window._unitPhaseBBGroups || []) : (window._unitBbGroups || []);
     items = list.map(r => `<div style="padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;">
       <div style="font-weight:700;font-size:13px;">${r.fruit_groups?.telegram_group_title || 'Group'}</div>
       <div style="font-size:11px;color:var(--text2);">NDD: ${r.staff_code} · ${r.fruit_groups?.profiles?.full_name || ''}</div>
     </div>`);
+  } else if (type === 'tvv_phase') {
+    title = '💬 Trái TV (đang ở giai đoạn TV)';
+    const list = window._unitPhaseTVFruits || [];
+    items = list.map(r => {
+      const p = r.fruit_groups?.profiles;
+      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--accent);color:white;">💬 TV</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">TĐ: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
+      </div>`;
+    });
+  } else if (type === 'gvbb_phase') {
+    title = '🎓 Trái BB (đang ở giai đoạn BB)';
+    const list = window._unitPhaseBBFruits || [];
+    items = list.map(r => {
+      const p = r.fruit_groups?.profiles;
+      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--green);color:white;">🎓 BB</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">TĐ: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
+      </div>`;
+    });
+  } else if (type === 'center') {
+    title = '🏛️ Trái Center';
+    const list = window._unitCenterFruits || [];
+    items = list.map(r => {
+      const p = r.fruit_groups?.profiles;
+      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#8b5cf6;color:white;">🏛️ Center</span>
+        </div>
+        <div style="font-size:11px;color:var(--text2);">TĐ: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
+      </div>`;
+    });
   }
   document.getElementById('unitPopupTitle').textContent = title;
   document.getElementById('unitPopupBody').innerHTML = items.length ? items.join('') : '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có dữ liệu</div>';

@@ -154,6 +154,41 @@
     .dash-stat.yellow .num { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .dash-stat.pink .num   { background: linear-gradient(135deg, #f472b6, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .dash-stat .lbl { font-size: 11px; color: var(--text2); font-weight: 500; }
+    /* Dashboard mode toggle */
+    .dash-mode-toggle {
+      display: flex; gap: 4px; padding: 3px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid var(--border); margin-bottom: 14px;
+    }
+    .dash-mode-btn {
+      flex: 1; text-align: center; padding: 7px 10px; border-radius: 8px; font-size: 12px;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--text2); border: none; background: transparent;
+    }
+    .dash-mode-btn.active {
+      background: var(--accent); color: white; box-shadow: 0 2px 8px rgba(124,106,247,0.3);
+    }
+    /* Center circle */
+    .dash-center-circle {
+      width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 14px;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: 0 6px 24px rgba(139,92,246,0.35); cursor: pointer; transition: transform 0.2s;
+    }
+    .dash-center-circle:active { transform: scale(0.95); }
+    .dash-center-circle .num { font-size: 34px; font-weight: 800; color: white; line-height: 1; }
+    .dash-center-circle .lbl { font-size: 10px; color: rgba(255,255,255,0.85); font-weight: 600; margin-top: 3px; }
+    /* Info tooltip on stat */
+    .dash-stat .info-badge {
+      position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text3);
+      font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; z-index: 2; line-height: 1;
+    }
+    .dash-stat .info-badge:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    /* Dashboard grid 5 cards layout */
+    .dash-grid-5 {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+    }
+
     /* Section headers — cleaner accent style */
     .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 8px 12px; background: var(--surface2); border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
     .section-title { font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.8px; }
