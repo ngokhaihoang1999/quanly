@@ -309,7 +309,8 @@ async function loadDashboard() {
       const myAreas = pos === 'admin' ? (structureData||[]) :
         (structureData||[]).filter(a => a.yjyn_staff_code === myCode || ['ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos));
       myAreas.forEach(a => {
-        (a.org_groups||[]).forEach(g => {
+        const sortedGroups = (a.org_groups||[]).slice().sort((a,b) => (a.name||'').localeCompare(b.name||'','vi',{numeric:true}));
+        sortedGroups.forEach(g => {
           const gCodes = [];
           (g.teams||[]).forEach(t => (t.staff||[]).forEach(m => gCodes.push(m.staff_code)));
           const gS = countForCodes(gCodes);
@@ -322,7 +323,8 @@ async function loadDashboard() {
               </div>
             </div>
             <div id="${gid}" style="display:none;padding-left:12px;">`;
-          (g.teams||[]).forEach(t => {
+          const sortedTeams = (g.teams||[]).slice().sort((a,b) => (a.name||'').localeCompare(b.name||'','vi',{numeric:true}));
+          sortedTeams.forEach(t => {
             const tCodes = (t.staff||[]).map(m => m.staff_code);
             const tS = countForCodes(tCodes);
             const tid = 'subteam_' + t.id;
@@ -343,7 +345,8 @@ async function loadDashboard() {
       for (const a of (structureData||[])) {
         const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
         if (myGrp) {
-          (myGrp.teams||[]).forEach(t => {
+          const sortedTeams2 = (myGrp.teams||[]).slice().sort((a,b) => (a.name||'').localeCompare(b.name||'','vi',{numeric:true}));
+          sortedTeams2.forEach(t => {
             const tCodes = (t.staff||[]).map(m => m.staff_code);
             const tS = countForCodes(tCodes);
             const tid = 'subteam_' + t.id;
