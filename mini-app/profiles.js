@@ -62,8 +62,9 @@ async function openProfile(p) {
 
   const ph = p.phase || 'chakki';
   const fStatus = p.fruit_status || 'alive';
-  const statusBg = fStatus === 'dropout' ? 'var(--red)' : 'var(--green)';
-  const statusText = fStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+  const isDropout = fStatus === 'dropout';
+  const statusBg = isDropout ? 'var(--red)' : 'var(--green)';
+  const statusText = isDropout ? '🔴 Drop-out' : '🟢 Alive';
   const myCode2 = getEffectiveStaffCode();
   const pos2 = getCurrentPosition();
 
