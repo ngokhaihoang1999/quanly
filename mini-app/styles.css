@@ -45,7 +45,7 @@
     .header-right { display: flex; align-items: center; gap: 8px; }
     .tab-bar { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
     .tab-bar::-webkit-scrollbar { display: none; }
-    .tab { flex-shrink: 0; padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); background: transparent; color: var(--text2); }
+    .tab { flex-shrink: 0; padding: 7px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); background: transparent; color: var(--text2); white-space: nowrap; }
     .tab.active { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 16px var(--fab-shadow); }
     .content { padding: 16px; max-width: 600px; margin: 0 auto; }
     .search-wrap { position: relative; margin-bottom: 16px; }
