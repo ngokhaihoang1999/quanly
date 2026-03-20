@@ -424,14 +424,49 @@
       border-top: 1px dashed #d97706;
     }
     .sticky-note-body.open { display: block; padding-top: 8px; }
-    .sticky-note-del {
-      position: absolute; top: 6px; right: 6px; width: 20px; height: 20px;
-      border-radius: 50%; border: none; background: rgba(220,38,38,0.1);
-      color: #dc2626; font-size: 12px; cursor: pointer; display: flex;
-      align-items: center; justify-content: center; opacity: 0;
-      transition: opacity 0.2s;
+    .sticky-note-actions {
+      position: absolute; top: 6px; right: 6px; display: flex; gap: 4px;
+      opacity: 0; transition: opacity 0.2s;
     }
-    .sticky-note:hover .sticky-note-del { opacity: 1; }
+    .sticky-note:hover .sticky-note-actions { opacity: 1; }
+    .sticky-note-edit, .sticky-note-del {
+      width: 24px; height: 24px; border-radius: 50%; border: none;
+      font-size: 12px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .sticky-note-edit { background: rgba(37,99,235,0.1); color: #2563eb; }
+    .sticky-note-edit:hover { background: #2563eb; color: white; }
+    .sticky-note-del { background: rgba(220,38,38,0.1); color: #dc2626; }
+    .sticky-note-del:hover { background: #dc2626; color: white; }
+    /* Mindmap zoom */
+    .mm-zoom-bar {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      z-index: 10; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 8px 4px;
+    }
+    .mm-zoom-bar button {
+      width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-size: 16px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .mm-zoom-bar button:active { transform: scale(0.9); background: var(--accent); color: white; }
+    .mm-zoom-bar .mm-zoom-level {
+      font-size: 9px; font-weight: 700; color: var(--text2);
+    }
+    /* Mindmap popup */
+    .mm-popup {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; min-width: 260px; max-width: 90vw; max-height: 60vh; overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 200;
+    }
+    .mm-popup-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 199;
+    }
     /* Mindmap */
     .mm-node {
       position: absolute; padding: 6px 12px; border-radius: 16px;

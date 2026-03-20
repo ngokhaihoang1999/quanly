@@ -1,14 +1,45 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP — Pure SVG/CSS renderer (zero external libs, zero extra API calls)
+// MINDMAP — Interactive SVG with Zoom & Popup Detail
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _mmCurrentType = 'info';
+let _mmZoom = 1;
+let _mmBranches = [];
 
 function switchMindmap(type, btn) {
   _mmCurrentType = type;
   document.querySelectorAll('#mindmapTab .chip').forEach(c => c.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  _mmZoom = 1;
   renderMindmap();
+}
+
+function mmZoomIn() { _mmZoom = Math.min(_mmZoom + 0.15, 2.5); applyMmZoom(); }
+function mmZoomOut() { _mmZoom = Math.max(_mmZoom - 0.15, 0.4); applyMmZoom(); }
+function applyMmZoom() {
+  const inner = document.getElementById('mmInner');
+  const lvl = document.getElementById('mmZoomLvl');
+  if (inner) inner.style.transform = `scale(${_mmZoom})`;
+  if (lvl) lvl.textContent = Math.round(_mmZoom * 100) + '%';
+}
+
+function showMmPopup(title, details) {
+  // Remove existing
+  document.querySelectorAll('.mm-popup,.mm-popup-overlay').forEach(e => e.remove());
+  const overlay = document.createElement('div');
+  overlay.className = 'mm-popup-overlay';
+  overlay.onclick = () => { overlay.remove(); popup.remove(); };
+  const popup = document.createElement('div');
+  popup.className = 'mm-popup';
+  popup.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-weight:700;font-size:15px;">${title}</div>
+      <button onclick="this.closest('.mm-popup').remove();document.querySelector('.mm-popup-overlay')?.remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;">${details}</div>
+  `;
+  document.body.appendChild(overlay);
+  document.body.appendChild(popup);
 }
 
 function renderMindmap() {
@@ -16,117 +47,114 @@ function renderMindmap() {
   if (!container || !currentProfileId) return;
   const p = allProfiles.find(x => x.id === currentProfileId);
   if (!p) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">Không tìm thấy hồ sơ</div>'; return; }
-
-  if (_mmCurrentType === 'info') {
-    renderInfoMindmap(container, p);
-  } else {
-    renderCollectMindmap(container, p);
-  }
+  if (_mmCurrentType === 'info') renderInfoMindmap(container, p);
+  else renderCollectMindmap(container, p);
 }
 
 // ── Personal Info Mindmap ──
 function renderInfoMindmap(container, p) {
-  const infoData = window._currentInfoSheet || {};
+  const d = window._currentInfoSheet || {};
   const centerLabel = p.full_name || 'Trái quả';
-  
   const branches = [];
-  if (infoData.gioi_tinh || p.gender) branches.push({ label: '👤 Giới tính', children: [infoData.gioi_tinh || p.gender || '—'] });
-  if (infoData.nam_sinh || p.birth_year) branches.push({ label: '📅 Năm sinh', children: [infoData.nam_sinh || p.birth_year || '—'] });
-  if (infoData.nghe_nghiep) branches.push({ label: '💼 Nghề nghiệp', children: [infoData.nghe_nghiep] });
-  if (infoData.ton_giao) branches.push({ label: '🙏 Tôn giáo', children: Array.isArray(infoData.ton_giao) ? infoData.ton_giao : [infoData.ton_giao] });
-  if (infoData.hon_nhan) branches.push({ label: '💍 Hôn nhân', children: Array.isArray(infoData.hon_nhan) ? infoData.hon_nhan : [infoData.hon_nhan] });
-  if (infoData.dia_chi) branches.push({ label: '📍 Nơi ở', children: [infoData.dia_chi] });
-  if (infoData.que_quan) branches.push({ label: '🏠 Quê quán', children: [infoData.que_quan] });
-  if (infoData.tinh_cach) branches.push({ label: '🧩 Tính cách', children: [infoData.tinh_cach] });
-  if (infoData.so_thich) branches.push({ label: '⭐ Sở thích', children: [infoData.so_thich] });
-  if (infoData.du_dinh) branches.push({ label: '🎯 Dự định', children: [infoData.du_dinh] });
-  if (infoData.nguoi_quan_trong) branches.push({ label: '❤️ Người QT', children: [infoData.nguoi_quan_trong] });
-  if (infoData.quan_diem) branches.push({ label: '🌟 Quan điểm TL', children: [infoData.quan_diem] });
-  if (infoData.sdt || p.phone_number) branches.push({ label: '📞 SĐT', children: [infoData.sdt || p.phone_number || '—'] });
+  
+  const add = (icon, label, val) => {
+    if (!val || (Array.isArray(val) && val.length === 0)) return;
+    const children = Array.isArray(val) ? val : [val];
+    branches.push({ label: icon + ' ' + label, children, fullData: children.join(', ') });
+  };
+  
+  add('👤', 'Giới tính', d.gioi_tinh || p.gender);
+  add('📅', 'Năm sinh', d.nam_sinh || p.birth_year);
+  add('💼', 'Nghề nghiệp', d.nghe_nghiep);
+  add('🙏', 'Tôn giáo', d.ton_giao);
+  add('💍', 'Hôn nhân', d.hon_nhan);
+  add('📍', 'Nơi ở', d.dia_chi);
+  add('🏠', 'Quê quán', d.que_quan);
+  add('🧩', 'Tính cách', d.tinh_cach);
+  add('⭐', 'Sở thích', d.so_thich);
+  add('🎯', 'Dự định', d.du_dinh);
+  add('❤️', 'Người QT', d.nguoi_quan_trong);
+  add('🌟', 'Quan điểm TL', d.quan_diem);
+  add('📞', 'SĐT', d.sdt || p.phone_number);
   
   if (branches.length === 0) {
-    branches.push({ label: '📋 Chưa có dữ liệu', children: ['Hãy điền Phiếu Thông tin'] });
+    branches.push({ label: '📋 Chưa có', children: ['Hãy điền Phiếu Thông tin'], fullData: 'Chưa có dữ liệu' });
   }
-
+  _mmBranches = branches;
   drawRadialMindmap(container, centerLabel, branches);
 }
 
-// ── Collected Info Mindmap (from reports + notes) ──
+// ── Collected Info Mindmap ──
 async function renderCollectMindmap(container, p) {
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">⏳ Đang phân tích dữ liệu...</div>';
-  
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">⏳ Đang phân tích...</div>';
   try {
-    // Fetch reports + notes (already in records table, minimal API call)
     const [tvRes, bbRes, noteRes] = await Promise.all([
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.tu_van&select=content&order=created_at.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.bien_ban&select=content&order=created_at.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.note&select=content&order=created_at.asc`)
     ]);
-    const tvRecs = await tvRes.json();
-    const bbRecs = await bbRes.json();
-    const notes = await noteRes.json();
-
+    const tvRecs = await tvRes.json(), bbRecs = await bbRes.json(), notes = await noteRes.json();
     const centerLabel = p.full_name || 'Thu thập';
     const branches = [];
 
-    // TV Reports summary
     if (tvRecs.length > 0) {
-      const tvChildren = tvRecs.map((r, i) => {
+      const details = tvRecs.map((r, i) => {
         const c = r.content || {};
-        let summary = `Lần ${c.lan_thu || (i+1)}`;
-        if (c.noi_dung) summary += ': ' + c.noi_dung.substring(0, 40);
-        else if (c.tom_tat) summary += ': ' + c.tom_tat.substring(0, 40);
-        return summary;
+        return `<b>Lần ${c.lan_thu || (i+1)}</b>: ${c.noi_dung || c.tom_tat || '—'}`;
+      }).join('<br>');
+      branches.push({
+        label: '💬 Tư vấn (' + tvRecs.length + ')',
+        children: tvRecs.map((r, i) => 'Lần ' + (r.content?.lan_thu || (i+1))),
+        fullData: details
       });
-      branches.push({ label: '💬 Tư vấn (' + tvRecs.length + ')', children: tvChildren });
     }
 
-    // BB Reports summary
     if (bbRecs.length > 0) {
-      const bbChildren = bbRecs.map((r, i) => {
+      const details = bbRecs.map((r, i) => {
         const c = r.content || {};
-        let summary = `Buổi ${c.buoi_thu || (i+1)}`;
-        if (c.noi_dung) summary += ': ' + c.noi_dung.substring(0, 40);
-        else if (c.tom_tat) summary += ': ' + c.tom_tat.substring(0, 40);
-        return summary;
+        return `<b>Buổi ${c.buoi_thu || (i+1)}</b>: ${c.noi_dung || c.tom_tat || '—'}`;
+      }).join('<br>');
+      branches.push({
+        label: '📝 Biên bản (' + bbRecs.length + ')',
+        children: bbRecs.map((r, i) => 'Buổi ' + (r.content?.buoi_thu || (i+1))),
+        fullData: details
       });
-      branches.push({ label: '📝 Biên bản (' + bbRecs.length + ')', children: bbChildren });
     }
 
-    // Notes summary
     if (notes.length > 0) {
-      const noteChildren = notes.map(n => {
+      const details = notes.map(n => {
         const c = n.content || {};
-        return (c.title || 'Ghi chú') + (c.body ? ': ' + c.body.substring(0, 30) : '');
+        return `<b>${c.title || 'Ghi chú'}</b>: ${c.body || '—'}`;
+      }).join('<br>');
+      branches.push({
+        label: '📌 Ghi chú (' + notes.length + ')',
+        children: notes.map(n => n.content?.title || 'Ghi chú'),
+        fullData: details
       });
-      branches.push({ label: '📌 Ghi chú (' + notes.length + ')', children: noteChildren });
     }
 
-    // Key themes extraction (simple keyword analysis)
+    // Key themes
     const allText = [...tvRecs, ...bbRecs, ...notes].map(r => {
       const c = r.content || {};
       return [c.noi_dung, c.tom_tat, c.title, c.body, c.cam_xuc, c.phan_hoi].filter(Boolean).join(' ');
     }).join(' ');
-    
     if (allText.length > 20) {
       const keywords = extractKeyThemes(allText);
       if (keywords.length > 0) {
-        branches.push({ label: '🔑 Chủ đề nổi bật', children: keywords.slice(0, 6) });
+        branches.push({ label: '🔑 Chủ đề', children: keywords.slice(0, 5), fullData: keywords.join(', ') });
       }
     }
 
     if (branches.length === 0) {
-      branches.push({ label: '📋 Chưa có dữ liệu', children: ['Chưa có báo cáo hoặc ghi chú'] });
+      branches.push({ label: '📋 Chưa có', children: ['N/A'], fullData: 'Chưa có báo cáo' });
     }
-
+    _mmBranches = branches;
     drawRadialMindmap(container, centerLabel, branches);
   } catch(e) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);font-size:13px;">❌ Lỗi tải dữ liệu</div>';
-    console.error('renderCollectMindmap:', e);
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ Lỗi tải</div>';
   }
 }
 
-// ── Simple keyword extraction ──
 function extractKeyThemes(text) {
   const stopWords = new Set(['và','là','của','các','cho','hay','thì','mà','với','trong','này','đó','được','không','có','một','những','đã','sẽ','để','từ','khi','rất','cũng','nhưng','về','theo','lại','ra','vào','lên','xuống','qua','tại','ở']);
   const words = text.toLowerCase().replace(/[^\p{L}\s]/gu, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
@@ -135,52 +163,60 @@ function extractKeyThemes(text) {
   return Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0, 8).map(([w, c]) => `${w} (${c})`);
 }
 
-// ── Radial Mindmap Renderer (Pure HTML/CSS, no SVG needed) ──
+// ── Radial Mindmap Renderer with Zoom + Popup ──
 function drawRadialMindmap(container, centerLabel, branches) {
   const W = container.clientWidth || 360;
-  const H = Math.max(400, branches.length * 70 + 120);
-  container.style.height = H + 'px';
+  const baseH = Math.max(360, branches.length * 65 + 100);
   
-  const cx = W / 2, cy = H / 2;
-  const branchRadius = Math.min(W * 0.32, 130);
-  const leafRadius = Math.min(W * 0.48, 190);
+  const cx = W / 2, cy = baseH / 2;
+  const branchR = Math.min(W * 0.3, 120);
+  const leafR = Math.min(W * 0.48, 185);
   
   let svgLines = '';
   let nodesHtml = '';
   
-  // Center node
-  nodesHtml += `<div class="mm-node mm-center" style="left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);">${centerLabel}</div>`;
+  // Center
+  nodesHtml += `<div class="mm-node mm-center" style="left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${centerLabel.replace(/'/g,"\\'")}','Tổng quan hồ sơ: ${branches.length} nhóm thông tin')">${centerLabel}</div>`;
   
   const n = branches.length;
   branches.forEach((br, i) => {
     const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-    const bx = cx + branchRadius * Math.cos(angle);
-    const by = cy + branchRadius * Math.sin(angle);
+    const bx = cx + branchR * Math.cos(angle);
+    const by = cy + branchR * Math.sin(angle);
     
-    // Line from center to branch  
-    svgLines += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="var(--accent)" stroke-width="2" stroke-opacity="0.3"/>`;
+    svgLines += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="var(--accent)" stroke-width="2" stroke-opacity="0.25"/>`;
     
-    // Branch node
-    nodesHtml += `<div class="mm-node mm-branch" style="left:${bx}px;top:${by}px;transform:translate(-50%,-50%);">${br.label}</div>`;
+    // Escape for onclick
+    const popupTitle = br.label.replace(/'/g, "\\'");
+    const popupDetail = (br.fullData || br.children.join(', ')).replace(/'/g, "\\'").replace(/\n/g, '<br>');
     
-    // Leaf nodes
-    const leafCount = br.children.length;
+    nodesHtml += `<div class="mm-node mm-branch" style="left:${bx}px;top:${by}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${popupTitle}','${popupDetail}')">${br.label}</div>`;
+    
+    // Leaves — only show short label, detail in popup
+    const lc = br.children.length;
     br.children.forEach((leaf, j) => {
-      const leafAngle = angle + (j - (leafCount - 1) / 2) * 0.35;
-      const lx = cx + leafRadius * Math.cos(leafAngle);
-      const ly = cy + leafRadius * Math.sin(leafAngle);
+      const la = angle + (j - (lc - 1) / 2) * (lc > 3 ? 0.25 : 0.35);
+      const lx = cx + leafR * Math.cos(la);
+      const ly = cy + leafR * Math.sin(la);
       
-      svgLines += `<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="var(--border)" stroke-width="1" stroke-opacity="0.5"/>`;
+      svgLines += `<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="var(--border)" stroke-width="1" stroke-opacity="0.4"/>`;
       
-      const leafText = typeof leaf === 'string' ? (leaf.length > 25 ? leaf.substring(0, 25) + '…' : leaf) : leaf;
-      nodesHtml += `<div class="mm-node mm-leaf" style="left:${lx}px;top:${ly}px;transform:translate(-50%,-50%);" title="${typeof leaf === 'string' ? leaf.replace(/"/g, '&quot;') : ''}">${leafText}</div>`;
+      const leafText = typeof leaf === 'string' ? (leaf.length > 18 ? leaf.substring(0, 18) + '…' : leaf) : leaf;
+      const leafFull = (typeof leaf === 'string' ? leaf : '').replace(/'/g, "\\'");
+      nodesHtml += `<div class="mm-node mm-leaf" style="left:${lx}px;top:${ly}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${popupTitle}','${leafFull}')">${leafText}</div>`;
     });
   });
   
   container.innerHTML = `
-    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">
-      ${svgLines}
-    </svg>
-    ${nodesHtml}
+    <div id="mmInner" style="position:relative;width:100%;height:${baseH}px;transform-origin:center center;transition:transform 0.2s;transform:scale(${_mmZoom});">
+      <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">${svgLines}</svg>
+      ${nodesHtml}
+    </div>
+    <div class="mm-zoom-bar">
+      <button onclick="mmZoomIn()">+</button>
+      <span class="mm-zoom-level" id="mmZoomLvl">${Math.round(_mmZoom * 100)}%</span>
+      <button onclick="mmZoomOut()">−</button>
+    </div>
   `;
+  container.style.height = baseH + 'px';
 }

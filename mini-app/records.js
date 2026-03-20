@@ -762,11 +762,16 @@ async function loadNotes(profileId) {
       return;
     }
     listEl.innerHTML = notes.map(n => {
-      const title = n.content?.title || 'Không tiêu đề';
+      const title = (n.content?.title || 'Không tiêu đề').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const body = (n.content?.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const date = new Date(n.created_at).toLocaleDateString('vi-VN');
-      return `<div class="sticky-note">
-        <button class="sticky-note-del" onclick="event.stopPropagation();deleteNote('${n.id}')" title="Xoá">×</button>
+      const rawTitle = (n.content?.title || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
+      const rawBody = (n.content?.body || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
+      return `<div class="sticky-note" id="note_${n.id}">
+        <div class="sticky-note-actions">
+          <button class="sticky-note-edit" onclick="event.stopPropagation();editNote('${n.id}','${rawTitle}','${rawBody}')" title="Sửa">✏️</button>
+          <button class="sticky-note-del" onclick="event.stopPropagation();deleteNote('${n.id}')" title="Xoá">×</button>
+        </div>
         <div class="sticky-note-header" onclick="this.nextElementSibling.classList.toggle('open')">
           <span class="sticky-note-title">📌 ${title}</span>
           <span class="sticky-note-date">${date}</span>
@@ -779,20 +784,47 @@ async function loadNotes(profileId) {
 
 async function saveNote() {
   if (!currentProfileId) return;
-  const title = document.getElementById('note_title')?.value?.trim();
-  const body = document.getElementById('note_body')?.value?.trim();
+  const titleEl = document.getElementById('note_title');
+  const bodyEl = document.getElementById('note_body');
+  const editId = titleEl?.dataset?.editId;
+  const title = titleEl?.value?.trim();
+  const body = bodyEl?.value?.trim();
   if (!title && !body) { showToast('⚠️ Nhập tiêu đề hoặc nội dung'); return; }
   try {
-    await sbFetch('/rest/v1/records', {
-      method: 'POST',
-      headers: { 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ profile_id: currentProfileId, record_type: 'note', content: { title: title || 'Ghi chú', body: body || '' } })
-    });
-    document.getElementById('note_title').value = '';
-    document.getElementById('note_body').value = '';
-    showToast('✅ Đã thêm ghi chú!');
+    if (editId) {
+      // Update existing note
+      await sbFetch(`/rest/v1/records?id=eq.${editId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ content: { title: title || 'Ghi chú', body: body || '' } })
+      });
+      delete titleEl.dataset.editId;
+      document.getElementById('noteSaveBtn').textContent = '📌 Thêm ghi chú';
+      showToast('✅ Đã cập nhật ghi chú!');
+    } else {
+      await sbFetch('/rest/v1/records', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ profile_id: currentProfileId, record_type: 'note', content: { title: title || 'Ghi chú', body: body || '' } })
+      });
+      showToast('✅ Đã thêm ghi chú!');
+    }
+    titleEl.value = '';
+    bodyEl.value = '';
     loadNotes(currentProfileId);
   } catch(e) { showToast('❌ Lỗi lưu ghi chú'); }
+}
+
+function editNote(noteId, title, body) {
+  const titleEl = document.getElementById('note_title');
+  const bodyEl = document.getElementById('note_body');
+  if (!titleEl || !bodyEl) return;
+  titleEl.value = title.replace(/\\n/g, "\n");
+  bodyEl.value = body.replace(/\\n/g, "\n");
+  titleEl.dataset.editId = noteId;
+  document.getElementById('noteSaveBtn').textContent = '💾 Cập nhật ghi chú';
+  titleEl.focus();
+  // Scroll to form
+  titleEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function deleteNote(noteId) {
