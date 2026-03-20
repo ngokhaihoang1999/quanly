@@ -1,21 +1,21 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP v12 — OpenAI-powered + Shared AI Chat via Supabase
+// MINDMAP v13 — Persistent AI Insight + Shared AI Chat
 // ══════════════════════════════════════════════════════════════════════════════
 
-let _mmCurrentType = 'info';
-const _mmCache = {};
+var _mmCurrentType = 'info';
+var _mmCache = {};
 
 function switchMindmap(type, btn) {
   _mmCurrentType = type;
-  document.querySelectorAll('#mindmapTab .chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#mindmapTab .chip').forEach(function(c){c.classList.remove('active');});
   if (btn) btn.classList.add('active');
   renderMindmap();
 }
 
 function renderMindmap() {
-  const container = document.getElementById('mindmapContainer');
+  var container = document.getElementById('mindmapContainer');
   if (!container || !currentProfileId) return;
-  const p = allProfiles.find(x => x.id === currentProfileId);
+  var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!p) return;
   if (_mmCurrentType === 'info') renderInfoMM(container, p);
   else renderCollectMM(container, p);
@@ -36,22 +36,20 @@ function renderMarkmap(container, md) {
 function splitToBranches(text) {
   if (!text || text.length < 10) return text ? [text] : [];
   text = text.replace(/\n+/g, ', ').replace(/\s+/g, ' ').trim();
-  var parts = text.split(/[,;.!?\n]+|(?:\s+(?:và|nhưng|tuy nhiên|ngoài ra|do đó|vì vậy|cũng|còn|nên|mà|rồi|thì)\s+)/i);
-  var cleaned = parts.map(function(p){return p.trim();}).filter(function(p){return p.length > 4;}).map(function(p){return p.length > 38 ? p.substring(0,36)+'…' : p;});
+  var parts = text.split(/[,;.!?\n]+|(?:\s+(?:v\u00e0|nh\u01b0ng|tuy nhi\u00ean|ngo\u00e0i ra|do \u0111\u00f3|v\u00ec v\u1eady|c\u0169ng|c\u00f2n|n\u00ean|m\u00e0|r\u1ed3i|th\u00ec)\s+)/i);
+  var cleaned = parts.map(function(p){return p.trim();}).filter(function(p){return p.length > 4;}).map(function(p){return p.length > 38 ? p.substring(0,36)+'\u2026' : p;});
   if (cleaned.length > 4) return cleaned.slice(0, 4);
-  return cleaned.length ? cleaned : [text.length > 38 ? text.substring(0,36)+'…' : text];
+  return cleaned.length ? cleaned : [text.length > 38 ? text.substring(0,36)+'\u2026' : text];
 }
-
 function mdBranches(text) {
   var parts = splitToBranches(text);
   if (parts.length <= 1) return '- ' + (parts[0] || '') + '\n';
   return parts.map(function(p){return '- '+p+'\n';}).join('');
 }
-
-function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'…'; }
+function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'\u2026'; }
 
 // ═══════════════════════════════════════════════════
-// OpenAI API KEY — hardcoded
+// OpenAI API KEY
 // ═══════════════════════════════════════════════════
 var _AI_KEY = atob('c2stcHJvai10bExCMkZZTVc4NzF3bHV4enZfZkw5SXd6QVRRdkJfMUIzQ0lyOWdrdkZfZlBUSkdqaHdYN1pnNnMwWm1Va05vOXdzX2EtYzBPWlQzQmxia0ZKMllzM0kwdHcyMEs1bGY3NHZpZ1BhSlNkRE1TaXhVM2hLSnhQTkxid0J6eTZlNEkyTWhENzlwcmFZbVFEcVlHZy1sZEtmUXlBa0E=');
 function getOpenAIKey() { return _AI_KEY; }
@@ -63,8 +61,7 @@ function trackCost(cost) {
   localStorage.setItem('cj_ai_cost', _aiGlobalCost.toFixed(6));
 }
 function showAdminCost() {
-  var vnd = Math.round(_aiGlobalCost * 25000);
-  alert('Tong chi phi AI: ~' + vnd + 'd ($' + _aiGlobalCost.toFixed(4) + ')');
+  alert('Tong chi phi AI: ~' + Math.round(_aiGlobalCost * 25000) + 'd ($' + _aiGlobalCost.toFixed(4) + ')');
 }
 var _adminTapCount = 0, _adminTapTimer = null;
 document.addEventListener('DOMContentLoaded', function() {
@@ -83,43 +80,54 @@ function renderInfoMM(container, p) {
   var d = window._currentInfoSheet || {};
   var name = p.full_name || 'Trai qua';
   var md = '# ' + name + '\n';
-
   var id = [d.gioi_tinh||p.gender, d.nam_sinh?'Sinh '+d.nam_sinh:null, d.nghe_nghiep].filter(Boolean);
-  if (id.length) { md += '## 👤 Nhân thân\n'; id.forEach(function(v){md += '- '+v+'\n';}); }
-
+  if (id.length) { md += '## \ud83d\udc64 Nh\u00e2n th\u00e2n\n'; id.forEach(function(v){md += '- '+v+'\n';}); }
   var gd = [];
   if (d.hon_nhan) gd.push(Array.isArray(d.hon_nhan)?d.hon_nhan.join(', '):d.hon_nhan);
   if (d.nguoi_quan_trong) gd.push('QT: '+d.nguoi_quan_trong);
   if (d.nguoi_than) gd.push(short(d.nguoi_than,35));
-  if (gd.length) { md += '## 👨‍👩‍👧 Gia đình\n'; gd.forEach(function(v){md += '- '+v+'\n';}); }
-
-  if (d.tinh_cach) { md += '## 🧩 Tính cách\n'; md += mdBranches(d.tinh_cach); }
-  if (d.so_thich) { md += '## ⭐ Sở thích\n'; md += mdBranches(d.so_thich); }
-  if (d.ton_giao) md += '## 🙏 Tôn giáo\n- '+(Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao)+'\n';
-  if (d.du_dinh) { md += '## 🎯 Dự định\n'; md += mdBranches(d.du_dinh); }
-  if (d.quan_diem) { md += '## 🌟 Quan điểm\n'; md += mdBranches(d.quan_diem); }
-  if (d.chuyen_cu) { md += '## 📖 Câu chuyện\n'; md += mdBranches(d.chuyen_cu); }
-  if (d.luu_y) { md += '## ⚠️ Lưu ý\n'; md += mdBranches(d.luu_y); }
-
+  if (gd.length) { md += '## \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67 Gia \u0111\u00ecnh\n'; gd.forEach(function(v){md += '- '+v+'\n';}); }
+  if (d.tinh_cach) { md += '## \ud83e\udde9 T\u00ednh c\u00e1ch\n'; md += mdBranches(d.tinh_cach); }
+  if (d.so_thich) { md += '## \u2b50 S\u1edf th\u00edch\n'; md += mdBranches(d.so_thich); }
+  if (d.ton_giao) md += '## \ud83d\ude4f T\u00f4n gi\u00e1o\n- '+(Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao)+'\n';
+  if (d.du_dinh) { md += '## \ud83c\udfaf D\u1ef1 \u0111\u1ecbnh\n'; md += mdBranches(d.du_dinh); }
+  if (d.quan_diem) { md += '## \ud83c\udf1f Quan \u0111i\u1ec3m\n'; md += mdBranches(d.quan_diem); }
+  if (d.chuyen_cu) { md += '## \ud83d\udcd6 C\u00e2u chuy\u1ec7n\n'; md += mdBranches(d.chuyen_cu); }
+  if (d.luu_y) { md += '## \u26a0\ufe0f L\u01b0u \u00fd\n'; md += mdBranches(d.luu_y); }
   var noi = [d.dia_chi, d.que_quan].filter(Boolean);
-  if (noi.length) { md += '## 📍 Nơi sống\n'; noi.forEach(function(v){md += '- '+short(v,30)+'\n';}); }
-
-  if (md.trim() === '# '+name) md += '## 📋 Chưa có dữ liệu\n';
+  if (noi.length) { md += '## \ud83d\udccd N\u01a1i s\u1ed1ng\n'; noi.forEach(function(v){md += '- '+short(v,30)+'\n';}); }
+  if (md.trim() === '# '+name) md += '## \ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u\n';
   renderMarkmap(container, md);
 }
 
 // ═══════════════════════════════════════════════════
-// TAB 2: AI Insight — button-triggered
+// TAB 2: AI Insight — with Supabase persistence
 // ═══════════════════════════════════════════════════
 
 async function renderCollectMM(container, p) {
+  // 1. Check memory cache
   if (_mmCache[p.id]) { renderMarkmap(container, _mmCache[p.id]); return; }
+
+  // 2. Check Supabase for saved mindmap
   container.style.height = 'auto'; container.style.overflow = 'auto';
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">\u23f3 \u0110ang t\u1ea3i...</div>';
+  try {
+    var r = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.ai_mindmap&select=id,content&order=created_at.desc&limit=1');
+    var rows = await r.json();
+    if (rows.length && rows[0].content && rows[0].content.markdown) {
+      var saved = rows[0].content.markdown;
+      _mmCache[p.id] = saved;
+      renderMarkmap(container, saved);
+      return;
+    }
+  } catch(e) { console.warn('Load mindmap:', e); }
+
+  // 3. No saved result — show button
   container.innerHTML = '<div style="text-align:center;padding:40px;">' +
-    '<div style="font-size:36px;margin-bottom:8px;">🤖</div>' +
+    '<div style="font-size:36px;margin-bottom:8px;">\ud83e\udd16</div>' +
     '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">AI Insight</div>' +
-    '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Phân tích toàn bộ hồ sơ bằng AI</div>' +
-    '<button onclick="runAIAnalysis()" style="padding:12px 28px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.3);">🔍 Phân tích ngay</button>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Ph\u00e2n t\u00edch to\u00e0n b\u1ed9 h\u1ed3 s\u01a1 b\u1eb1ng AI</div>' +
+    '<button onclick="runAIAnalysis()" style="padding:12px 28px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.3);">\ud83d\udd0d Ph\u00e2n t\u00edch ngay</button>' +
     '</div>';
 }
 
@@ -128,7 +136,7 @@ async function runAIAnalysis() {
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!container || !p) return;
   var apiKey = getOpenAIKey();
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">🤖 AI đang phân tích...<br><small style="color:var(--text3);">10-20 giây</small></div>';
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83e\udd16 AI \u0111ang ph\u00e2n t\u00edch...<br><small style="color:var(--text3);">10-20 gi\u00e2y</small></div>';
   container.style.height = 'auto';
   try {
     var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
@@ -136,24 +144,24 @@ async function runAIAnalysis() {
     var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content,created_at&order=created_at.asc');
     var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
     var d = window._currentInfoSheet || {};
-    if (!tvs.length && !bbs.length && !nts.length) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">📋 Chưa có dữ liệu</div>'; return; }
-    var context = 'HỌC VIÊN: '+(p.full_name||'N/A')+'\nGIAI ĐOẠN: '+(p.phase||'chakki')+'\n\n';
+    if (!tvs.length && !bbs.length && !nts.length) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>'; return; }
+    var context = 'H\u1eccC VI\u00caN: '+(p.full_name||'N/A')+'\nGIAI \u0110O\u1ea0N: '+(p.phase||'chakki')+'\n\n';
     if (Object.keys(d).length) {
-      context += 'PHIẾU THÔNG TIN:\n';
+      context += 'PHI\u1ebeU TH\u00d4NG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
       context += '\n';
     }
-    tvs.forEach(function(r,i){ var c=r.content||{}; context+='--- TV LẦN '+(c.lan_thu||(i+1))+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    bbs.forEach(function(r,i){ var c=r.content||{}; context+='--- BB BUỔI '+(c.buoi_thu||(i+1))+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CHÚ: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
+    tvs.forEach(function(r,i){ var c=r.content||{}; context+='--- TV L\u1ea6N '+(c.lan_thu||(i+1))+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
+    bbs.forEach(function(r,i){ var c=r.content||{}; context+='--- BB BU\u1ed4I '+(c.buoi_thu||(i+1))+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
+    nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CH\u00da: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
 
-    var sysPrompt = 'Bạn là trợ lý phân tích hồ sơ học viên cho người quản lý hoạt động truyền đạo của nhà thờ.\n'+
-      'Nhiệm vụ: Phân tích TOÀN BỘ thông tin và tạo mindmap Markdown xúc tích.\n\n'+
-      'QUY TẮC NGHIÊM NGẶT:\n- Output CHỈNH là Markdown cho mindmap, KHÔNG giải thích gì thêm\n'+
-      '- Dùng # cho root, ## cho nhánh chính, ### cho nhánh phụ, - cho lá\n'+
-      '- Mỗi node tối đa 35 ký tự\n- Tối đa 5-6 nhánh chính\n- Mỗi nhánh tối đa 3-4 mục con\n- Tổng không quá 25 nodes\n\n'+
-      'CÁC NHÁNH BẮT BUỘC:\n## 🎯 Vấn đề cốt lõi\n## 💭 Tâm lý hiện tại\n## 🤝 Cách tiếp cận\n## 💡 Hướng đi\n## 🤖 Đề xuất\n\n'+
-      'QUAN TRỌNG: Góc nhìn TRUYỀN ĐẠO — hiểu, giúp đỡ, dẫn dắt. Chắt lọc insight, KHÔNG liệt kê raw.';
+    var sysPrompt = 'B\u1ea1n l\u00e0 tr\u1ee3 l\u00fd ph\u00e2n t\u00edch h\u1ed3 s\u01a1 h\u1ecdc vi\u00ean cho ng\u01b0\u1eddi qu\u1ea3n l\u00fd ho\u1ea1t \u0111\u1ed9ng truy\u1ec1n \u0111\u1ea1o c\u1ee7a nh\u00e0 th\u1edd.\n'+
+      'Nhi\u1ec7m v\u1ee5: Ph\u00e2n t\u00edch TO\u00c0N B\u1ed8 th\u00f4ng tin v\u00e0 t\u1ea1o mindmap Markdown x\u00fac t\u00edch.\n\n'+
+      'QUY T\u1eaeC NGHI\u00caM NG\u1eb6T:\n- Output CH\u1ec8 l\u00e0 Markdown cho mindmap, KH\u00d4NG gi\u1ea3i th\u00edch g\u00ec th\u00eam\n'+
+      '- D\u00f9ng # cho root, ## cho nh\u00e1nh ch\u00ednh, ### cho nh\u00e1nh ph\u1ee5, - cho l\u00e1\n'+
+      '- M\u1ed7i node t\u1ed1i \u0111a 35 k\u00fd t\u1ef1\n- T\u1ed1i \u0111a 5-6 nh\u00e1nh ch\u00ednh\n- M\u1ed7i nh\u00e1nh t\u1ed1i \u0111a 3-4 m\u1ee5c con\n- T\u1ed5ng kh\u00f4ng qu\u00e1 25 nodes\n\n'+
+      'C\u00c1C NH\u00c1NH B\u1eaeT BU\u1ed8C:\n## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 c\u1ed1t l\u00f5i\n## \ud83d\udcad T\u00e2m l\u00fd hi\u1ec7n t\u1ea1i\n## \ud83e\udd1d C\u00e1ch ti\u1ebfp c\u1eadn\n## \ud83d\udca1 H\u01b0\u1edbng \u0111i\n## \ud83e\udd16 \u0110\u1ec1 xu\u1ea5t\n\n'+
+      'QUAN TR\u1eccNG: G\u00f3c nh\u00ecn TRUY\u1ec0N \u0110\u1ea0O \u2014 hi\u1ec3u, gi\u00fap \u0111\u1ee1, d\u1eabn d\u1eaft. Ch\u1eaft l\u1ecdc insight, KH\u00d4NG li\u1ec7t k\u00ea raw.';
 
     var res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -168,20 +176,49 @@ async function runAIAnalysis() {
     trackCost((u.prompt_tokens||0)/1e6*0.40 + (u.completion_tokens||0)/1e6*1.60);
     _mmCache[p.id] = md;
     renderMarkmap(container, md);
+
+    // Save to Supabase — persist for all users
+    saveAIMindmap(p.id, md);
+
   } catch(e) {
     console.error('AI Mindmap error:', e);
     container.style.height = 'auto';
     container.innerHTML = '<div style="padding:20px;text-align:center;">' +
-      '<div style="color:var(--red);font-weight:700;margin-bottom:6px;">❌ Lỗi phân tích</div>' +
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">'+(e.message||'Lỗi')+'</div>' +
-      '<button onclick="runAIAnalysis()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;">🔄 Thử lại</button>' +
+      '<div style="color:var(--red);font-weight:700;margin-bottom:6px;">\u274c L\u1ed7i ph\u00e2n t\u00edch</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">'+(e.message||'L\u1ed7i')+' </div>' +
+      '<button onclick="runAIAnalysis()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;">\ud83d\udd04 Th\u1eed l\u1ea1i</button>' +
       '</div>';
   }
+}
+
+async function saveAIMindmap(profileId, md) {
+  try {
+    // Check existing
+    var r = await sbFetch('/rest/v1/records?profile_id=eq.'+profileId+'&record_type=eq.ai_mindmap&select=id&order=created_at.desc&limit=1');
+    var rows = await r.json();
+    if (rows.length) {
+      await sbFetch('/rest/v1/records?id=eq.'+rows[0].id, {
+        method: 'PATCH',
+        headers: { 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ content: { markdown: md } })
+      });
+    } else {
+      await sbFetch('/rest/v1/records', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ profile_id: profileId, record_type: 'ai_mindmap', content: { markdown: md } })
+      });
+    }
+  } catch(e) { console.warn('Save mindmap:', e); }
 }
 
 function clearMindmapCache(profileId) {
   if (profileId) delete _mmCache[profileId];
   else Object.keys(_mmCache).forEach(function(k){delete _mmCache[k];});
+  // Also delete from Supabase so next analysis is fresh
+  if (profileId) {
+    sbFetch('/rest/v1/records?profile_id=eq.'+profileId+'&record_type=eq.ai_mindmap', { method:'DELETE' }).catch(function(){});
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -192,7 +229,7 @@ var _aiChatHistory = [], _aiChatContext = '', _aiChatProfileId = null, _aiChatRe
 function escChat(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderChatBubbles(msgBox) {
-  var html = '<div class="ai-msg ai-msg-system">Trợ lý AI cho hồ sơ này. Mọi người cùng thấy.</div>';
+  var html = '<div class="ai-msg ai-msg-system">Tr\u1ee3 l\u00fd AI cho h\u1ed3 s\u01a1 n\u00e0y. M\u1ecdi ng\u01b0\u1eddi c\u00f9ng th\u1ea5y.</div>';
   _aiChatHistory.forEach(function(m) {
     if (m.role === 'user') html += '<div class="ai-msg ai-msg-user">' + escChat(m.content) + '</div>';
     else if (m.role === 'assistant') html += '<div class="ai-msg ai-msg-ai">' + escChat(m.content) + '</div>';
@@ -210,7 +247,7 @@ async function toggleAIChat() {
       _aiChatHistory = []; _aiChatContext = ''; _aiChatRecordId = null;
       _aiChatProfileId = currentProfileId;
       var msgBox = document.getElementById('aiChatMessages');
-      msgBox.innerHTML = '<div class="ai-msg ai-msg-system">⏳ Đang tải...</div>';
+      msgBox.innerHTML = '<div class="ai-msg ai-msg-system">\u23f3 \u0110ang t\u1ea3i...</div>';
       try {
         var r = await sbFetch('/rest/v1/records?profile_id=eq.'+currentProfileId+'&record_type=eq.ai_chat&select=id,content&order=created_at.desc&limit=1');
         var rows = await r.json();
@@ -256,9 +293,9 @@ async function buildChatCtx() {
   var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content&order=created_at.asc');
   var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
   var d = window._currentInfoSheet || {};
-  var ctx = 'HỌC VIÊN: '+(p.full_name||'N/A')+' | '+(p.phase||'chakki')+'\n\n';
+  var ctx = 'H\u1eccC VI\u00caN: '+(p.full_name||'N/A')+' | '+(p.phase||'chakki')+'\n\n';
   if (Object.keys(d).length) {
-    ctx += 'PHIẾU TT:\n';
+    ctx += 'PHI\u1ebeU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){
       if (d[k]) ctx += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n';
     });
@@ -285,7 +322,7 @@ async function sendAIChat() {
   try {
     var context = await buildChatCtx();
     var msgs = [
-      { role: 'system', content: 'Bạn là trợ lý AI cho người quản lý truyền đạo nhà thờ. Có hồ sơ học viên bên dưới. Trả lời ngắn gọn, TỐI ĐA 150 từ, tiếng Việt. Góc nhìn truyền đạo.\n\nHỒ SƠ:\n' + context }
+      { role: 'system', content: 'B\u1ea1n l\u00e0 tr\u1ee3 l\u00fd AI cho ng\u01b0\u1eddi qu\u1ea3n l\u00fd truy\u1ec1n \u0111\u1ea1o nh\u00e0 th\u1edd. C\u00f3 h\u1ed3 s\u01a1 h\u1ecdc vi\u00ean b\u00ean d\u01b0\u1edbi. Tr\u1ea3 l\u1eddi ng\u1eafn g\u1ecdn, T\u1ed0I \u0110A 150 t\u1eeb, ti\u1ebfng Vi\u1ec7t. G\u00f3c nh\u00ecn truy\u1ec1n \u0111\u1ea1o.\n\nH\u1ed2 S\u01a0:\n' + context }
     ].concat(_aiChatHistory.slice(-8));
     var res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -295,7 +332,7 @@ async function sendAIChat() {
     var el = document.getElementById('aiTyping'); if(el) el.remove();
     if (!res.ok) { var e = await res.json().catch(function(){return {};}); throw new Error(e.error?e.error.message:'API '+res.status); }
     var data = await res.json();
-    var answer = (data.choices && data.choices[0] ? data.choices[0].message.content : 'Không có phản hồi');
+    var answer = (data.choices && data.choices[0] ? data.choices[0].message.content : 'Kh\u00f4ng c\u00f3 ph\u1ea3n h\u1ed3i');
     var u = data.usage || {};
     trackCost((u.prompt_tokens||0)/1e6*0.40 + (u.completion_tokens||0)/1e6*1.60);
     _aiChatHistory.push({ role: 'assistant', content: answer });
@@ -305,7 +342,7 @@ async function sendAIChat() {
     var el2 = document.getElementById('aiTyping'); if(el2) el2.remove();
     _aiChatHistory.pop();
     renderChatBubbles(msgBox);
-    msgBox.innerHTML += '<div class="ai-msg ai-msg-system" style="color:var(--red);">❌ '+escChat(e.message)+'</div>';
+    msgBox.innerHTML += '<div class="ai-msg ai-msg-system" style="color:var(--red);">\u274c '+escChat(e.message)+'</div>';
   }
   msgBox.scrollTop = msgBox.scrollHeight;
 }
