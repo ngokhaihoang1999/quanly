@@ -236,6 +236,46 @@ async function renderCollectMM(container, p) {
       md += `## 🔧 Công cụ\n- ${[...new Set(tools)].join(', ')}\n`;
     }
 
+    // ══ 🤖 SYSTEM RECOMMENDATIONS ══
+    const recs = [];
+    const d = window._currentInfoSheet || {};
+    const allText = [...rawIssues, ...rawFeelings, ...rawApproach, ...rawNext,
+      ...noteInsights.map(n => n.body)].join(' ').toLowerCase();
+
+    // 1. Data gaps
+    if (!tvs.length && !bbs.length) recs.push('Chưa có báo cáo → Cần TV lần đầu');
+    else if (tvs.length > 0 && !bbs.length) recs.push('Chưa có BB → Xem xét chốt BB');
+    if (!nts.length && (tvs.length + bbs.length) > 0) recs.push('Chưa có ghi chú → Nên quan sát');
+    if (!d.tinh_cach && !d.so_thich) recs.push('Thiếu sở thích → Khai thác để tiếp cận');
+    if (!d.ton_giao && !d.quan_diem) recs.push('Chưa biết quan điểm tâm linh');
+    if (!d.nguoi_quan_trong && !d.nguoi_than) recs.push('Chưa rõ gia đình → Cần khai thác');
+
+    // 2. Content analysis
+    const fKw = ['gia đình','ba mẹ','kiểm cặp','ly hôn','kinh tế','khó khăn'];
+    const eKw = ['buồn','lo','sợ','mệt','chán','stress','áp lực','cô đơn','trầm','tự ti'];
+    const sKw = ['học','thi','trường','ôn tập','sắp thi'];
+    const lKw = ['bạn trai','bạn gái','người yêu','tình cảm'];
+    const oKw = ['mở lòng','chia sẻ','thoải mái','hứng thú','vui'];
+
+    if (fKw.some(w => allText.includes(w))) recs.push('GĐ phức tạp → Đồng cảm, lắng nghe');
+    if (eKw.some(w => allText.includes(w))) recs.push('Có áp lực tâm lý → Đồng hành');
+    if (sKw.some(w => allText.includes(w))) recs.push('Bận học → Hẹn linh hoạt, hỗ trợ');
+    if (lKw.some(w => allText.includes(w))) recs.push('Có chuyện tình cảm → Tiếp cận qua đây');
+
+    // 3. Approach
+    if (d.so_thich) recs.push(`Tiếp cận qua: ${short(d.so_thich, 22)}`);
+    if (oKw.some(w => allText.includes(w))) recs.push('Đang mở lòng → Thời điểm tốt');
+
+    // 4. Session flow
+    if (tvs.length > 0 && tvs.length < 3 && !bbs.length) recs.push('Đã TV '+tvs.length+' lần → Xét chốt BB');
+    if (bbs.length >= 3 && !allText.includes('kinh thánh')) recs.push('Đã '+bbs.length+' BB → Xét mở KT');
+
+    if (recs.length > 4) recs.length = 4;
+    if (recs.length) {
+      md += `## 🤖 Đề xuất\n`;
+      recs.forEach(r => md += `- ${r}\n`);
+    }
+
     renderMarkmap(container, md);
   } catch(e) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ Lỗi</div>';
