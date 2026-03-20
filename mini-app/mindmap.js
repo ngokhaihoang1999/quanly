@@ -116,12 +116,33 @@ async function renderCollectMM(container, p) {
   const apiKey = getOpenAIKey();
   if (!apiKey) { promptForKey(container); return; }
 
-  // Check cache
+  // Check cache — show if already analyzed
   const cacheKey = p.id;
   if (_mmCache[cacheKey]) {
     renderMarkmap(container, _mmCache[cacheKey]);
     return;
   }
+
+  // Not cached — show button to trigger analysis (don't auto-call API)
+  container.style.height = 'auto';
+  container.style.overflow = 'auto';
+  container.innerHTML = '<div style="text-align:center;padding:40px;">' +
+    '<div style="font-size:36px;margin-bottom:8px;">🤖</div>' +
+    '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">AI Insight</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Phân tích toàn bộ hồ sơ bằng AI</div>' +
+    '<button onclick="runAIAnalysis()" style="padding:12px 28px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.3);">🔍 Phân tích ngay</button>' +
+    '<div style="font-size:10px;color:var(--text3);margin-top:10px;">~250đ/hồ sơ · gpt-4.1-mini</div>' +
+    '</div>';
+  return;
+}
+
+// Separate function triggered by button click
+async function runAIAnalysis() {
+  const container = document.getElementById('mindmapContainer');
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  if (!container || !p) return;
+  const apiKey = getOpenAIKey();
+  if (!apiKey) { promptForKey(container); return; }
 
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">🤖 AI đang phân tích hồ sơ...<br><small style="color:var(--text3);">Có thể mất 10-20 giây</small></div>';
   container.style.height = 'auto';
@@ -243,7 +264,7 @@ QUAN TRỌNG: Phân tích từ GÓC NHÌN TRUYỀN ĐẠO — mục tiêu là hi
     }
 
     // Cache result
-    _mmCache[cacheKey] = md;
+    _mmCache[p.id] = md;
 
     renderMarkmap(container, md);
 
