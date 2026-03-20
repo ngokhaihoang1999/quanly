@@ -364,15 +364,20 @@ function toggleFullscreen(elId) {
   if (el.classList.contains('ai-fullscreen')) {
     // Exit fullscreen
     el.classList.remove('ai-fullscreen');
-    if (elId === 'mindmapContainer') { el.style.height = '420px'; }
     document.body.style.overflow = '';
-    // Remove close button
     var closeBtn = document.getElementById('aiFsClose');
     if (closeBtn) closeBtn.remove();
+    // Re-render mindmap at normal size
+    if (elId === 'mindmapContainer') {
+      el.style.height = '420px';
+      var pid = currentProfileId;
+      if (_mmCache[pid]) {
+        setTimeout(function(){ renderMarkmap(el, _mmCache[pid]); }, 50);
+      }
+    }
   } else {
     // Enter fullscreen
     el.classList.add('ai-fullscreen');
-    if (elId === 'mindmapContainer') { el.style.height = '100vh'; }
     document.body.style.overflow = 'hidden';
     // Add close button
     var btn = document.createElement('button');
@@ -381,9 +386,13 @@ function toggleFullscreen(elId) {
     btn.innerHTML = '\u2715';
     btn.onclick = function() { toggleFullscreen(elId); };
     document.body.appendChild(btn);
-    // Markmap re-render
-    if (elId === 'mindmapContainer' && window.markmap && window.markmap.autoLoader) {
-      setTimeout(function(){ window.markmap.autoLoader.renderAll(); }, 100);
+    // Mindmap: re-render at full size
+    if (elId === 'mindmapContainer') {
+      el.style.height = '100vh';
+      var pid2 = currentProfileId;
+      if (_mmCache[pid2]) {
+        setTimeout(function(){ renderMarkmap(el, _mmCache[pid2]); }, 100);
+      }
     }
     // Chat: auto-open body + focus input
     if (elId === 'aiChatCard') {
@@ -394,3 +403,4 @@ function toggleFullscreen(elId) {
     }
   }
 }
+
