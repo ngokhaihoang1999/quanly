@@ -239,7 +239,7 @@ async function loadDashboard() {
       const idsStr = allPids.map(id=>`"${id}"`).join(',');
       try {
         const [rRes, sRes] = await Promise.all([
-          sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&record_type=neq.mo_kt&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+          sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&record_type=not.in.(mo_kt,note)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
           sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
         ]);
         const recs = await rRes.json(); recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
@@ -432,7 +432,7 @@ async function loadDashboard() {
         const ids = missingIds.map(id=>`"${id}"`).join(',');
         try {
           const [recRes, sRes2] = await Promise.all([
-            sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=neq.mo_kt&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+            sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=not.in.(mo_kt,note)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
             sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
           ]);
           const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
