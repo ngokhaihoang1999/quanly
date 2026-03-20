@@ -442,6 +442,41 @@
     .sticky-note-del:hover { background: #dc2626; color: white; }
     /* Markmap container */
     .markmap { position: relative; }
-    .markmap > svg { width: 100%; height: 400px; }
+    .markmap > svg { width: 100%; height: 350px; }
     [data-theme="light"] .markmap > svg { color: #202124; }
 
+    /* Mindmap detail panel */
+    .mm-topic-card {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      margin-bottom: 6px; overflow: hidden; background: var(--surface);
+    }
+    .mm-topic-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px; cursor: pointer; user-select: none;
+      transition: background 0.15s;
+    }
+    .mm-topic-head:active { background: var(--surface2); }
+    .mm-topic-body {
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+      border-top: 0 solid var(--border);
+    }
+    .mm-topic-body.mm-open {
+      max-height: 2000px; border-top-width: 1px; overflow-y: auto;
+    }
+    .mm-detail-src {
+      font-size: 10px; font-weight: 700; color: var(--accent);
+      padding: 6px 12px 2px; text-transform: uppercase;
+      border-top: 1px solid var(--border);
+    }
+    .mm-detail-src:first-child { border-top: none; }
+    .mm-detail-item {
+      padding: 4px 12px 6px;
+    }
+    .mm-detail-label {
+      font-size: 9px; font-weight: 600; color: var(--text3);
+      margin-bottom: 1px;
+    }
+    .mm-detail-text {
+      font-size: 12px; color: var(--text1); line-height: 1.5;
+      white-space: pre-wrap; word-break: break-word;
+    }
