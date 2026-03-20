@@ -263,7 +263,8 @@ async function loadInfoSheet(profileId) {
         ton_giao: d.t2_ton_giao, hon_nhan: d.t2_hon_nhan, dia_chi: d.t2_dia_chi,
         que_quan: d.t2_que_quan, tinh_cach: d.t2_tinh_cach, so_thich: d.t2_so_thich,
         du_dinh: d.t2_du_dinh, nguoi_quan_trong: d.t2_nguoi_quan_trong,
-        quan_diem: d.t2_quan_diem, sdt: d.t2_sdt
+        quan_diem: d.t2_quan_diem, sdt: d.t2_sdt,
+        chuyen_cu: d.t2_chuyen_cu, nguoi_than: d.t2_nguoi_than, luu_y: d.t2_luu_y
       };
       Object.entries(d).forEach(([key, val]) => { if (typeof val === 'string') { const el=document.getElementById(key); if(el) el.value=val; } });
       if (d.t2_ton_giao) setChipValues('chips_ton_giao', d.t2_ton_giao);
