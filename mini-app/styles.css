@@ -441,122 +441,69 @@
     .sticky-note-del { background: rgba(220,38,38,0.1); color: #dc2626; }
     .sticky-note-del:hover { background: #dc2626; color: white; }
 
-    /* ── Ministry Insight Dashboard ── */
-    .mm-dashboard { padding: 4px 0; }
-    .mm-empty {
-      text-align: center; padding: 40px 20px; color: var(--text2); font-size: 14px;
+    /* ═══ Visual Mindmap Tree ═══ */
+    .vmm { padding: 12px 8px 4px; }
+    .vmm-root {
+      text-align: center; font-size: 16px; font-weight: 800; padding: 10px 20px;
+      background: linear-gradient(135deg, var(--accent), #ec4899); color: white;
+      border-radius: 20px; width: fit-content; margin: 0 auto;
+      box-shadow: 0 4px 16px rgba(124,106,247,0.3);
+    }
+    .vmm-connector {
+      width: 2px; height: 12px; background: var(--border); margin: 0 auto;
+    }
+    .vmm-branches {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .vmm-branch { position: relative; }
+    .vmm-branch-line {
+      width: 3px; height: 10px; margin: 0 auto; border-radius: 2px;
+    }
+    .vmm-branch-head {
+      text-align: center; font-size: 12px; font-weight: 700; padding: 6px 8px;
+      border: 2px solid; border-radius: 12px; background: var(--surface);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vmm-branch-items { padding: 4px 0 2px 12px; }
+    .vmm-item {
+      font-size: 10px; color: var(--text2); padding: 2px 0 2px 8px;
+      border-left: 2px solid; line-height: 1.4;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* Hero */
-    .mm-hero {
-      text-align: center; padding: 14px 12px 10px;
-      border-bottom: 1px solid var(--border); margin-bottom: 8px;
-    }
-    .mm-hero-name {
-      font-size: 18px; font-weight: 800;
-      background: linear-gradient(135deg, var(--accent), #ec4899);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .mm-hero-stats {
-      display: flex; gap: 6px; justify-content: center; margin-top: 8px; flex-wrap: wrap;
-    }
-    .mm-stat {
-      font-size: 10px; font-weight: 600; padding: 3px 8px;
-      border-radius: 10px; background: var(--surface2); color: var(--text2);
-    }
-    .mm-hero-emotion {
-      margin-top: 8px; font-size: 12px; color: var(--text2);
-    }
-
-    /* Cards */
+    /* ═══ Detail Cards ═══ */
     .mm-card {
       border: 1px solid var(--border); border-radius: var(--radius-sm);
-      margin-bottom: 8px; overflow: hidden; background: var(--surface);
+      margin-bottom: 6px; overflow: hidden; background: var(--surface);
     }
-    .mm-card-highlight { border-left: 3px solid var(--accent); }
-    .mm-card-note { border-left: 3px solid #f59e0b; }
-
     .mm-card-head {
       display: flex; align-items: center; gap: 10px; padding: 10px 12px;
       cursor: pointer; user-select: none; transition: background 0.15s;
     }
     .mm-card-head:active { background: var(--surface2); }
-    .mm-card-icon { font-size: 18px; flex-shrink: 0; }
+    .mm-card-icon { font-size: 16px; flex-shrink: 0; }
     .mm-card-info { flex: 1; min-width: 0; }
     .mm-card-title { font-size: 13px; font-weight: 700; color: var(--text1); }
     .mm-card-sub {
-      font-size: 11px; color: var(--text3); margin-top: 2px;
+      font-size: 11px; color: var(--text3); margin-top: 1px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .mm-card-arrow {
-      font-size: 18px; color: var(--text3); flex-shrink: 0;
-      transition: transform 0.2s;
-    }
+    .mm-card-arrow { font-size: 16px; color: var(--text3); flex-shrink: 0; }
     .mm-card-body {
-      max-height: 0; overflow: hidden; transition: max-height 0.35s ease;
-      border-top: 0 solid var(--border);
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
     }
     .mm-card-body.mm-open {
-      max-height: 5000px; border-top-width: 1px; overflow-y: auto;
+      max-height: 5000px; overflow-y: auto; border-top: 1px solid var(--border);
     }
-
-    /* Detail items inside cards */
     .mm-detail-item-wrap {
       padding: 8px 12px; border-bottom: 1px solid var(--border);
     }
     .mm-detail-item-wrap:last-child { border-bottom: none; }
     .mm-detail-src-tag {
       font-size: 9px; font-weight: 700; color: var(--accent);
-      text-transform: uppercase; margin-bottom: 3px;
-    }
-    .mm-detail-src {
-      font-size: 11px; font-weight: 700; color: var(--accent);
-      padding: 6px 12px 2px;
+      text-transform: uppercase; margin-bottom: 2px;
     }
     .mm-detail-text {
-      font-size: 12px; color: var(--text1); line-height: 1.6;
-      white-space: pre-wrap; word-break: break-word; padding: 2px 12px 8px;
+      font-size: 12px; color: var(--text1); line-height: 1.5;
+      white-space: pre-wrap; word-break: break-word;
     }
-
-    /* Info sections (tab Cá nhân) */
-    .mm-section {
-      border-bottom: 1px solid var(--border);
-    }
-    .mm-section:last-child { border-bottom: none; }
-    .mm-section-head {
-      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
-      cursor: pointer; user-select: none;
-    }
-    .mm-section-head:active { background: var(--surface2); }
-    .mm-section-icon { font-size: 16px; flex-shrink: 0; }
-    .mm-section-title { font-size: 12px; font-weight: 700; color: var(--text1); white-space: nowrap; }
-    .mm-section-preview { font-size: 12px; color: var(--text3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .mm-section-arrow { font-size: 14px; color: var(--text3); flex-shrink: 0; }
-    .mm-section-body {
-      max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
-    }
-    .mm-section-body.mm-open { max-height: 1000px; }
-    .mm-section-detail {
-      padding: 6px 12px 6px 36px; font-size: 12px; color: var(--text1);
-      line-height: 1.5; white-space: pre-wrap; word-break: break-word;
-      border-top: 1px solid var(--border);
-    }
-
-    /* Timeline inside "Tiến trình" card */
-    .mm-timeline-item {
-      padding: 10px 12px; border-bottom: 1px solid var(--border);
-    }
-    .mm-timeline-item:last-child { border-bottom: none; }
-    .mm-tl-badge {
-      display: inline-block; font-size: 10px; font-weight: 700;
-      padding: 2px 8px; border-radius: 8px; margin-bottom: 6px;
-      background: var(--accent); color: white;
-    }
-    .mm-tl-field {
-      font-size: 11px; color: var(--text2); line-height: 1.5;
-      padding: 2px 0 2px 4px; white-space: pre-wrap; word-break: break-word;
-    }
-    .mm-tl-important { color: var(--text1); font-weight: 500; }
-    .mm-tl-icon { font-size: 11px; margin-right: 2px; }
-
