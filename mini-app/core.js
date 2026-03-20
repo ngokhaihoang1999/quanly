@@ -8,19 +8,20 @@ let allPositions = [];
 
 // ============ POSITIONS (DB-driven) ============
 const ALL_PERMISSION_KEYS = [
-  'manage_positions','manage_structure','assign_position','manage_staff',
-  'create_hapja','approve_hapja',
-  'assign_role','link_profile','change_phase','toggle_kt','toggle_fruit_status',
-  'edit_profile','create_report','delete_record','view_dashboard'
+  'manage_positions', 'manage_structure', 'assign_position', 'manage_staff',
+  'create_hapja', 'approve_hapja',
+  'edit_profile',
+  'view_dashboard'
 ];
 const PERMISSION_LABELS = {
-  manage_positions:'Quản lý Chức vụ', manage_structure:'Quản lý Cơ cấu',
-  assign_position:'Gán Chức vụ', manage_staff:'Quản lý TĐ',
-  create_hapja:'Tạo Hapja', approve_hapja:'Duyệt Hapja',
-  assign_role:'Gán Vai trò', link_profile:'Gắn Hồ sơ', change_phase:'Chuyển Giai đoạn',
-  toggle_kt:'Bật/Tắt KT', toggle_fruit_status:'Chuyển Alive/Drop-out',
-  edit_profile:'Sửa Hồ sơ', create_report:'Tạo Báo cáo',
-  delete_record:'Xóa Báo cáo', view_dashboard:'Xem Dashboard'
+  manage_positions: 'Quản lý Chức vụ',
+  manage_structure: 'Quản lý Cơ cấu',
+  assign_position:  'Gán Chức vụ',
+  manage_staff:     'Quản lý TĐ',
+  create_hapja:     'Tạo Hapja',
+  approve_hapja:    'Duyệt Hapja',
+  edit_profile:     'Sửa Hồ sơ (toàn quyền với hồ sơ trong scope)',
+  view_dashboard:   'Xem Dashboard'
 };
 const SCOPE_LABELS = { system:'Toàn hệ thống', area:'Khu vực', group:'Nhóm', team:'Tổ' };
 const SCOPE_LEVELS = { system:4, area:3, group:2, team:1 };

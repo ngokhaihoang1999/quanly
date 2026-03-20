@@ -97,6 +97,17 @@ async function openProfile(p) {
   const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
   const gvbbDisplay = rolesInfo.gvbb || '—';
 
+  // Per-profile role of current user
+  const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);
+  const isProfileTVV  = rolesInfo.tvv.includes(myCode2);
+  const isProfileGVBB = rolesInfo.gvbb === myCode2;
+  const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
+  const canEditTV     = hasFullEdit || isProfileTVV;
+  const canEditBB     = hasFullEdit || isProfileGVBB;
+  const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['bb','center','completed'].includes(ph);
+  // Store for use in other functions
+  window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
+
   // Warning: BB phase but no real Telegram group
   const bbNoGroupWarning = ['bb','center'].includes(ph) && !hasRealBBGroup
     ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;">
@@ -113,17 +124,19 @@ async function openProfile(p) {
     latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
   } catch(e) {}
 
-    const canToggleStatus = pos2 === 'admin' || nddDisplay === myCode2 || ['gyjn','bgyjn'].includes(pos2);
+    const canToggleStatus = hasFullEdit || isProfileNDD;
   const statusBtn = canToggleStatus
     ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`
     : `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
   const reasonHtml = (fStatus==='dropout' && p.dropout_reason)
     ? `<div style="font-size:11px;color:var(--red);padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-top:4px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
 
+  // KT toggle: NDD, GVBB hoặc full edit
   const isKT = p.is_kt_opened === true;
   const showKT = ['bb', 'center', 'completed'].includes(ph);
+  const canToggleKT = (hasFullEdit || isProfileGVBB) && !isDropout;
   const ktHtml = showKT
-    ? `<span ${(fStatus!=='dropout') ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${(fStatus==='dropout')?'opacity:0.6;':''}cursor:pointer;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
+    ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
   // ONE unified card
@@ -173,10 +186,10 @@ async function openProfile(p) {
   // Tab visibility
   const tabTV = document.getElementById('tabTV');
   const tabBB = document.getElementById('tabBB');
-  if (tabTV) tabTV.style.display = ['tu_van','bb','center','completed'].includes(ph) ? '' : 'none';
-  if (tabBB) tabBB.style.display = ['bb','center','completed'].includes(ph) ? '' : 'none';
   const tabMM = document.getElementById('tabMindmap');
-  if (tabMM) tabMM.style.display = ['bb','center','completed'].includes(ph) ? '' : 'none';
+  if (tabTV) tabTV.style.display = (canEditTV && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
+  if (tabBB) tabBB.style.display = (canEditBB && ['bb','center','completed'].includes(ph)) ? '' : 'none';
+  if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
   clearFormFields();
   loadInfoSheet(p.id);
   loadJourney(p.id, ph);

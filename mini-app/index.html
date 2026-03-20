@@ -108,7 +108,7 @@
       <div class="form-tab" onclick="switchFormTab(this,'tuVan')" id="tabTV" style="display:none;">💬 TV</div>
       <div class="form-tab" onclick="switchFormTab(this,'bienBan')" id="tabBB" style="display:none;">📖 BB</div>
       <div class="form-tab" onclick="switchFormTab(this,'notesTab')">🗒️ Ghi chú</div>
-      <div class="form-tab" onclick="switchFormTab(this,'mindmapTab')" id="tabMindmap" style="display:none;">🧠 Mindmap</div>
+      <div class="form-tab" onclick="switchFormTab(this,'mindmapTab')" id="tabMindmap" style="display:none;">🧠 Tư Duy</div>
     </div>
 
     <!-- PHIẾU THÔNG TIN (1 duy nhất) -->
@@ -186,37 +186,38 @@
       <div class="form-card-header"><div class="form-card-title" id="mmTitle">🧠 MINDMAP</div></div>
       <div class="form-card-body" style="padding:8px;">
         <div style="display:flex;gap:4px;margin-bottom:10px;align-items:center;" id="mindmapTab">
-          <button class="chip active" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Cá nhân</button>
+      <button class="chip active" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Thông tin cơ bản</button>
           <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)">👼 Lacie Insight</button>
           <span style="flex:1;"></span>
           <button onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;" title="Phân tích lại">🔄</button>
         </div>
-        <div id="mindmapContainer" style="width:100%;height:420px;overflow:hidden;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
+        <div id="mindmapContainer" style="width:100%;height:380px;overflow:hidden;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
         <button onclick="toggleFullscreen('mindmapContainer')" style="margin-top:4px;background:none;border:1px solid var(--border);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">⛶ Toàn màn hình</button>
+
+        <!-- Lacie Chat (trong tab Tư Duy) -->
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+          <div class="ai-chat-header" onclick="toggleAIChat()" style="border-radius:var(--radius-sm);">
+            <div class="ai-chat-avatar">👼</div>
+            <div style="flex:1;">
+              <div class="ai-chat-name">Lacie 💫</div>
+              <div class="ai-chat-status">Trợ lý AI · Bấm để mở</div>
+            </div>
+            <span class="ai-chat-arrow" id="aiChatArrow">▾</span>
+            <button class="ai-chat-fs-btn" onclick="event.stopPropagation();toggleFullscreen('aiChatCard')" title="Toàn màn hình">⛶</button>
+          </div>
+          <div id="aiChatBody" style="display:none;">
+            <div class="ai-chat-msgs" id="aiChatMessages">
+              <div class="ai-msg ai-msg-system">Trợ lý AI cho hồ sơ này. Mọi người cùng thấy.</div>
+            </div>
+            <div class="ai-chat-input-area">
+              <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hỏi về bạn này..." onkeydown="if(event.key==='Enter')sendAIChat();" />
+              <button class="ai-chat-send" onclick="sendAIChat()">➤</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- AI Chat Section -->
-    <div class="ai-chat-card" id="aiChatCard">
-      <div class="ai-chat-header" onclick="toggleAIChat()">
-        <div class="ai-chat-avatar">👼</div>
-        <div style="flex:1;">
-          <div class="ai-chat-name">Lacie 💫</div>
-          <div class="ai-chat-status">Trợ lý AI · Bấm để mở</div>
-        </div>
-        <span class="ai-chat-arrow" id="aiChatArrow">▾</span>
-        <button class="ai-chat-fs-btn" onclick="event.stopPropagation();toggleFullscreen('aiChatCard')" title="Toàn màn hình">⛶</button>
-      </div>
-      <div class="ai-chat-body" id="aiChatBody" style="display:none;">
-        <div class="ai-chat-msgs" id="aiChatMessages">
-          <div class="ai-msg ai-msg-system">Xin chào! Mình là Lacie 💫 Hỏi mình bất kỳ điều gì về hồ sơ này nhé!</div>
-        </div>
-        <div class="ai-chat-input-area">
-          <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hỏi về bạn này..." onkeydown="if(event.key==='Enter')sendAIChat();" />
-          <button class="ai-chat-send" onclick="sendAIChat()">➤</button>
-        </div>
-      </div>
-    </div>
 
     <button class="delete-profile-btn" onclick="deleteProfile()">🗑️ Xoá hồ sơ này</button>
   </div>
