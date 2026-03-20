@@ -155,13 +155,7 @@ async function runAIAnalysis() {
     bbs.forEach(function(r,i){ var c=r.content||{}; context+='--- BB BU\u1ed4I '+(c.buoi_thu||(i+1))+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
     nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CH\u00da: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
 
-    var sysPrompt = 'B\u1ea1n l\u00e0 tr\u1ee3 l\u00fd ph\u00e2n t\u00edch h\u1ed3 s\u01a1 h\u1ecdc vi\u00ean cho ng\u01b0\u1eddi qu\u1ea3n l\u00fd ho\u1ea1t \u0111\u1ed9ng truy\u1ec1n \u0111\u1ea1o c\u1ee7a nh\u00e0 th\u1edd.\n'+
-      'Nhi\u1ec7m v\u1ee5: Ph\u00e2n t\u00edch TO\u00c0N B\u1ed8 th\u00f4ng tin v\u00e0 t\u1ea1o mindmap Markdown x\u00fac t\u00edch.\n\n'+
-      'QUY T\u1eaeC NGHI\u00caM NG\u1eb6T:\n- Output CH\u1ec8 l\u00e0 Markdown cho mindmap, KH\u00d4NG gi\u1ea3i th\u00edch g\u00ec th\u00eam\n'+
-      '- D\u00f9ng # cho root, ## cho nh\u00e1nh ch\u00ednh, ### cho nh\u00e1nh ph\u1ee5, - cho l\u00e1\n'+
-      '- M\u1ed7i node t\u1ed1i \u0111a 35 k\u00fd t\u1ef1\n- T\u1ed1i \u0111a 5-6 nh\u00e1nh ch\u00ednh\n- M\u1ed7i nh\u00e1nh t\u1ed1i \u0111a 3-4 m\u1ee5c con\n- T\u1ed5ng kh\u00f4ng qu\u00e1 25 nodes\n\n'+
-      'C\u00c1C NH\u00c1NH B\u1eaeT BU\u1ed8C:\n## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 c\u1ed1t l\u00f5i\n## \ud83d\udcad T\u00e2m l\u00fd hi\u1ec7n t\u1ea1i\n## \ud83e\udd1d C\u00e1ch ti\u1ebfp c\u1eadn\n## \ud83d\udca1 H\u01b0\u1edbng \u0111i\n## \ud83e\udd16 \u0110\u1ec1 xu\u1ea5t\n\n'+
-      'QUAN TR\u1eccNG: G\u00f3c nh\u00ecn TRUY\u1ec0N \u0110\u1ea0O \u2014 hi\u1ec3u, gi\u00fap \u0111\u1ee1, d\u1eabn d\u1eaft. Ch\u1eaft l\u1ecdc insight, KH\u00d4NG li\u1ec7t k\u00ea raw.';
+    var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\nNHIEM VU: Tao mindmap Markdown xuc tich.\n' + 'QUY TAC: Output CHI la Markdown, KHONG giai thich. Dung # root, ## nhanh chinh, ### nhanh phu, - la. Moi node max 35 ky tu. Max 5-6 nhanh chinh, 3-4 muc con/nhanh. Tong max 25 nodes.\n' + 'CAC NHANH: ## \ud83c\udfaf Van de cot loi ## \ud83d\udcad Tam ly hien tai ## \ud83e\udd1d Cach tiep can ## \ud83d\udca1 Huong di ## \ud83e\udd16 De xuat\nChat loc insight, KHONG liet ke raw.';
 
     var res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -322,7 +316,7 @@ async function sendAIChat() {
   try {
     var context = await buildChatCtx();
     var msgs = [
-      { role: 'system', content: 'B\u1ea1n l\u00e0 tr\u1ee3 l\u00fd AI cho ng\u01b0\u1eddi qu\u1ea3n l\u00fd truy\u1ec1n \u0111\u1ea1o nh\u00e0 th\u1edd. C\u00f3 h\u1ed3 s\u01a1 h\u1ecdc vi\u00ean b\u00ean d\u01b0\u1edbi. Tr\u1ea3 l\u1eddi ng\u1eafn g\u1ecdn, T\u1ed0I \u0110A 150 t\u1eeb, ti\u1ebfng Vi\u1ec7t. G\u00f3c nh\u00ecn truy\u1ec1n \u0111\u1ea1o.\n\nH\u1ed2 S\u01a0:\n' + context }
+      { role: 'system', content: LACIE_SYSTEM_PROMPT + '\n\nHO SO TRAI QUA HIEN TAI:\n' + context }
     ].concat(_aiChatHistory.slice(-8));
     var res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
