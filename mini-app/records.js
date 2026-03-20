@@ -745,3 +745,61 @@ async function saveRecord() {
     await _refreshCurrentProfile();
   } catch { showToast('❌ Lỗi'); }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NOTES (Sticky Notes)
+// ══════════════════════════════════════════════════════════════════════════════
+async function loadNotes(profileId) {
+  const listEl = document.getElementById('notesList');
+  const countEl = document.getElementById('noteCount');
+  if (!listEl) return;
+  try {
+    const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.note&select=id,content,created_at&order=created_at.desc`);
+    const notes = await res.json();
+    countEl.textContent = `${notes.length} ghi chú`;
+    if (notes.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có ghi chú nào</div>';
+      return;
+    }
+    listEl.innerHTML = notes.map(n => {
+      const title = n.content?.title || 'Không tiêu đề';
+      const body = (n.content?.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const date = new Date(n.created_at).toLocaleDateString('vi-VN');
+      return `<div class="sticky-note">
+        <button class="sticky-note-del" onclick="event.stopPropagation();deleteNote('${n.id}')" title="Xoá">×</button>
+        <div class="sticky-note-header" onclick="this.nextElementSibling.classList.toggle('open')">
+          <span class="sticky-note-title">📌 ${title}</span>
+          <span class="sticky-note-date">${date}</span>
+        </div>
+        <div class="sticky-note-body">${body}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('loadNotes:', e); }
+}
+
+async function saveNote() {
+  if (!currentProfileId) return;
+  const title = document.getElementById('note_title')?.value?.trim();
+  const body = document.getElementById('note_body')?.value?.trim();
+  if (!title && !body) { showToast('⚠️ Nhập tiêu đề hoặc nội dung'); return; }
+  try {
+    await sbFetch('/rest/v1/records', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ profile_id: currentProfileId, record_type: 'note', content: { title: title || 'Ghi chú', body: body || '' } })
+    });
+    document.getElementById('note_title').value = '';
+    document.getElementById('note_body').value = '';
+    showToast('✅ Đã thêm ghi chú!');
+    loadNotes(currentProfileId);
+  } catch(e) { showToast('❌ Lỗi lưu ghi chú'); }
+}
+
+async function deleteNote(noteId) {
+  if (!confirm('Xoá ghi chú này?')) return;
+  try {
+    await sbFetch(`/rest/v1/records?id=eq.${noteId}`, { method: 'DELETE' });
+    showToast('🗑️ Đã xoá ghi chú');
+    if (currentProfileId) loadNotes(currentProfileId);
+  } catch(e) { showToast('❌ Lỗi xoá'); }
+}

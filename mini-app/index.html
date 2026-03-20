@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2024031930" />
+  <link rel="stylesheet" href="styles.css?v=2024031931" />
 </head>
 <body>
 <div class="header">
@@ -102,6 +102,8 @@
       <div class="form-tab" onclick="switchFormTab(this,'journeyTab')">🔄 Giai đoạn</div>
       <div class="form-tab" onclick="switchFormTab(this,'tuVan')" id="tabTV" style="display:none;">💬 TV</div>
       <div class="form-tab" onclick="switchFormTab(this,'bienBan')" id="tabBB" style="display:none;">📝 BB</div>
+      <div class="form-tab" onclick="switchFormTab(this,'notesTab')">📝 Ghi chú</div>
+      <div class="form-tab" onclick="switchFormTab(this,'mindmapTab')" id="tabMindmap" style="display:none;">🧠 Mindmap</div>
     </div>
 
     <!-- PHIẾU THÔNG TIN (1 duy nhất) -->
@@ -159,6 +161,31 @@
       <div class="form-card-header"><div class="form-card-title">📝 BIÊN BẢN BB</div><div class="form-card-meta" id="bbCount">0 phiếu</div></div>
       <div class="form-card-body" id="bbList"></div>
       <div style="padding:0 16px 16px;"><button class="add-record-btn" onclick="openAddRecordModal('bien_ban')">＋ Thêm Biên bản BB</button></div>
+    </div>
+
+    <!-- GHI CHÚ -->
+    <div class="form-card" id="notesTab">
+      <div class="form-card-header"><div class="form-card-title">📝 GHI CHÚ</div><div class="form-card-meta" id="noteCount">0 ghi chú</div></div>
+      <div class="form-card-body">
+        <div id="notesList"></div>
+        <div style="padding:8px 0;">
+          <div class="field-group"><label>Tiêu đề</label><input type="text" id="note_title" placeholder="Nhập tiêu đề..." /></div>
+          <div class="field-group"><label>Nội dung</label><textarea id="note_body" placeholder="Nhập nội dung ghi chú..." style="min-height:80px;"></textarea></div>
+          <button class="add-record-btn" onclick="saveNote()">📌 Thêm ghi chú</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MINDMAP -->
+    <div class="form-card" id="mindmapTab">
+      <div class="form-card-header"><div class="form-card-title">🧠 MINDMAP</div></div>
+      <div class="form-card-body" style="padding:8px;">
+        <div style="display:flex;gap:4px;margin-bottom:10px;">
+          <button class="chip active" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Cá nhân</button>
+          <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)">📊 Thu thập</button>
+        </div>
+        <div id="mindmapContainer" style="width:100%;min-height:400px;overflow:auto;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
+      </div>
     </div>
 
     <button class="delete-profile-btn" onclick="deleteProfile()">🗑️ Xoá hồ sơ này</button>
@@ -356,12 +383,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="core.js?v=2024031930"></script>
-<script src="dashboard.js?v=2024031930"></script>
-<script src="profiles.js?v=2024031930"></script>
-<script src="hapja.js?v=2024031930"></script>
-<script src="records.js?v=2024031930"></script>
-<script src="staff.js?v=2024031930"></script>
-<script src="structure.js?v=2024031930"></script>
+<script src="core.js?v=2024031931"></script>
+<script src="dashboard.js?v=2024031931"></script>
+<script src="profiles.js?v=2024031931"></script>
+<script src="hapja.js?v=2024031931"></script>
+<script src="records.js?v=2024031931"></script>
+<script src="staff.js?v=2024031931"></script>
+<script src="structure.js?v=2024031931"></script>
+<script src="mindmap.js?v=2024031931"></script>
 </body>
 </html>

@@ -175,11 +175,14 @@ async function openProfile(p) {
   const tabBB = document.getElementById('tabBB');
   if (tabTV) tabTV.style.display = ['tu_van','bb','center','completed'].includes(ph) ? '' : 'none';
   if (tabBB) tabBB.style.display = ['bb','center','completed'].includes(ph) ? '' : 'none';
+  const tabMM = document.getElementById('tabMindmap');
+  if (tabMM) tabMM.style.display = ['bb','center','completed'].includes(ph) ? '' : 'none';
   clearFormFields();
   loadInfoSheet(p.id);
   loadJourney(p.id, ph);
   loadRecords(p.id, 'tu_van', 'tvList', 'tvCount');
   loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount');
+  loadNotes(p.id);
   document.querySelectorAll('#profileTabs .form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
   document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
   document.getElementById('infoSheet')?.classList.add('active');
@@ -254,6 +257,14 @@ async function loadInfoSheet(profileId) {
     const data = await res.json();
     if (data.length > 0 && data[0].data) {
       const d = data[0].data;
+      // Store for mindmap use
+      window._currentInfoSheet = {
+        gioi_tinh: d.t2_gioi_tinh, nam_sinh: d.t2_nam_sinh, nghe_nghiep: d.t2_nghe_nghiep,
+        ton_giao: d.t2_ton_giao, hon_nhan: d.t2_hon_nhan, dia_chi: d.t2_dia_chi,
+        que_quan: d.t2_que_quan, tinh_cach: d.t2_tinh_cach, so_thich: d.t2_so_thich,
+        du_dinh: d.t2_du_dinh, nguoi_quan_trong: d.t2_nguoi_quan_trong,
+        quan_diem: d.t2_quan_diem, sdt: d.t2_sdt
+      };
       Object.entries(d).forEach(([key, val]) => { if (typeof val === 'string') { const el=document.getElementById(key); if(el) el.value=val; } });
       if (d.t2_ton_giao) setChipValues('chips_ton_giao', d.t2_ton_giao);
       if (d.t2_hon_nhan) setChipValues('chips_hon_nhan', d.t2_hon_nhan);
