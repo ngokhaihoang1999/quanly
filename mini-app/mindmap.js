@@ -1,6 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP v7 — Topic-cross-source with detail popup
-// Group ALL sources (TV, BB, Notes) by TOPIC, short labels, tap for full text
+// MINDMAP v8 — Ministry Insight Dashboard
+// Designed for: Church ministry manager tracking fruit's spiritual journey
+// No more markmap — purpose-built mobile-first card UI
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _mmCurrentType = 'info';
@@ -21,125 +22,103 @@ function renderMindmap() {
   else renderCollectMM(container, p);
 }
 
-function renderMarkmap(container, md) {
-  container.innerHTML = '<script type="text/template">' + md + '<\/script>';
-  if (window.markmap && window.markmap.autoLoader) {
-    window.markmap.autoLoader.renderAll();
-  }
-}
+// ── Utilities ──
+function escH(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function condense(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'…'; }
 
 // ═══════════════════════════════════════════════════
-// TEXT UTILS
-// ═══════════════════════════════════════════════════
-const STOP_WORDS = new Set(['và','là','của','có','được','cho','với','trong','để','các','này','đã',
-  'không','những','một','từ','theo','khi','về','như','cũng','đó','tại','sẽ','rất',
-  'hay','thì','mà','nhưng','lại','đang','nên','phải','vì','bị','làm','ra','đi',
-  'lên','xuống','vào','ở','trên','dưới','qua','tới','thế','nào','gì','ai',
-  'đây','kia','nó','họ','tôi','bạn','mình','em','anh','chị']);
-
-function extractKeyPoints(text, maxPoints) {
-  if (!text || text.length < 20) return [text || ''];
-  maxPoints = maxPoints || 3;
-  const sents = text.split(/[.!?\n;]+/).map(s => s.trim()).filter(s => s.length > 3);
-  if (sents.length <= maxPoints) return sents.map(s => s.length > 35 ? s.substring(0, 33) + '…' : s);
-  const wordFreq = {};
-  text.toLowerCase().split(/\s+/).forEach(w => {
-    const c = w.replace(/[^a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/g, '');
-    if (c.length > 1 && !STOP_WORDS.has(c)) wordFreq[c] = (wordFreq[c] || 0) + 1;
-  });
-  const scored = sents.map(s => {
-    let score = 0;
-    s.toLowerCase().split(/\s+/).forEach(w => {
-      const c = w.replace(/[^a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/g, '');
-      if (wordFreq[c]) score += wordFreq[c];
-    });
-    score *= Math.max(0.5, 1 - s.length / 200);
-    return { text: s, score };
-  });
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, maxPoints).map(s => s.text.length > 35 ? s.text.substring(0, 33) + '…' : s.text);
-}
-
-function condense(text, max) {
-  if (!text) return '';
-  max = max || 30;
-  const c = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-  if (c.length <= max) return c;
-  return c.substring(0, max - 1) + '…';
-}
-
-function escH(s) {
-  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-// ═══════════════════════════════════════════════════
-// PERSONAL INFO
+// TAB 1: Cá nhân — Clean profile summary
 // ═══════════════════════════════════════════════════
 function renderInfoMM(container, p) {
   const d = window._currentInfoSheet || {};
   const name = p.full_name || 'Trái quả';
-  let md = `# ${name}\n`;
-  const nhanThan = [];
-  if (d.gioi_tinh || p.gender) nhanThan.push(d.gioi_tinh || p.gender);
-  if (d.nam_sinh || p.birth_year) nhanThan.push('Sinh ' + (d.nam_sinh || p.birth_year));
+  let html = `<div class="mm-dashboard">`;
+
+  // Profile hero
+  html += `<div class="mm-hero">
+    <div class="mm-hero-name">${escH(name)}</div>
+  </div>`;
+
+  // Info sections
+  const sections = [];
+
+  const nhanThan=[];
+  if (d.gioi_tinh||p.gender) nhanThan.push(d.gioi_tinh||p.gender);
+  if (d.nam_sinh||p.birth_year) nhanThan.push('Sinh '+(d.nam_sinh||p.birth_year));
   if (d.nghe_nghiep) nhanThan.push(d.nghe_nghiep);
-  if (nhanThan.length) { md += `## 👤 Nhân thân\n`; nhanThan.forEach(v => md += `- ${v}\n`); }
-  const noiSong = [d.dia_chi, d.que_quan].filter(Boolean);
-  if (noiSong.length) { md += `## 📍 Nơi sống\n`; noiSong.forEach(v => md += `- ${v}\n`); }
-  const gd = [];
-  if (d.hon_nhan) gd.push(Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : d.hon_nhan);
-  if (d.nguoi_quan_trong) gd.push('QT: ' + d.nguoi_quan_trong);
-  if (d.nguoi_than) gd.push(condense(d.nguoi_than));
-  if (gd.length) { md += `## 👨‍👩‍👧 Gia đình\n`; gd.forEach(v => md += `- ${v}\n`); }
-  if (d.ton_giao) md += `## 🙏 Tôn giáo\n- ${Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : d.ton_giao}\n`;
-  if (d.tinh_cach) md += `## 🧩 Tính cách\n- ${condense(d.tinh_cach)}\n`;
-  if (d.so_thich) md += `## ⭐ Sở thích\n- ${condense(d.so_thich)}\n`;
-  if (d.du_dinh) md += `## 🎯 Dự định\n- ${condense(d.du_dinh)}\n`;
-  if (d.quan_diem) md += `## 🌟 Quan điểm TL\n- ${condense(d.quan_diem)}\n`;
-  if (d.sdt || p.phone_number) md += `## 📞 Liên hệ\n- ${d.sdt || p.phone_number}\n`;
-  if (d.chuyen_cu) { md += `## 📖 Câu chuyện\n`; extractKeyPoints(d.chuyen_cu, 2).forEach(k => md += `- ${k}\n`); }
-  if (d.luu_y) md += `## ⚠️ Lưu ý\n- ${condense(d.luu_y)}\n`;
-  if (md.trim() === `# ${name}`) md += `## 📋 Chưa có\n- Hãy điền Phiếu TT\n`;
-  renderMarkmap(container, md);
+  if (nhanThan.length) sections.push({ icon:'👤', title:'Nhân thân', items: nhanThan });
+
+  const noi=[d.dia_chi,d.que_quan].filter(Boolean);
+  if (noi.length) sections.push({ icon:'📍', title:'Nơi sống', items: noi });
+
+  const gd=[];
+  if (d.hon_nhan) gd.push(Array.isArray(d.hon_nhan)?d.hon_nhan.join(', '):d.hon_nhan);
+  if (d.nguoi_quan_trong) gd.push('Người QT: '+d.nguoi_quan_trong);
+  if (d.nguoi_than) gd.push(d.nguoi_than);
+  if (gd.length) sections.push({ icon:'👨‍👩‍👧', title:'Gia đình', items: gd });
+
+  if (d.ton_giao) sections.push({ icon:'🙏', title:'Tôn giáo', items: [Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao] });
+  if (d.tinh_cach) sections.push({ icon:'🧩', title:'Tính cách', items: [d.tinh_cach] });
+  if (d.so_thich) sections.push({ icon:'⭐', title:'Sở thích', items: [d.so_thich] });
+  if (d.du_dinh) sections.push({ icon:'🎯', title:'Dự định', items: [d.du_dinh] });
+  if (d.quan_diem) sections.push({ icon:'🌟', title:'Quan điểm Thần linh', items: [d.quan_diem] });
+  if (d.chuyen_cu) sections.push({ icon:'📖', title:'Câu chuyện', items: [d.chuyen_cu] });
+  if (d.luu_y) sections.push({ icon:'⚠️', title:'Lưu ý', items: [d.luu_y] });
+
+  if (sections.length === 0) {
+    html += `<div class="mm-empty">📋 Chưa có dữ liệu<br><span style="font-size:11px;color:var(--text3);">Hãy điền Phiếu Thông tin</span></div>`;
+  } else {
+    sections.forEach((s, si) => {
+      const id = 'mmInfo_' + si;
+      const preview = escH(condense(s.items[0], 40));
+      const hasMore = s.items.length > 1 || s.items[0].length > 40;
+      html += `<div class="mm-section">
+        <div class="mm-section-head" ${hasMore ? `onclick="document.getElementById('${id}').classList.toggle('mm-open')"` : ''}>
+          <span class="mm-section-icon">${s.icon}</span>
+          <span class="mm-section-title">${escH(s.title)}</span>
+          <span class="mm-section-preview">${preview}</span>
+          ${hasMore ? '<span class="mm-section-arrow">›</span>' : ''}
+        </div>
+        ${hasMore ? `<div class="mm-section-body" id="${id}">
+          ${s.items.map(it => `<div class="mm-section-detail">${escH(it)}</div>`).join('')}
+        </div>` : ''}
+      </div>`;
+    });
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+  container.style.overflow = 'auto';
 }
 
 // ═══════════════════════════════════════════════════
-// TOPIC DEFINITIONS
+// TAB 2: Thu thập — Ministry Insight Dashboard
 // ═══════════════════════════════════════════════════
-const TOPICS = [
-  { key: 'family', label: 'Gia đình', icon: '👨‍👩‍👧', kw: ['gia đình','ba mẹ','mẹ','bố','cha','vợ','chồng','người thân','ly hôn','kết hôn','kinh tế','tài chính','tiền','khó khăn','nhà','ông','bà','em gái','anh trai','chị','ba ','kiểm cặp'] },
-  { key: 'love', label: 'Tình cảm', icon: '💕', kw: ['bạn trai','bạn gái','người yêu','yêu','tình cảm','tình yêu','hẹn hò','chia tay','cưới','cô đơn'] },
-  { key: 'work', label: 'Học tập & Việc làm', icon: '💼', kw: ['công việc','làm việc','nghề','lương','sếp','kinh doanh','thu nhập','học','thi','trường','đại học','ôn tập','sinh viên','quản trị'] },
-  { key: 'mental', label: 'Tâm lý', icon: '🧠', kw: ['cảm xúc','lo lắng','sợ','buồn','vui','stress','áp lực','tự ti','mệt','chán','giận','thất vọng','hy vọng','trầm','khóc','lo','tức'] },
-  { key: 'health', label: 'Sức khỏe', icon: '🏥', kw: ['sức khỏe','bệnh','thuốc','bác sĩ','đau','mất ngủ','nghiện','rượu','bia'] },
-  { key: 'spiritual', label: 'Tâm linh', icon: '✝️', kw: ['kinh thánh','cầu nguyện','nhà thờ','chùa','chúa','đức tin','thiền','tôn giáo'] },
-  { key: 'progress', label: 'Tiến trình', icon: '📈', kw: ['tiến bộ','thay đổi','mở lòng','tích cực','cải thiện','phát triển','cam kết','hợp tác','sẵn sàng'] },
-];
 
-// TV field mappings (correct field names from the form)
+// TV field definitions
 const TV_FIELDS = [
-  { key: 'van_de', label: '🎯 Vấn đề' },
-  { key: 'phan_hoi', label: '💭 Phản hồi' },
-  { key: 'diem_hai', label: '⭐ Điểm hái' },
-  { key: 'de_xuat', label: '💡 Đề xuất' },
-  { key: 'ket_qua_test', label: '📋 Test' },
-  { key: 'ten_cong_cu', label: '🔧 Công cụ' },
+  { key:'van_de', label:'Vấn đề khai thác', icon:'🎯', important:true },
+  { key:'phan_hoi', label:'Phản hồi trái', icon:'💭', important:true },
+  { key:'diem_hai', label:'Điểm hái trái', icon:'⭐', important:false },
+  { key:'de_xuat', label:'Đề xuất TVV', icon:'💡', important:true },
+  { key:'ket_qua_test', label:'Kết quả test', icon:'📋', important:false },
+  { key:'ten_cong_cu', label:'Công cụ', icon:'🔧', important:false },
 ];
 
-// BB field mappings
+// BB field definitions
 const BB_FIELDS = [
-  { key: 'khai_thac', label: '🔍 Phát hiện mới' },
-  { key: 'phan_ung', label: '💭 Phản ứng' },
-  { key: 'tuong_tac', label: '🤝 Tương tác' },
-  { key: 'noi_dung', label: '📖 Nội dung' },
-  { key: 'de_xuat_cs', label: '💡 Đề xuất' },
+  { key:'khai_thac', label:'Phát hiện mới', icon:'🔍', important:true },
+  { key:'phan_ung', label:'Phản ứng HS', icon:'💭', important:true },
+  { key:'tuong_tac', label:'Tương tác đáng chú ý', icon:'🤝', important:true },
+  { key:'noi_dung', label:'Nội dung buổi', icon:'📖', important:false },
+  { key:'de_xuat_cs', label:'Đề xuất chăm sóc', icon:'💡', important:true },
+  { key:'noi_dung_tiep', label:'Nội dung buổi tiếp', icon:'📅', important:false },
 ];
 
-// ═══════════════════════════════════════════════════
-// COLLECTED INFO — Topic-cross-source
-// ═══════════════════════════════════════════════════
 async function renderCollectMM(container, p) {
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Phân tích...</div>';
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Đang phân tích hồ sơ...</div>';
+  container.style.overflow = 'auto';
+
   try {
     const [tvR, bbR, ntR] = await Promise.all([
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.tu_van&select=content,created_at&order=created_at.asc`),
@@ -148,167 +127,223 @@ async function renderCollectMM(container, p) {
     ]);
     const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
     const d = window._currentInfoSheet || {};
+    const ph = p.phase || 'chakki';
 
-    // ── Collect ALL fragments with source + label ──
-    const allFrags = []; // {text, src, label}
+    if (tvs.length === 0 && bbs.length === 0 && nts.length === 0) {
+      container.innerHTML = '<div class="mm-empty">📋 Chưa có dữ liệu<br><span style="font-size:11px;color:var(--text3);">Hãy thêm báo cáo TV, BB hoặc ghi chú</span></div>';
+      return;
+    }
 
+    // ══ ANALYSIS ══
+
+    // 1. Extract KEY ISSUES from all TV reports (van_de is most important)
+    const keyIssues = [];
     tvs.forEach((r, i) => {
       const c = r.content || {};
-      const src = 'TV lần ' + (c.lan_thu || (i + 1));
-      TV_FIELDS.forEach(f => {
-        if (c[f.key] && String(c[f.key]).trim())
-          allFrags.push({ text: String(c[f.key]), src, label: f.label });
-      });
+      if (c.van_de) keyIssues.push({ text: c.van_de, src: 'TV lần '+(c.lan_thu||(i+1)) });
     });
-
+    // Also from BB khai_thac
     bbs.forEach((r, i) => {
       const c = r.content || {};
-      const src = 'BB buổi ' + (c.buoi_thu || (i + 1));
-      BB_FIELDS.forEach(f => {
-        if (c[f.key] && String(c[f.key]).trim())
-          allFrags.push({ text: String(c[f.key]), src, label: f.label });
-      });
+      if (c.khai_thac) keyIssues.push({ text: c.khai_thac, src: 'BB buổi '+(c.buoi_thu||(i+1)) });
     });
 
+    // 2. Extract RECOMMENDATIONS (de_xuat from TV, de_xuat_cs from BB)
+    const recommendations = [];
+    tvs.forEach((r, i) => {
+      const c = r.content || {};
+      if (c.de_xuat) recommendations.push({ text: c.de_xuat, src: 'TV lần '+(c.lan_thu||(i+1)) });
+    });
+    bbs.forEach((r, i) => {
+      const c = r.content || {};
+      if (c.de_xuat_cs) recommendations.push({ text: c.de_xuat_cs, src: 'BB buổi '+(c.buoi_thu||(i+1)) });
+    });
+
+    // 3. Extract REACTIONS/FEEDBACK (phan_hoi from TV, phan_ung from BB)
+    const reactions = [];
+    tvs.forEach((r, i) => {
+      const c = r.content || {};
+      if (c.phan_hoi) reactions.push({ text: c.phan_hoi, src: 'TV lần '+(c.lan_thu||(i+1)) });
+    });
+    bbs.forEach((r, i) => {
+      const c = r.content || {};
+      if (c.phan_ung) reactions.push({ text: c.phan_ung, src: 'BB buổi '+(c.buoi_thu||(i+1)) });
+    });
+
+    // 4. Extract INTERACTIONS (tuong_tac from BB)
+    const interactions = [];
+    bbs.forEach((r, i) => {
+      const c = r.content || {};
+      if (c.tuong_tac) interactions.push({ text: c.tuong_tac, src: 'BB buổi '+(c.buoi_thu||(i+1)) });
+    });
+
+    // 5. Notes by user
+    const noteItems = [];
     nts.forEach(r => {
       const c = r.content || {};
-      if (c.body && c.body.trim()) {
-        allFrags.push({ text: String(c.body), src: '📌 ' + (c.title || 'Ghi chú'), label: c.title || 'Ghi chú' });
-      }
+      if (c.title || c.body) noteItems.push({ title: c.title||'Ghi chú', body: c.body||'' });
     });
 
-    // Info sheet
-    if (d.tinh_cach) allFrags.push({ text: d.tinh_cach, src: 'Phiếu TT', label: 'Tính cách' });
-    if (d.chuyen_cu) allFrags.push({ text: d.chuyen_cu, src: 'Phiếu TT', label: 'Câu chuyện' });
-    if (d.luu_y) allFrags.push({ text: d.luu_y, src: 'Phiếu TT', label: 'Lưu ý' });
-
-    // ── Classify into TOPICS (cross all sources) ──
-    const topicMap = {};
-    TOPICS.forEach(t => { topicMap[t.key] = { ...t, frags: [] }; });
-    topicMap['other'] = { key: 'other', label: 'Khác', icon: '📝', frags: [], kw: [] };
-
-    // Also use note titles as topic hints
-    const noteTitleMap = {};
-    nts.forEach(r => {
-      const c = r.content || {};
-      if (c.title && c.body) noteTitleMap[c.title] = c.body;
+    // 6. Emotion analysis
+    const negW=['khó khăn','buồn','lo','sợ','mệt','chán','stress','áp lực','thất vọng','đau','tức','giận','cô đơn','trầm','kiểm cặp','khó','tiêu cực','từ chối','không muốn','không chịu'];
+    const posW=['vui','hy vọng','tích cực','tiến bộ','mở lòng','hạnh phúc','cam kết','sẵn sàng','cải thiện','hòa thuận','đồng ý','chấp nhận','mở','quan tâm','hứng thú'];
+    let negCount=0, posCount=0;
+    const allTexts = [
+      ...keyIssues.map(x=>x.text), ...reactions.map(x=>x.text),
+      ...interactions.map(x=>x.text), ...noteItems.map(x=>x.body)
+    ];
+    allTexts.forEach(t => {
+      const l = t.toLowerCase();
+      negW.forEach(w => { if (l.includes(w)) negCount++; });
+      posW.forEach(w => { if (l.includes(w)) posCount++; });
     });
 
-    allFrags.forEach(f => {
-      const lower = (f.text + ' ' + f.label).toLowerCase();
-      let placed = false;
-      for (const t of TOPICS) {
-        if (t.kw.some(kw => lower.includes(kw))) {
-          topicMap[t.key].frags.push(f);
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) topicMap['other'].frags.push(f);
-    });
+    let emotionLabel, emotionColor, emotionIcon;
+    if (negCount + posCount === 0) { emotionLabel='Chưa rõ'; emotionColor='var(--text3)'; emotionIcon='❓'; }
+    else if (negCount > posCount*2) { emotionLabel='Tiêu cực'; emotionColor='var(--red)'; emotionIcon='⚠️'; }
+    else if (posCount > negCount*2) { emotionLabel='Tích cực'; emotionColor='var(--green)'; emotionIcon='✅'; }
+    else { emotionLabel='Pha trộn'; emotionColor='#f59e0b'; emotionIcon='🔄'; }
 
-    // ── Build MARKMAP (short labels) ──
-    let md = `# 🔍 ${p.full_name || 'Insight'}\n`;
+    // ══ RENDER ══
+    let html = `<div class="mm-dashboard">`;
 
-    const activeTopics = [];
-    for (const [key, topic] of Object.entries(topicMap)) {
-      if (!topic.frags.length) continue;
-      activeTopics.push(topic);
-      md += `## ${topic.icon} ${topic.label}\n`;
-      // Show max 3 condensed key points
-      const combined = topic.frags.map(f => f.text).join('. ');
-      const points = extractKeyPoints(combined, 3);
-      points.forEach(pt => { md += `- ${pt}\n`; });
+    // ── HERO: Overview strip ──
+    const phLabel = (typeof PHASE_LABELS !== 'undefined' ? PHASE_LABELS[ph] : ph) || ph;
+    const phColor = (typeof PHASE_COLORS !== 'undefined' ? PHASE_COLORS[ph] : '#888') || '#888';
+    html += `<div class="mm-hero">
+      <div class="mm-hero-name">${escH(p.full_name||'')}</div>
+      <div class="mm-hero-stats">
+        <span class="mm-stat"><b>${tvs.length}</b> TV</span>
+        <span class="mm-stat"><b>${bbs.length}</b> BB</span>
+        <span class="mm-stat"><b>${nts.length}</b> ghi chú</span>
+        <span class="mm-stat" style="background:${phColor};color:white;">${phLabel}</span>
+      </div>
+      <div class="mm-hero-emotion">
+        <span>${emotionIcon} Xu hướng: <b style="color:${emotionColor}">${emotionLabel}</b></span>
+      </div>
+    </div>`;
+
+    // ── Section 1: Vấn đề trọng tâm (key issues) ──
+    if (keyIssues.length > 0) {
+      html += buildSection('mmKI', '🎯', 'Vấn đề trọng tâm', 'Những vấn đề/nhu cầu khai thác được', keyIssues, true);
     }
 
-    // Insights branch
-    const insights = [];
-    const sorted = [...activeTopics].sort((a, b) => b.frags.length - a.frags.length);
-    if (sorted.length > 0) insights.push(`${sorted[0].icon} ${sorted[0].label} nổi bật`);
-    
-    const negW = ['khó khăn','buồn','lo','sợ','mệt','chán','stress','áp lực','thất vọng','đau','tức','giận','cô đơn','kiểm cặp'];
-    const posW = ['vui','hy vọng','tích cực','tiến bộ','mở lòng','cam kết','sẵn sàng','cải thiện','hòa thuận'];
-    let neg = 0, pos = 0;
-    allFrags.forEach(f => { const l = f.text.toLowerCase(); negW.forEach(w => { if (l.includes(w)) neg++; }); posW.forEach(w => { if (l.includes(w)) pos++; }); });
-    if (neg + pos > 0) {
-      if (neg > pos * 2) insights.push('⚠️ Tiêu cực nổi trội');
-      else if (pos > neg * 2) insights.push('✅ Tích cực');
-      else insights.push('🔄 Pha trộn');
-    }
-    const gaps = [];
-    TOPICS.forEach(t => { if (!topicMap[t.key].frags.length) gaps.push(t.label); });
-    if (gaps.length > 0 && gaps.length <= 4) insights.push('🔎 Thiếu: ' + gaps.join(', '));
-
-    if (insights.length > 0) {
-      md += `## 💡 Insight\n`;
-      insights.forEach(ins => md += `- ${ins}\n`);
+    // ── Section 2: Phản hồi & Thái độ ──
+    if (reactions.length > 0) {
+      html += buildSection('mmRE', '💭', 'Phản hồi & Thái độ', 'Cảm nhận và phản ứng', reactions, false);
     }
 
-    if (allFrags.length === 0) {
-      md += `## 📋 Chưa có dữ liệu\n`;
+    // ── Section 3: Tương tác BB ──
+    if (interactions.length > 0) {
+      html += buildSection('mmIA', '🤝', 'Tương tác trong nhóm', 'Nhận xét đáng chú ý từ BB', interactions, false);
     }
 
-    // ── Render: Markmap + Detail Panel ──
-    container.innerHTML = '';
-    container.style.height = 'auto';
-
-    // Markmap area
-    const mmDiv = document.createElement('div');
-    mmDiv.className = 'markmap';
-    mmDiv.style.cssText = 'width:100%;min-height:350px;';
-    mmDiv.innerHTML = '<script type="text/template">' + md + '<\/script>';
-    container.appendChild(mmDiv);
-
-    // Hint
-    const hint = document.createElement('div');
-    hint.style.cssText = 'text-align:center;font-size:10px;color:var(--text3);padding:4px 0;';
-    hint.textContent = '👆 Kéo/zoom mindmap | 👇 Bấm chủ đề bên dưới để xem chi tiết';
-    container.appendChild(hint);
-
-    // Detail panel (expandable topics)
-    const detailDiv = document.createElement('div');
-    detailDiv.style.cssText = 'padding:0 4px 8px;';
-    let detailHtml = '';
-
-    activeTopics.forEach((topic, ti) => {
-      const topicId = 'mmDetail_' + ti;
-      detailHtml += `<div class="mm-topic-card">
-        <div class="mm-topic-head" onclick="document.getElementById('${topicId}').classList.toggle('mm-open')">
-          <span>${topic.icon} <b>${escH(topic.label)}</b></span>
-          <span style="font-size:10px;color:var(--text3);">${topic.frags.length} mục ›</span>
+    // ── Section 4: Ghi chú quan sát ──  
+    if (noteItems.length > 0) {
+      html += `<div class="mm-card mm-card-note">
+        <div class="mm-card-head" onclick="document.getElementById('mmNO').classList.toggle('mm-open')">
+          <span class="mm-card-icon">📌</span>
+          <div class="mm-card-info">
+            <div class="mm-card-title">Ghi chú quan sát</div>
+            <div class="mm-card-sub">${noteItems.map(n => escH(n.title)).join(' • ')}</div>
+          </div>
+          <span class="mm-card-arrow">›</span>
         </div>
-        <div class="mm-topic-body" id="${topicId}">`;
-
-      // Group frags by source for narrative flow
-      const bySrc = {};
-      topic.frags.forEach(f => {
-        if (!bySrc[f.src]) bySrc[f.src] = [];
-        bySrc[f.src].push(f);
+        <div class="mm-card-body" id="mmNO">`;
+      noteItems.forEach(n => {
+        html += `<div class="mm-detail-src">${escH(n.title)}</div>
+          <div class="mm-detail-text">${escH(n.body)}</div>`;
       });
-
-      for (const [src, items] of Object.entries(bySrc)) {
-        detailHtml += `<div class="mm-detail-src">${escH(src)}</div>`;
-        items.forEach(it => {
-          detailHtml += `<div class="mm-detail-item">
-            <div class="mm-detail-label">${escH(it.label)}</div>
-            <div class="mm-detail-text">${escH(it.text)}</div>
-          </div>`;
-        });
-      }
-
-      detailHtml += `</div></div>`;
-    });
-
-    detailDiv.innerHTML = detailHtml;
-    container.appendChild(detailDiv);
-
-    // Render markmap
-    if (window.markmap && window.markmap.autoLoader) {
-      window.markmap.autoLoader.renderAll();
+      html += `</div></div>`;
     }
 
-  } catch (e) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ Lỗi</div>';
+    // ── Section 5: Đề xuất & Hướng đi ──
+    if (recommendations.length > 0) {
+      html += buildSection('mmREC', '💡', 'Đề xuất & Hướng đi', 'Khuyến nghị từ TVV và GVBB', recommendations, true);
+    }
+
+    // ── Section 6: Tiến trình tư vấn (timeline view) ──
+    if (tvs.length > 0 || bbs.length > 0) {
+      html += `<div class="mm-card">
+        <div class="mm-card-head" onclick="document.getElementById('mmTL').classList.toggle('mm-open')">
+          <span class="mm-card-icon">📈</span>
+          <div class="mm-card-info">
+            <div class="mm-card-title">Tiến trình chi tiết</div>
+            <div class="mm-card-sub">${tvs.length} báo cáo TV + ${bbs.length} báo cáo BB</div>
+          </div>
+          <span class="mm-card-arrow">›</span>
+        </div>
+        <div class="mm-card-body" id="mmTL">`;
+
+      // Interleave TV and BB chronologically
+      const timeline = [];
+      tvs.forEach((r,i) => {
+        const c = r.content || {};
+        timeline.push({ type:'tv', num: c.lan_thu||(i+1), date: r.created_at, content: c });
+      });
+      bbs.forEach((r,i) => {
+        const c = r.content || {};
+        timeline.push({ type:'bb', num: c.buoi_thu||(i+1), date: r.created_at, content: c });
+      });
+      timeline.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+      timeline.forEach(ev => {
+        if (ev.type === 'tv') {
+          html += `<div class="mm-timeline-item mm-tl-tv">
+            <div class="mm-tl-badge">TV ${ev.num}${ev.content.ten_cong_cu ? ' · '+condense(ev.content.ten_cong_cu,15) : ''}</div>`;
+          TV_FIELDS.forEach(f => {
+            if (ev.content[f.key]) {
+              html += `<div class="mm-tl-field${f.important?' mm-tl-important':''}">
+                <span class="mm-tl-icon">${f.icon}</span> ${escH(ev.content[f.key])}
+              </div>`;
+            }
+          });
+          html += `</div>`;
+        } else {
+          html += `<div class="mm-timeline-item mm-tl-bb">
+            <div class="mm-tl-badge" style="background:var(--green);">BB ${ev.num}</div>`;
+          BB_FIELDS.forEach(f => {
+            if (ev.content[f.key]) {
+              html += `<div class="mm-tl-field${f.important?' mm-tl-important':''}">
+                <span class="mm-tl-icon">${f.icon}</span> ${escH(ev.content[f.key])}
+              </div>`;
+            }
+          });
+          html += `</div>`;
+        }
+      });
+
+      html += `</div></div>`;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+
+  } catch(e) {
+    container.innerHTML = '<div class="mm-empty">❌ Lỗi tải dữ liệu</div>';
     console.error(e);
   }
+}
+
+// ── Build a standard insight section ──
+function buildSection(id, icon, title, subtitle, items, startOpen) {
+  const preview = condense(items[0].text, 50);
+  let html = `<div class="mm-card${startOpen?' mm-card-highlight':''}">
+    <div class="mm-card-head" onclick="document.getElementById('${id}').classList.toggle('mm-open')">
+      <span class="mm-card-icon">${icon}</span>
+      <div class="mm-card-info">
+        <div class="mm-card-title">${escH(title)}</div>
+        <div class="mm-card-sub">${escH(preview)}</div>
+      </div>
+      <span class="mm-card-arrow">›</span>
+    </div>
+    <div class="mm-card-body${startOpen?' mm-open':''}" id="${id}">`;
+  items.forEach(it => {
+    html += `<div class="mm-detail-item-wrap">
+      <div class="mm-detail-src-tag">${escH(it.src)}</div>
+      <div class="mm-detail-text">${escH(it.text)}</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  return html;
 }
