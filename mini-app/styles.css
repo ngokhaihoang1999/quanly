@@ -482,3 +482,19 @@
       0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
       30% { opacity: 1; transform: translateY(-4px); }
     }
+
+/* AI Fullscreen */
+.ai-fullscreen {
+  position: fixed !important;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  z-index: 9999;
+  border-radius: 0 !important;
+  border: none !important;
+  background: var(--bg) !important;
+}
+.ai-fullscreen .markmap {
+  height: 100vh !important;
+}

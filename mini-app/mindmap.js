@@ -159,21 +159,22 @@ async function runAIAnalysis() {
     nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CHU: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
 
     var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\n' +
-      '=== NHIEM VU: TAO MINDMAP ===\n' +
-      'Phan tich TOAN BO thong tin ho so va tao mindmap Markdown.\n\n' +
-      'QUY TAC DINH DANG:\n' +
-      '- Output CHI la Markdown, KHONG giai thich gi them\n' +
-      '- # cho root (ten trai qua), ## nhanh chinh, ### nhanh phu, - cho la\n' +
-      '- Moi node toi da 35 ky tu\n' +
-      '- Toi da 6 nhanh chinh, moi nhanh 3-4 muc con, tong max 30 nodes\n\n' +
-      '6 NHANH BAT BUOC:\n' +
-      '## \ud83d\udccb Tong quan — Giai doan, nguoi phu trach, concept. Chi ghi nhung gi CO trong du lieu\n' +
-      '## \ud83c\udfaf Van de & Tam ly — Van de sau xa + cam xuc hien tai. Chi tu bao cao thuc te\n' +
-      '## \ud83d\udc8e Diem hai trai — Diem cham cam xuc. Neu thieu: ghi "Can khai thac them"\n' +
-      '## \ud83d\udcd6 Lien ket KT — Cau chuyen/loi day KT phu hop. CHI khi du thong tin va tu BB tro di. Neu chua: "Chua den thoi diem"\n' +
-      '## \ud83e\udd1d Chien luoc — Cach tiep can phu hop giai doan hien tai\n' +
-      '## \u26a1 Hanh dong tiep — Buoc ke tiep ro rang. Neu thieu du lieu: ghi can bo sung gi\n\n' +
-      'NGUYEN TAC: Chi dua tren du lieu thuc te. Khong bua. Neu thieu -> "Can bo sung".';
+      '=== NHI\u1ec6M V\u1ee4: T\u1ea0O MINDMAP ===\n' +
+      'Ph\u00e2n t\u00edch TO\u00c0N B\u1ed8 th\u00f4ng tin h\u1ed3 s\u01a1 v\u00e0 t\u1ea1o mindmap Markdown.\n\n' +
+      'QUY T\u1eaeC \u0110\u1ecaNH D\u1ea0NG:\n' +
+      '- Output CH\u1ec8 l\u00e0 Markdown, KH\u00d4NG gi\u1ea3i th\u00edch g\u00ec th\u00eam\n' +
+      '- # cho root (t\u00ean tr\u00e1i qu\u1ea3), ## nh\u00e1nh ch\u00ednh, ### nh\u00e1nh ph\u1ee5, - cho l\u00e1\n' +
+      '- M\u1ed7i node t\u1ed1i \u0111a 35 k\u00fd t\u1ef1, PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7\n' +
+      '- T\u1ed1i \u0111a 6 nh\u00e1nh ch\u00ednh, m\u1ed7i nh\u00e1nh 3-4 m\u1ee5c con, t\u1ed5ng max 30 nodes\n\n' +
+      '6 NH\u00c1NH B\u1eaeT BU\u1ed8C:\n' +
+      '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, concept\n' +
+      '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa + c\u1ea3m x\u00fac hi\u1ec7n t\u1ea1i\n' +
+      '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 \u0110i\u1ec3m ch\u1ea1m c\u1ea3m x\u00fac. N\u1ebfu thi\u1ebfu: "C\u1ea7n khai th\u00e1c th\u00eam"\n' +
+      '## \ud83d\udcd6 Li\u00ean k\u1ebft KT \u2014 C\u00e2u chuy\u1ec7n/l\u1eddi d\u1ea1y Kinh th\u00e1nh. CH\u1ec8 t\u1eeb BB tr\u1edf \u0111i\n' +
+      '## \ud83e\udd1d Chi\u1ebfn l\u01b0\u1ee3c \u2014 C\u00e1ch ti\u1ebfp c\u1eadn ph\u00f9 h\u1ee3p giai \u0111o\u1ea1n\n' +
+      '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf ti\u1ebfp r\u00f5 r\u00e0ng\n\n' +
+      'NGUY\u00caN T\u1eaeC: Ch\u1ec9 d\u1ef1a tr\u00ean d\u1eef li\u1ec7u th\u1ef1c t\u1ebf. Kh\u00f4ng b\u1ecba. N\u1ebfu thi\u1ebfu -> "C\u1ea7n b\u1ed5 sung".\n' +
+      'QUAN TR\u1eccNG: To\u00e0n b\u1ed9 output PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7.';
 
     var res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -354,4 +355,23 @@ async function sendAIChat() {
     msgBox.innerHTML += '<div class="ai-msg ai-msg-system" style="color:var(--red);">\u274c '+escChat(e.message)+'</div>';
   }
   msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+// Fullscreen toggle for mindmap & chat
+function toggleFullscreen(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  if (el.classList.contains('ai-fullscreen')) {
+    el.classList.remove('ai-fullscreen');
+    if (elId === 'mindmapContainer') { el.style.height = '420px'; }
+    document.body.style.overflow = '';
+  } else {
+    el.classList.add('ai-fullscreen');
+    if (elId === 'mindmapContainer') { el.style.height = '100vh'; }
+    document.body.style.overflow = 'hidden';
+    // Re-render markmap if needed
+    if (elId === 'mindmapContainer' && window.markmap && window.markmap.autoLoader) {
+      setTimeout(function(){ window.markmap.autoLoader.renderAll(); }, 100);
+    }
+  }
 }
