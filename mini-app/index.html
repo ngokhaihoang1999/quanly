@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2024031931" />
+  <link rel="stylesheet" href="styles.css?v=2024031932" />
 </head>
 <body>
 <div class="header">
@@ -46,8 +46,11 @@
 
   <!-- ĐƠN VỊ -->
   <div id="tab-unit">
-    <div class="section-header"><div class="section-title" id="dashUnitTitle">🏢 Đơn vị</div></div>
-    <div id="dashUnitMetrics"></div>
+    <div class="section-header" style="cursor:pointer;" onclick="toggleDashMetrics()">
+      <div class="section-title" id="dashUnitTitle">🏢 Đơn vị</div>
+      <span id="dashToggleIcon" style="font-size:16px;transition:transform 0.3s;">▲</span>
+    </div>
+    <div id="dashUnitMetrics" class="dash-collapsible"></div>
     <div id="dashUnitList" style="margin-bottom:8px;"></div>
     <div id="dashSubUnits" style="margin-bottom:16px;"></div>
 
@@ -383,13 +386,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="core.js?v=2024031931"></script>
-<script src="dashboard.js?v=2024031931"></script>
-<script src="profiles.js?v=2024031931"></script>
-<script src="hapja.js?v=2024031931"></script>
-<script src="records.js?v=2024031931"></script>
-<script src="staff.js?v=2024031931"></script>
-<script src="structure.js?v=2024031931"></script>
-<script src="mindmap.js?v=2024031931"></script>
+<script src="core.js?v=2024031932"></script>
+<script src="dashboard.js?v=2024031932"></script>
+<script src="profiles.js?v=2024031932"></script>
+<script src="hapja.js?v=2024031932"></script>
+<script src="records.js?v=2024031932"></script>
+<script src="staff.js?v=2024031932"></script>
+<script src="structure.js?v=2024031932"></script>
+<script src="mindmap.js?v=2024031932"></script>
 </body>
 </html>

@@ -141,6 +141,12 @@
       transition: transform 0.15s, border-color 0.2s;
     }
     .dash-stat:active { transform: scale(0.97); }
+    /* Collapsible dashboard */
+    .dash-collapsible {
+      max-height: 500px; overflow: hidden;
+      transition: max-height 0.35s ease, opacity 0.25s ease; opacity: 1;
+    }
+    .dash-collapsible.collapsed { max-height: 0; opacity: 0; margin-bottom: 0; }
     .dash-stat::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));

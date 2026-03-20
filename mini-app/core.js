@@ -15,6 +15,15 @@ function getBadgeClass(p) {
   return 'role-default';
 }
 
+// Dashboard collapse toggle
+function toggleDashMetrics() {
+  const el = document.getElementById('dashUnitMetrics');
+  const icon = document.getElementById('dashToggleIcon');
+  if (!el) return;
+  el.classList.toggle('collapsed');
+  if (icon) icon.textContent = el.classList.contains('collapsed') ? '▼' : '▲';
+}
+
 // Helpers
 function getChipValues(id) { const el=document.getElementById(id); if(!el) return []; return Array.from(el.querySelectorAll('.chip.selected')).map(c=>c.textContent.trim()); }
 function setChipValues(id, vals) { const el=document.getElementById(id); if(!el||!vals) return; el.querySelectorAll('.chip').forEach(c=>{ vals.includes(c.textContent.trim()) ? c.classList.add('selected') : c.classList.remove('selected'); }); }
