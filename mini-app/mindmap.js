@@ -1,9 +1,10 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP v10.1 — Smart filtering + sub-branching
-// Filter noise, deduplicate, only keep meaningful insights
+// MINDMAP v11 — OpenAI-powered Ministry Insight
+// Uses GPT-4.1-mini to analyze reports from a ministry manager perspective
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _mmCurrentType = 'info';
+const _mmCache = {}; // Cache AI responses per profile
 
 function switchMindmap(type, btn) {
   _mmCurrentType = type;
@@ -31,20 +32,14 @@ function renderMarkmap(container, md) {
 }
 
 // ═══════════════════════════════════════════════════
-// SMART TEXT PROCESSING
+// UTILITIES
 // ═══════════════════════════════════════════════════
-
 function splitToBranches(text) {
   if (!text || text.length < 10) return text ? [text] : [];
   text = text.replace(/\n+/g, ', ').replace(/\s+/g, ' ').trim();
-  const parts = text.split(/[,;.!?\n]+|(?:\s+(?:và|nhưng|tuy nhiên|ngoài ra|bên cạnh đó|do đó|vì vậy|cũng|còn|hay|hoặc|nên|mà|rồi|thì)\s+)/i);
-  const cleaned = parts.map(p => p.trim()).filter(p => p.length > 4 && !isNoise(p)).map(p => p.length > 38 ? p.substring(0, 36) + '…' : p);
+  const parts = text.split(/[,;.!?\n]+|(?:\s+(?:và|nhưng|tuy nhiên|ngoài ra|do đó|vì vậy|cũng|còn|nên|mà|rồi|thì)\s+)/i);
+  const cleaned = parts.map(p => p.trim()).filter(p => p.length > 4).map(p => p.length > 38 ? p.substring(0, 36) + '…' : p);
   if (cleaned.length > 4) return cleaned.slice(0, 4);
-  if (cleaned.length === 1 && cleaned[0].length > 35) {
-    const mid = Math.floor(cleaned[0].length / 2);
-    const si = cleaned[0].indexOf(' ', mid - 5);
-    if (si > 10) return [cleaned[0].substring(0, si), cleaned[0].substring(si + 1)];
-  }
   return cleaned.length ? cleaned : [text.length > 38 ? text.substring(0, 36) + '…' : text];
 }
 
@@ -57,62 +52,32 @@ function mdBranches(text) {
 function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'…'; }
 
 // ═══════════════════════════════════════════════════
-// NOISE FILTER — skip metadata, names, codes, dates
+// OpenAI API KEY management
 // ═══════════════════════════════════════════════════
-const NOISE_RE = [
-  /^ngày\s*:/i, /^học sinh\s*:/i, /^người dẫn/i, /^shin\d/i,
-  /^báo cáo\s/i, /^buổi\s*\d/i, /^\d{1,2}\/\d{1,2}/,
-  /^thứ\s+(hai|ba|tư|năm|sáu|bảy|cn)/i,
-  /^[A-Z]{2,}\d+/, /^(tên|sdt|email|mã|code)\s*:/i,
-  /^[\d\s\-\/.:]+$/, /^[A-Z][a-z]+\s[A-Z]/, // person names
-  /^\d+\s*-\s*\d+$/, /^x+$/i
-];
-
-function isNoise(text) {
-  if (!text) return true;
-  const t = text.trim();
-  if (t.length < 8) return true;
-  for (const re of NOISE_RE) { if (re.test(t)) return true; }
-  // All-caps short = likely a code/label
-  if (t.length < 15 && /^[A-ZÀ-Ỹ\s\d-]+$/.test(t)) return true;
-  // Just a person name (2-5 words all start uppercase)
-  const ws = t.split(/\s+/);
-  if (ws.length >= 2 && ws.length <= 5 && ws.every(w => /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỸĐ]/i.test(w) && w.length < 10) && !t.includes(' là ') && !t.includes(' có ') && !t.includes(' không ')) {
-    // Probably a name if no verbs
-    if (ws.every(w => /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴĐ]/.test(w))) return true;
-  }
-  return false;
+function getOpenAIKey() {
+  return localStorage.getItem('cj_openai_key') || '';
 }
 
-// Filter text block: remove noise lines, join meaningful parts
-function filterText(text) {
-  if (!text) return '';
-  const lines = text.split(/[\n;]+/).map(s => s.trim()).filter(s => s.length > 0);
-  const good = lines.filter(l => !isNoise(l));
-  return good.join(', ').trim();
+function setOpenAIKey(key) {
+  localStorage.setItem('cj_openai_key', key.trim());
 }
 
-// Deduplicate by word overlap (>60% = duplicate)
-function dedupe(arr) {
-  const result = [];
-  for (const item of arr) {
-    const lower = item.toLowerCase();
-    const isDup = result.some(ex => {
-      const el = ex.toLowerCase();
-      if (el.includes(lower) || lower.includes(el)) return true;
-      const w1 = new Set(el.split(/\s+/));
-      const w2 = new Set(lower.split(/\s+/));
-      let common = 0;
-      w2.forEach(w => { if (w1.has(w)) common++; });
-      return common / Math.max(w1.size, w2.size) > 0.6;
-    });
-    if (!isDup && item.length > 5) result.push(item);
-  }
-  return result;
+function promptForKey(container) {
+  container.style.height = 'auto';
+  container.style.overflow = 'auto';
+  container.innerHTML = `
+    <div style="padding:20px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">🤖</div>
+      <div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:4px;">AI Mindmap</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">Nhập OpenAI API Key để hệ thống phân tích</div>
+      <input type="password" id="mmKeyInput" placeholder="sk-..." style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text1);font-size:13px;margin-bottom:10px;" />
+      <div style="font-size:10px;color:var(--text3);margin-bottom:12px;">Model: gpt-4.1-mini · ~250đ/hồ sơ · Key lưu local</div>
+      <button onclick="setOpenAIKey(document.getElementById('mmKeyInput').value);renderMindmap();" style="padding:10px 20px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:13px;cursor:pointer;">✅ Lưu & Phân tích</button>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════════
-// TAB 1: Cá nhân
+// TAB 1: Cá nhân (no AI needed)
 // ═══════════════════════════════════════════════════
 function renderInfoMM(container, p) {
   const d = window._currentInfoSheet || {};
@@ -144,141 +109,158 @@ function renderInfoMM(container, p) {
 }
 
 // ═══════════════════════════════════════════════════
-// TAB 2: Thu thập — Filtered, deduped, concise
+// TAB 2: Thu thập — OpenAI analysis
 // ═══════════════════════════════════════════════════
 
 async function renderCollectMM(container, p) {
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Phân tích...</div>';
+  const apiKey = getOpenAIKey();
+  if (!apiKey) { promptForKey(container); return; }
+
+  // Check cache
+  const cacheKey = p.id;
+  if (_mmCache[cacheKey]) {
+    renderMarkmap(container, _mmCache[cacheKey]);
+    return;
+  }
+
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">🤖 AI đang phân tích hồ sơ...<br><small style="color:var(--text3);">Có thể mất 10-20 giây</small></div>';
+  container.style.height = 'auto';
+
   try {
+    // Fetch all data
     const [tvR, bbR, ntR] = await Promise.all([
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.tu_van&select=content,created_at&order=created_at.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.note&select=content,created_at&order=created_at.asc`)
     ]);
     const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
+    const d = window._currentInfoSheet || {};
 
     if (!tvs.length && !bbs.length && !nts.length) {
       container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">📋 Chưa có dữ liệu</div>';
       return;
     }
 
-    // ── Gather & FILTER — only meaningful content ──
-    const rawIssues = [], rawFeelings = [], rawApproach = [], rawNext = [];
-    const noteInsights = [], tools = [];
+    // Build context for AI
+    let context = `HỌC VIÊN: ${p.full_name || 'N/A'}\n`;
+    context += `GIAI ĐOẠN: ${p.phase || 'chakki'}\n\n`;
 
-    tvs.forEach(r => {
+    if (Object.keys(d).length > 0) {
+      context += `PHIẾU THÔNG TIN:\n`;
+      if (d.gioi_tinh) context += `Giới tính: ${d.gioi_tinh}\n`;
+      if (d.nam_sinh) context += `Năm sinh: ${d.nam_sinh}\n`;
+      if (d.nghe_nghiep) context += `Nghề: ${d.nghe_nghiep}\n`;
+      if (d.tinh_cach) context += `Tính cách: ${d.tinh_cach}\n`;
+      if (d.so_thich) context += `Sở thích: ${d.so_thich}\n`;
+      if (d.ton_giao) context += `Tôn giáo: ${Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao}\n`;
+      if (d.quan_diem) context += `Quan điểm tâm linh: ${d.quan_diem}\n`;
+      if (d.luu_y) context += `Lưu ý: ${d.luu_y}\n`;
+      context += '\n';
+    }
+
+    tvs.forEach((r, i) => {
       const c = r.content || {};
-      if (c.van_de) { const f = filterText(c.van_de); if (f) rawIssues.push(f); }
-      if (c.phan_hoi) { const f = filterText(c.phan_hoi); if (f) rawFeelings.push(f); }
-      if (c.diem_hai) { const f = filterText(c.diem_hai); if (f) rawApproach.push(f); }
-      if (c.de_xuat) { const f = filterText(c.de_xuat); if (f) rawNext.push(f); }
-      if (c.ten_cong_cu && c.ten_cong_cu.trim()) tools.push(c.ten_cong_cu.trim());
+      context += `--- BÁO CÁO TƯ VẤN LẦN ${c.lan_thu||(i+1)} ---\n`;
+      if (c.ten_cong_cu) context += `Công cụ: ${c.ten_cong_cu}\n`;
+      if (c.van_de) context += `Vấn đề khai thác: ${c.van_de}\n`;
+      if (c.phan_hoi) context += `Phản hồi trái: ${c.phan_hoi}\n`;
+      if (c.diem_hai) context += `Điểm hái: ${c.diem_hai}\n`;
+      if (c.de_xuat) context += `Đề xuất TVV: ${c.de_xuat}\n`;
+      context += '\n';
     });
 
-    bbs.forEach(r => {
+    bbs.forEach((r, i) => {
       const c = r.content || {};
-      if (c.khai_thac) { const f = filterText(c.khai_thac); if (f) rawIssues.push(f); }
-      if (c.phan_ung) { const f = filterText(c.phan_ung); if (f) rawFeelings.push(f); }
-      if (c.tuong_tac) { const f = filterText(c.tuong_tac); if (f) rawApproach.push(f); }
-      if (c.de_xuat_cs) { const f = filterText(c.de_xuat_cs); if (f) rawNext.push(f); }
+      context += `--- BÁO CÁO BB BUỔI ${c.buoi_thu||(i+1)} ---\n`;
+      if (c.noi_dung) context += `Nội dung: ${c.noi_dung}\n`;
+      if (c.khai_thac) context += `Phát hiện mới: ${c.khai_thac}\n`;
+      if (c.phan_ung) context += `Phản ứng: ${c.phan_ung}\n`;
+      if (c.tuong_tac) context += `Tương tác: ${c.tuong_tac}\n`;
+      if (c.de_xuat_cs) context += `Đề xuất chăm sóc: ${c.de_xuat_cs}\n`;
+      context += '\n';
     });
 
     nts.forEach(r => {
       const c = r.content || {};
-      if (c.title && c.body && c.body.trim().length > 5) {
-        noteInsights.push({ title: c.title, body: filterText(c.body) || c.body.trim() });
+      if (c.title || c.body) {
+        context += `--- GHI CHÚ: ${c.title||''} ---\n${c.body||''}\n\n`;
       }
     });
 
-    // ── Deduplicate & limit ──
-    const issues = dedupe(rawIssues).slice(0, 3);
-    const feelings = dedupe(rawFeelings).slice(0, 3);
-    const approach = dedupe(rawApproach).slice(0, 3);
-    const nextSteps = dedupe(rawNext).slice(0, 3);
+    // Call OpenAI
+    const systemPrompt = `Bạn là trợ lý phân tích hồ sơ học viên cho người quản lý hoạt động truyền đạo của nhà thờ.
+Nhiệm vụ: Phân tích TOÀN BỘ thông tin và tạo mindmap Markdown xúc tích.
 
-    // ── BUILD CONCISE MARKDOWN ──
-    const name = p.full_name || 'Insight';
-    let md = `# 🔍 ${name}\n`;
+QUY TẮC NGHIÊM NGẶT:
+- Output CHỈNH là Markdown cho mindmap, KHÔNG giải thích gì thêm
+- Dùng # cho root (tên học viên), ## cho nhánh chính, ### cho nhánh phụ, - cho lá
+- Mỗi node tối đa 35 ký tự
+- Tối đa 5-6 nhánh chính (##)
+- Mỗi nhánh tối đa 3-4 mục con
+- Tổng không quá 25 nodes
 
-    if (issues.length) {
-      md += `## 🎯 Cần chú ý\n`;
-      issues.forEach(text => {
-        const parts = splitToBranches(text);
-        if (parts.length <= 1) { md += `- ${parts[0]||''}\n`; }
-        else { md += `### ${short(parts[0],28)}\n`; parts.slice(1).forEach(p => md += `- ${p}\n`); }
-      });
+CÁC NHÁNH BẮT BUỘC:
+## 🎯 Vấn đề cốt lõi — Những vấn đề sâu xa nhất ảnh hưởng đến bạn (gia đình, tâm lý, hoàn cảnh)
+## 💭 Tâm lý hiện tại — Trạng thái cảm xúc, điểm mạnh/yếu tính cách
+## 🤝 Cách tiếp cận — Gợi ý cụ thể cách lấy lòng và giúp đỡ bạn
+## 💡 Hướng đi — Bước tiếp theo cần làm, cần khai thác thêm gì
+## 🤖 Đề xuất hệ thống — Nhận xét tổng quan, cảnh báo, thời điểm phù hợp
+
+QUAN TRỌNG: Phân tích từ GÓC NHÌN TRUYỀN ĐẠO — mục tiêu là hiểu bạn để đồng hành, giúp đỡ, và dẫn dắt bạn đến với đức tin. Chắt lọc insight, KHÔNG liệt kê thông tin raw.`;
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: context }
+        ],
+        temperature: 0.3,
+        max_tokens: 800
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        localStorage.removeItem('cj_openai_key');
+        promptForKey(container);
+        return;
+      }
+      throw new Error(err.error?.message || `API error ${res.status}`);
     }
 
-    if (feelings.length) {
-      md += `## 💭 Phản hồi\n`;
-      feelings.forEach(text => { splitToBranches(text).slice(0,3).forEach(p => md += `- ${p}\n`); });
+    const data = await res.json();
+    const md = (data.choices?.[0]?.message?.content || '').trim();
+
+    if (!md || !md.startsWith('#')) {
+      throw new Error('AI response invalid');
     }
 
-    if (approach.length) {
-      md += `## 🤝 Tiếp cận\n`;
-      approach.forEach(text => { splitToBranches(text).slice(0,3).forEach(p => md += `- ${p}\n`); });
-    }
-
-    if (noteInsights.length) {
-      md += `## 📌 Ghi chú\n`;
-      noteInsights.slice(0, 4).forEach(n => {
-        md += `### ${short(n.title, 20)}\n`;
-        splitToBranches(n.body).slice(0,3).forEach(p => md += `- ${p}\n`);
-      });
-    }
-
-    if (nextSteps.length) {
-      md += `## 💡 Hướng đi\n`;
-      nextSteps.forEach(text => { splitToBranches(text).slice(0,2).forEach(p => md += `- ${p}\n`); });
-    }
-
-    if (tools.length) {
-      md += `## 🔧 Công cụ\n- ${[...new Set(tools)].join(', ')}\n`;
-    }
-
-    // ══ 🤖 SYSTEM RECOMMENDATIONS ══
-    const recs = [];
-    const d = window._currentInfoSheet || {};
-    const allText = [...rawIssues, ...rawFeelings, ...rawApproach, ...rawNext,
-      ...noteInsights.map(n => n.body)].join(' ').toLowerCase();
-
-    // 1. Data gaps
-    if (!tvs.length && !bbs.length) recs.push('Chưa có báo cáo → Cần TV lần đầu');
-    else if (tvs.length > 0 && !bbs.length) recs.push('Chưa có BB → Xem xét chốt BB');
-    if (!nts.length && (tvs.length + bbs.length) > 0) recs.push('Chưa có ghi chú → Nên quan sát');
-    if (!d.tinh_cach && !d.so_thich) recs.push('Thiếu sở thích → Khai thác để tiếp cận');
-    if (!d.ton_giao && !d.quan_diem) recs.push('Chưa biết quan điểm tâm linh');
-    if (!d.nguoi_quan_trong && !d.nguoi_than) recs.push('Chưa rõ gia đình → Cần khai thác');
-
-    // 2. Content analysis
-    const fKw = ['gia đình','ba mẹ','kiểm cặp','ly hôn','kinh tế','khó khăn'];
-    const eKw = ['buồn','lo','sợ','mệt','chán','stress','áp lực','cô đơn','trầm','tự ti'];
-    const sKw = ['học','thi','trường','ôn tập','sắp thi'];
-    const lKw = ['bạn trai','bạn gái','người yêu','tình cảm'];
-    const oKw = ['mở lòng','chia sẻ','thoải mái','hứng thú','vui'];
-
-    if (fKw.some(w => allText.includes(w))) recs.push('GĐ phức tạp → Đồng cảm, lắng nghe');
-    if (eKw.some(w => allText.includes(w))) recs.push('Có áp lực tâm lý → Đồng hành');
-    if (sKw.some(w => allText.includes(w))) recs.push('Bận học → Hẹn linh hoạt, hỗ trợ');
-    if (lKw.some(w => allText.includes(w))) recs.push('Có chuyện tình cảm → Tiếp cận qua đây');
-
-    // 3. Approach
-    if (d.so_thich) recs.push(`Tiếp cận qua: ${short(d.so_thich, 22)}`);
-    if (oKw.some(w => allText.includes(w))) recs.push('Đang mở lòng → Thời điểm tốt');
-
-    // 4. Session flow
-    if (tvs.length > 0 && tvs.length < 3 && !bbs.length) recs.push('Đã TV '+tvs.length+' lần → Xét chốt BB');
-    if (bbs.length >= 3 && !allText.includes('kinh thánh')) recs.push('Đã '+bbs.length+' BB → Xét mở KT');
-
-    if (recs.length > 4) recs.length = 4;
-    if (recs.length) {
-      md += `## 🤖 Đề xuất\n`;
-      recs.forEach(r => md += `- ${r}\n`);
-    }
+    // Cache result
+    _mmCache[cacheKey] = md;
 
     renderMarkmap(container, md);
+
   } catch(e) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ Lỗi</div>';
-    console.error(e);
+    console.error('AI Mindmap error:', e);
+    container.style.height = 'auto';
+    container.innerHTML = `<div style="padding:20px;text-align:center;">
+      <div style="color:var(--red);font-weight:700;margin-bottom:6px;">❌ Lỗi phân tích</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">${e.message||'Unknown error'}</div>
+      <button onclick="_mmCache['${p.id}']=null;renderMindmap();" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;">🔄 Thử lại</button>
+      <button onclick="localStorage.removeItem('cj_openai_key');renderMindmap();" style="padding:8px 16px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;cursor:pointer;margin-left:6px;">🔑 Đổi Key</button>
+    </div>`;
   }
+}
+
+// Clear cache when switching profile
+function clearMindmapCache(profileId) {
+  if (profileId) delete _mmCache[profileId];
+  else Object.keys(_mmCache).forEach(k => delete _mmCache[k]);
 }
