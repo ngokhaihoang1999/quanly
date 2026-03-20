@@ -264,3 +264,112 @@ function clearMindmapCache(profileId) {
   if (profileId) delete _mmCache[profileId];
   else Object.keys(_mmCache).forEach(k => delete _mmCache[k]);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AI CHAT — Interactive Q&A about the profile
+// ══════════════════════════════════════════════════════════════════════════════
+let _aiChatHistory = [], _aiChatContext = '', _aiTotalCost = 0, _aiChatProfileId = null;
+
+function toggleAIChat() {
+  const body = document.getElementById('aiChatBody');
+  if (!body) return;
+  body.style.display = body.style.display === 'none' ? 'block' : 'none';
+  if (body.style.display === 'block') {
+    if (_aiChatProfileId !== currentProfileId) {
+      _aiChatHistory = []; _aiChatContext = ''; _aiTotalCost = 0;
+      _aiChatProfileId = currentProfileId;
+      document.getElementById('aiChatMessages').innerHTML =
+        '<div class="ai-msg ai-msg-system">Tôi là trợ lý AI. Hãy hỏi bất kỳ điều gì về hồ sơ này.</div>';
+      updateCostDisplay();
+    }
+    document.getElementById('aiChatInput')?.focus();
+  }
+}
+
+function updateCostDisplay() {
+  const el = document.getElementById('aiChatCost');
+  if (el) el.textContent = _aiTotalCost > 0 ? '~' + Math.round(_aiTotalCost * 25000) + 'đ' : '';
+}
+
+function escChat(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function buildChatContext() {
+  if (_aiChatContext) return _aiChatContext;
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  if (!p) return '';
+  const [tvR, bbR, ntR] = await Promise.all([
+    sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.tu_van&select=content,created_at&order=created_at.asc`),
+    sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc`),
+    sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.note&select=content,created_at&order=created_at.asc`)
+  ]);
+  const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
+  const d = window._currentInfoSheet || {};
+  let ctx = 'HỌC VIÊN: ' + (p.full_name||'N/A') + ' | Giai đoạn: ' + (p.phase||'chakki') + '\n\n';
+  if (Object.keys(d).length) {
+    ctx += 'PHIẾU THÔNG TIN:\n';
+    ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(k => {
+      if (d[k]) ctx += k + ': ' + (Array.isArray(d[k]) ? d[k].join(', ') : d[k]) + '\n';
+    });
+    ctx += '\n';
+  }
+  tvs.forEach((r, i) => {
+    const c = r.content || {};
+    ctx += '--- TV LẦN ' + (c.lan_thu||(i+1)) + ' ---\n';
+    ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(k => { if (c[k]) ctx += k + ': ' + c[k] + '\n'; });
+    ctx += '\n';
+  });
+  bbs.forEach((r, i) => {
+    const c = r.content || {};
+    ctx += '--- BB BUỔI ' + (c.buoi_thu||(i+1)) + ' ---\n';
+    ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(k => { if (c[k]) ctx += k + ': ' + c[k] + '\n'; });
+    ctx += '\n';
+  });
+  nts.forEach(r => {
+    const c = r.content || {};
+    if (c.title || c.body) ctx += '--- GHI CHÚ: ' + (c.title||'') + ' ---\n' + (c.body||'') + '\n\n';
+  });
+  _aiChatContext = ctx;
+  return ctx;
+}
+
+async function sendAIChat() {
+  const input = document.getElementById('aiChatInput');
+  const msgBox = document.getElementById('aiChatMessages');
+  if (!input || !msgBox) return;
+  const q = input.value.trim();
+  if (!q) return;
+  const apiKey = getOpenAIKey();
+  if (!apiKey) { alert('Chưa có API Key. Vào Mindmap > AI Insight để nhập.'); return; }
+  input.value = '';
+  msgBox.innerHTML += '<div class="ai-msg ai-msg-user">' + escChat(q) + '</div>';
+  msgBox.innerHTML += '<div class="ai-typing" id="aiTyping"><span></span><span></span><span></span></div>';
+  msgBox.scrollTop = msgBox.scrollHeight;
+  try {
+    const context = await buildChatContext();
+    _aiChatHistory.push({ role: 'user', content: q });
+    const msgs = [
+      { role: 'system', content: 'Bạn là trợ lý AI cho người quản lý truyền đạo nhà thờ. Có hồ sơ học viên bên dưới. Trả lời ngắn gọn, TỐI ĐA 150 từ, tiếng Việt. Góc nhìn truyền đạo.\n\nHỒ SƠ:\n' + context },
+      ..._aiChatHistory.slice(-6)
+    ];
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: 'gpt-4.1-mini', messages: msgs, temperature: 0.4, max_tokens: 400 })
+    });
+    document.getElementById('aiTyping')?.remove();
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || 'API ' + res.status); }
+    const data = await res.json();
+    const answer = data.choices?.[0]?.message?.content || 'Không có phản hồi';
+    const u = data.usage || {};
+    const cost = (u.prompt_tokens||0) / 1e6 * 0.40 + (u.completion_tokens||0) / 1e6 * 1.60;
+    _aiTotalCost += cost;
+    _aiChatHistory.push({ role: 'assistant', content: answer });
+    msgBox.innerHTML += '<div class="ai-msg ai-msg-ai">' + escChat(answer) + '</div>';
+    if (cost > 0) msgBox.innerHTML += '<div class="ai-msg-cost">~' + Math.round(cost * 25000) + 'đ</div>';
+    updateCostDisplay();
+  } catch(e) {
+    document.getElementById('aiTyping')?.remove();
+    msgBox.innerHTML += '<div class="ai-msg ai-msg-system" style="color:var(--red);">❌ ' + escChat(e.message) + '</div>';
+  }
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
