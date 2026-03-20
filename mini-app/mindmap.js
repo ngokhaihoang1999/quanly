@@ -124,9 +124,9 @@ async function renderCollectMM(container, p) {
 
   // 3. No saved result — show button
   container.innerHTML = '<div style="text-align:center;padding:40px;">' +
-    '<div style="font-size:36px;margin-bottom:8px;">\ud83e\udd16</div>' +
+    '<div style="font-size:36px;margin-bottom:8px;">\ud83d\udc7c</div>' +
     '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">Lacie Insight</div>' +
-    '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Ph\u00e2n t\u00edch to\u00e0n b\u1ed9 h\u1ed3 s\u01a1 b\u1eb1ng AI</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Ph\u00e2n t\u00edch to\u00e0n b\u1ed9 h\u1ed3 s\u01a1 v\u1edbi Lacie</div>' +
     '<button onclick="runAIAnalysis()" style="padding:12px 28px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.3);">\ud83d\udd0d Ph\u00e2n t\u00edch ngay</button>' +
     '</div>';
 }
@@ -136,7 +136,7 @@ async function runAIAnalysis() {
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!container || !p) return;
   var apiKey = getOpenAIKey();
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83e\udd16 AI \u0111ang ph\u00e2n t\u00edch...<br><small style="color:var(--text3);">10-20 gi\u00e2y</small></div>';
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udc7c AI \u0111ang ph\u00e2n t\u00edch...<br><small style="color:var(--text3);">10-20 gi\u00e2y</small></div>';
   container.style.height = 'auto';
   try {
     var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
@@ -166,12 +166,12 @@ async function runAIAnalysis() {
       '- # cho root (t\u00ean tr\u00e1i qu\u1ea3), ## nh\u00e1nh ch\u00ednh, ### nh\u00e1nh ph\u1ee5, - cho l\u00e1\n' +
       '- M\u1ed7i node t\u1ed1i \u0111a 35 k\u00fd t\u1ef1, PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7\n' +
       '- T\u1ed1i \u0111a 6 nh\u00e1nh ch\u00ednh, m\u1ed7i nh\u00e1nh 3-4 m\u1ee5c con, t\u1ed5ng max 30 nodes\n\n' +
-      'L\u01af\u1ee4U \u00dd V\u1ec0 V\u1ecf B\u1eccC (Concept):\n' +
-      '- V\u1ecf b\u1ecdc l\u00e0 t\u00ean t\u1ed5 ch\u1ee9c/ch\u01b0\u01a1ng tr\u00ecnh m\u00e0 NDD d\u1ef1ng l\u00ean \u0111\u1ec3 che gi\u1ea5u m\u1ee5c \u0111\u00edch h\u1ecdc KT. V\u00ed d\u1ee5: "H\u1ecdc vi\u1ec7n t\u00e2m l\u00fd", "CLB k\u1ef9 n\u0103ng s\u1ed1ng".\n' +
-      '- Enneagram, MBTI, t\u00e2m linh, t\u00f4n gi\u00e1o, \u0111\u1eb7c \u0111i\u1ec3m c\u00e1 nh\u00e2n c\u1ee7a tr\u00e1i qu\u1ea3 KH\u00d4NG PH\u1ea2I l\u00e0 v\u1ecf b\u1ecdc.\n' +
-      '- N\u1ebfu trong d\u1eef li\u1ec7u KH\u00d4NG c\u00f3 th\u00f4ng tin r\u00f5 r\u00e0ng v\u1ec1 v\u1ecf b\u1ecdc: ghi "\u0110ang d\u00f9ng: Ch\u01b0a r\u00f5" ho\u1eb7c "Ch\u01b0a c\u00f3 th\u00f4ng tin". KH\u00d4NG T\u1ef0 \u0110I\u1ec0N b\u1eefa.\n\n' +
+      'L\u01af\u1ee4U \u00dd CONCEPT (Concept):\n' +
+      '- Concept l\u00e0 t\u00ean t\u1ed5 ch\u1ee9c/ch\u01b0\u01a1ng tr\u00ecnh m\u00e0 NDD d\u1ef1ng l\u00ean \u0111\u1ec3 che gi\u1ea5u m\u1ee5c \u0111\u00edch h\u1ecdc KT. V\u00ed d\u1ee5: "H\u1ecdc vi\u1ec7n t\u00e2m l\u00fd", "CLB k\u1ef9 n\u0103ng s\u1ed1ng".\n' +
+      '- Enneagram, MBTI, t\u00e2m linh, t\u00f4n gi\u00e1o, \u0111\u1eb7c \u0111i\u1ec3m c\u00e1 nh\u00e2n c\u1ee7a tr\u00e1i qu\u1ea3 KH\u00d4NG PH\u1ea2I l\u00e0 concept.\n' +
+      '- N\u1ebfu trong d\u1eef li\u1ec7u KH\u00d4NG c\u00f3 th\u00f4ng tin r\u00f5 r\u00e0ng v\u1ec1 concept: ghi "\u0110ang d\u00f9ng: Ch\u01b0a r\u00f5" ho\u1eb7c "Ch\u01b0a c\u00f3 th\u00f4ng tin". KH\u00d4NG T\u1ef0 \u0110I\u1ec0N b\u1eefa.\n\n' +
       '6 NH\u00c1NH B\u1eaeT BU\u1ed8C:\n' +
-      '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, v\u1ecf b\u1ecdc NDD (n\u1ebfu c\u00f3)\n' +
+      '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, Concept NDD (n\u1ebfu c\u00f3)\n' +
       '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa + c\u1ea3m x\u00fac hi\u1ec7n t\u1ea1i\n' +
       '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 \u0110i\u1ec3m ch\u1ea1m c\u1ea3m x\u00fac. N\u1ebfu thi\u1ebfu: "C\u1ea7n khai th\u00e1c th\u00eam"\n' +
       '## \ud83d\udcd6 Li\u00ean k\u1ebft KT \u2014 C\u00e2u chuy\u1ec7n/l\u1eddi d\u1ea1y Kinh th\u00e1nh. CH\u1ec8 t\u1eeb BB tr\u1edf \u0111i\n' +
