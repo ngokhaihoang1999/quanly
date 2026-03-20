@@ -155,22 +155,49 @@ async function renderCollectMM(container, p) {
     const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
     const d = window._currentInfoSheet || {};
 
-    // ── Collect all knowledge ──
+    // ── Collect all knowledge from CORRECT fields ──
     const allFrags = [];
+
+    // TV fields: van_de (vấn đề/nhu cầu), phan_hoi (phản hồi trái), 
+    //   diem_hai (điểm hái), de_xuat (đề xuất TVV), ten_cong_cu, ket_qua_test
+    const TV_FIELDS = [
+      { key: 'van_de', label: 'Vấn đề/Nhu cầu' },
+      { key: 'phan_hoi', label: 'Phản hồi trái' },
+      { key: 'diem_hai', label: 'Điểm đáng lưu ý' },
+      { key: 'de_xuat', label: 'Đề xuất TVV' },
+      { key: 'ket_qua_test', label: 'Kết quả test' },
+      { key: 'ten_cong_cu', label: 'Công cụ' },
+    ];
 
     tvs.forEach((r, i) => {
       const c = r.content || {};
       const src = 'TV' + (c.lan_thu || (i + 1));
-      ['noi_dung','tom_tat','cam_xuc','phan_hoi','ghi_chu','nhan_xet','cong_cu'].forEach(k => {
-        if (c[k]) allFrags.push({ text: String(c[k]), src, srcType: 'tv' });
+      TV_FIELDS.forEach(f => {
+        if (c[f.key] && String(c[f.key]).trim()) {
+          allFrags.push({ text: String(c[f.key]), src, srcType: 'tv', label: f.label });
+        }
       });
     });
+
+    // BB fields: noi_dung (nội dung buổi), phan_ung (phản ứng HS),
+    //   khai_thac (khai thác mới), tuong_tac (tương tác đáng chú ý),
+    //   de_xuat_cs (đề xuất chăm sóc), noi_dung_tiep (buổi tiếp)
+    const BB_FIELDS = [
+      { key: 'khai_thac', label: 'Phát hiện mới về HS' },
+      { key: 'phan_ung', label: 'Phản ứng HS' },
+      { key: 'tuong_tac', label: 'Tương tác đáng chú ý' },
+      { key: 'noi_dung', label: 'Nội dung buổi' },
+      { key: 'de_xuat_cs', label: 'Đề xuất chăm sóc' },
+      { key: 'noi_dung_tiep', label: 'Kế hoạch tiếp' },
+    ];
 
     bbs.forEach((r, i) => {
       const c = r.content || {};
       const src = 'BB' + (c.buoi_thu || (i + 1));
-      ['noi_dung','tom_tat','cam_xuc','phan_hoi','ghi_chu','nhan_xet'].forEach(k => {
-        if (c[k]) allFrags.push({ text: String(c[k]), src, srcType: 'bb' });
+      BB_FIELDS.forEach(f => {
+        if (c[f.key] && String(c[f.key]).trim()) {
+          allFrags.push({ text: String(c[f.key]), src, srcType: 'bb', label: f.label });
+        }
       });
     });
 
@@ -207,7 +234,7 @@ async function renderCollectMM(container, p) {
       if (!placed && f.text.length > 5) ungrouped.push(f);
     });
 
-    // ── BUILD MARKDOWN with SMART SUMMARIES ──
+    // ── BUILD MARKDOWN with DEEP UNDERSTANDING ──
     let md = `# 🔍 ${p.full_name || 'Insight'}\n`;
 
     // A. Overview
@@ -217,59 +244,114 @@ async function renderCollectMM(container, p) {
     // B. Note-based insights (user's own classification!)
     if (noteGroups.length > 0) {
       noteGroups.forEach(ng => {
-        // Find which aspect this note title belongs to
         const matchAsp = ASPECTS.find(a => a.kw.some(kw => ng.title.toLowerCase().includes(kw)));
         const icon = matchAsp ? matchAsp.icon : '📌';
         md += `## ${icon} ${ng.title}\n`;
-        // Extract key points from body
         const points = extractKeyPoints(ng.body, 3);
         points.forEach(pt => { md += `- ${pt}\n`; });
       });
     }
 
-    // C. Aspects from TV/BB that weren't covered by notes
+    // C. TV Insight — deep read of consultation reports
+    if (tvs.length > 0) {
+      md += `## 💬 Từ tư vấn\n`;
+      tvs.forEach((r, i) => {
+        const c = r.content || {};
+        const lan = c.lan_thu || (i + 1);
+        const tool = c.ten_cong_cu ? ` (${condenseFrag(c.ten_cong_cu)})` : '';
+        md += `### Lần ${lan}${tool}\n`;
+
+        // Most important: van_de = vấn đề khai thác được
+        if (c.van_de) {
+          const pts = extractKeyPoints(c.van_de, 3);
+          pts.forEach(pt => { md += `- 🎯 ${pt}\n`; });
+        }
+        // Phản hồi trái
+        if (c.phan_hoi) {
+          md += `- 💭 ${condenseFrag(c.phan_hoi)}\n`;
+        }
+        // Điểm hái
+        if (c.diem_hai) {
+          md += `- ⭐ ${condenseFrag(c.diem_hai)}\n`;
+        }
+        // Đề xuất
+        if (c.de_xuat) {
+          md += `- 💡 ${condenseFrag(c.de_xuat)}\n`;
+        }
+        // Kết quả test
+        if (c.ket_qua_test) {
+          md += `- 📋 ${condenseFrag(c.ket_qua_test)}\n`;
+        }
+      });
+    }
+
+    // D. BB Insight — deep read of group session reports
+    if (bbs.length > 0) {
+      md += `## 📝 Từ BB\n`;
+      bbs.forEach((r, i) => {
+        const c = r.content || {};
+        const buoi = c.buoi_thu || (i + 1);
+        md += `### Buổi ${buoi}\n`;
+
+        // Most important: khai_thac = phát hiện mới
+        if (c.khai_thac) {
+          const pts = extractKeyPoints(c.khai_thac, 2);
+          pts.forEach(pt => { md += `- 🔍 ${pt}\n`; });
+        }
+        // Phản ứng HS
+        if (c.phan_ung) {
+          md += `- 💭 ${condenseFrag(c.phan_ung)}\n`;
+        }
+        // Tương tác đáng chú ý
+        if (c.tuong_tac) {
+          md += `- 🤝 ${condenseFrag(c.tuong_tac)}\n`;
+        }
+        // Đề xuất chăm sóc
+        if (c.de_xuat_cs) {
+          md += `- 💡 ${condenseFrag(c.de_xuat_cs)}\n`;
+        }
+      });
+    }
+
+    // E. Cross-source aspects (only TV/BB fragments not yet shown)
     const noteTitlesLower = noteGroups.map(n => n.title.toLowerCase());
     for (const asp of ASPECTS) {
       const data = aspectMap[asp.key];
-      // Skip if a note title already covers this aspect
       const coveredByNote = noteTitlesLower.some(nt =>
         asp.kw.some(kw => nt.includes(kw))
       );
-      // Only show TV/BB frags not from notes
-      const tvbbFrags = data.frags.filter(f => f.srcType === 'tv' || f.srcType === 'bb');
-      if (coveredByNote || tvbbFrags.length === 0) continue;
+      // Only show info-sheet fragments here
+      const infoFrags = data.frags.filter(f => f.srcType === 'info');
+      if (coveredByNote || infoFrags.length === 0) continue;
 
       md += `## ${asp.icon} ${asp.label}\n`;
-      // Combine all text, extract key points
-      const combined = tvbbFrags.map(f => f.text).join('. ');
-      const points = extractKeyPoints(combined, 3);
-      points.forEach(pt => { md += `- ${pt}\n`; });
-      // Source summary
-      const sources = [...new Set(tvbbFrags.map(f => f.src))];
-      md += `- 📎 ${sources.join(', ')}\n`;
-    }
-
-    // D. Ungrouped
-    if (ungrouped.length > 0) {
-      md += `## 📝 Khác\n`;
-      ungrouped.slice(0, 5).forEach(f => {
+      infoFrags.forEach(f => {
         md += `- ${condenseFrag(f.text)}\n`;
       });
     }
 
-    // E. Insights
+    // F. Ungrouped
+    if (ungrouped.length > 0) {
+      md += `## 📝 Khác\n`;
+      ungrouped.slice(0, 4).forEach(f => {
+        const srcTag = f.label ? `[${f.label}]` : '';
+        md += `- ${condenseFrag(f.text)} ${srcTag}\n`;
+      });
+    }
+
+    // G. AI-style Insights
     const insights = [];
 
     // Top aspect
     const sortedAsp = ASPECTS.map(a => ({ ...a, count: aspectMap[a.key].frags.length }))
       .filter(a => a.count > 0).sort((a, b) => b.count - a.count);
     if (sortedAsp.length > 0) {
-      insights.push(`Chủ đề nổi bật: **${sortedAsp[0].icon} ${sortedAsp[0].label}**`);
+      insights.push(`Chủ đề nổi bật: ${sortedAsp[0].icon} **${sortedAsp[0].label}**`);
     }
 
     // Emotion trend
-    const negW = ['khó khăn','buồn','lo','sợ','mệt','chán','stress','áp lực','thất vọng','đau','tức','giận','cô đơn','trầm','kiểm cặp'];
-    const posW = ['vui','hy vọng','tích cực','tiến bộ','mở lòng','hạnh phúc','cam kết','sẵn sàng','cải thiện','hòa thuận'];
+    const negW = ['khó khăn','buồn','lo','sợ','mệt','chán','stress','áp lực','thất vọng','đau','tức','giận','cô đơn','trầm','kiểm cặp','khó'];
+    const posW = ['vui','hy vọng','tích cực','tiến bộ','mở lòng','hạnh phúc','cam kết','sẵn sàng','cải thiện','hòa thuận','đồng ý'];
     let neg = 0, pos = 0;
     allFrags.forEach(f => {
       const l = f.text.toLowerCase();
@@ -277,17 +359,22 @@ async function renderCollectMM(container, p) {
       posW.forEach(w => { if (l.includes(w)) pos++; });
     });
     if (neg + pos > 0) {
-      if (neg > pos * 2) insights.push('⚠️ Cảm xúc **tiêu cực** nổi trội');
+      if (neg > pos * 2) insights.push('⚠️ Xu hướng **tiêu cực** nổi trội');
       else if (pos > neg * 2) insights.push('✅ Xu hướng **tích cực**');
       else insights.push('🔄 Cảm xúc **pha trộn**');
     }
 
     // Gaps
     const gaps = [];
-    if (!aspectMap.work.frags.length) gaps.push('Công việc');
+    if (!aspectMap.work.frags.length && !noteGroups.some(n => ASPECTS.find(a => a.key === 'work')?.kw.some(kw => n.title.toLowerCase().includes(kw)))) gaps.push('Công việc');
     if (!aspectMap.health.frags.length) gaps.push('Sức khỏe');
     if (!aspectMap.spiritual.frags.length) gaps.push('Tâm linh');
     if (gaps.length > 0) insights.push(`🔎 Cần tìm hiểu: ${gaps.join(', ')}`);
+
+    // Note-based insight
+    if (noteGroups.length >= 2) {
+      insights.push(`📌 Ghi nhận ${noteGroups.length} khía cạnh: ${noteGroups.map(n => n.title).join(', ')}`);
+    }
 
     if (insights.length > 0) {
       md += `## 💡 Insight\n`;
