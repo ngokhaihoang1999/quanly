@@ -498,3 +498,10 @@
     .mm-leaf-item::before {
       content: '•'; position: absolute; left: 20px; color: var(--accent); font-weight: 700;
     }
+    .mm-leaf-text { font-size: 12px; line-height: 1.4; }
+    .mm-src-badge {
+      display: inline-block; margin-top: 3px;
+      font-size: 9px; font-weight: 600; color: var(--accent);
+      background: var(--chip-bg); border: 1px solid var(--chip-border);
+      padding: 1px 6px; border-radius: 8px;
+    }

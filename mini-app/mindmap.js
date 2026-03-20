@@ -172,16 +172,17 @@ async function renderCollectMM(container, p) {
     const branches = [];
     for (const [key, data] of Object.entries(topicMap)) {
       if (!data.items.length) continue;
+      // Each item keeps {text, src} for display
       branches.push({
         icon: data.icon,
         label: key + ' (' + data.items.length + ')',
-        items: data.items.map(f => f.text.length > 40 ? f.text.substring(0, 40) + '…' : f.text),
-        detailItems: data.items // for popup
+        items: data.items, // keep full objects {text, src}
+        detailItems: data.items
       });
     }
 
     if (!branches.length) {
-      branches.push({ icon: '📋', label: 'Chưa có dữ liệu', items: ['Chưa có báo cáo hoặc ghi chú'] });
+      branches.push({ icon: '📋', label: 'Chưa có dữ liệu', items: [{text: 'Chưa có báo cáo hoặc ghi chú', src: ''}] });
     }
 
     const subtitle = `Nguồn: ${tvs.length} TV, ${bbs.length} BB, ${nts.length} ghi chú`;
@@ -197,29 +198,34 @@ async function renderCollectMM(container, p) {
 // ═══════════════════════════════════════════════════
 function renderTree(container, centerName, branches, subtitle) {
   let html = `<div class="mm-tree">`;
-
-  // Center / Root
   html += `<div class="mm-root">${escHtml(centerName)}</div>`;
   if (subtitle) html += `<div class="mm-subtitle">${escHtml(subtitle)}</div>`;
 
-  // Branches
   html += `<div class="mm-branches">`;
   branches.forEach((br, bi) => {
     const brId = 'mmBr_' + bi;
+    const itemCount = br.items.length;
     html += `<div class="mm-branch-wrap">
       <div class="mm-branch-head" onclick="document.getElementById('${brId}').classList.toggle('mm-open')">
         <span class="mm-branch-icon">${br.icon}</span>
         <span class="mm-branch-label">${escHtml(br.label)}</span>
-        <span class="mm-branch-count">${br.items.length}</span>
+        <span class="mm-branch-count">${itemCount}</span>
         <span class="mm-branch-arrow">›</span>
       </div>
       <div class="mm-branch-items" id="${brId}">`;
 
     br.items.forEach((item, ii) => {
-      const clickAction = br.detailItems
-        ? `mmShowTopicDetail(${bi})`
-        : '';
-      html += `<div class="mm-leaf-item" ${clickAction ? `onclick="${clickAction}"` : ''}>${escHtml(String(item))}</div>`;
+      const isObj = typeof item === 'object' && item.text;
+      const text = isObj ? item.text : String(item);
+      const src = isObj ? item.src : '';
+      const truncText = text.length > 60 ? text.substring(0, 60) + '…' : text;
+      const srcBadge = src ? `<span class="mm-src-badge">${escHtml(src)}</span>` : '';
+      const clickAction = br.detailItems ? `onclick="mmShowTopicDetail(${bi})"` : '';
+      
+      html += `<div class="mm-leaf-item" ${clickAction}>
+        <div class="mm-leaf-text">${escHtml(truncText)}</div>
+        ${srcBadge}
+      </div>`;
     });
 
     html += `</div></div>`;
@@ -228,8 +234,6 @@ function renderTree(container, centerName, branches, subtitle) {
 
   container.innerHTML = html;
   container.style.height = 'auto';
-
-  // Store for popup access
   window._mmBranchData = branches;
 }
 
