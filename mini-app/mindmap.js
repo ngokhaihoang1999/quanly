@@ -144,23 +144,41 @@ async function runAIAnalysis() {
     var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content,created_at&order=created_at.asc');
     var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
     var d = window._currentInfoSheet || {};
-    if (!tvs.length && !bbs.length && !nts.length) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>'; return; }
-    var context = 'H\u1eccC VI\u00caN: '+(p.full_name||'N/A')+'\nGIAI \u0110O\u1ea0N: '+(p.phase||'chakki')+'\n\n';
+    if (!tvs.length && !bbs.length && !nts.length && !Object.keys(d).length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>';
+      return;
+    }
+    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\n\n';
     if (Object.keys(d).length) {
-      context += 'PHI\u1ebeU TH\u00d4NG TIN:\n';
-      ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
+      context += 'PHIEU THONG TIN:\n';
+      ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
       context += '\n';
     }
-    tvs.forEach(function(r,i){ var c=r.content||{}; context+='--- TV L\u1ea6N '+(c.lan_thu||(i+1))+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    bbs.forEach(function(r,i){ var c=r.content||{}; context+='--- BB BU\u1ed4I '+(c.buoi_thu||(i+1))+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CH\u00da: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
+    tvs.forEach(function(r,i){ var c=r.content||{}; context+='--- TV LAN '+(c.lan_thu||(i+1))+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
+    bbs.forEach(function(r,i){ var c=r.content||{}; context+='--- BB BUOI '+(c.buoi_thu||(i+1))+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
+    nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CHU: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
 
-    var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\nNHIEM VU: Tao mindmap Markdown xuc tich.\n' + 'QUY TAC: Output CHI la Markdown, KHONG giai thich. Dung # root, ## nhanh chinh, ### nhanh phu, - la. Moi node max 35 ky tu. Max 5-6 nhanh chinh, 3-4 muc con/nhanh. Tong max 25 nodes.\n' + 'CAC NHANH: ## \ud83c\udfaf Van de cot loi ## \ud83d\udcad Tam ly hien tai ## \ud83e\udd1d Cach tiep can ## \ud83d\udca1 Huong di ## \ud83e\udd16 De xuat\nChat loc insight, KHONG liet ke raw.';
+    var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\n' +
+      '=== NHIEM VU: TAO MINDMAP ===\n' +
+      'Phan tich TOAN BO thong tin ho so va tao mindmap Markdown.\n\n' +
+      'QUY TAC DINH DANG:\n' +
+      '- Output CHI la Markdown, KHONG giai thich gi them\n' +
+      '- # cho root (ten trai qua), ## nhanh chinh, ### nhanh phu, - cho la\n' +
+      '- Moi node toi da 35 ky tu\n' +
+      '- Toi da 6 nhanh chinh, moi nhanh 3-4 muc con, tong max 30 nodes\n\n' +
+      '6 NHANH BAT BUOC:\n' +
+      '## \ud83d\udccb Tong quan — Giai doan, nguoi phu trach, concept. Chi ghi nhung gi CO trong du lieu\n' +
+      '## \ud83c\udfaf Van de & Tam ly — Van de sau xa + cam xuc hien tai. Chi tu bao cao thuc te\n' +
+      '## \ud83d\udc8e Diem hai trai — Diem cham cam xuc. Neu thieu: ghi "Can khai thac them"\n' +
+      '## \ud83d\udcd6 Lien ket KT — Cau chuyen/loi day KT phu hop. CHI khi du thong tin va tu BB tro di. Neu chua: "Chua den thoi diem"\n' +
+      '## \ud83e\udd1d Chien luoc — Cach tiep can phu hop giai doan hien tai\n' +
+      '## \u26a1 Hanh dong tiep — Buoc ke tiep ro rang. Neu thieu du lieu: ghi can bo sung gi\n\n' +
+      'NGUYEN TAC: Chi dua tren du lieu thuc te. Khong bua. Neu thieu -> "Can bo sung".';
 
     var res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: 'gpt-4.1-mini', messages: [{role:'system',content:sysPrompt},{role:'user',content:context}], temperature: 0.3, max_tokens: 800 })
+      body: JSON.stringify({ model: 'gpt-4.1-mini', messages: [{role:'system',content:sysPrompt},{role:'user',content:context}], temperature: 0.3, max_tokens: 1000 })
     });
     if (!res.ok) { var err = await res.json().catch(function(){return {};}); throw new Error(err.error?err.error.message:'API '+res.status); }
     var data = await res.json();
@@ -170,16 +188,13 @@ async function runAIAnalysis() {
     trackCost((u.prompt_tokens||0)/1e6*0.40 + (u.completion_tokens||0)/1e6*1.60);
     _mmCache[p.id] = md;
     renderMarkmap(container, md);
-
-    // Save to Supabase — persist for all users
     saveAIMindmap(p.id, md);
-
   } catch(e) {
     console.error('AI Mindmap error:', e);
     container.style.height = 'auto';
     container.innerHTML = '<div style="padding:20px;text-align:center;">' +
       '<div style="color:var(--red);font-weight:700;margin-bottom:6px;">\u274c L\u1ed7i ph\u00e2n t\u00edch</div>' +
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">'+(e.message||'L\u1ed7i')+' </div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">'+(e.message||'L\u1ed7i')+'</div>' +
       '<button onclick="runAIAnalysis()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;">\ud83d\udd04 Th\u1eed l\u1ea1i</button>' +
       '</div>';
   }
