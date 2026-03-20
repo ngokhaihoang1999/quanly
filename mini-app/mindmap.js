@@ -167,7 +167,7 @@ async function runAIAnalysis() {
       '- M\u1ed7i node t\u1ed1i \u0111a 35 k\u00fd t\u1ef1, PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7\n' +
       '- T\u1ed1i \u0111a 6 nh\u00e1nh ch\u00ednh, m\u1ed7i nh\u00e1nh 3-4 m\u1ee5c con, t\u1ed5ng max 30 nodes\n\n' +
       '6 NH\u00c1NH B\u1eaeT BU\u1ed8C:\n' +
-      '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, concept\n' +
+      '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, v\u1ecf b\u1ecdc NDD d\u1ef1ng l\u00ean\n' +
       '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa + c\u1ea3m x\u00fac hi\u1ec7n t\u1ea1i\n' +
       '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 \u0110i\u1ec3m ch\u1ea1m c\u1ea3m x\u00fac. N\u1ebfu thi\u1ebfu: "C\u1ea7n khai th\u00e1c th\u00eam"\n' +
       '## \ud83d\udcd6 Li\u00ean k\u1ebft KT \u2014 C\u00e2u chuy\u1ec7n/l\u1eddi d\u1ea1y Kinh th\u00e1nh. CH\u1ec8 t\u1eeb BB tr\u1edf \u0111i\n' +
