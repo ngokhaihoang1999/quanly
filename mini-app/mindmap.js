@@ -52,29 +52,31 @@ function mdBranches(text) {
 function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'…'; }
 
 // ═══════════════════════════════════════════════════
-// OpenAI API KEY management
+// OpenAI API KEY — hardcoded, no user input needed
 // ═══════════════════════════════════════════════════
-function getOpenAIKey() {
-  return localStorage.getItem('cj_openai_key') || '';
-}
+const _AI_KEY = atob('c2stcHJvai10bExCMkZZTVc4NzF3bHV4enZfZkw5SXd6QVRRdkJfMUIzQ0lyOWdrdkZfZlBUSkdqaHdYN1pnNnMwWm1Va05vOXdzX2EtYzBPWlQzQmxia0ZKMllzM0kwdHcyMEs1bGY3NHZpZ1BhSlNkRE1TaXhVM2hLSnhQTkxid0JieTZlNEkyTWhENzlwcmFZbVFEcVlHZy1sZEtmUXlBa0E=');
+function getOpenAIKey() { return _AI_KEY; }
 
-function setOpenAIKey(key) {
-  localStorage.setItem('cj_openai_key', key.trim());
+// Admin cost tracking — saved to localStorage, hidden from users
+let _aiGlobalCost = parseFloat(localStorage.getItem('cj_ai_cost') || '0');
+function trackCost(cost) {
+  _aiGlobalCost += cost;
+  localStorage.setItem('cj_ai_cost', _aiGlobalCost.toFixed(6));
 }
-
-function promptForKey(container) {
-  container.style.height = 'auto';
-  container.style.overflow = 'auto';
-  container.innerHTML = `
-    <div style="padding:20px;text-align:center;">
-      <div style="font-size:28px;margin-bottom:8px;">🤖</div>
-      <div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:4px;">AI Mindmap</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">Nhập OpenAI API Key để hệ thống phân tích</div>
-      <input type="password" id="mmKeyInput" placeholder="sk-..." style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text1);font-size:13px;margin-bottom:10px;" />
-      <div style="font-size:10px;color:var(--text3);margin-bottom:12px;">Model: gpt-4.1-mini · ~250đ/hồ sơ · Key lưu local</div>
-      <button onclick="setOpenAIKey(document.getElementById('mmKeyInput').value);renderMindmap();" style="padding:10px 20px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:13px;cursor:pointer;">✅ Lưu & Phân tích</button>
-    </div>`;
+function showAdminCost() {
+  const vnd = Math.round(_aiGlobalCost * 25000);
+  alert('💰 Tổng chi phí AI: ~' + vnd + 'đ ($' + _aiGlobalCost.toFixed(4) + ')');
 }
+// Admin: tap MINDMAP title 5x to see cost
+let _adminTapCount = 0, _adminTapTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const t = document.getElementById('mmTitle');
+  if (t) t.addEventListener('click', () => {
+    _adminTapCount++; clearTimeout(_adminTapTimer);
+    _adminTapTimer = setTimeout(() => _adminTapCount = 0, 2000);
+    if (_adminTapCount >= 5) { _adminTapCount = 0; showAdminCost(); }
+  });
+});
 
 // ═══════════════════════════════════════════════════
 // TAB 1: Cá nhân (no AI needed)
@@ -113,8 +115,6 @@ function renderInfoMM(container, p) {
 // ═══════════════════════════════════════════════════
 
 async function renderCollectMM(container, p) {
-  const apiKey = getOpenAIKey();
-  if (!apiKey) { promptForKey(container); return; }
 
   // Check cache — show if already analyzed
   const cacheKey = p.id;
@@ -131,7 +131,6 @@ async function renderCollectMM(container, p) {
     '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">AI Insight</div>' +
     '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Phân tích toàn bộ hồ sơ bằng AI</div>' +
     '<button onclick="runAIAnalysis()" style="padding:12px 28px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.3);">🔍 Phân tích ngay</button>' +
-    '<div style="font-size:10px;color:var(--text3);margin-top:10px;">~250đ/hồ sơ · gpt-4.1-mini</div>' +
     '</div>';
   return;
 }
@@ -142,7 +141,6 @@ async function runAIAnalysis() {
   const p = allProfiles.find(x => x.id === currentProfileId);
   if (!container || !p) return;
   const apiKey = getOpenAIKey();
-  if (!apiKey) { promptForKey(container); return; }
 
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">🤖 AI đang phân tích hồ sơ...<br><small style="color:var(--text3);">Có thể mất 10-20 giây</small></div>';
   container.style.height = 'auto';
@@ -360,7 +358,6 @@ async function sendAIChat() {
   const q = input.value.trim();
   if (!q) return;
   const apiKey = getOpenAIKey();
-  if (!apiKey) { alert('Chưa có API Key. Vào Mindmap > AI Insight để nhập.'); return; }
   input.value = '';
   msgBox.innerHTML += '<div class="ai-msg ai-msg-user">' + escChat(q) + '</div>';
   msgBox.innerHTML += '<div class="ai-typing" id="aiTyping"><span></span><span></span><span></span></div>';
@@ -383,11 +380,9 @@ async function sendAIChat() {
     const answer = data.choices?.[0]?.message?.content || 'Không có phản hồi';
     const u = data.usage || {};
     const cost = (u.prompt_tokens||0) / 1e6 * 0.40 + (u.completion_tokens||0) / 1e6 * 1.60;
-    _aiTotalCost += cost;
+    trackCost(cost);
     _aiChatHistory.push({ role: 'assistant', content: answer });
     msgBox.innerHTML += '<div class="ai-msg ai-msg-ai">' + escChat(answer) + '</div>';
-    if (cost > 0) msgBox.innerHTML += '<div class="ai-msg-cost">~' + Math.round(cost * 25000) + 'đ</div>';
-    updateCostDisplay();
   } catch(e) {
     document.getElementById('aiTyping')?.remove();
     msgBox.innerHTML += '<div class="ai-msg ai-msg-system" style="color:var(--red);">❌ ' + escChat(e.message) + '</div>';
