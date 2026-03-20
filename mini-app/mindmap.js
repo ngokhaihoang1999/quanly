@@ -1,10 +1,9 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP — Interactive SVG with Zoom & Popup Detail
+// MINDMAP v2 — Smart topic-based layout with zoom & popup
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _mmCurrentType = 'info';
 let _mmZoom = 1;
-let _mmBranches = [];
 
 function switchMindmap(type, btn) {
   _mmCurrentType = type;
@@ -14,209 +13,208 @@ function switchMindmap(type, btn) {
   renderMindmap();
 }
 
-function mmZoomIn() { _mmZoom = Math.min(_mmZoom + 0.15, 2.5); applyMmZoom(); }
-function mmZoomOut() { _mmZoom = Math.max(_mmZoom - 0.15, 0.4); applyMmZoom(); }
-function applyMmZoom() {
-  const inner = document.getElementById('mmInner');
-  const lvl = document.getElementById('mmZoomLvl');
-  if (inner) inner.style.transform = `scale(${_mmZoom})`;
-  if (lvl) lvl.textContent = Math.round(_mmZoom * 100) + '%';
+function mmZoomIn() { _mmZoom = Math.min(_mmZoom + 0.15, 2.5); applyZoom(); }
+function mmZoomOut() { _mmZoom = Math.max(_mmZoom - 0.15, 0.4); applyZoom(); }
+function applyZoom() {
+  const el = document.getElementById('mmInner');
+  const lbl = document.getElementById('mmZoomLvl');
+  if (el) el.style.transform = `scale(${_mmZoom})`;
+  if (lbl) lbl.textContent = Math.round(_mmZoom * 100) + '%';
 }
 
-function showMmPopup(title, details) {
-  // Remove existing
+function showMmPopup(title, html) {
   document.querySelectorAll('.mm-popup,.mm-popup-overlay').forEach(e => e.remove());
-  const overlay = document.createElement('div');
-  overlay.className = 'mm-popup-overlay';
-  overlay.onclick = () => { overlay.remove(); popup.remove(); };
-  const popup = document.createElement('div');
-  popup.className = 'mm-popup';
-  popup.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <div style="font-weight:700;font-size:15px;">${title}</div>
-      <button onclick="this.closest('.mm-popup').remove();document.querySelector('.mm-popup-overlay')?.remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">×</button>
-    </div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.6;">${details}</div>
-  `;
-  document.body.appendChild(overlay);
-  document.body.appendChild(popup);
+  const ov = document.createElement('div'); ov.className = 'mm-popup-overlay';
+  const pp = document.createElement('div'); pp.className = 'mm-popup';
+  pp.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <b style="font-size:14px;">${title}</b>
+    <span onclick="this.closest('.mm-popup').remove();document.querySelector('.mm-popup-overlay')?.remove()" style="cursor:pointer;font-size:20px;color:var(--text2);">×</span>
+  </div><div style="font-size:12px;line-height:1.7;color:var(--text2);">${html}</div>`;
+  ov.onclick = () => { ov.remove(); pp.remove(); };
+  document.body.append(ov, pp);
 }
 
 function renderMindmap() {
-  const container = document.getElementById('mindmapContainer');
-  if (!container || !currentProfileId) return;
+  const c = document.getElementById('mindmapContainer');
+  if (!c || !currentProfileId) return;
   const p = allProfiles.find(x => x.id === currentProfileId);
-  if (!p) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">Không tìm thấy hồ sơ</div>'; return; }
-  if (_mmCurrentType === 'info') renderInfoMindmap(container, p);
-  else renderCollectMindmap(container, p);
+  if (!p) return;
+  _mmCurrentType === 'info' ? renderInfoMM(c, p) : renderCollectMM(c, p);
 }
 
-// ── Personal Info Mindmap ──
-function renderInfoMindmap(container, p) {
+// ── PERSONAL INFO MINDMAP ──
+function renderInfoMM(container, p) {
   const d = window._currentInfoSheet || {};
-  const centerLabel = p.full_name || 'Trái quả';
-  const branches = [];
-  
-  const add = (icon, label, val) => {
-    if (!val || (Array.isArray(val) && val.length === 0)) return;
-    const children = Array.isArray(val) ? val : [val];
-    branches.push({ label: icon + ' ' + label, children, fullData: children.join(', ') });
+  const name = p.full_name || 'Trái quả';
+  const br = [];
+  const add = (icon, lbl, val) => {
+    if (!val || (Array.isArray(val) && !val.length)) return;
+    const arr = Array.isArray(val) ? val.filter(Boolean) : [val];
+    if (!arr.length) return;
+    br.push({ label: icon + ' ' + lbl, items: arr });
   };
-  
-  add('👤', 'Giới tính', d.gioi_tinh || p.gender);
-  add('📅', 'Năm sinh', d.nam_sinh || p.birth_year);
-  add('💼', 'Nghề nghiệp', d.nghe_nghiep);
-  add('🙏', 'Tôn giáo', d.ton_giao);
-  add('💍', 'Hôn nhân', d.hon_nhan);
-  add('📍', 'Nơi ở', d.dia_chi);
-  add('🏠', 'Quê quán', d.que_quan);
-  add('🧩', 'Tính cách', d.tinh_cach);
-  add('⭐', 'Sở thích', d.so_thich);
-  add('🎯', 'Dự định', d.du_dinh);
-  add('❤️', 'Người QT', d.nguoi_quan_trong);
-  add('🌟', 'Quan điểm TL', d.quan_diem);
-  add('📞', 'SĐT', d.sdt || p.phone_number);
-  
-  if (branches.length === 0) {
-    branches.push({ label: '📋 Chưa có', children: ['Hãy điền Phiếu Thông tin'], fullData: 'Chưa có dữ liệu' });
-  }
-  _mmBranches = branches;
-  drawRadialMindmap(container, centerLabel, branches);
+
+  // Group by category for cleaner mindmap
+  add('👤', 'Nhân thân', [
+    d.gioi_tinh || p.gender,
+    d.nam_sinh || p.birth_year ? `Sinh ${d.nam_sinh || p.birth_year}` : null,
+    d.nghe_nghiep ? `${d.nghe_nghiep}` : null
+  ].filter(Boolean));
+  add('🏠', 'Nơi sống', [d.dia_chi, d.que_quan].filter(Boolean));
+  add('💍', 'Gia đình', [
+    ...(Array.isArray(d.hon_nhan) ? d.hon_nhan : d.hon_nhan ? [d.hon_nhan] : []),
+    d.nguoi_quan_trong ? `QT: ${d.nguoi_quan_trong}` : null
+  ].filter(Boolean));
+  add('🙏', 'Tôn giáo', Array.isArray(d.ton_giao) ? d.ton_giao : d.ton_giao ? [d.ton_giao] : []);
+  add('🧩', 'Tính cách', d.tinh_cach ? [d.tinh_cach] : []);
+  add('⭐', 'Sở thích', d.so_thich ? [d.so_thich] : []);
+  add('🎯', 'Dự định', d.du_dinh ? [d.du_dinh] : []);
+  add('🌟', 'Quan điểm', d.quan_diem ? [d.quan_diem] : []);
+  add('📞', 'Liên hệ', [d.sdt || p.phone_number].filter(Boolean));
+
+  if (!br.length) br.push({ label: '📋 Chưa có dữ liệu', items: ['Hãy điền Phiếu Thông tin'] });
+  drawMM(container, name, br);
 }
 
-// ── Collected Info Mindmap ──
-async function renderCollectMindmap(container, p) {
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">⏳ Đang phân tích...</div>';
+// ── COLLECTED INFO MINDMAP — Smart topic synthesis ──
+async function renderCollectMM(container, p) {
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Đang tổng hợp...</div>';
   try {
-    const [tvRes, bbRes, noteRes] = await Promise.all([
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.tu_van&select=content&order=created_at.asc`),
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.bien_ban&select=content&order=created_at.asc`),
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.note&select=content&order=created_at.asc`)
+    const [tvR, bbR, ntR] = await Promise.all([
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.tu_van&select=content,created_at&order=created_at.asc`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.note&select=content,created_at&order=created_at.asc`)
     ]);
-    const tvRecs = await tvRes.json(), bbRecs = await bbRes.json(), notes = await noteRes.json();
-    const centerLabel = p.full_name || 'Thu thập';
-    const branches = [];
+    const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
 
-    if (tvRecs.length > 0) {
-      const details = tvRecs.map((r, i) => {
-        const c = r.content || {};
-        return `<b>Lần ${c.lan_thu || (i+1)}</b>: ${c.noi_dung || c.tom_tat || '—'}`;
-      }).join('<br>');
-      branches.push({
-        label: '💬 Tư vấn (' + tvRecs.length + ')',
-        children: tvRecs.map((r, i) => 'Lần ' + (r.content?.lan_thu || (i+1))),
-        fullData: details
-      });
-    }
-
-    if (bbRecs.length > 0) {
-      const details = bbRecs.map((r, i) => {
-        const c = r.content || {};
-        return `<b>Buổi ${c.buoi_thu || (i+1)}</b>: ${c.noi_dung || c.tom_tat || '—'}`;
-      }).join('<br>');
-      branches.push({
-        label: '📝 Biên bản (' + bbRecs.length + ')',
-        children: bbRecs.map((r, i) => 'Buổi ' + (r.content?.buoi_thu || (i+1))),
-        fullData: details
-      });
-    }
-
-    if (notes.length > 0) {
-      const details = notes.map(n => {
-        const c = n.content || {};
-        return `<b>${c.title || 'Ghi chú'}</b>: ${c.body || '—'}`;
-      }).join('<br>');
-      branches.push({
-        label: '📌 Ghi chú (' + notes.length + ')',
-        children: notes.map(n => n.content?.title || 'Ghi chú'),
-        fullData: details
-      });
-    }
-
-    // Key themes
-    const allText = [...tvRecs, ...bbRecs, ...notes].map(r => {
+    // ── Step 1: Extract all text fragments with source labels ──
+    const fragments = [];
+    tvs.forEach((r, i) => {
       const c = r.content || {};
-      return [c.noi_dung, c.tom_tat, c.title, c.body, c.cam_xuc, c.phan_hoi].filter(Boolean).join(' ');
-    }).join(' ');
-    if (allText.length > 20) {
-      const keywords = extractKeyThemes(allText);
-      if (keywords.length > 0) {
-        branches.push({ label: '🔑 Chủ đề', children: keywords.slice(0, 5), fullData: keywords.join(', ') });
+      const entries = [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.cong_cu, c.nhan_xet].filter(Boolean);
+      entries.forEach(t => fragments.push({ text: t, src: `TV lần ${c.lan_thu || (i + 1)}` }));
+    });
+    bbs.forEach((r, i) => {
+      const c = r.content || {};
+      const entries = [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.nhan_xet].filter(Boolean);
+      entries.forEach(t => fragments.push({ text: t, src: `BB buổi ${c.buoi_thu || (i + 1)}` }));
+    });
+    nts.forEach(r => {
+      const c = r.content || {};
+      if (c.body) fragments.push({ text: c.body, src: c.title || 'Ghi chú' });
+    });
+
+    // ── Step 2: Classify fragments into TOPIC categories ──
+    const topics = {
+      'Tâm lý': { icon: '🧠', keywords: ['cảm xúc','lo lắng','sợ','buồn','vui','khó khăn','stress','áp lực','tự ti','cô đơn','mệt','chán','tức','giận','thất vọng','hy vọng','tin','lo','trầm','hạnh phúc','đau'], items: [] },
+      'Gia đình': { icon: '👨‍👩‍👧', keywords: ['gia đình','ba','mẹ','anh','chị','em','con','vợ','chồng','bố','cha','bác','cô','chú','dì','ông','bà','người thân','ly hôn','kết hôn'], items: [] },
+      'Công việc': { icon: '💼', keywords: ['công việc','làm việc','nghề','lương','sếp','đồng nghiệp','dự án','kinh doanh','thu nhập','tiền','tài chính','kinh tế'], items: [] },
+      'Quan hệ XH': { icon: '🤝', keywords: ['bạn','người yêu','mối quan hệ','xã hội','giao tiếp','cộng đồng','nhóm','hội','kết nối','tình bạn','tình yêu'], items: [] },
+      'Sức khỏe': { icon: '🏥', keywords: ['sức khỏe','bệnh','thuốc','bác sĩ','khám','đau','mất ngủ','ăn','tập','thể dục','nghiện'], items: [] },
+      'Tâm linh': { icon: '🌟', keywords: ['kinh','thần','linh','cầu nguyện','nhà thờ','chùa','phật','chúa','tôn giáo','đức tin','thiền','tin lành'], items: [] },
+      'Tiến trình': { icon: '📈', keywords: ['tiến bộ','thay đổi','mở lòng','chia sẻ','hợp tác','tích cực','cải thiện','phát triển','cam kết','quyết tâm'], items: [] },
+      'Ghi nhận': { icon: '📝', keywords: [], items: [] } // catch-all
+    };
+
+    fragments.forEach(f => {
+      const lower = f.text.toLowerCase();
+      let matched = false;
+      for (const [topic, data] of Object.entries(topics)) {
+        if (topic === 'Ghi nhận') continue;
+        if (data.keywords.some(kw => lower.includes(kw))) {
+          const short = f.text.length > 50 ? f.text.substring(0, 50) + '…' : f.text;
+          data.items.push({ short, full: f.text, src: f.src });
+          matched = true;
+          break; // each fragment goes to first matching topic
+        }
       }
+      if (!matched) {
+        const short = f.text.length > 50 ? f.text.substring(0, 50) + '…' : f.text;
+        topics['Ghi nhận'].items.push({ short, full: f.text, src: f.src });
+      }
+    });
+
+    // ── Step 3: Build branches from non-empty topics ──
+    const branches = [];
+    for (const [topic, data] of Object.entries(topics)) {
+      if (!data.items.length) continue;
+      const items = data.items.map(it => it.short);
+      const detailHtml = data.items.map(it =>
+        `<div style="margin-bottom:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;">
+          <div style="font-size:12px;">${it.full}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">📎 ${it.src}</div>
+        </div>`
+      ).join('');
+      branches.push({
+        label: `${data.icon} ${topic} (${data.items.length})`,
+        items: items.slice(0, 4), // max 4 leaves visible
+        detailHtml: detailHtml
+      });
     }
 
-    if (branches.length === 0) {
-      branches.push({ label: '📋 Chưa có', children: ['N/A'], fullData: 'Chưa có báo cáo' });
+    // Summary stats
+    const statsHtml = `TV: ${tvs.length} | BB: ${bbs.length} | Ghi chú: ${nts.length} | Tổng đoạn: ${fragments.length}`;
+
+    if (!branches.length) {
+      branches.push({ label: '📋 Chưa có dữ liệu', items: ['Chưa có báo cáo hoặc ghi chú'], detailHtml: '' });
     }
-    _mmBranches = branches;
-    drawRadialMindmap(container, centerLabel, branches);
-  } catch(e) {
+
+    drawMM(container, p.full_name || 'Thu thập', branches, statsHtml);
+  } catch (e) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ Lỗi tải</div>';
+    console.error(e);
   }
 }
 
-function extractKeyThemes(text) {
-  const stopWords = new Set(['và','là','của','các','cho','hay','thì','mà','với','trong','này','đó','được','không','có','một','những','đã','sẽ','để','từ','khi','rất','cũng','nhưng','về','theo','lại','ra','vào','lên','xuống','qua','tại','ở']);
-  const words = text.toLowerCase().replace(/[^\p{L}\s]/gu, '').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
-  const freq = {};
-  words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
-  return Object.entries(freq).sort((a,b) => b[1] - a[1]).slice(0, 8).map(([w, c]) => `${w} (${c})`);
-}
+// ── DRAW MINDMAP (Radial layout) ──
+function drawMM(container, center, branches, subtitle) {
+  const W = container.clientWidth || 340;
+  const totalLeaves = branches.reduce((s, b) => s + b.items.length, 0);
+  const H = Math.max(380, branches.length * 75 + totalLeaves * 18 + 80);
 
-// ── Radial Mindmap Renderer with Zoom + Popup ──
-function drawRadialMindmap(container, centerLabel, branches) {
-  const W = container.clientWidth || 360;
-  const baseH = Math.max(360, branches.length * 65 + 100);
-  
-  const cx = W / 2, cy = baseH / 2;
-  const branchR = Math.min(W * 0.3, 120);
-  const leafR = Math.min(W * 0.48, 185);
-  
-  let svgLines = '';
-  let nodesHtml = '';
-  
-  // Center
-  nodesHtml += `<div class="mm-node mm-center" style="left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${centerLabel.replace(/'/g,"\\'")}','Tổng quan hồ sơ: ${branches.length} nhóm thông tin')">${centerLabel}</div>`;
-  
+  const cx = W / 2, cy = H / 2;
+  const R1 = Math.min(W * 0.28, 110); // branch radius
+  const R2 = Math.min(W * 0.46, 175); // leaf radius
+
+  let svg = '', html = '';
+
+  // Center node
+  const esc = s => (s || '').replace(/'/g, "\\'");
+  html += `<div class="mm-node mm-center" style="left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${esc(center)}','${esc(subtitle || center)}')">${center}</div>`;
+
   const n = branches.length;
   branches.forEach((br, i) => {
-    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
-    const bx = cx + branchR * Math.cos(angle);
-    const by = cy + branchR * Math.sin(angle);
-    
-    svgLines += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="var(--accent)" stroke-width="2" stroke-opacity="0.25"/>`;
-    
-    // Escape for onclick
-    const popupTitle = br.label.replace(/'/g, "\\'");
-    const popupDetail = (br.fullData || br.children.join(', ')).replace(/'/g, "\\'").replace(/\n/g, '<br>');
-    
-    nodesHtml += `<div class="mm-node mm-branch" style="left:${bx}px;top:${by}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${popupTitle}','${popupDetail}')">${br.label}</div>`;
-    
-    // Leaves — only show short label, detail in popup
-    const lc = br.children.length;
-    br.children.forEach((leaf, j) => {
-      const la = angle + (j - (lc - 1) / 2) * (lc > 3 ? 0.25 : 0.35);
-      const lx = cx + leafR * Math.cos(la);
-      const ly = cy + leafR * Math.sin(la);
-      
-      svgLines += `<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="var(--border)" stroke-width="1" stroke-opacity="0.4"/>`;
-      
-      const leafText = typeof leaf === 'string' ? (leaf.length > 18 ? leaf.substring(0, 18) + '…' : leaf) : leaf;
-      const leafFull = (typeof leaf === 'string' ? leaf : '').replace(/'/g, "\\'");
-      nodesHtml += `<div class="mm-node mm-leaf" style="left:${lx}px;top:${ly}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${popupTitle}','${leafFull}')">${leafText}</div>`;
+    const a = (2 * Math.PI * i / n) - Math.PI / 2;
+    const bx = cx + R1 * Math.cos(a);
+    const by = cy + R1 * Math.sin(a);
+
+    svg += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="var(--accent)" stroke-width="2" opacity="0.3"/>`;
+
+    const popDetail = br.detailHtml || br.items.map(it => `<div style="padding:4px 0;border-bottom:1px dotted var(--border);">${it}</div>`).join('');
+    html += `<div class="mm-node mm-branch" style="left:${bx}px;top:${by}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${esc(br.label)}','${esc(popDetail)}')">${br.label}</div>`;
+
+    // Leaves
+    const lc = br.items.length;
+    const spread = lc > 3 ? 0.22 : 0.32;
+    br.items.forEach((leaf, j) => {
+      const la = a + (j - (lc - 1) / 2) * spread;
+      const lx = cx + R2 * Math.cos(la);
+      const ly = cy + R2 * Math.sin(la);
+      svg += `<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="var(--border)" stroke-width="1" opacity="0.4"/>`;
+      const txt = typeof leaf === 'string' ? (leaf.length > 16 ? leaf.substring(0, 16) + '…' : leaf) : leaf;
+      html += `<div class="mm-node mm-leaf" style="left:${lx}px;top:${ly}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${esc(br.label)}','${esc(popDetail)}')" title="${esc(leaf)}">${txt}</div>`;
     });
   });
-  
+
+  container.style.height = H + 'px';
   container.innerHTML = `
-    <div id="mmInner" style="position:relative;width:100%;height:${baseH}px;transform-origin:center center;transition:transform 0.2s;transform:scale(${_mmZoom});">
-      <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">${svgLines}</svg>
-      ${nodesHtml}
+    <div id="mmInner" style="position:relative;width:100%;height:${H}px;transform-origin:center center;transition:transform 0.15s;transform:scale(${_mmZoom});">
+      <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">${svg}</svg>
+      ${html}
     </div>
     <div class="mm-zoom-bar">
       <button onclick="mmZoomIn()">+</button>
       <span class="mm-zoom-level" id="mmZoomLvl">${Math.round(_mmZoom * 100)}%</span>
       <button onclick="mmZoomOut()">−</button>
-    </div>
-  `;
-  container.style.height = baseH + 'px';
+    </div>`;
 }
