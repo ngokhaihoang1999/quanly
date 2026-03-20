@@ -1,82 +1,116 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP v2 — Smart topic-based layout with zoom & popup
+// MINDMAP v3 — CSS Tree layout (no SVG, no positioning bugs)
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _mmCurrentType = 'info';
-let _mmZoom = 1;
 
 function switchMindmap(type, btn) {
   _mmCurrentType = type;
   document.querySelectorAll('#mindmapTab .chip').forEach(c => c.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  _mmZoom = 1;
   renderMindmap();
 }
 
-function mmZoomIn() { _mmZoom = Math.min(_mmZoom + 0.15, 2.5); applyZoom(); }
-function mmZoomOut() { _mmZoom = Math.max(_mmZoom - 0.15, 0.4); applyZoom(); }
-function applyZoom() {
-  const el = document.getElementById('mmInner');
-  const lbl = document.getElementById('mmZoomLvl');
-  if (el) el.style.transform = `scale(${_mmZoom})`;
-  if (lbl) lbl.textContent = Math.round(_mmZoom * 100) + '%';
+function renderMindmap() {
+  const container = document.getElementById('mindmapContainer');
+  if (!container || !currentProfileId) return;
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  if (!p) return;
+  if (_mmCurrentType === 'info') renderInfoMM(container, p);
+  else renderCollectMM(container, p);
 }
 
-function showMmPopup(title, html) {
+// ── Show popup for detail ──
+function showMmDetail(title, items) {
   document.querySelectorAll('.mm-popup,.mm-popup-overlay').forEach(e => e.remove());
-  const ov = document.createElement('div'); ov.className = 'mm-popup-overlay';
-  const pp = document.createElement('div'); pp.className = 'mm-popup';
-  pp.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-    <b style="font-size:14px;">${title}</b>
-    <span onclick="this.closest('.mm-popup').remove();document.querySelector('.mm-popup-overlay')?.remove()" style="cursor:pointer;font-size:20px;color:var(--text2);">×</span>
-  </div><div style="font-size:12px;line-height:1.7;color:var(--text2);">${html}</div>`;
+  const ov = document.createElement('div');
+  ov.className = 'mm-popup-overlay';
+  const pp = document.createElement('div');
+  pp.className = 'mm-popup';
+
+  let body = '';
+  if (Array.isArray(items)) {
+    body = items.map(it => {
+      if (typeof it === 'object' && it.text) {
+        return `<div style="margin-bottom:6px;padding:6px 8px;background:var(--surface2);border-radius:6px;">
+          <div style="font-size:12px;">${escHtml(it.text)}</div>
+          ${it.src ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;">📎 ${escHtml(it.src)}</div>` : ''}
+        </div>`;
+      }
+      return `<div style="padding:4px 0;font-size:12px;">${escHtml(String(it))}</div>`;
+    }).join('');
+  } else {
+    body = `<div style="font-size:12px;">${escHtml(String(items))}</div>`;
+  }
+
+  pp.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <b style="font-size:14px;">${escHtml(title)}</b>
+      <span onclick="document.querySelectorAll('.mm-popup,.mm-popup-overlay').forEach(e=>e.remove())" style="cursor:pointer;font-size:20px;color:var(--text2);padding:0 4px;">×</span>
+    </div>
+    <div>${body}</div>`;
   ov.onclick = () => { ov.remove(); pp.remove(); };
   document.body.append(ov, pp);
 }
 
-function renderMindmap() {
-  const c = document.getElementById('mindmapContainer');
-  if (!c || !currentProfileId) return;
-  const p = allProfiles.find(x => x.id === currentProfileId);
-  if (!p) return;
-  _mmCurrentType === 'info' ? renderInfoMM(c, p) : renderCollectMM(c, p);
+function escHtml(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ── PERSONAL INFO MINDMAP ──
+// ═══════════════════════════════════════════════════
+// PERSONAL INFO MINDMAP
+// ═══════════════════════════════════════════════════
 function renderInfoMM(container, p) {
   const d = window._currentInfoSheet || {};
   const name = p.full_name || 'Trái quả';
-  const br = [];
-  const add = (icon, lbl, val) => {
-    if (!val || (Array.isArray(val) && !val.length)) return;
-    const arr = Array.isArray(val) ? val.filter(Boolean) : [val];
-    if (!arr.length) return;
-    br.push({ label: icon + ' ' + lbl, items: arr });
+  const branches = [];
+
+  const add = (icon, label, values) => {
+    const arr = (Array.isArray(values) ? values : [values]).filter(v => v && String(v).trim());
+    if (arr.length) branches.push({ icon, label, items: arr.map(String) });
   };
 
-  // Group by category for cleaner mindmap
-  add('👤', 'Nhân thân', [
-    d.gioi_tinh || p.gender,
-    d.nam_sinh || p.birth_year ? `Sinh ${d.nam_sinh || p.birth_year}` : null,
-    d.nghe_nghiep ? `${d.nghe_nghiep}` : null
-  ].filter(Boolean));
-  add('🏠', 'Nơi sống', [d.dia_chi, d.que_quan].filter(Boolean));
-  add('💍', 'Gia đình', [
-    ...(Array.isArray(d.hon_nhan) ? d.hon_nhan : d.hon_nhan ? [d.hon_nhan] : []),
-    d.nguoi_quan_trong ? `QT: ${d.nguoi_quan_trong}` : null
-  ].filter(Boolean));
-  add('🙏', 'Tôn giáo', Array.isArray(d.ton_giao) ? d.ton_giao : d.ton_giao ? [d.ton_giao] : []);
-  add('🧩', 'Tính cách', d.tinh_cach ? [d.tinh_cach] : []);
-  add('⭐', 'Sở thích', d.so_thich ? [d.so_thich] : []);
-  add('🎯', 'Dự định', d.du_dinh ? [d.du_dinh] : []);
-  add('🌟', 'Quan điểm', d.quan_diem ? [d.quan_diem] : []);
-  add('📞', 'Liên hệ', [d.sdt || p.phone_number].filter(Boolean));
+  // Group meaningfully
+  if (d.gioi_tinh || p.gender || d.nam_sinh || p.birth_year || d.nghe_nghiep) {
+    const items = [];
+    if (d.gioi_tinh || p.gender) items.push(d.gioi_tinh || p.gender);
+    if (d.nam_sinh || p.birth_year) items.push('Sinh ' + (d.nam_sinh || p.birth_year));
+    if (d.nghe_nghiep) items.push(d.nghe_nghiep);
+    if (items.length) branches.push({ icon: '👤', label: 'Nhân thân', items });
+  }
 
-  if (!br.length) br.push({ label: '📋 Chưa có dữ liệu', items: ['Hãy điền Phiếu Thông tin'] });
-  drawMM(container, name, br);
+  add('📍', 'Nơi sống', [d.dia_chi, d.que_quan].filter(Boolean));
+  
+  const famItems = [];
+  if (d.hon_nhan) {
+    const hn = Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : d.hon_nhan;
+    famItems.push(hn);
+  }
+  if (d.nguoi_quan_trong) famItems.push('Người QT: ' + d.nguoi_quan_trong);
+  if (famItems.length) branches.push({ icon: '👨‍👩‍👧', label: 'Gia đình', items: famItems });
+
+  if (d.ton_giao) {
+    const tg = Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : d.ton_giao;
+    branches.push({ icon: '🙏', label: 'Tôn giáo', items: [tg] });
+  }
+  add('🧩', 'Tính cách', d.tinh_cach);
+  add('⭐', 'Sở thích', d.so_thich);
+  add('🎯', 'Dự định', d.du_dinh);
+  add('🌟', 'Quan điểm TL', d.quan_diem);
+  if (d.sdt || p.phone_number) {
+    branches.push({ icon: '📞', label: 'Liên hệ', items: [d.sdt || p.phone_number] });
+  }
+
+  if (!branches.length) {
+    branches.push({ icon: '📋', label: 'Chưa có dữ liệu', items: ['Hãy điền Phiếu Thông tin'] });
+  }
+
+  renderTree(container, name, branches);
 }
 
-// ── COLLECTED INFO MINDMAP — Smart topic synthesis ──
+// ═══════════════════════════════════════════════════
+// COLLECTED INFO MINDMAP — Topic-based synthesis
+// ═══════════════════════════════════════════════════
 async function renderCollectMM(container, p) {
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Đang tổng hợp...</div>';
   try {
@@ -87,134 +121,120 @@ async function renderCollectMM(container, p) {
     ]);
     const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
 
-    // ── Step 1: Extract all text fragments with source labels ──
-    const fragments = [];
+    // Step 1: Collect all text fragments
+    const frags = [];
     tvs.forEach((r, i) => {
       const c = r.content || {};
-      const entries = [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.cong_cu, c.nhan_xet].filter(Boolean);
-      entries.forEach(t => fragments.push({ text: t, src: `TV lần ${c.lan_thu || (i + 1)}` }));
+      [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.nhan_xet].filter(Boolean).forEach(t =>
+        frags.push({ text: String(t), src: 'TV lần ' + (c.lan_thu || (i + 1)) })
+      );
     });
     bbs.forEach((r, i) => {
       const c = r.content || {};
-      const entries = [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.nhan_xet].filter(Boolean);
-      entries.forEach(t => fragments.push({ text: t, src: `BB buổi ${c.buoi_thu || (i + 1)}` }));
+      [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.nhan_xet].filter(Boolean).forEach(t =>
+        frags.push({ text: String(t), src: 'BB buổi ' + (c.buoi_thu || (i + 1)) })
+      );
     });
     nts.forEach(r => {
       const c = r.content || {};
-      if (c.body) fragments.push({ text: c.body, src: c.title || 'Ghi chú' });
+      if (c.body) frags.push({ text: String(c.body), src: c.title || 'Ghi chú' });
     });
 
-    // ── Step 2: Classify fragments into TOPIC categories ──
-    const topics = {
-      'Tâm lý': { icon: '🧠', keywords: ['cảm xúc','lo lắng','sợ','buồn','vui','khó khăn','stress','áp lực','tự ti','cô đơn','mệt','chán','tức','giận','thất vọng','hy vọng','tin','lo','trầm','hạnh phúc','đau'], items: [] },
-      'Gia đình': { icon: '👨‍👩‍👧', keywords: ['gia đình','ba','mẹ','anh','chị','em','con','vợ','chồng','bố','cha','bác','cô','chú','dì','ông','bà','người thân','ly hôn','kết hôn'], items: [] },
-      'Công việc': { icon: '💼', keywords: ['công việc','làm việc','nghề','lương','sếp','đồng nghiệp','dự án','kinh doanh','thu nhập','tiền','tài chính','kinh tế'], items: [] },
-      'Quan hệ XH': { icon: '🤝', keywords: ['bạn','người yêu','mối quan hệ','xã hội','giao tiếp','cộng đồng','nhóm','hội','kết nối','tình bạn','tình yêu'], items: [] },
-      'Sức khỏe': { icon: '🏥', keywords: ['sức khỏe','bệnh','thuốc','bác sĩ','khám','đau','mất ngủ','ăn','tập','thể dục','nghiện'], items: [] },
-      'Tâm linh': { icon: '🌟', keywords: ['kinh','thần','linh','cầu nguyện','nhà thờ','chùa','phật','chúa','tôn giáo','đức tin','thiền','tin lành'], items: [] },
-      'Tiến trình': { icon: '📈', keywords: ['tiến bộ','thay đổi','mở lòng','chia sẻ','hợp tác','tích cực','cải thiện','phát triển','cam kết','quyết tâm'], items: [] },
-      'Ghi nhận': { icon: '📝', keywords: [], items: [] } // catch-all
-    };
+    // Step 2: Classify by topic keywords
+    const topicDefs = [
+      { key: 'Tâm lý', icon: '🧠', kw: ['cảm xúc','lo lắng','sợ','buồn','vui','khó khăn','stress','áp lực','tự ti','cô đơn','mệt','chán','tức','giận','thất vọng','hy vọng','trầm','đau khổ'] },
+      { key: 'Gia đình', icon: '👨‍👩‍👧', kw: ['gia đình','ba ','mẹ ','anh ','chị ','em ','con ','vợ','chồng','bố','cha ','người thân','ly hôn','kết hôn','kinh tế gia đình'] },
+      { key: 'Công việc', icon: '💼', kw: ['công việc','làm việc','nghề','lương','sếp','đồng nghiệp','kinh doanh','thu nhập','tiền','tài chính'] },
+      { key: 'Quan hệ', icon: '🤝', kw: ['bạn','người yêu','mối quan hệ','giao tiếp','nhóm','tình bạn','tình yêu','hẹn hò'] },
+      { key: 'Sức khỏe', icon: '🏥', kw: ['sức khỏe','bệnh','thuốc','bác sĩ','đau','mất ngủ','nghiện','rượu'] },
+      { key: 'Tâm linh', icon: '✝️', kw: ['kinh thánh','cầu nguyện','nhà thờ','chùa','phật','chúa','đức tin','thiền'] },
+      { key: 'Tiến trình', icon: '📈', kw: ['tiến bộ','thay đổi','mở lòng','chia sẻ','tích cực','cải thiện','phát triển','cam kết','hợp tác'] },
+    ];
 
-    fragments.forEach(f => {
+    const topicMap = {};
+    topicDefs.forEach(td => { topicMap[td.key] = { icon: td.icon, items: [] }; });
+    topicMap['Khác'] = { icon: '📝', items: [] };
+
+    frags.forEach(f => {
       const lower = f.text.toLowerCase();
-      let matched = false;
-      for (const [topic, data] of Object.entries(topics)) {
-        if (topic === 'Ghi nhận') continue;
-        if (data.keywords.some(kw => lower.includes(kw))) {
-          const short = f.text.length > 50 ? f.text.substring(0, 50) + '…' : f.text;
-          data.items.push({ short, full: f.text, src: f.src });
-          matched = true;
-          break; // each fragment goes to first matching topic
+      let placed = false;
+      for (const td of topicDefs) {
+        if (td.kw.some(kw => lower.includes(kw))) {
+          topicMap[td.key].items.push(f);
+          placed = true;
+          break;
         }
       }
-      if (!matched) {
-        const short = f.text.length > 50 ? f.text.substring(0, 50) + '…' : f.text;
-        topics['Ghi nhận'].items.push({ short, full: f.text, src: f.src });
-      }
+      if (!placed) topicMap['Khác'].items.push(f);
     });
 
-    // ── Step 3: Build branches from non-empty topics ──
+    // Step 3: Build branches (only non-empty topics)
     const branches = [];
-    for (const [topic, data] of Object.entries(topics)) {
+    for (const [key, data] of Object.entries(topicMap)) {
       if (!data.items.length) continue;
-      const items = data.items.map(it => it.short);
-      const detailHtml = data.items.map(it =>
-        `<div style="margin-bottom:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;">
-          <div style="font-size:12px;">${it.full}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">📎 ${it.src}</div>
-        </div>`
-      ).join('');
       branches.push({
-        label: `${data.icon} ${topic} (${data.items.length})`,
-        items: items.slice(0, 4), // max 4 leaves visible
-        detailHtml: detailHtml
+        icon: data.icon,
+        label: key + ' (' + data.items.length + ')',
+        items: data.items.map(f => f.text.length > 40 ? f.text.substring(0, 40) + '…' : f.text),
+        detailItems: data.items // for popup
       });
     }
 
-    // Summary stats
-    const statsHtml = `TV: ${tvs.length} | BB: ${bbs.length} | Ghi chú: ${nts.length} | Tổng đoạn: ${fragments.length}`;
-
     if (!branches.length) {
-      branches.push({ label: '📋 Chưa có dữ liệu', items: ['Chưa có báo cáo hoặc ghi chú'], detailHtml: '' });
+      branches.push({ icon: '📋', label: 'Chưa có dữ liệu', items: ['Chưa có báo cáo hoặc ghi chú'] });
     }
 
-    drawMM(container, p.full_name || 'Thu thập', branches, statsHtml);
+    const subtitle = `Nguồn: ${tvs.length} TV, ${bbs.length} BB, ${nts.length} ghi chú`;
+    renderTree(container, p.full_name || 'Thu thập', branches, subtitle);
   } catch (e) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ Lỗi tải</div>';
     console.error(e);
   }
 }
 
-// ── DRAW MINDMAP (Radial layout) ──
-function drawMM(container, center, branches, subtitle) {
-  const W = container.clientWidth || 340;
-  const totalLeaves = branches.reduce((s, b) => s + b.items.length, 0);
-  const H = Math.max(380, branches.length * 75 + totalLeaves * 18 + 80);
+// ═══════════════════════════════════════════════════
+// TREE RENDERER — Pure CSS, no SVG, no positioning
+// ═══════════════════════════════════════════════════
+function renderTree(container, centerName, branches, subtitle) {
+  let html = `<div class="mm-tree">`;
 
-  const cx = W / 2, cy = H / 2;
-  const R1 = Math.min(W * 0.28, 110); // branch radius
-  const R2 = Math.min(W * 0.46, 175); // leaf radius
+  // Center / Root
+  html += `<div class="mm-root">${escHtml(centerName)}</div>`;
+  if (subtitle) html += `<div class="mm-subtitle">${escHtml(subtitle)}</div>`;
 
-  let svg = '', html = '';
+  // Branches
+  html += `<div class="mm-branches">`;
+  branches.forEach((br, bi) => {
+    const brId = 'mmBr_' + bi;
+    html += `<div class="mm-branch-wrap">
+      <div class="mm-branch-head" onclick="document.getElementById('${brId}').classList.toggle('mm-open')">
+        <span class="mm-branch-icon">${br.icon}</span>
+        <span class="mm-branch-label">${escHtml(br.label)}</span>
+        <span class="mm-branch-count">${br.items.length}</span>
+        <span class="mm-branch-arrow">›</span>
+      </div>
+      <div class="mm-branch-items" id="${brId}">`;
 
-  // Center node
-  const esc = s => (s || '').replace(/'/g, "\\'");
-  html += `<div class="mm-node mm-center" style="left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${esc(center)}','${esc(subtitle || center)}')">${center}</div>`;
-
-  const n = branches.length;
-  branches.forEach((br, i) => {
-    const a = (2 * Math.PI * i / n) - Math.PI / 2;
-    const bx = cx + R1 * Math.cos(a);
-    const by = cy + R1 * Math.sin(a);
-
-    svg += `<line x1="${cx}" y1="${cy}" x2="${bx}" y2="${by}" stroke="var(--accent)" stroke-width="2" opacity="0.3"/>`;
-
-    const popDetail = br.detailHtml || br.items.map(it => `<div style="padding:4px 0;border-bottom:1px dotted var(--border);">${it}</div>`).join('');
-    html += `<div class="mm-node mm-branch" style="left:${bx}px;top:${by}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${esc(br.label)}','${esc(popDetail)}')">${br.label}</div>`;
-
-    // Leaves
-    const lc = br.items.length;
-    const spread = lc > 3 ? 0.22 : 0.32;
-    br.items.forEach((leaf, j) => {
-      const la = a + (j - (lc - 1) / 2) * spread;
-      const lx = cx + R2 * Math.cos(la);
-      const ly = cy + R2 * Math.sin(la);
-      svg += `<line x1="${bx}" y1="${by}" x2="${lx}" y2="${ly}" stroke="var(--border)" stroke-width="1" opacity="0.4"/>`;
-      const txt = typeof leaf === 'string' ? (leaf.length > 16 ? leaf.substring(0, 16) + '…' : leaf) : leaf;
-      html += `<div class="mm-node mm-leaf" style="left:${lx}px;top:${ly}px;transform:translate(-50%,-50%);" onclick="showMmPopup('${esc(br.label)}','${esc(popDetail)}')" title="${esc(leaf)}">${txt}</div>`;
+    br.items.forEach((item, ii) => {
+      const clickAction = br.detailItems
+        ? `mmShowTopicDetail(${bi})`
+        : '';
+      html += `<div class="mm-leaf-item" ${clickAction ? `onclick="${clickAction}"` : ''}>${escHtml(String(item))}</div>`;
     });
-  });
 
-  container.style.height = H + 'px';
-  container.innerHTML = `
-    <div id="mmInner" style="position:relative;width:100%;height:${H}px;transform-origin:center center;transition:transform 0.15s;transform:scale(${_mmZoom});">
-      <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">${svg}</svg>
-      ${html}
-    </div>
-    <div class="mm-zoom-bar">
-      <button onclick="mmZoomIn()">+</button>
-      <span class="mm-zoom-level" id="mmZoomLvl">${Math.round(_mmZoom * 100)}%</span>
-      <button onclick="mmZoomOut()">−</button>
-    </div>`;
+    html += `</div></div>`;
+  });
+  html += `</div></div>`;
+
+  container.innerHTML = html;
+  container.style.height = 'auto';
+
+  // Store for popup access
+  window._mmBranchData = branches;
+}
+
+function mmShowTopicDetail(branchIdx) {
+  const br = window._mmBranchData?.[branchIdx];
+  if (!br || !br.detailItems) return;
+  showMmDetail(br.icon + ' ' + br.label, br.detailItems);
 }
