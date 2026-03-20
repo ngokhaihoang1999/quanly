@@ -362,16 +362,35 @@ function toggleFullscreen(elId) {
   var el = document.getElementById(elId);
   if (!el) return;
   if (el.classList.contains('ai-fullscreen')) {
+    // Exit fullscreen
     el.classList.remove('ai-fullscreen');
     if (elId === 'mindmapContainer') { el.style.height = '420px'; }
     document.body.style.overflow = '';
+    // Remove close button
+    var closeBtn = document.getElementById('aiFsClose');
+    if (closeBtn) closeBtn.remove();
   } else {
+    // Enter fullscreen
     el.classList.add('ai-fullscreen');
     if (elId === 'mindmapContainer') { el.style.height = '100vh'; }
     document.body.style.overflow = 'hidden';
-    // Re-render markmap if needed
+    // Add close button
+    var btn = document.createElement('button');
+    btn.id = 'aiFsClose';
+    btn.className = 'ai-fs-close';
+    btn.innerHTML = '\u2715';
+    btn.onclick = function() { toggleFullscreen(elId); };
+    document.body.appendChild(btn);
+    // Markmap re-render
     if (elId === 'mindmapContainer' && window.markmap && window.markmap.autoLoader) {
       setTimeout(function(){ window.markmap.autoLoader.renderAll(); }, 100);
+    }
+    // Chat: auto-open body + focus input
+    if (elId === 'aiChatCard') {
+      var body = document.getElementById('aiChatBody');
+      if (body) body.style.display = 'flex';
+      var inp = document.getElementById('aiChatInput');
+      if (inp) setTimeout(function(){ inp.focus(); }, 150);
     }
   }
 }
