@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP v10 — Markmap with smart sub-branching
-// Split long text into visual sub-branches, not raw data dumps
+// MINDMAP v10.1 — Smart filtering + sub-branching
+// Filter noise, deduplicate, only keep meaningful insights
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _mmCurrentType = 'info';
@@ -31,52 +31,85 @@ function renderMarkmap(container, md) {
 }
 
 // ═══════════════════════════════════════════════════
-// Smart text splitting — break into sub-branches
+// SMART TEXT PROCESSING
 // ═══════════════════════════════════════════════════
 
-// Split a long text into meaningful phrases for sub-branches
 function splitToBranches(text) {
   if (!text || text.length < 10) return text ? [text] : [];
-  
-  // Clean up
   text = text.replace(/\n+/g, ', ').replace(/\s+/g, ' ').trim();
-  
-  // Split by Vietnamese connectors and punctuation
   const parts = text.split(/[,;.!?\n]+|(?:\s+(?:và|nhưng|tuy nhiên|ngoài ra|bên cạnh đó|do đó|vì vậy|cũng|còn|hay|hoặc|nên|mà|rồi|thì)\s+)/i);
-  
-  // Filter: keep meaningful parts (>5 chars), trim, cap at 40 chars
-  const cleaned = parts
-    .map(p => p.trim())
-    .filter(p => p.length > 4)
-    .map(p => p.length > 40 ? p.substring(0, 38) + '…' : p);
-  
-  // If too many parts, take first 4
+  const cleaned = parts.map(p => p.trim()).filter(p => p.length > 4 && !isNoise(p)).map(p => p.length > 38 ? p.substring(0, 36) + '…' : p);
   if (cleaned.length > 4) return cleaned.slice(0, 4);
-  // If only 1 part and it's long, try splitting by space at ~half
   if (cleaned.length === 1 && cleaned[0].length > 35) {
     const mid = Math.floor(cleaned[0].length / 2);
-    const spaceIdx = cleaned[0].indexOf(' ', mid - 5);
-    if (spaceIdx > 10) {
-      return [cleaned[0].substring(0, spaceIdx), cleaned[0].substring(spaceIdx + 1)];
-    }
+    const si = cleaned[0].indexOf(' ', mid - 5);
+    if (si > 10) return [cleaned[0].substring(0, si), cleaned[0].substring(si + 1)];
   }
-  return cleaned.length ? cleaned : [text.length > 40 ? text.substring(0, 38) + '…' : text];
+  return cleaned.length ? cleaned : [text.length > 38 ? text.substring(0, 36) + '…' : text];
 }
 
-// Create markdown sub-branches from text
-function mdBranches(text, depth) {
-  const prefix = '#'.repeat(depth) + ' '; // ## or ###
-  const bullet = '- ';
+function mdBranches(text) {
   const parts = splitToBranches(text);
-  
-  if (parts.length <= 1) {
-    return bullet + (parts[0] || '') + '\n';
-  }
-  // Multiple parts → each becomes a bullet
-  return parts.map(p => bullet + p + '\n').join('');
+  if (parts.length <= 1) return '- ' + (parts[0] || '') + '\n';
+  return parts.map(p => '- ' + p + '\n').join('');
 }
 
 function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'…'; }
+
+// ═══════════════════════════════════════════════════
+// NOISE FILTER — skip metadata, names, codes, dates
+// ═══════════════════════════════════════════════════
+const NOISE_RE = [
+  /^ngày\s*:/i, /^học sinh\s*:/i, /^người dẫn/i, /^shin\d/i,
+  /^báo cáo\s/i, /^buổi\s*\d/i, /^\d{1,2}\/\d{1,2}/,
+  /^thứ\s+(hai|ba|tư|năm|sáu|bảy|cn)/i,
+  /^[A-Z]{2,}\d+/, /^(tên|sdt|email|mã|code)\s*:/i,
+  /^[\d\s\-\/.:]+$/, /^[A-Z][a-z]+\s[A-Z]/, // person names
+  /^\d+\s*-\s*\d+$/, /^x+$/i
+];
+
+function isNoise(text) {
+  if (!text) return true;
+  const t = text.trim();
+  if (t.length < 8) return true;
+  for (const re of NOISE_RE) { if (re.test(t)) return true; }
+  // All-caps short = likely a code/label
+  if (t.length < 15 && /^[A-ZÀ-Ỹ\s\d-]+$/.test(t)) return true;
+  // Just a person name (2-5 words all start uppercase)
+  const ws = t.split(/\s+/);
+  if (ws.length >= 2 && ws.length <= 5 && ws.every(w => /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỸĐ]/i.test(w) && w.length < 10) && !t.includes(' là ') && !t.includes(' có ') && !t.includes(' không ')) {
+    // Probably a name if no verbs
+    if (ws.every(w => /^[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴĐ]/.test(w))) return true;
+  }
+  return false;
+}
+
+// Filter text block: remove noise lines, join meaningful parts
+function filterText(text) {
+  if (!text) return '';
+  const lines = text.split(/[\n;]+/).map(s => s.trim()).filter(s => s.length > 0);
+  const good = lines.filter(l => !isNoise(l));
+  return good.join(', ').trim();
+}
+
+// Deduplicate by word overlap (>60% = duplicate)
+function dedupe(arr) {
+  const result = [];
+  for (const item of arr) {
+    const lower = item.toLowerCase();
+    const isDup = result.some(ex => {
+      const el = ex.toLowerCase();
+      if (el.includes(lower) || lower.includes(el)) return true;
+      const w1 = new Set(el.split(/\s+/));
+      const w2 = new Set(lower.split(/\s+/));
+      let common = 0;
+      w2.forEach(w => { if (w1.has(w)) common++; });
+      return common / Math.max(w1.size, w2.size) > 0.6;
+    });
+    if (!isDup && item.length > 5) result.push(item);
+  }
+  return result;
+}
 
 // ═══════════════════════════════════════════════════
 // TAB 1: Cá nhân
@@ -95,13 +128,13 @@ function renderInfoMM(container, p) {
   if (d.nguoi_than) gd.push(short(d.nguoi_than,35));
   if (gd.length) { md += `## 👨‍👩‍👧 Gia đình\n`; gd.forEach(v => md += `- ${v}\n`); }
 
-  if (d.tinh_cach) { md += `## 🧩 Tính cách\n`; md += mdBranches(d.tinh_cach, 3); }
-  if (d.so_thich) { md += `## ⭐ Sở thích\n`; md += mdBranches(d.so_thich, 3); }
+  if (d.tinh_cach) { md += `## 🧩 Tính cách\n`; md += mdBranches(d.tinh_cach); }
+  if (d.so_thich) { md += `## ⭐ Sở thích\n`; md += mdBranches(d.so_thich); }
   if (d.ton_giao) md += `## 🙏 Tôn giáo\n- ${Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao}\n`;
-  if (d.du_dinh) { md += `## 🎯 Dự định\n`; md += mdBranches(d.du_dinh, 3); }
-  if (d.quan_diem) { md += `## 🌟 Quan điểm\n`; md += mdBranches(d.quan_diem, 3); }
-  if (d.chuyen_cu) { md += `## 📖 Câu chuyện\n`; md += mdBranches(d.chuyen_cu, 3); }
-  if (d.luu_y) { md += `## ⚠️ Lưu ý\n`; md += mdBranches(d.luu_y, 3); }
+  if (d.du_dinh) { md += `## 🎯 Dự định\n`; md += mdBranches(d.du_dinh); }
+  if (d.quan_diem) { md += `## 🌟 Quan điểm\n`; md += mdBranches(d.quan_diem); }
+  if (d.chuyen_cu) { md += `## 📖 Câu chuyện\n`; md += mdBranches(d.chuyen_cu); }
+  if (d.luu_y) { md += `## ⚠️ Lưu ý\n`; md += mdBranches(d.luu_y); }
 
   const noi = [d.dia_chi, d.que_quan].filter(Boolean);
   if (noi.length) { md += `## 📍 Nơi sống\n`; noi.forEach(v => md += `- ${short(v,30)}\n`); }
@@ -111,7 +144,7 @@ function renderInfoMM(container, p) {
 }
 
 // ═══════════════════════════════════════════════════
-// TAB 2: Thu thập — Ministry insight
+// TAB 2: Thu thập — Filtered, deduped, concise
 // ═══════════════════════════════════════════════════
 
 async function renderCollectMM(container, p) {
@@ -129,104 +162,79 @@ async function renderCollectMM(container, p) {
       return;
     }
 
-    // ── Gather insights by CATEGORY (not by source) ──
-    const issues = [];     // van_de from TV + khai_thac from BB
-    const feelings = [];   // phan_hoi from TV + phan_ung from BB
-    const approach = [];   // tuong_tac from BB + diem_hai from TV
-    const nextSteps = [];  // de_xuat from TV + de_xuat_cs from BB
-    const noteInsights = []; // notes from user
-    const tools = [];      // ten_cong_cu from TV
+    // ── Gather & FILTER — only meaningful content ──
+    const rawIssues = [], rawFeelings = [], rawApproach = [], rawNext = [];
+    const noteInsights = [], tools = [];
 
-    tvs.forEach((r, i) => {
+    tvs.forEach(r => {
       const c = r.content || {};
-      if (c.van_de && c.van_de.trim()) issues.push(c.van_de.trim());
-      if (c.phan_hoi && c.phan_hoi.trim()) feelings.push(c.phan_hoi.trim());
-      if (c.diem_hai && c.diem_hai.trim()) approach.push(c.diem_hai.trim());
-      if (c.de_xuat && c.de_xuat.trim()) nextSteps.push(c.de_xuat.trim());
+      if (c.van_de) { const f = filterText(c.van_de); if (f) rawIssues.push(f); }
+      if (c.phan_hoi) { const f = filterText(c.phan_hoi); if (f) rawFeelings.push(f); }
+      if (c.diem_hai) { const f = filterText(c.diem_hai); if (f) rawApproach.push(f); }
+      if (c.de_xuat) { const f = filterText(c.de_xuat); if (f) rawNext.push(f); }
       if (c.ten_cong_cu && c.ten_cong_cu.trim()) tools.push(c.ten_cong_cu.trim());
     });
 
-    bbs.forEach((r, i) => {
+    bbs.forEach(r => {
       const c = r.content || {};
-      if (c.khai_thac && c.khai_thac.trim()) issues.push(c.khai_thac.trim());
-      if (c.phan_ung && c.phan_ung.trim()) feelings.push(c.phan_ung.trim());
-      if (c.tuong_tac && c.tuong_tac.trim()) approach.push(c.tuong_tac.trim());
-      if (c.de_xuat_cs && c.de_xuat_cs.trim()) nextSteps.push(c.de_xuat_cs.trim());
+      if (c.khai_thac) { const f = filterText(c.khai_thac); if (f) rawIssues.push(f); }
+      if (c.phan_ung) { const f = filterText(c.phan_ung); if (f) rawFeelings.push(f); }
+      if (c.tuong_tac) { const f = filterText(c.tuong_tac); if (f) rawApproach.push(f); }
+      if (c.de_xuat_cs) { const f = filterText(c.de_xuat_cs); if (f) rawNext.push(f); }
     });
 
     nts.forEach(r => {
       const c = r.content || {};
-      if (c.title && c.body && c.body.trim()) {
-        noteInsights.push({ title: c.title, body: c.body.trim() });
+      if (c.title && c.body && c.body.trim().length > 5) {
+        noteInsights.push({ title: c.title, body: filterText(c.body) || c.body.trim() });
       }
     });
 
-    // ── BUILD MARKDOWN ──
+    // ── Deduplicate & limit ──
+    const issues = dedupe(rawIssues).slice(0, 3);
+    const feelings = dedupe(rawFeelings).slice(0, 3);
+    const approach = dedupe(rawApproach).slice(0, 3);
+    const nextSteps = dedupe(rawNext).slice(0, 3);
+
+    // ── BUILD CONCISE MARKDOWN ──
     const name = p.full_name || 'Insight';
     let md = `# 🔍 ${name}\n`;
 
-    // 🎯 Vấn đề trọng tâm (biggest branch — from van_de + khai_thac)
     if (issues.length) {
       md += `## 🎯 Cần chú ý\n`;
       issues.forEach(text => {
-        // Each issue becomes a sub-branch with smart splitting
         const parts = splitToBranches(text);
-        if (parts.length === 1) {
-          md += `- ${parts[0]}\n`;
-        } else {
-          // First part = branch label, rest = sub-items
-          md += `### ${short(parts[0], 30)}\n`;
-          parts.slice(1).forEach(p => md += `- ${p}\n`);
-        }
+        if (parts.length <= 1) { md += `- ${parts[0]||''}\n`; }
+        else { md += `### ${short(parts[0],28)}\n`; parts.slice(1).forEach(p => md += `- ${p}\n`); }
       });
     }
 
-    // 💭 Phản hồi & Cảm xúc
     if (feelings.length) {
       md += `## 💭 Phản hồi\n`;
-      feelings.forEach(text => {
-        const parts = splitToBranches(text);
-        parts.forEach(p => md += `- ${p}\n`);
-      });
+      feelings.forEach(text => { splitToBranches(text).slice(0,3).forEach(p => md += `- ${p}\n`); });
     }
 
-    // 💕 Tương tác & Tiếp cận
     if (approach.length) {
-      md += `## 🤝 Tương tác\n`;
-      approach.forEach(text => {
-        const parts = splitToBranches(text);
-        parts.forEach(p => md += `- ${p}\n`);
-      });
+      md += `## 🤝 Tiếp cận\n`;
+      approach.forEach(text => { splitToBranches(text).slice(0,3).forEach(p => md += `- ${p}\n`); });
     }
 
-    // 📌 Ghi chú (user's own notes — title as branch, body split into sub)
     if (noteInsights.length) {
       md += `## 📌 Ghi chú\n`;
-      noteInsights.forEach(n => {
-        md += `### ${short(n.title, 25)}\n`;
-        const parts = splitToBranches(n.body);
-        parts.forEach(p => md += `- ${p}\n`);
+      noteInsights.slice(0, 4).forEach(n => {
+        md += `### ${short(n.title, 20)}\n`;
+        splitToBranches(n.body).slice(0,3).forEach(p => md += `- ${p}\n`);
       });
     }
 
-    // 💡 Hướng đi
     if (nextSteps.length) {
       md += `## 💡 Hướng đi\n`;
-      nextSteps.forEach(text => {
-        const parts = splitToBranches(text);
-        parts.forEach(p => md += `- ${p}\n`);
-      });
+      nextSteps.forEach(text => { splitToBranches(text).slice(0,2).forEach(p => md += `- ${p}\n`); });
     }
 
-    // 🔧 Công cụ
     if (tools.length) {
-      md += `## 🔧 Công cụ\n`;
-      tools.forEach(t => md += `- ${t}\n`);
+      md += `## 🔧 Công cụ\n- ${[...new Set(tools)].join(', ')}\n`;
     }
-
-    // 📊 Tổng quan
-    md += `## 📊 Tổng quan\n`;
-    md += `- ${tvs.length} TV · ${bbs.length} BB · ${nts.length} note\n`;
 
     renderMarkmap(container, md);
   } catch(e) {
