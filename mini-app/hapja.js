@@ -1,5 +1,5 @@
 // ============ CHECK HAPJA ============
-function canCreateHapja(pos) { return true; } // Ai cũng có thể tạo Hapja
+function canCreateHapja(pos) { return hasPermission('create_hapja'); }
 function openCheckHapjaModal() {
   document.getElementById('checkHapjaModal').classList.add('open');
   const sel = document.getElementById('hj_ndd');
@@ -108,8 +108,7 @@ async function openHapjaDetail(id) {
     const h = hapjas[0];
     const d = h.data || {};
     const date = new Date(h.created_at).toLocaleDateString('vi-VN');
-    const pos = getCurrentPosition();
-    const canApprove = ['admin','yjyn','ggn_jondo','ggn_chakki'].includes(pos) && h.status === 'pending';
+    const canApprove = hasPermission('approve_hapja') && h.status === 'pending';
     const body = document.getElementById('hapjaDetailBody');
     const fields = [
       ['Họ tên', h.full_name],

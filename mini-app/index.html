@@ -22,9 +22,8 @@
   </div>
   <div class="view-as-bar" id="viewAsBar">
     <label>👁️ Test:</label>
-    <select id="viewAsPos" onchange="applyViewAs()" style="flex:1;">
-      <option value="">Chức vụ: Chính mình</option>
-    </select>
+    <select id="viewAsPos" onchange="applyViewAs()" style="flex:1;"></select>
+    <select id="viewAsSpec" onchange="applyViewAs()" style="flex:1;"></select>
     <select id="viewAsRole" onchange="applyViewAs()" style="flex:1;">
       <option value="">Vai trò: Không</option>
       <option value="ndd">NDD</option>
@@ -90,7 +89,10 @@
   <div id="tab-structure" style="display:none;">
     <div class="section-header">
       <div class="section-title">Cơ cấu tổ chức</div>
-      <button class="add-record-btn" id="btnAddArea" onclick="openAddAreaModal()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;">+ Khu vực</button>
+      <div style="display:flex;gap:8px;">
+        <button class="add-record-btn" id="btnManagePositions" onclick="openPositionManager()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;display:none;">⚙️ Chức vụ</button>
+        <button class="add-record-btn" id="btnAddArea" onclick="openAddAreaModal()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;">+ Khu vực</button>
+      </div>
     </div>
     <div id="structureTree"><div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-sub">Đang tải...</div></div></div>
   </div>
@@ -290,11 +292,8 @@
   <div style="display:flex;flex-direction:column;gap:14px;">
     <div class="field-group"><label>Họ và tên *</label><input type="text" id="new_staff_name" placeholder="..." /></div>
     <div class="field-group"><label>Mã TĐ *</label><input type="text" id="new_staff_code" placeholder="VD: 012345-ABC" /></div>
-    <div class="field-group"><label>Chức vụ</label><select id="new_staff_position">
-      <option value="td">TĐ</option><option value="bgyjn">BGYJN (Tổ phó)</option><option value="gyjn">GYJN (Tổ trưởng)</option>
-      <option value="sgn_jondo">SGN Jondo</option><option value="ggn_chakki">GGN Chakki</option><option value="ggn_jondo">GGN Jondo</option>
-      <option value="tjn">TJN</option><option value="yjyn">YJYN</option>
-    </select></div>
+    <div class="field-group"><label>Chức vụ Quản trị</label><select id="new_staff_position"></select></div>
+    <div class="field-group"><label>Chức vụ Chuyên môn</label><select id="new_staff_specialist"><option value="">Không</option></select></div>
     <div class="grid-2">
       <div class="field-group"><label>SĐT</label><input type="tel" id="new_staff_phone" placeholder="0xxx..." /></div>
       <div class="field-group"><label>Email</label><input type="text" id="new_staff_email" placeholder="email@..." /></div>
@@ -411,6 +410,44 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- MODAL: QUẢN LÝ CHỨC VỤ -->
+<div class="modal-overlay" id="positionManagerModal"><div class="modal" style="max-height:90vh;">
+  <div class="modal-handle"></div>
+  <div class="modal-title">⚙️ Quản lý Chức vụ</div>
+  <div id="positionListView">
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Quản trị</div>
+      <div id="posMgmtList"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px;">Chuyên môn</div>
+      <div id="posSpecList"></div>
+    </div>
+    <button class="add-record-btn" onclick="openPositionForm(null)" style="margin-top:8px;">＋ Tạo Chức vụ mới</button>
+    <button onclick="closeModal('positionManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Đóng</button>
+  </div>
+  <div id="positionFormView" style="display:none;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field-group"><label>Mã code (không đổi sau tạo)</label><input type="text" id="pos_code" placeholder="vd: truong_phong" /></div>
+      <div class="field-group"><label>Tên hiển thị</label><input type="text" id="pos_name" placeholder="vd: Trưởng phòng" /></div>
+      <div class="grid-2">
+        <div class="field-group"><label>Phân loại</label><select id="pos_category"><option value="management">Quản trị</option><option value="specialist">Chuyên môn</option></select></div>
+        <div class="field-group"><label>Phạm vi (Scope)</label><select id="pos_scope"><option value="system">Toàn hệ thống</option><option value="area">Khu vực</option><option value="group">Nhóm</option><option value="team">Tổ</option></select></div>
+      </div>
+      <div class="grid-2">
+        <div class="field-group"><label>Cấp bậc (0-100)</label><input type="number" id="pos_level" min="0" max="100" value="10" /></div>
+        <div class="field-group"><label>Màu badge</label><input type="color" id="pos_color" value="#6b7280" style="height:38px;border:none;padding:2px;" /></div>
+      </div>
+      <div class="field-group">
+        <label>Quyền hạn</label>
+        <div id="pos_permissions" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;"></div>
+      </div>
+      <input type="hidden" id="pos_editing_id" />
+      <button class="save-btn" onclick="savePosition()">💾 Lưu Chức vụ</button>
+      <button id="pos_delete_btn" class="delete-profile-btn" onclick="deletePosition()" style="display:none;">🗑️ Xoá Chức vụ</button>
+      <button onclick="showPositionList()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">← Quay lại</button>
+    </div>
+  </div>
+</div></div>
 <script src="core.js?v=2024031962"></script>
 <script src="dashboard.js?v=2024031962"></script>
 <script src="profiles.js?v=2024031962"></script>

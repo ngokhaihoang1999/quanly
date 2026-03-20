@@ -6,24 +6,42 @@ const PHASE_COLORS = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'
 async function loadDashboard() {
   try {
     const pos = getCurrentPosition();
+    const scope = getScope();
     const myCode = getEffectiveStaffCode();
 
     // ── Determine unit scope: collect staff codes in my managed unit ──
     let unitLabel = '';
     let unitStaffCodes = []; // all staff_code in my unit
-    if (pos === 'admin') {
+    if (scope === 'system') {
       unitLabel = 'Toàn hệ thống';
       unitStaffCodes = allStaff.map(s => s.staff_code);
-    } else if (pos === 'yjyn') {
-      // Manage whole Area
+    } else if (scope === 'area') {
+      // Manager of Area (YJYN) or specialist with area scope
       const myArea = (structureData||[]).find(a => a.yjyn_staff_code === myCode);
       if (myArea) {
         unitLabel = 'Khu vực: ' + myArea.name;
         (myArea.org_groups||[]).forEach(g => {
           (g.teams||[]).forEach(t => { (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
         });
+      } else {
+        // Specialist with area scope — find area containing my team
+        for (const a of (structureData||[])) {
+          for (const g of (a.org_groups||[])) {
+            for (const t of (g.teams||[])) {
+              if ((t.staff||[]).some(m => m.staff_code === myCode)) {
+                unitLabel = 'Khu vực: ' + a.name;
+                (a.org_groups||[]).forEach(g2 => {
+                  (g2.teams||[]).forEach(t2 => { (t2.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
+                });
+                break;
+              }
+            }
+            if (unitLabel) break;
+          }
+          if (unitLabel) break;
+        }
       }
-    } else if (pos === 'tjn') {
+    } else if (scope === 'group') {
       // Manage a Group
       for (const a of (structureData||[])) {
         const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
@@ -38,48 +56,15 @@ async function loadDashboard() {
           break;
         }
       }
-    } else if (['gyjn','bgyjn'].includes(pos)) {
-      // Manage a Team
+    } else if (scope === 'team') {
       for (const a of (structureData||[])) {
         for (const g of (a.org_groups||[])) {
-          const myTeam = (g.teams||[]).find(t => t.gyjn_staff_code === myCode || t.bgyjn_staff_code === myCode);
+          const myTeam = (g.teams||[]).find(t => t.gyjn_staff_code === myCode || t.bgyjn_staff_code === myCode || (t.staff||[]).some(m => m.staff_code === myCode));
           if (myTeam) {
             unitLabel = 'Tổ: ' + myTeam.name;
             (myTeam.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code));
             break;
           }
-        }
-        if (unitLabel) break;
-      }
-    } else if (['ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
-      // GGN/SGN → see whole Area scope
-      for (const a of (structureData||[])) {
-        for (const g of (a.org_groups||[])) {
-          for (const t of (g.teams||[])) {
-            if ((t.staff||[]).some(m => m.staff_code === myCode)) {
-              unitLabel = 'Khu vực: ' + a.name;
-              (a.org_groups||[]).forEach(g2 => {
-                (g2.teams||[]).forEach(t2 => { (t2.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code)); });
-              });
-              break;
-            }
-          }
-          if (unitLabel) break;
-        }
-        if (unitLabel) break;
-      }
-    } else {
-      // TĐ → see their own Team
-      for (const a of (structureData||[])) {
-        for (const g of (a.org_groups||[])) {
-          for (const t of (g.teams||[])) {
-            if ((t.staff||[]).some(m => m.staff_code === myCode)) {
-              unitLabel = 'Tổ: ' + t.name;
-              (t.staff||[]).forEach(m => unitStaffCodes.push(m.staff_code));
-              break;
-            }
-          }
-          if (unitLabel) break;
         }
         if (unitLabel) break;
       }
@@ -308,9 +293,9 @@ async function loadDashboard() {
         groups: new Set(fr.map(r => r.fruit_group_id)).size,
       };
     }
-    if (['admin','yjyn','ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos)) {
-      const myAreas = pos === 'admin' ? (structureData||[]) :
-        (structureData||[]).filter(a => a.yjyn_staff_code === myCode || ['ggn_jondo','ggn_chakki','sgn_jondo'].includes(pos));
+    if (['system','area'].includes(scope)) {
+      const myAreas = scope === 'system' ? (structureData||[]) :
+        (structureData||[]).filter(a => a.yjyn_staff_code === myCode || scope === 'area');
       myAreas.forEach(a => {
         const sortedGroups = (a.org_groups||[]).slice().sort((a,b) => (a.name||'').localeCompare(b.name||'','vi',{numeric:true}));
         sortedGroups.forEach(g => {
@@ -344,7 +329,7 @@ async function loadDashboard() {
           subHtml += '</div></div>';
         });
       });
-    } else if (pos === 'tjn') {
+    } else if (scope === 'group') {
       for (const a of (structureData||[])) {
         const myGrp = (a.org_groups||[]).find(g => g.tjn_staff_code === myCode);
         if (myGrp) {
@@ -374,9 +359,9 @@ async function loadDashboard() {
     unitListEl.innerHTML = '';
 
     // ── HAPJA (filter by unit scope) ──
-    const canApprove = ['admin','yjyn','ggn_jondo','ggn_chakki'].includes(pos);
+    const canApprove = hasPermission('approve_hapja');
     let hapjaQuery = '/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20';
-    if (canApprove && unitStaffCodes.length > 0 && pos !== 'admin') {
+    if (canApprove && unitStaffCodes.length > 0 && scope !== 'system') {
       const codeFilter2 = unitStaffCodes.map(c => `"${c}"`).join(',');
       hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20`;
     } else if (!canApprove && myCode) {

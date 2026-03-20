@@ -6,7 +6,7 @@ async function loadStructure() {
     const el = document.getElementById('structureTree');
     const pos = getCurrentPosition();
     const myCode = getEffectiveStaffCode();
-    const isAdmin = pos === 'admin';
+    const isAdmin = hasPermission('manage_structure');
     if (!structureData.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udfe2</div><div class="empty-title">Ch\u01b0a c\u00f3</div><div class="empty-sub">B\u1ea5m + Khu v\u1ef1c</div></div>'; return; }
     let html = '<div class="tree-container">';
     structureData.forEach(a => {
@@ -208,7 +208,7 @@ function renderTeamMembers(teamItem) {
   const members = teamItem.staff||[];
   const listEl = document.getElementById('edit_members_list');
   const pos = getCurrentPosition();
-  const canAssignPos = ['admin','yjyn'].includes(pos);
+  const canAssignPos = hasPermission('assign_position');
   // Find parent area/group for YJYN/TJN cross-reference
   let parentArea = null, parentGroup = null;
   for (const a of (structureData||[])) {
@@ -231,14 +231,15 @@ function renderTeamMembers(teamItem) {
       if (m.staff_code === teamItem.bgyjn_staff_code) effectivePos = 'bgyjn';
       const posBadge = `<span class="staff-role-badge ${getBadgeClass(effectivePos)}" style="font-size:9px;padding:1px 6px;">${getPositionName(effectivePos)}</span>`;
       const assignHtml = canAssignPos ? `
-        <select onchange="assignMemberPos('${m.staff_code}',this.value)" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;">
-          <option value="td" ${effectivePos==='td'?'selected':''}>T\u0110</option>
-          <option value="ggn_jondo" ${effectivePos==='ggn_jondo'?'selected':''}>GGN Jondo</option>
-          <option value="ggn_chakki" ${effectivePos==='ggn_chakki'?'selected':''}>GGN Chakki</option>
-          <option value="sgn_jondo" ${effectivePos==='sgn_jondo'?'selected':''}>SGN Jondo</option>
-          <option value="bgyjn" ${effectivePos==='bgyjn'?'selected':''}>BGYJN</option>
-          <option value="gyjn" ${effectivePos==='gyjn'?'selected':''}>GYJN</option>
-        </select>` : '';
+        <div style="display:flex;gap:4px;margin-top:4px;">
+          <select onchange="assignMemberPos('${m.staff_code}',this.value,'management')" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;flex:1;">
+            ${getManagementPositions().map(p => `<option value="${p.code}" ${effectivePos===p.code?'selected':''}>${p.name}</option>`).join('')}
+          </select>
+          <select onchange="assignMemberPos('${m.staff_code}',this.value,'specialist')" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;flex:1;">
+            <option value="">CM: Không</option>
+            ${getSpecialistPositions().map(p => `<option value="${p.code}" ${m.specialist_position===p.code?'selected':''}>${p.name}</option>`).join('')}
+          </select>
+        </div>` : '';
       return `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
@@ -328,10 +329,12 @@ async function removeMemberFromTeam(staffCode) {
     await loadStaff();
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
-async function assignMemberPos(staffCode, newPos) {
+async function assignMemberPos(staffCode, newPos, posType) {
   try {
-    await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', body: JSON.stringify({ position: newPos }) });
-    showToast(`\u2705 \u0110\u00e3 ch\u1ec9 \u0111\u1ecbnh ${getPositionName(newPos)} cho ${staffCode}`);
+    const body = posType === 'specialist' ? { specialist_position: newPos || null } : { position: newPos };
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', body: JSON.stringify(body) });
+    const label = posType === 'specialist' ? (newPos ? getPositionName(newPos) : 'Không') : getPositionName(newPos);
+    showToast(`\u2705 \u0110\u00e3 ch\u1ec9 \u0111\u1ecbnh ${label} cho ${staffCode}`);
     const teamId = document.getElementById('edit_struct_id').value;
     await loadStructure();
     const item = findStructItem('team', teamId);
@@ -340,3 +343,100 @@ async function assignMemberPos(staffCode, newPos) {
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 
+// ============ POSITION MANAGER ============
+function openPositionManager() {
+  showPositionList();
+  document.getElementById('positionManagerModal').classList.add('open');
+}
+function showPositionList() {
+  document.getElementById('positionListView').style.display = 'block';
+  document.getElementById('positionFormView').style.display = 'none';
+  const mgmtList = document.getElementById('posMgmtList');
+  const specList = document.getElementById('posSpecList');
+  const renderItem = p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px;cursor:pointer;" onclick="openPositionForm('${p.id}')">
+      <div style="width:12px;height:12px;border-radius:50%;background:${p.color||'#6b7280'};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;">${p.name} <span style="color:var(--text3);font-size:11px;">(${p.code})</span></div>
+        <div style="font-size:11px;color:var(--text2);">${SCOPE_LABELS[p.scope_level]||p.scope_level} \u00b7 L${p.level} \u00b7 ${(p.permissions||[]).length} quyền${p.is_system?' \u00b7 \ud83d\udd12 Hệ thống':''}</div>
+      </div>
+      <span style="color:var(--text3);">›</span>
+    </div>`;
+  mgmtList.innerHTML = getManagementPositions().map(renderItem).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px;">Không có</div>';
+  specList.innerHTML = getSpecialistPositions().map(renderItem).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px;">Không có</div>';
+}
+function openPositionForm(posId) {
+  document.getElementById('positionListView').style.display = 'none';
+  document.getElementById('positionFormView').style.display = 'block';
+  // Render permission checkboxes
+  const permEl = document.getElementById('pos_permissions');
+  permEl.innerHTML = ALL_PERMISSION_KEYS.map(k =>
+    `<label style="display:flex;align-items:center;gap:4px;font-size:12px;padding:4px;cursor:pointer;"><input type="checkbox" value="${k}" />${PERMISSION_LABELS[k]||k}</label>`
+  ).join('');
+  if (posId) {
+    const p = allPositions.find(x => x.id === posId);
+    if (!p) return;
+    document.getElementById('pos_editing_id').value = p.id;
+    document.getElementById('pos_code').value = p.code;
+    document.getElementById('pos_code').disabled = true; // code đã tạo không đổi
+    document.getElementById('pos_name').value = p.name;
+    document.getElementById('pos_category').value = p.category;
+    document.getElementById('pos_scope').value = p.scope_level;
+    document.getElementById('pos_level').value = p.level;
+    document.getElementById('pos_color').value = p.color || '#6b7280';
+    // Check matching permissions
+    permEl.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = (p.permissions||[]).includes(cb.value);
+    });
+    document.getElementById('pos_delete_btn').style.display = p.is_system ? 'none' : 'block';
+  } else {
+    document.getElementById('pos_editing_id').value = '';
+    document.getElementById('pos_code').value = '';
+    document.getElementById('pos_code').disabled = false;
+    document.getElementById('pos_name').value = '';
+    document.getElementById('pos_category').value = 'management';
+    document.getElementById('pos_scope').value = 'team';
+    document.getElementById('pos_level').value = '10';
+    document.getElementById('pos_color').value = '#6b7280';
+    permEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+    document.getElementById('pos_delete_btn').style.display = 'none';
+  }
+}
+async function savePosition() {
+  const id = document.getElementById('pos_editing_id').value;
+  const code = document.getElementById('pos_code').value.trim();
+  const name = document.getElementById('pos_name').value.trim();
+  if (!code || !name) { showToast('\u26a0\ufe0f Nhập mã code và tên'); return; }
+  const perms = Array.from(document.getElementById('pos_permissions').querySelectorAll('input:checked')).map(cb => cb.value);
+  const body = {
+    code, name,
+    category: document.getElementById('pos_category').value,
+    scope_level: document.getElementById('pos_scope').value,
+    level: parseInt(document.getElementById('pos_level').value) || 10,
+    permissions: perms,
+    color: document.getElementById('pos_color').value
+  };
+  try {
+    if (id) {
+      delete body.code; // không cập nhật code
+      await sbFetch(`/rest/v1/positions?id=eq.${id}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    } else {
+      await sbFetch('/rest/v1/positions', { method:'POST', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    }
+    showToast('\u2705 \u0110\u00e3 l\u01b0u Ch\u1ee9c v\u1ee5 "' + name + '"');
+    await loadPositions();
+    showPositionList();
+  } catch(e) { showToast('\u274c L\u1ed7i l\u01b0u'); console.error(e); }
+}
+async function deletePosition() {
+  const id = document.getElementById('pos_editing_id').value;
+  const name = document.getElementById('pos_name').value;
+  if (!id) return;
+  if (!confirm(`Xóa Chức vụ "${name}"? Staff đang sử dụng sẽ cần được gán chức vụ khác.`)) return;
+  try {
+    await sbFetch(`/rest/v1/positions?id=eq.${id}`, { method:'DELETE' });
+    showToast('\u2705 \u0110\u00e3 x\u00f3a');
+    await loadPositions();
+    showPositionList();
+  } catch(e) { showToast('\u274c L\u1ed7i x\u00f3a'); console.error(e); }
+}

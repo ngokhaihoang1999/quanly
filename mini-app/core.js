@@ -4,15 +4,88 @@ const tg = window.Telegram?.WebApp;
 
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
+let allPositions = [];
 
-const POS_LABELS = { td:'TĐ', bgyjn:'BGYJN (Tổ phó)', gyjn:'GYJN (Tổ trưởng)', sgn_jondo:'SGN Jondo', ggn_chakki:'GGN Chakki', ggn_jondo:'GGN Jondo', tjn:'TJN', yjyn:'YJYN', admin:'Admin' };
-function getPositionName(p) { return POS_LABELS[p] || p || 'TĐ'; }
+// ============ POSITIONS (DB-driven) ============
+const ALL_PERMISSION_KEYS = [
+  'manage_positions','manage_structure','assign_position','manage_staff',
+  'create_hapja','approve_hapja',
+  'assign_role','link_profile','change_phase','toggle_kt','toggle_fruit_status',
+  'edit_profile','create_report','delete_record','view_dashboard'
+];
+const PERMISSION_LABELS = {
+  manage_positions:'Quản lý Chức vụ', manage_structure:'Quản lý Cơ cấu',
+  assign_position:'Gán Chức vụ', manage_staff:'Quản lý TĐ',
+  create_hapja:'Tạo Hapja', approve_hapja:'Duyệt Hapja',
+  assign_role:'Gán Vai trò', link_profile:'Gắn Hồ sơ', change_phase:'Chuyển Giai đoạn',
+  toggle_kt:'Bật/Tắt KT', toggle_fruit_status:'Chuyển Alive/Drop-out',
+  edit_profile:'Sửa Hồ sơ', create_report:'Tạo Báo cáo',
+  delete_record:'Xóa Báo cáo', view_dashboard:'Xem Dashboard'
+};
+const SCOPE_LABELS = { system:'Toàn hệ thống', area:'Khu vực', group:'Nhóm', team:'Tổ' };
+const SCOPE_LEVELS = { system:4, area:3, group:2, team:1 };
+
+async function loadPositions() {
+  try {
+    const res = await sbFetch('/rest/v1/positions?select=*&order=level.desc');
+    allPositions = await res.json();
+  } catch(e) { console.error('loadPositions error:', e); allPositions = []; }
+}
+
+function getPositionObj(code) {
+  if (!code) return null;
+  return allPositions.find(p => p.code === code) || null;
+}
+function getPositionName(p) {
+  const obj = getPositionObj(p);
+  return obj ? obj.name : (p || 'TĐ');
+}
+function getPosLevel(p) {
+  const obj = getPositionObj(p);
+  return obj ? obj.level : 0;
+}
 function getBadgeClass(p) {
-  if (!p) return 'role-default';
-  if (p==='admin'||p==='yjyn') return 'role-admin';
-  if (p==='tjn'||p==='gyjn') return 'role-ndd';
-  if (['ggn_jondo','ggn_chakki','sgn_jondo'].includes(p)) return 'role-tvv';
+  const obj = getPositionObj(p);
+  if (!obj) return 'role-default';
+  if (obj.level >= 80) return 'role-admin';
+  if (obj.level >= 40) return 'role-ndd';
+  if (obj.category === 'specialist') return 'role-tvv';
   return 'role-default';
+}
+function getPositionColor(p) {
+  const obj = getPositionObj(p);
+  return obj?.color || '#6b7280';
+}
+function getManagementPositions() { return allPositions.filter(p => p.category === 'management'); }
+function getSpecialistPositions() { return allPositions.filter(p => p.category === 'specialist'); }
+
+// ============ PERMISSION SYSTEM ============
+function getCurrentSpecialistPosition() {
+  if (viewAsSpecialist !== undefined && viewAsSpecialist !== null) return viewAsSpecialist;
+  return myStaff?.specialist_position || null;
+}
+function getEffectivePermissions() {
+  const pos = getCurrentPosition();
+  const spec = getCurrentSpecialistPosition();
+  const posObj = getPositionObj(pos);
+  const specObj = getPositionObj(spec);
+  const perms = new Set();
+  if (posObj?.permissions) posObj.permissions.forEach(p => perms.add(p));
+  if (specObj?.permissions) specObj.permissions.forEach(p => perms.add(p));
+  return perms;
+}
+function hasPermission(permKey) {
+  return getEffectivePermissions().has(permKey);
+}
+function getScope() {
+  const pos = getCurrentPosition();
+  const spec = getCurrentSpecialistPosition();
+  const posObj = getPositionObj(pos);
+  const specObj = getPositionObj(spec);
+  const posScope = posObj?.scope_level || 'team';
+  const specScope = specObj?.scope_level || 'team';
+  // Return highest scope
+  return (SCOPE_LEVELS[posScope] || 1) >= (SCOPE_LEVELS[specScope] || 1) ? posScope : specScope;
 }
 
 // Dashboard collapse toggle
@@ -150,6 +223,7 @@ async function sbFetch(path, opts={}) {
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) { tg.ready(); tg.expand(); }
   initCustomAutocomplete();
+  await loadPositions();
   await loadStaffInfo();
   await Promise.all([loadProfiles(), loadDashboard(), loadStaff()]);
 });
@@ -158,7 +232,7 @@ async function loadStaffInfo() {
   const userId = tg?.initDataUnsafe?.user?.id;
   if (!userId) {
     document.getElementById('staffBadge').textContent = 'Demo';
-    myStaff = { staff_code: 'DEMO', position: 'admin', full_name: 'Demo Admin' };
+    myStaff = { staff_code: 'DEMO', position: 'admin', specialist_position: null, full_name: 'Demo Admin' };
     document.getElementById('viewAsBar').classList.add('active');
     applyPermissions();
     return;
@@ -168,8 +242,10 @@ async function loadStaffInfo() {
     const data = await res.json();
     if (data.length > 0) {
       myStaff = data[0];
-      document.getElementById('staffBadge').textContent = `${myStaff.staff_code} \u00b7 ${getPositionName(myStaff.position)}`;
-      if (myStaff.position === 'admin') {
+      let badgeText = `${myStaff.staff_code} \u00b7 ${getPositionName(myStaff.position)}`;
+      if (myStaff.specialist_position) badgeText += ` + ${getPositionName(myStaff.specialist_position)}`;
+      document.getElementById('staffBadge').textContent = badgeText;
+      if (hasPermission('manage_positions')) {
         document.getElementById('viewAsBar').classList.add('active');
       }
       const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code');
@@ -217,20 +293,21 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 let viewAsPosition = null;
 let viewAsRole = null;
 let viewAsStaffCode = null;
+let viewAsSpecialist = undefined; // undefined = not overridden, null = no specialist
 function getCurrentPosition() { return viewAsPosition || myStaff?.position || 'td'; }
 function getCurrentRole() { return viewAsRole; }
 function getEffectiveStaffCode() { return viewAsStaffCode || myStaff?.staff_code; }
-function getPosLevel(p) { return {td:0,bgyjn:1,gyjn:2,tjn:3,ggn_chakki:3,sgn_jondo:3,ggn_jondo:3,yjyn:4,admin:5}[p]||0; }
 
 function populateViewAsDropdown() {
   const sel = document.getElementById('viewAsPos');
   if (!sel) return;
-  let html = '<option value="">Ch\u1ee9c v\u1ee5: Ch\u00ednh m\u00ecnh</option>';
-  html += '<option value="td">T\u0110 (chung)</option>';
-  html += '<option value="sgn_jondo">SGN Jondo</option>';
-  html += '<option value="ggn_chakki">GGN Chakki</option>';
-  html += '<option value="ggn_jondo">GGN Jondo</option>';
-  // From structure data
+  let html = '<option value="">Chức vụ: Chính mình</option>';
+  // Add all management positions
+  getManagementPositions().forEach(p => {
+    if (p.code === 'admin') return;
+    html += `<option value="${p.code}">${p.name} (chung)</option>`;
+  });
+  // From structure data — specific units
   (structureData||[]).forEach(a => {
     if (a.yjyn_staff_code) html += `<option value="yjyn|${a.yjyn_staff_code}">YJYN \u00b7 ${a.name}</option>`;
     (a.org_groups||[]).forEach(g => {
@@ -242,11 +319,21 @@ function populateViewAsDropdown() {
     });
   });
   sel.innerHTML = html;
+  // Specialist dropdown
+  const specSel = document.getElementById('viewAsSpec');
+  if (specSel) {
+    let specHtml = '<option value="">Chuyên môn: Không</option>';
+    getSpecialistPositions().forEach(p => {
+      specHtml += `<option value="${p.code}">${p.name}</option>`;
+    });
+    specSel.innerHTML = specHtml;
+  }
 }
 
 function applyViewAs() {
   const raw = document.getElementById('viewAsPos').value;
   const selRole = document.getElementById('viewAsRole').value;
+  const selSpec = document.getElementById('viewAsSpec')?.value || '';
   if (raw && raw.includes('|')) {
     const [p, code] = raw.split('|');
     viewAsPosition = p;
@@ -256,49 +343,60 @@ function applyViewAs() {
     viewAsStaffCode = null;
   }
   viewAsRole = selRole || null;
+  viewAsSpecialist = selSpec || undefined;
+  if (selSpec === '' && !raw) viewAsSpecialist = undefined;
+  else if (selSpec === '') viewAsSpecialist = null;
   const pos = getCurrentPosition();
   const posLabel = getPositionName(pos);
-  const roleLabel = selRole ? {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'L\u00e1'}[selRole] : '';
+  const specLabel = getCurrentSpecialistPosition() ? getPositionName(getCurrentSpecialistPosition()) : '';
+  const roleLabel = selRole ? {ndd:'NDD',tvv:'TVV',gvbb:'GVBB',la:'Lá'}[selRole] : '';
   const badge = document.getElementById('staffBadge');
-  if (raw || selRole) {
+  if (raw || selRole || selSpec) {
     let txt = '\uD83D\uDC41 ' + posLabel;
     if (viewAsStaffCode) {
       const s = allStaff.find(x => x.staff_code === viewAsStaffCode);
       if (s) txt += ' (' + s.full_name + ')';
     }
+    if (specLabel) txt += ' + ' + specLabel;
     if (roleLabel) txt += ' + ' + roleLabel;
     badge.textContent = txt;
   } else {
-    badge.textContent = `${myStaff?.staff_code||'---'} \u00b7 ${getPositionName(myStaff?.position)}`;
+    let txt = `${myStaff?.staff_code||'---'} \u00b7 ${getPositionName(myStaff?.position)}`;
+    if (myStaff?.specialist_position) txt += ` + ${getPositionName(myStaff.specialist_position)}`;
+    badge.textContent = txt;
   }
   applyPermissions();
-  if (raw || selRole) {
+  if (raw || selRole || selSpec) {
     let msg = '\uD83D\uDC41 ';
     if (raw) msg += posLabel;
-    if (selRole) msg += (raw ? ' + ' : '') + roleLabel;
+    if (specLabel) msg += (raw ? ' + ' : '') + specLabel;
+    if (selRole) msg += ' + ' + roleLabel;
     showToast(msg);
   }
 }
 function resetViewAs() {
   document.getElementById('viewAsPos').value = '';
   document.getElementById('viewAsRole').value = '';
+  const specSel = document.getElementById('viewAsSpec');
+  if (specSel) specSel.value = '';
+  viewAsSpecialist = undefined;
   applyViewAs();
-  showToast('\u2705 Reset v\u1ec1 Admin');
+  showToast('\u2705 Reset về Admin');
 }
 function applyPermissions() {
-  const pos = getCurrentPosition();
-  const lvl = getPosLevel(pos);
-  const role = getCurrentRole();
   // Tab Cơ cấu: visible for all
   const structTab = document.querySelector('[data-tab="structure"]');
   if (structTab) structTab.style.display = '';
-  // "+ Khu vực" button: Admin only
+  // "+ Khu vực" button: only manage_structure permission
   const btnAddArea = document.getElementById('btnAddArea');
-  if (btnAddArea) btnAddArea.style.display = pos==='admin' ? '' : 'none';
+  if (btnAddArea) btnAddArea.style.display = hasPermission('manage_structure') ? '' : 'none';
+  // "Điều chỉnh Chức vụ" button: only manage_positions permission
+  const btnManagePos = document.getElementById('btnManagePositions');
+  if (btnManagePos) btnManagePos.style.display = hasPermission('manage_positions') ? '' : 'none';
   // FAB: only for those who can create Hapja
   const fabBtn = document.getElementById('fabBtn');
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
-  if (fabBtn) fabBtn.style.display = (canCreateHapja(pos) && (activeTab==='unit'||activeTab==='personal')) ? 'flex' : 'none';
+  if (fabBtn) fabBtn.style.display = (hasPermission('create_hapja') && (activeTab==='unit'||activeTab==='personal')) ? 'flex' : 'none';
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
 }
@@ -478,7 +576,7 @@ async function toggleKTStatus(profileId, newState) {
   
   // Permission Check
   let hasPerm = false;
-  if (['admin', 'yjyn', 'tjn', 'gyjn', 'bgyjn'].includes(pos)) hasPerm = true;
+  if (hasPermission('toggle_kt')) hasPerm = true;
   if (!hasPerm && p.ndd_staff_code === myCode) hasPerm = true;
   if (!hasPerm) {
     try {
