@@ -78,7 +78,7 @@ async function loadJourney(profileId, currentPhase) {
   try {
     const [sessRes, recRes, hjRes] = await Promise.all([
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`)
     ]);
     const sessions = await sessRes.json();
