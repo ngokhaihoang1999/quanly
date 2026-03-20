@@ -100,7 +100,8 @@ function renderInfoMM(container, p) {
 }
 
 // ═══════════════════════════════════════════════════
-// COLLECTED INFO MINDMAP — Topic-based synthesis
+// COLLECTED INFO MINDMAP — Smart: notes-title-first
+// User's note titles ARE the classification!
 // ═══════════════════════════════════════════════════
 async function renderCollectMM(container, p) {
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">⏳ Đang tổng hợp...</div>';
@@ -112,68 +113,87 @@ async function renderCollectMM(container, p) {
     ]);
     const tvs = await tvR.json(), bbs = await bbR.json(), nts = await ntR.json();
 
-    // Collect fragments with source labels
-    const frags = [];
-    tvs.forEach((r, i) => {
-      const c = r.content || {};
-      [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.nhan_xet].filter(Boolean).forEach(t =>
-        frags.push({ text: String(t), src: 'TV lần ' + (c.lan_thu || (i + 1)) })
-      );
-    });
-    bbs.forEach((r, i) => {
-      const c = r.content || {};
-      [c.noi_dung, c.tom_tat, c.cam_xuc, c.phan_hoi, c.ghi_chu, c.nhan_xet].filter(Boolean).forEach(t =>
-        frags.push({ text: String(t), src: 'BB buổi ' + (c.buoi_thu || (i + 1)) })
-      );
-    });
-    nts.forEach(r => {
-      const c = r.content || {};
-      if (c.body) frags.push({ text: String(c.body), src: '📌 ' + (c.title || 'Ghi chú') });
-    });
-
-    // Classify by topic
-    const topicDefs = [
-      { key: 'Tâm lý', icon: '🧠', kw: ['cảm xúc','lo lắng','sợ','buồn','vui','khó khăn','stress','áp lực','tự ti','cô đơn','mệt','chán','tức','giận','thất vọng','hy vọng','trầm','đau khổ'] },
-      { key: 'Gia đình', icon: '👨‍👩‍👧', kw: ['gia đình','ba ','mẹ ','anh ','chị ','em ','con ','vợ','chồng','bố','cha ','người thân','ly hôn','kết hôn','kinh tế gia'] },
-      { key: 'Công việc', icon: '💼', kw: ['công việc','làm việc','nghề','lương','sếp','đồng nghiệp','kinh doanh','thu nhập','tiền','tài chính'] },
-      { key: 'Quan hệ', icon: '🤝', kw: ['bạn trai','bạn gái','người yêu','mối quan hệ','giao tiếp','nhóm','tình bạn','tình yêu','hẹn hò','bạn bè'] },
-      { key: 'Sức khỏe', icon: '🏥', kw: ['sức khỏe','bệnh','thuốc','bác sĩ','đau','mất ngủ','nghiện','rượu'] },
-      { key: 'Tâm linh', icon: '✝️', kw: ['kinh thánh','cầu nguyện','nhà thờ','chùa','phật','chúa','đức tin','thiền','tôn giáo'] },
-      { key: 'Tiến trình', icon: '📈', kw: ['tiến bộ','thay đổi','mở lòng','chia sẻ','tích cực','cải thiện','phát triển','cam kết','hợp tác'] },
-    ];
-
-    const topicMap = {};
-    topicDefs.forEach(td => { topicMap[td.key] = { icon: td.icon, items: [] }; });
-    topicMap['Khác'] = { icon: '📝', items: [] };
-
-    frags.forEach(f => {
-      const lower = f.text.toLowerCase();
-      let placed = false;
-      for (const td of topicDefs) {
-        if (td.kw.some(kw => lower.includes(kw))) {
-          topicMap[td.key].items.push(f);
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) topicMap['Khác'].items.push(f);
-    });
-
-    // Build Markdown
     let md = `# ${p.full_name || 'Thu thập'}\n`;
 
-    for (const [key, data] of Object.entries(topicMap)) {
-      if (!data.items.length) continue;
-      md += `## ${data.icon} ${key} (${data.items.length})\n`;
-      data.items.forEach(f => {
-        // Truncate long text for readability
-        const txt = f.text.length > 80 ? f.text.substring(0, 80) + '…' : f.text;
-        md += `- ${txt}\n`;
-        md += `  - 📎 *${f.src}*\n`;
+    // ── 1. GHI CHÚ: Tiêu đề = nhánh chính, body = nội dung ──
+    // User's note titles are THEIR classification — respect it!
+    if (nts.length > 0) {
+      md += `## 📌 Ghi chú\n`;
+      nts.forEach(r => {
+        const c = r.content || {};
+        const title = c.title || 'Ghi chú';
+        const body = c.body || '';
+        md += `### ${title}\n`;
+        // Split body by lines for sub-items
+        const lines = body.split(/\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0) {
+          lines.forEach(line => {
+            md += `- ${line}\n`;
+          });
+        } else {
+          md += `- *(trống)*\n`;
+        }
       });
     }
 
-    if (frags.length === 0) {
+    // ── 2. TƯ VẤN: Mỗi lần TV = 1 nhánh con ──
+    if (tvs.length > 0) {
+      md += `## 💬 Tư vấn (${tvs.length} lần)\n`;
+      tvs.forEach((r, i) => {
+        const c = r.content || {};
+        const lanThu = c.lan_thu || (i + 1);
+        md += `### Lần ${lanThu}\n`;
+        const fields = [
+          { key: 'noi_dung', label: 'Nội dung' },
+          { key: 'tom_tat', label: 'Tóm tắt' },
+          { key: 'cam_xuc', label: 'Cảm xúc' },
+          { key: 'phan_hoi', label: 'Phản hồi' },
+          { key: 'ghi_chu', label: 'Ghi chú' },
+          { key: 'nhan_xet', label: 'Nhận xét' },
+          { key: 'cong_cu', label: 'Công cụ' },
+        ];
+        let hasContent = false;
+        fields.forEach(f => {
+          if (c[f.key]) {
+            const txt = String(c[f.key]);
+            const short = txt.length > 80 ? txt.substring(0, 80) + '…' : txt;
+            md += `- **${f.label}**: ${short}\n`;
+            hasContent = true;
+          }
+        });
+        if (!hasContent) md += `- *(chưa có nội dung)*\n`;
+      });
+    }
+
+    // ── 3. BIÊN BẢN BB: Mỗi buổi = 1 nhánh con ──
+    if (bbs.length > 0) {
+      md += `## 📝 Biên bản BB (${bbs.length} buổi)\n`;
+      bbs.forEach((r, i) => {
+        const c = r.content || {};
+        const buoi = c.buoi_thu || (i + 1);
+        md += `### Buổi ${buoi}\n`;
+        const fields = [
+          { key: 'noi_dung', label: 'Nội dung' },
+          { key: 'tom_tat', label: 'Tóm tắt' },
+          { key: 'cam_xuc', label: 'Cảm xúc' },
+          { key: 'phan_hoi', label: 'Phản hồi' },
+          { key: 'ghi_chu', label: 'Ghi chú' },
+          { key: 'nhan_xet', label: 'Nhận xét' },
+        ];
+        let hasContent = false;
+        fields.forEach(f => {
+          if (c[f.key]) {
+            const txt = String(c[f.key]);
+            const short = txt.length > 80 ? txt.substring(0, 80) + '…' : txt;
+            md += `- **${f.label}**: ${short}\n`;
+            hasContent = true;
+          }
+        });
+        if (!hasContent) md += `- *(chưa có nội dung)*\n`;
+      });
+    }
+
+    if (tvs.length === 0 && bbs.length === 0 && nts.length === 0) {
       md += `## 📋 Chưa có dữ liệu\n- Chưa có báo cáo hoặc ghi chú\n`;
     }
 
