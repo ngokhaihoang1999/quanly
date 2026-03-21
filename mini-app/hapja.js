@@ -95,25 +95,21 @@ async function saveCheckHapja() {
 
     // === Notify approvers about new Hapja ===
     try {
-      // Get all staff with approve_hapja permission
-      const approverCodes = (allStaff || [])
-        .filter(s => {
-          const pos = allPositions?.find(p => p.code === s.position);
-          return pos?.permissions?.includes('approve_hapja');
-        })
-        .map(s => s.staff_code);
+      const approverCodes = typeof getApproverCodes === 'function'
+        ? await getApproverCodes()
+        : [];
       if (typeof createNotification === 'function' && approverCodes.length > 0) {
-        createNotification(
-          approverCodes, 'hapja_created',
+        await createNotification(
+          approverCodes,
+          'hapja_created',
           `🍎 Phiếu Check Hapja mới`,
           `${fullName} — NDD: ${ndd}`,
           null
         );
       }
-      // Refresh priority list & notification count
-      if (typeof loadPriority === 'function' && document.getElementById('tab-priority').style.display !== 'none') loadPriority();
+      if (typeof loadPriority === 'function') loadPriority();
       if (typeof loadNotifCount === 'function') loadNotifCount();
-    } catch(e) { console.warn('Hapja notify fail:', e); }
+    } catch(e) { console.warn('Hapja notify error:', e); }
 
     loadDashboard();
   } catch(e) { 
