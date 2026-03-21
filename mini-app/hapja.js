@@ -92,6 +92,29 @@ async function saveCheckHapja() {
     document.getElementById('hj_ndd').selectedIndex = 0;
     document.getElementById('hj_gioi_tinh').selectedIndex = 0;
     ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh'].forEach(clearChips);
+
+    // === Notify approvers about new Hapja ===
+    try {
+      // Get all staff with approve_hapja permission
+      const approverCodes = (allStaff || [])
+        .filter(s => {
+          const pos = allPositions?.find(p => p.code === s.position);
+          return pos?.permissions?.includes('approve_hapja');
+        })
+        .map(s => s.staff_code);
+      if (typeof createNotification === 'function' && approverCodes.length > 0) {
+        createNotification(
+          approverCodes, 'hapja_created',
+          `🍎 Phiếu Check Hapja mới`,
+          `${fullName} — NDD: ${ndd}`,
+          null
+        );
+      }
+      // Refresh priority list & notification count
+      if (typeof loadPriority === 'function' && document.getElementById('tab-priority').style.display !== 'none') loadPriority();
+      if (typeof loadNotifCount === 'function') loadNotifCount();
+    } catch(e) { console.warn('Hapja notify fail:', e); }
+
     loadDashboard();
   } catch(e) { 
     showToast('❌ Lỗi: ' + e.message); 

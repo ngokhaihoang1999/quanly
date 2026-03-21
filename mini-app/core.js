@@ -405,6 +405,11 @@ function applyPermissions() {
   if (tabStaffBtn) tabStaffBtn.style.display = hasPermission('manage_positions') ? '' : 'none';
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
+  // Init priority badge + notification count (deferred to let DOM/data settle)
+  setTimeout(() => {
+    if (typeof loadPriority === 'function') loadPriority();
+    if (typeof loadNotifCount === 'function') loadNotifCount();
+  }, 800);
 }
 
 // ============ UNIT POPUP ============

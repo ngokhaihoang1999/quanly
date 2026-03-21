@@ -827,3 +827,14 @@
   cursor: pointer; transition: all 0.2s; color: var(--text2);
 }
 .priority-seen-btn:hover { border-color: var(--accent); color: var(--accent); }
+.priority-item-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.priority-item.priority-unseen {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border-left: 3px solid var(--accent);
+}
+.priority-item.priority-overdue {
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+}
+.priority-item.priority-overdue .priority-item-meta { color: #ef4444; font-weight: 600; }
