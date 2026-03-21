@@ -24,14 +24,18 @@ async function loadPriority() {
   listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">⌛ Đang tải...</div>';
 
   try {
-    // === Parallel fetch: hapja pending + personal priority tasks ===
+    // Get all staff in my managed scope
+    const scopeCodes = typeof getMyManagedStaffCodes === 'function' ? getMyManagedStaffCodes() : [myCode];
+    const codesStr = scopeCodes.join(',');
+
+    // === Parallel fetch ===
     const [hapjaRes, tasksRes] = await Promise.all([
-      // "Duyệt Hapja": always query direct from DB if user can approve
+      // "Duyệt Hapja": visible to anyone with approve_hapja permission
       hasPermission('approve_hapja')
         ? sbFetch(`/rest/v1/check_hapja?status=eq.pending&select=id,full_name,created_by,created_at,data&order=created_at.asc`)
         : Promise.resolve(null),
-      // Personal priority tasks (chot_tv_1, viet_bc_tv, viet_bc_bb, hoc_bb)
-      sbFetch(`/rest/v1/priority_tasks?staff_code=eq.${myCode}&is_completed=eq.false&select=*&order=created_at.desc`)
+      // Priority tasks for entire managed scope
+      sbFetch(`/rest/v1/priority_tasks?staff_code=in.(${codesStr})&is_completed=eq.false&select=*&order=created_at.desc`)
     ]);
 
     const pendingHapjas = hapjaRes ? await hapjaRes.json() : [];
