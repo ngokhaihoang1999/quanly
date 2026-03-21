@@ -209,14 +209,27 @@ function openAddEventModal() {
       <div class="field-group"><label>Giờ</label><input type="time" id="ev_time" /></div>
     </div>
     <div class="field-group"><label>Mô tả</label><textarea id="ev_desc" placeholder="Chi tiết..." style="min-height:60px;"></textarea></div>
-    <div class="field-group"><label>Nhắc trước (phút)</label>
-      <div class="chips" id="chips_ev_reminder">
-        <div class="chip" onclick="toggleChip(this)">15</div>
-        <div class="chip" onclick="toggleChip(this)">30</div>
-        <div class="chip" onclick="toggleChip(this)">60</div>
+    <div class="field-group"><label>Nhắc trước</label>
+      <div class="chips" id="chips_ev_reminder" style="margin-bottom:6px;">
+        <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">15 phút</div>
+        <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">30 phút</div>
+        <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">60 phút</div>
+        <div class="chip" id="chip_custom_remind" onclick="toggleCustomReminder(this)">⏰ Chọn giờ</div>
+      </div>
+      <div id="ev_remind_custom_wrap" style="display:none;">
+        <div class="grid-2">
+          <div class="field-group" style="margin:0;"><label style="font-size:11px;">Ngày nhắc</label><input type="date" id="ev_remind_date" /></div>
+          <div class="field-group" style="margin:0;"><label style="font-size:11px;">Giờ nhắc</label><input type="time" id="ev_remind_time" /></div>
+        </div>
+        <div id="ev_remind_warn" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">⚠️ Phải trước thời điểm sự kiện</div>
       </div>
     </div>
   `;
+  // When event date/time changes, auto-validate reminder
+  document.getElementById('ev_date').addEventListener('change', validateReminderTime);
+  document.getElementById('ev_time').addEventListener('change', validateReminderTime);
+  document.getElementById('ev_remind_date')?.addEventListener('change', validateReminderTime);
+  document.getElementById('ev_remind_time')?.addEventListener('change', validateReminderTime);
   // Override save button behavior
   const saveBtn = document.querySelector('#addRecordModal .save-btn');
   if (saveBtn) {
@@ -228,14 +241,38 @@ function openAddEventModal() {
 
 async function saveCalEvent() {
   const title = document.getElementById('ev_title')?.value?.trim();
-  const date = document.getElementById('ev_date')?.value;
-  const time = document.getElementById('ev_time')?.value || null;
-  const desc = document.getElementById('ev_desc')?.value?.trim() || null;
-  const reminderChips = getChipValues('chips_ev_reminder');
-  const reminderMinutes = reminderChips.map(v => parseInt(v)).filter(v => !isNaN(v));
-  
+  const date  = document.getElementById('ev_date')?.value;
+  const time  = document.getElementById('ev_time')?.value || null;
+  const desc  = document.getElementById('ev_desc')?.value?.trim() || null;
+
   if (!title || !date) { showToast('⚠️ Nhập tiêu đề và ngày'); return; }
-  
+
+  // Reminder: custom datetime OR preset minutes
+  let reminderAt = null;
+  let reminderMinutes = [];
+
+  const customWrap = document.getElementById('ev_remind_custom_wrap');
+  const isCustom = customWrap?.style.display !== 'none';
+  if (isCustom) {
+    const rd = document.getElementById('ev_remind_date')?.value;
+    const rt = document.getElementById('ev_remind_time')?.value;
+    if (rd) {
+      reminderAt = rt ? `${rd}T${rt}:00` : `${rd}T08:00:00`;
+      // Validate: must be before event
+      const eventDt = time ? new Date(`${date}T${time}:00`) : new Date(`${date}T23:59:59`);
+      if (new Date(reminderAt) >= eventDt) {
+        showToast('⚠️ Giờ nhắc phải trước thời điểm sự kiện');
+        document.getElementById('ev_remind_warn').style.display = '';
+        return;
+      }
+    }
+  } else {
+    const chips = getChipValues('chips_ev_reminder');
+    reminderMinutes = chips
+      .map(v => parseInt(v))
+      .filter(v => !isNaN(v));
+  }
+
   try {
     await sbFetch('/rest/v1/calendar_events', {
       method: 'POST',
@@ -245,19 +282,52 @@ async function saveCalEvent() {
         title, description: desc,
         event_date: date,
         event_time: time,
-        reminder_minutes: reminderMinutes,
-        reminder_channels: ['app'],
+        reminder_minutes: reminderMinutes.length ? reminderMinutes : null,
+        reminder_at: reminderAt,
+        reminder_channels: ['app','chat'],
         is_auto: false,
         is_system: false
       })
     });
     closeModal('addRecordModal');
-    // Restore save button
     const saveBtn = document.querySelector('#addRecordModal .save-btn');
     if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; }
     showToast('✅ Đã tạo sự kiện');
     loadCalendar();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
+
+function toggleCustomReminder(chipEl) {
+  const wrap = document.getElementById('ev_remind_custom_wrap');
+  const isOpen = wrap?.style.display !== 'none';
+  if (isOpen) {
+    wrap.style.display = 'none';
+    chipEl.classList.remove('active');
+  } else {
+    wrap.style.display = '';
+    chipEl.classList.add('active');
+    // Deselect all preset chips
+    document.querySelectorAll('#chips_ev_reminder .chip:not(#chip_custom_remind)').forEach(c => c.classList.remove('active'));
+    // Pre-fill remind date with event date
+    const evDate = document.getElementById('ev_date')?.value;
+    if (evDate && !document.getElementById('ev_remind_date')?.value) {
+      document.getElementById('ev_remind_date').value = evDate;
+    }
+  }
+}
+
+function validateReminderTime() {
+  const wrap = document.getElementById('ev_remind_custom_wrap');
+  if (!wrap || wrap.style.display === 'none') return;
+  const warn = document.getElementById('ev_remind_warn');
+  const rd = document.getElementById('ev_remind_date')?.value;
+  const rt = document.getElementById('ev_remind_time')?.value;
+  const ed = document.getElementById('ev_date')?.value;
+  const et = document.getElementById('ev_time')?.value;
+  if (!rd || !ed) return;
+  const reminderDt = new Date(rt ? `${rd}T${rt}:00` : `${rd}T00:00:00`);
+  const eventDt    = new Date(et ? `${ed}T${et}:00` : `${ed}T23:59:59`);
+  if (warn) warn.style.display = reminderDt >= eventDt ? '' : 'none';
 }
 
 async function deleteCalEvent(eventId) {
