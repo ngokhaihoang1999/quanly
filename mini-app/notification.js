@@ -269,6 +269,8 @@ async function createNotification(recipients, eventType, title, bodyText, profil
   if (!recipients || recipients.length === 0) return;
   const myCode = getEffectiveStaffCode();
   const unique = [...new Set(recipients.filter(r => r))];
+
+  // 1. Create in-app notifications
   for (const staffCode of unique) {
     try {
       const r = await sbFetch('/rest/v1/notifications', {
@@ -284,6 +286,22 @@ async function createNotification(recipients, eventType, title, bodyText, profil
     } catch(e) { console.error('createNotification error for', staffCode, ':', e); }
   }
   loadNotifCount();
+
+  // 2. Send Telegram chat notifications via Edge Function (fire-and-forget)
+  // Edge Function checks each recipient's chat_events preferences before sending
+  try {
+    sbFetch('/functions/v1/send-notification', {
+      method: 'POST',
+      body: JSON.stringify({
+        staff_codes: unique,
+        event_type: eventType,
+        title,
+        body: bodyText || null
+      })
+    }).then(r => {
+      if (!r.ok) r.text().then(t => console.warn('send-notification edge fn:', t));
+    }).catch(e => console.warn('send-notification edge fn error:', e));
+  } catch(e) { console.warn('send-notification call error:', e); }
 }
 
 // Find approvers from DB (reliable, no in-memory dependency)
