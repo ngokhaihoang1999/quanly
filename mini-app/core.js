@@ -1,10 +1,42 @@
-const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+﻿const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
 const tg = window.Telegram?.WebApp;
 
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
 let allPositions = [];
+
+// ============ CUSTOM CONFIRM (replaces browser confirm() which shows domain) ============
+function showConfirm(message, onOk, onCancel) {
+  let modal = document.getElementById('customConfirmModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'customConfirmModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);';
+    modal.innerHTML = `
+      <div style="background:var(--surface,#fff);border-radius:14px;padding:20px 20px 14px;max-width:280px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div id="customConfirmMsg" style="font-size:14px;color:var(--text,#111);line-height:1.5;margin-bottom:16px;white-space:pre-line;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="customConfirmCancel" style="padding:8px 16px;border:1px solid var(--border,#ddd);border-radius:8px;background:transparent;color:var(--text2,#555);font-size:13px;cursor:pointer;">Huỷ</button>
+          <button id="customConfirmOk" style="padding:8px 16px;border:none;border-radius:8px;background:var(--red,#ef4444);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Xác nhận</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('customConfirmMsg').textContent = message;
+  modal.style.display = 'flex';
+
+  const cleanup = () => { modal.style.display = 'none'; };
+  document.getElementById('customConfirmOk').onclick   = () => { cleanup(); if (onOk) onOk(); };
+  document.getElementById('customConfirmCancel').onclick = () => { cleanup(); if (onCancel) onCancel(); };
+  modal.onclick = (e) => { if (e.target === modal) { cleanup(); if (onCancel) onCancel(); } };
+}
+
+// Promise-based version: await showConfirmAsync('message') → true/false
+function showConfirmAsync(message) {
+  return new Promise(resolve => showConfirm(message, () => resolve(true), () => resolve(false)));
+}
+
 
 // ============ POSITIONS (DB-driven) ============
 const ALL_PERMISSION_KEYS = [
@@ -521,7 +553,7 @@ async function toggleFruitStatus(profileId, current) {
     reason = reason.trim();
   }
 
-  if (!confirm(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
+  if (!await showConfirmAsync(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
   try {
     const patchBody = { fruit_status: newStatus };
     if (newStatus === 'dropout') patchBody.dropout_reason = reason;
@@ -607,7 +639,7 @@ async function toggleKTStatus(profileId, newState) {
   }
   
   if (!newState) {
-    if (!confirm('Hủy trạng thái Đã mở KT? Sự kiện Mở KT trên Dòng thời gian cũng sẽ bị xóa.')) return;
+    if (!await showConfirmAsync('Hủy trạng thái Đã mở KT? Sự kiện Mở KT trên Dòng thời gian cũng sẽ bị xóa.')) return;
     executeKTToggle(profileId, false, null);
   } else {
     window._currentKTProfileId = profileId;

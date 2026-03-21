@@ -1,4 +1,4 @@
-// ── Shared utility: label for the latest activity of a profile ──────────────
+﻿// ── Shared utility: label for the latest activity of a profile ──────────────
 // rec = latest record row, sess = latest consultation_session row (either can be null)
 function latestActivityLabel(rec, sess) {
   const recTime = rec ? new Date(rec.created_at).getTime() : 0;
@@ -306,7 +306,7 @@ async function _refreshCurrentProfile() {
 
 // ── Delete single session (only allowed when in tu_van phase, newest only) ──
 async function deleteEventSession(sessionId, sessionNum) {
-  if (!confirm(`Xóa "Chốt TV lần ${sessionNum}"?\nNếu hết buổi TV, giai đoạn sẽ về Chakki.`)) return;
+  if (!await showConfirmAsync(`Xóa "Chốt TV lần ${sessionNum}"?\nNếu hết buổi TV, giai đoạn sẽ về Chakki.`)) return;
   try {
     await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'DELETE' });
     const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=id&limit=1`);
@@ -323,7 +323,7 @@ async function deleteEventSession(sessionId, sessionNum) {
 async function deleteEventRecord(recordId, recordType) {
   const labels = { tu_van:'Báo cáo TV', bien_ban:'Báo cáo BB' };
   const label = labels[recordType] || recordType;
-  if (!confirm(`Xóa "${label}" mới nhất?`)) return;
+  if (!await showConfirmAsync(`Xóa "${label}" mới nhất?`)) return;
   try {
     await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
     showToast(`✅ Đã xóa ${label}`);
@@ -332,7 +332,7 @@ async function deleteEventRecord(recordId, recordType) {
 }
 
 async function deleteEventRecordKt(recordId) {
-  if (!confirm('Hủy trạng thái Đã mở KT?')) return;
+  if (!await showConfirmAsync('Hủy trạng thái Đã mở KT?')) return;
   try {
     if (recordId && recordId !== 'undefined' && recordId !== 'null') {
       await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
@@ -384,7 +384,7 @@ async function undoLastPhaseChange() {
     showToast('⚠️ Không có gì để hoàn tác'); return;
   }
 
-  if (!confirm(confirmMsg)) return;
+  if (!await showConfirmAsync(confirmMsg)) return;
   try {
     await actionFn();
     showToast('↩️ Đã hoàn tác thành công!');
@@ -682,7 +682,7 @@ async function chotCenter() {
   if (!isNDD && !isAdmin && !isGYJN && !isGVBB) {
     showToast('⚠️ Chỉ NDD/GYJN/BGYJN/GVBB được chốt Center'); return;
   }
-  if (!confirm('Xác nhận trái quả nhập học Center?')) return;
+  if (!await showConfirmAsync('Xác nhận trái quả nhập học Center?')) return;
   try {
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'center' })});
     await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
@@ -929,7 +929,7 @@ function editNote(noteId, title, body) {
 }
 
 async function deleteNote(noteId) {
-  if (!confirm('Xoá ghi chú này?')) return;
+  if (!await showConfirmAsync('Xoá ghi chú này?')) return;
   try {
     await sbFetch(`/rest/v1/records?id=eq.${noteId}`, { method: 'DELETE' });
     showToast('🗑️ Đã xoá ghi chú');

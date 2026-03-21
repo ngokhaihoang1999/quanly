@@ -1,4 +1,4 @@
-// ============ CHECK HAPJA ============
+﻿// ============ CHECK HAPJA ============
 function canCreateHapja(pos) { return hasPermission('create_hapja'); }
 function openCheckHapjaModal() {
   document.getElementById('checkHapjaModal').classList.add('open');
@@ -240,7 +240,7 @@ async function approveHapja(id) {
   } catch(e) { showToast('❌ Lỗi khi duyệt'); console.error(e); }
 }
 async function deleteHapja(id) {
-  if (!confirm('Xác nhận xoá phiếu Check Hapja?')) return;
+  if (!await showConfirmAsync('Xác nhận xoá phiếu Check Hapja?')) return;
   try {
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, {method:'DELETE'});
     showToast('✅ Đã xoá phiếu');
@@ -299,7 +299,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
   } catch {}
 }
 async function deleteProfile() {
-  if (!currentProfileId || !confirm('Xác nhận xoá hồ sơ này?')) return;
+  if (!currentProfileId || !await showConfirmAsync('Xác nhận xoá hồ sơ này?')) return;
   const pid = currentProfileId;
   async function del(path, method='DELETE', body=null) {
     const opts = {method};
@@ -343,7 +343,7 @@ async function deleteRecord(id, type) {
     }
   } catch { showToast('❌ Lỗi kiểm tra'); return; }
 
-  if (!confirm('Xóa phiếu mới nhất này?')) return;
+  if (!await showConfirmAsync('Xóa phiếu mới nhất này?')) return;
   try {
     await sbFetch(`/rest/v1/records?id=eq.${id}`, {method:'DELETE'});
     showToast('✅ Đã xóa!');

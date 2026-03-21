@@ -1,5 +1,5 @@
-// ============ CALENDAR MODULE ============
-// Lịch tháng với auto-events từ hệ thống + events cá nhân
+﻿// ============ CALENDAR MODULE ============
+// Lịch tháng với auto-events từ hềEthống + events cá nhân
 
 let calYear, calMonth, calEvents = [], calSelectedDate = null;
 
@@ -189,7 +189,7 @@ function renderCalendarDayEvents(date) {
         </div>
         ${ev.description ? `<div class="cal-event-desc">${ev.description}</div>` : ''}
       </div>
-      ${!ev.is_auto ? `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">×</button>` : ''}
+      ${!ev.is_auto ? `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">ÁE/button>` : ''}
     </div>`;
   }).join('');
 }
@@ -203,10 +203,10 @@ function openAddEventModal() {
   document.getElementById('recordModalTitle').textContent = '📅 Tạo sự kiện mới';
   const body = document.getElementById('recordModalBody');
   body.innerHTML = `
-    <div class="field-group"><label>Tiêu đề *</label><input type="text" id="ev_title" placeholder="Nội dung sự kiện..." /></div>
+    <div class="field-group"><label>Tiêu đềE*</label><input type="text" id="ev_title" placeholder="Nội dung sự kiện..." /></div>
     <div class="grid-2">
       <div class="field-group"><label>Ngày *</label><input type="date" id="ev_date" value="${dateVal}" /></div>
-      <div class="field-group"><label>Giờ</label><input type="time" id="ev_time" /></div>
+      <div class="field-group"><label>GiềE/label><input type="time" id="ev_time" /></div>
     </div>
     <div class="field-group"><label>Mô tả</label><textarea id="ev_desc" placeholder="Chi tiết..." style="min-height:60px;"></textarea></div>
     <div class="field-group"><label>Nhắc trước</label>
@@ -214,14 +214,14 @@ function openAddEventModal() {
         <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">15 phút</div>
         <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">30 phút</div>
         <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">60 phút</div>
-        <div class="chip" id="chip_custom_remind" onclick="toggleCustomReminder(this)">⏰ Chọn giờ</div>
+        <div class="chip" id="chip_custom_remind" onclick="toggleCustomReminder(this)">⏰ Chọn giềE/div>
       </div>
       <div id="ev_remind_custom_wrap" style="display:none;">
         <div class="grid-2">
           <div class="field-group" style="margin:0;"><label style="font-size:11px;">Ngày nhắc</label><input type="date" id="ev_remind_date" /></div>
-          <div class="field-group" style="margin:0;"><label style="font-size:11px;">Giờ nhắc</label><input type="time" id="ev_remind_time" /></div>
+          <div class="field-group" style="margin:0;"><label style="font-size:11px;">GiềEnhắc</label><input type="time" id="ev_remind_time" /></div>
         </div>
-        <div id="ev_remind_warn" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">⚠️ Phải trước thời điểm sự kiện</div>
+        <div id="ev_remind_warn" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">⚠�E�EPhải trước thời điểm sự kiện</div>
       </div>
     </div>
   `;
@@ -245,7 +245,7 @@ async function saveCalEvent() {
   const time  = document.getElementById('ev_time')?.value || null;
   const desc  = document.getElementById('ev_desc')?.value?.trim() || null;
 
-  if (!title || !date) { showToast('⚠️ Nhập tiêu đề và ngày'); return; }
+  if (!title || !date) { showToast('⚠�E�ENhập tiêu đềEvà ngày'); return; }
 
   // Reminder: custom datetime OR preset minutes
   let reminderAt = null;
@@ -261,7 +261,7 @@ async function saveCalEvent() {
       // Validate: must be before event
       const eventDt = time ? new Date(`${date}T${time}:00`) : new Date(`${date}T23:59:59`);
       if (new Date(reminderAt) >= eventDt) {
-        showToast('⚠️ Giờ nhắc phải trước thời điểm sự kiện');
+        showToast('⚠�E�EGiềEnhắc phải trước thời điểm sự kiện');
         document.getElementById('ev_remind_warn').style.display = '';
         return;
       }
@@ -292,9 +292,9 @@ async function saveCalEvent() {
     closeModal('addRecordModal');
     const saveBtn = document.querySelector('#addRecordModal .save-btn');
     if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; }
-    showToast('✅ Đã tạo sự kiện');
+    showToast('✁EĐã tạo sự kiện');
     loadCalendar();
-  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❁ELỗi'); console.error(e); }
 }
 
 function toggleCustomReminder(chipEl) {
@@ -331,12 +331,12 @@ function validateReminderTime() {
 }
 
 async function deleteCalEvent(eventId) {
-  if (!confirm('Xoá sự kiện này?')) return;
+  if (!await showConfirmAsync('Xoá sự kiện này?')) return;
   try {
     await sbFetch(`/rest/v1/calendar_events?id=eq.${eventId}`, { method: 'DELETE' });
-    showToast('✅ Đã xoá');
+    showToast('✁EĐã xoá');
     loadCalendar();
-  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❁ELỗi'); console.error(e); }
 }
 
 // ============ AUTO-CREATE CALENDAR EVENTS ============
@@ -353,7 +353,7 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt) {
     // Create Chốt TV event
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'chot_tv',
-      title: `Chốt TV lần ${sessionNum} — ${pName}`,
+      title: `Chốt TV lần ${sessionNum}  E${pName}`,
       event_date: dateStr, event_time: timeStr,
       is_auto: true, is_system: true
     })});
@@ -365,7 +365,7 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt) {
     
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'deadline_bc_tv',
-      title: `Deadline BC TV lần ${sessionNum} — ${pName}`,
+      title: `Deadline BC TV lần ${sessionNum}  E${pName}`,
       event_date: dlDateStr, event_time: dlTimeStr,
       is_auto: true, is_system: true
     })});
@@ -397,7 +397,7 @@ async function createCalEventFromBBReport(profileId, buoiTiepStr) {
   try {
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'hoc_bb',
-      title: `Học BB tiếp — ${pName}`,
+      title: `Học BB tiếp  E${pName}`,
       event_date: dateStr, event_time: timeStr,
       is_auto: true, is_system: true
     })});

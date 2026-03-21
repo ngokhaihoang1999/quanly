@@ -1,4 +1,4 @@
-// ============ STRUCTURE ============
+﻿// ============ STRUCTURE ============
 async function loadStructure() {
   try {
     const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
@@ -312,7 +312,7 @@ async function deleteStructure() {
   const type = document.getElementById('edit_struct_type').value;
   const name = document.getElementById('edit_struct_name').value;
   const labels = {area:'Khu v\u1ef1c', group:'Nh\u00f3m', team:'T\u1ed5'};
-  if (!confirm(`X\u00f3a ${labels[type]} "${name}"?\nT\u1ea5t c\u1ea3 d\u1eef li\u1ec7u b\u00ean trong s\u1ebd b\u1ecb x\u00f3a!`)) return;
+  if (!await showConfirmAsync(`X\u00f3a ${labels[type]} "${name}"?\nT\u1ea5t c\u1ea3 d\u1eef li\u1ec7u b\u00ean trong s\u1ebd b\u1ecb x\u00f3a!`)) return;
   const tables = {area:'areas', group:'org_groups', team:'teams'};
   try {
     await sbFetch(`/rest/v1/${tables[type]}?id=eq.${id}`, { method:'DELETE' });
@@ -338,7 +338,7 @@ async function addMemberToTeam() {
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 async function removeMemberFromTeam(staffCode) {
-  if (!confirm('G\u1ee1 th\u00e0nh vi\u00ean n\u00e0y kh\u1ecfi t\u1ed5?')) return;
+  if (!await showConfirmAsync('G\u1ee1 th\u00e0nh vi\u00ean n\u00e0y kh\u1ecfi t\u1ed5?')) return;
   const teamId = document.getElementById('edit_struct_id').value;
   try {
     await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify({team_id:null}) });
@@ -385,7 +385,7 @@ async function assignMemberPos(staffCode, newPos, posType) {
           const currentHolder = teamItem[field];
           if (currentHolder && currentHolder !== staffCode) {
             const hn = allStaff.find(s => s.staff_code === currentHolder)?.full_name || currentHolder;
-            if (!confirm(`⚠️ Mỗi Tổ chỉ có 1 ${getPositionName(newPos)}.\n\nHiện tại: ${hn} (${currentHolder})\nĐổi sang ${staffCode}?`)) return;
+            if (!await showConfirmAsync(`⚠️ Mỗi Tổ chỉ có 1 ${getPositionName(newPos)}.\n\nHiện tại: ${hn} (${currentHolder})\nĐổi sang ${staffCode}?`)) return;
             const fallback = getHighestStructuralPosition(currentHolder, 'team', teamId);
             await sbFetch(`/rest/v1/staff?staff_code=eq.${currentHolder}`, { method:'PATCH', body: JSON.stringify({ position: fallback }) });
           }
@@ -502,7 +502,7 @@ async function deletePosition() {
   const id = document.getElementById('pos_editing_id').value;
   const name = document.getElementById('pos_name').value;
   if (!id) return;
-  if (!confirm(`Xóa Chức vụ "${name}"? Staff đang sử dụng sẽ cần được gán chức vụ khác.`)) return;
+  if (!await showConfirmAsync(`Xóa Chức vụ "${name}"? Staff đang sử dụng sẽ cần được gán chức vụ khác.`)) return;
   try {
     await sbFetch(`/rest/v1/positions?id=eq.${id}`, { method:'DELETE' });
     showToast('\u2705 \u0110\u00e3 x\u00f3a');
