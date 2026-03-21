@@ -148,7 +148,7 @@ async function runAIAnalysis() {
       container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>';
       return;
     }
-    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+'\n\n';
+    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? '\nDROPOUT_REASON: '+p.dropout_reason : '')+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
@@ -307,7 +307,7 @@ async function buildChatCtx() {
   var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content&order=created_at.asc');
   var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
   var d = window._currentInfoSheet || {};
-  var ctx = 'TRAI QUA: '+(p.full_name||'N/A')+' | GIAI DOAN: '+(p.phase||'chakki')+' | IS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+' | FRUIT_STATUS: '+(p.fruit_status||'alive')+'\n\n';
+  var ctx = 'TRAI QUA: '+(p.full_name||'N/A')+' | GIAI DOAN: '+(p.phase||'chakki')+' | IS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+' | FRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? ' | DROPOUT_REASON: '+p.dropout_reason : '')+'\n\n';
   if (Object.keys(d).length) {
     ctx += 'PHI\u1ebeU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){
