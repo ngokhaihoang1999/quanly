@@ -641,15 +641,22 @@ async function saveChotBB() {
       createNotification(stakeholders, 'chot_bb', '🎓 Chốt BB', pName, currentProfileId);
     }
 
-    // Create priority task "Học BB" for GVBB (if assigned), else for NDD as reminder
+    // Create priority task "Học BB" for GVBB if assigned,
+    // else for NDD + all managers in chain (so they know to assign GVBB)
     if (typeof createPriorityTask === 'function') {
       const gvbbCode = gvbb || null;
-      const assignee = gvbbCode || (p?.ndd_staff_code) || getEffectiveStaffCode();
-      createPriorityTask(
-        assignee, currentProfileId, 'hoc_bb',
-        `Học BB lần 1 — ${pName}`,
-        null
-      );
+      if (gvbbCode) {
+        // GVBB assigned → only their task
+        createPriorityTask(gvbbCode, currentProfileId, 'hoc_bb', `Học BB lần 1 — ${pName}`, null);
+      } else {
+        // No GVBB yet → create task for NDD + full managers chain
+        const nddCode = p?.ndd_staff_code || getEffectiveStaffCode();
+        const managers = typeof getManagersForStaffCode === 'function' ? getManagersForStaffCode(nddCode) : [];
+        const assignees = [nddCode, ...managers].filter(Boolean);
+        assignees.forEach(code => {
+          createPriorityTask(code, currentProfileId, 'hoc_bb', `⚠️ Chưa có GVBB — ${pName}`, null);
+        });
+      }
     }
 
     await _refreshCurrentProfile();
