@@ -29,13 +29,14 @@ async function loadPriority() {
     const codesStr = scopeCodes.join(',');
 
     // === Parallel fetch ===
+    const nowIso = new Date().toISOString();
     const [hapjaRes, tasksRes] = await Promise.all([
       // "Duyệt Hapja": visible to anyone with approve_hapja permission
       hasPermission('approve_hapja')
         ? sbFetch(`/rest/v1/check_hapja?status=eq.pending&select=id,full_name,created_by,created_at,data&order=created_at.asc`)
         : Promise.resolve(null),
-      // Priority tasks for entire managed scope
-      sbFetch(`/rest/v1/priority_tasks?staff_code=in.(${codesStr})&is_completed=eq.false&select=*&order=created_at.desc`)
+      // Priority tasks — only show if visible_at has passed (or is null)
+      sbFetch(`/rest/v1/priority_tasks?staff_code=in.(${codesStr})&is_completed=eq.false&or=(visible_at.is.null,visible_at.lte.${nowIso})&select=*&order=created_at.desc`)
     ]);
 
     const pendingHapjas = hapjaRes ? await hapjaRes.json() : [];
@@ -177,17 +178,20 @@ async function markPriorityItemSeen(taskId, profileId, taskType) {
 }
 
 // ============ AUTO-CREATE PRIORITY TASKS ============
-async function createPriorityTask(staffCode, profileId, taskType, title, deadline) {
+async function createPriorityTask(staffCode, profileId, taskType, title, deadline, visibleAt) {
   if (!staffCode) return;
   try {
     // Avoid duplicates
     const checkRes = await sbFetch(`/rest/v1/priority_tasks?staff_code=eq.${staffCode}&profile_id=eq.${profileId}&task_type=eq.${taskType}&is_completed=eq.false&select=id&limit=1`);
     const existing = await checkRes.json();
     if (existing.length > 0) {
-      // If deadline changed, update it
-      if (deadline) {
+      // Update deadline or visible_at if changed
+      const patch = {};
+      if (deadline) patch.deadline = deadline;
+      if (visibleAt) patch.visible_at = visibleAt;
+      if (Object.keys(patch).length) {
         await sbFetch(`/rest/v1/priority_tasks?id=eq.${existing[0].id}`, {
-          method: 'PATCH', body: JSON.stringify({ deadline })
+          method: 'PATCH', body: JSON.stringify(patch)
         });
       }
       return;
@@ -195,12 +199,12 @@ async function createPriorityTask(staffCode, profileId, taskType, title, deadlin
     await sbFetch('/rest/v1/priority_tasks', {
       method: 'POST', body: JSON.stringify({
         staff_code: staffCode, profile_id: profileId,
-        task_type: taskType, title, deadline: deadline || null
+        task_type: taskType, title,
+        deadline: deadline || null,
+        visible_at: visibleAt || null
       })
     });
-    // Refresh priority if tab is open
-    if (document.getElementById('tab-priority')?.style.display !== 'none') loadPriority();
-    else loadPriority(); // still refresh badge
+    loadPriority(); // refresh badge
   } catch(e) { console.warn('createPriorityTask:', e); }
 }
 

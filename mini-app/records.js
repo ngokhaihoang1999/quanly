@@ -1,4 +1,4 @@
-﻿// ── Shared utility: label for the latest activity of a profile ──────────────
+// ── Shared utility: label for the latest activity of a profile ──────────────
 // rec = latest record row, sess = latest consultation_session row (either can be null)
 function latestActivityLabel(rec, sess) {
   const recTime = rec ? new Date(rec.created_at).getTime() : 0;
@@ -525,7 +525,9 @@ async function saveScheduleTV() {
     if (!editingSessionId) {
       const p = allProfiles.find(x => x.id === currentProfileId);
       const pName = p?.full_name || '';
-      // Calendar: create Chốt TV event + deadline BC TV
+      const myCode = getEffectiveStaffCode();
+
+      // Calendar: create Chốt TV event ONLY (no Deadline BC TV on calendar)
       if (typeof createCalEventFromChotTV === 'function') {
         createCalEventFromChotTV(currentProfileId, num, dt || null);
       }
@@ -534,11 +536,11 @@ async function saveScheduleTV() {
         const stakeholders = await getProfileStakeholders(currentProfileId);
         createNotification(stakeholders, 'chot_tv', `📅 Chốt TV lần ${num}`, `${pName} — ${tool}`, currentProfileId);
       }
-      // Priority: create "viết BC TV" task (deadline +1h)
+      // Priority: create "viết BC TV" task — visible 1 hour AFTER Chốt TV session time
       if (typeof createPriorityTask === 'function') {
-        const deadline = dt ? new Date(new Date(dt).getTime() + 3600000).toISOString() : null;
-        const myCode = getEffectiveStaffCode();
-        createPriorityTask(myCode, currentProfileId, 'viet_bc_tv', `Viết BC TV lần ${num} — ${pName}`, deadline);
+        const sessionTime = dt ? new Date(dt) : new Date();
+        const visibleAt = new Date(sessionTime.getTime() + 60 * 60 * 1000).toISOString(); // +1 hour
+        createPriorityTask(myCode, currentProfileId, 'viet_bc_tv', `Viết BC TV lần ${num} — ${pName}`, null, visibleAt);
       }
       // Priority: complete "chot_tv_1" if this is session 1
       if (num === 1 && typeof completePriorityTask === 'function') {
@@ -830,11 +832,27 @@ async function saveRecord() {
           createNotification(stakeholders, 'bc_tv', `📝 BC TV lần ${data.lan_thu}`, pName, currentProfileId);
         }
       } else {
-        // BB report: complete "viet_bc_bb" priority + create next BB event if buoi_tiep
+        // BB report: complete current "viet_bc_bb" priority
         if (typeof completePriorityTask === 'function') completePriorityTask(currentProfileId, 'viet_bc_bb');
+
+        // Calendar: add Học BB next session event
         if (data.buoi_tiep && typeof createCalEventFromBBReport === 'function') {
           createCalEventFromBBReport(currentProfileId, data.buoi_tiep);
         }
+
+        // Priority: create next "viet_bc_bb" task — visible 1 hour AFTER next BB session
+        if (data.buoi_tiep && typeof createPriorityTask === 'function') {
+          const myCode = getEffectiveStaffCode();
+          const buoiTime = new Date(data.buoi_tiep);
+          const visibleAt = new Date(buoiTime.getTime() + 60 * 60 * 1000).toISOString(); // +1h
+          createPriorityTask(
+            myCode, currentProfileId, 'viet_bc_bb',
+            `Viết BC BB buổi ${(parseInt(data.buoi_thu) || 0) + 1} — ${pName}`,
+            null, visibleAt
+          );
+        }
+
+        // Notification
         if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
           const stakeholders = await getProfileStakeholders(currentProfileId);
           createNotification(stakeholders, 'bc_bb', `📋 BC BB buổi ${data.buoi_thu}`, pName, currentProfileId);
