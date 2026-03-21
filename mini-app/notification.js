@@ -288,10 +288,16 @@ async function createNotification(recipients, eventType, title, bodyText, profil
   loadNotifCount();
 
   // 2. Send Telegram chat notifications via Edge Function (fire-and-forget)
-  // Edge Function checks each recipient's chat_events preferences before sending
+  // Use raw fetch (not sbFetch) to avoid Prefer:return=representation header conflict
   try {
-    sbFetch('/functions/v1/send-notification', {
+    const edgeUrl = SUPABASE_URL + '/functions/v1/send-notification';
+    fetch(edgeUrl, {
       method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         staff_codes: unique,
         event_type: eventType,
@@ -299,8 +305,9 @@ async function createNotification(recipients, eventType, title, bodyText, profil
         body: bodyText || null
       })
     }).then(r => {
-      if (!r.ok) r.text().then(t => console.warn('send-notification edge fn:', t));
-    }).catch(e => console.warn('send-notification edge fn error:', e));
+      if (!r.ok) r.text().then(t => console.warn('send-notification edge fn error:', t));
+      else r.json().then(d => console.log('send-notification ok:', d?.results?.filter(r=>r.sent).length, 'sent'));
+    }).catch(e => console.warn('send-notification fetch error:', e));
   } catch(e) { console.warn('send-notification call error:', e); }
 }
 
