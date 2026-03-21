@@ -170,13 +170,21 @@ async function runAIAnalysis() {
       '- Concept l\u00e0 t\u00ean t\u1ed5 ch\u1ee9c/ch\u01b0\u01a1ng tr\u00ecnh m\u00e0 NDD d\u1ef1ng l\u00ean \u0111\u1ec3 che gi\u1ea5u m\u1ee5c \u0111\u00edch h\u1ecdc KT. V\u00ed d\u1ee5: "H\u1ecdc vi\u1ec7n t\u00e2m l\u00fd", "CLB k\u1ef9 n\u0103ng s\u1ed1ng".\n' +
       '- Enneagram, MBTI, t\u00e2m linh, t\u00f4n gi\u00e1o, \u0111\u1eb7c \u0111i\u1ec3m c\u00e1 nh\u00e2n c\u1ee7a tr\u00e1i qu\u1ea3 KH\u00d4NG PH\u1ea2I l\u00e0 concept.\n' +
       '- N\u1ebfu trong d\u1eef li\u1ec7u KH\u00d4NG c\u00f3 th\u00f4ng tin r\u00f5 r\u00e0ng v\u1ec1 concept: ghi "\u0110ang d\u00f9ng: Ch\u01b0a r\u00f5" ho\u1eb7c "Ch\u01b0a c\u00f3 th\u00f4ng tin". KH\u00d4NG T\u1ef0 \u0110I\u1ec0N b\u1eefa.\n\n' +
-      '6 NH\u00c1NH B\u1eaeT BU\u1ed8C:\n' +
-      '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, Concept NDD (n\u1ebfu c\u00f3)\n' +
-      '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa + c\u1ea3m x\u00fac hi\u1ec7n t\u1ea1i\n' +
-      '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 \u0110i\u1ec3m ch\u1ea1m c\u1ea3m x\u00fac. N\u1ebfu thi\u1ebfu: "C\u1ea7n khai th\u00e1c th\u00eam"\n' +
-      '## \ud83d\udcd6 Li\u00ean k\u1ebft KT \u2014 C\u00e2u chuy\u1ec7n/l\u1eddi d\u1ea1y Kinh th\u00e1nh. CH\u1ec8 t\u1eeb BB tr\u1edf \u0111i\n' +
-      '## \ud83e\udd1d Chi\u1ebfn l\u01b0\u1ee3c \u2014 C\u00e1ch ti\u1ebfp c\u1eadn ph\u00f9 h\u1ee3p giai \u0111o\u1ea1n\n' +
-      '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf ti\u1ebfp r\u00f5 r\u00e0ng\n\n' +
+      (p.fruit_status === 'dropout'
+        ? '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (D\u00c0NH CHO DROP-OUT):\n' +
+          '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n ngh\u1ec9, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, l\u00fd do ngh\u1ec9\n' +
+          '## \u26a0\ufe0f Nguy\u00ean nh\u00e2n ti\u1ec1m n\u0103ng \u2014 V\u00ec sao trai qu\u1ea3 ngh\u1ec9? Ph\u00e2n t\u00edch s\u00e2u t\u1eeb BC\n' +
+          '## \ud83d\udea9 D\u1ea5u hi\u1ec7u c\u1ea3nh b\u00e1o \u2014 Nh\u1eefng t\u00edn hi\u1ec7u nh\u1eadn ra t\u1eeb s\u1edbm trong BC TV/BB\n' +
+          '## \ud83d\udc94 \u0110i\u1ec3m th\u1ea5t b\u1ea1i \u2014 Sai s\u00f3t trong ti\u1ebfp c\u1eadn: concept, b\u1ea3o an, t\u1ed1c \u0111\u1ed9?\n' +
+          '## \ud83d\udca1 B\u00e0i h\u1ecdc r\u00fat ra \u2014 Kinh nghi\u1ec7m cho tr\u01b0\u1eddng h\u1ee3p t\u01b0\u01a1ng t\u1ef1\n' +
+          '## \ud83d\udee0\ufe0f H\u01b0\u1edbng kh\u1eafc ph\u1ee5c \u2014 C\u00e1ch l\u00e0m t\u1ed1t h\u01a1n trong t\u01b0\u01a1ng lai\n\n'
+        : '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (ALIVE):\n' +
+          '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, Concept NDD (n\u1ebfu c\u00f3)\n' +
+          '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa + c\u1ea3m x\u00fac hi\u1ec7n t\u1ea1i\n' +
+          '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 \u0110i\u1ec3m ch\u1ea1m c\u1ea3m x\u00fac. N\u1ebfu thi\u1ebfu: "C\u1ea7n khai th\u00e1c th\u00eam"\n' +
+          '## \ud83d\udcd6 Li\u00ean k\u1ebft KT \u2014 C\u00e2u chuy\u1ec7n/l\u1eddi d\u1ea1y Kinh th\u00e1nh. CH\u1ec8 t\u1eeb BB tr\u1edf \u0111i\n' +
+          '## \ud83e\udd1d Chi\u1ebfn l\u01b0\u1ee3c \u2014 C\u00e1ch ti\u1ebfp c\u1eadn ph\u00f9 h\u1ee3p giai \u0111o\u1ea1n\n' +
+          '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf ti\u1ebfp r\u00f5 r\u00e0ng\n\n') +
       'NGUY\u00caN T\u1eaeC: Ch\u1ec9 d\u1ef1a tr\u00ean d\u1eef li\u1ec7u th\u1ef1c t\u1ebf. Kh\u00f4ng b\u1ecba. N\u1ebfu thi\u1ebfu -> "Ch\u01b0a c\u00f3 th\u00f4ng tin".\n' +
       'QUAN TR\u1eccNG: To\u00e0n b\u1ed9 output PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7.';
 
