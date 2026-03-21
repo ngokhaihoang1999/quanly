@@ -24,8 +24,8 @@ async function loadPriority() {
   listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">⌛ Đang tải...</div>';
 
   try {
-    // Get all staff in my managed scope
-    const scopeCodes = typeof getMyManagedStaffCodes === 'function' ? getMyManagedStaffCodes() : [myCode];
+    // Get all staff in my managed scope (including GVBB from fruit_roles)
+    const scopeCodes = typeof getMyManagedStaffCodes === 'function' ? await getMyManagedStaffCodes() : [myCode];
     const codesStr = scopeCodes.join(',');
 
     // === Parallel fetch ===

@@ -185,7 +185,8 @@ function getManagersForStaffCode(staffCode) {
 }
 
 // Get all staff_codes managed by myCode (their entire scope downward)
-function getMyManagedStaffCodes() {
+// Also includes GVBB staff from fruit_roles for profiles in scope
+async function getMyManagedStaffCodes() {
   const myCode = getEffectiveStaffCode();
   const managed = new Set([myCode]);
   for (const area of (structureData || [])) {
@@ -199,7 +200,9 @@ function getMyManagedStaffCodes() {
           (allStaff || []).filter(s => String(s.team_id) === String(team.id)).forEach(s => managed.add(s.staff_code));
         }
       }
-      return [...managed]; // largest scope, stop
+      // Also include all GVBBs assigned to profiles whose NDD is in area scope
+      await _addGvbbForScope(managed);
+      return [...managed];
     }
     for (const group of (area.org_groups || [])) {
       // TJN → manages entire group
@@ -209,6 +212,7 @@ function getMyManagedStaffCodes() {
           if (team.bgyjn_staff_code) managed.add(team.bgyjn_staff_code);
           (allStaff || []).filter(s => String(s.team_id) === String(team.id)).forEach(s => managed.add(s.staff_code));
         }
+        await _addGvbbForScope(managed);
         return [...managed];
       }
       for (const team of (group.teams || [])) {
@@ -217,11 +221,31 @@ function getMyManagedStaffCodes() {
           if (team.gyjn_staff_code) managed.add(team.gyjn_staff_code);
           if (team.bgyjn_staff_code) managed.add(team.bgyjn_staff_code);
           (allStaff || []).filter(s => String(s.team_id) === String(team.id)).forEach(s => managed.add(s.staff_code));
+          await _addGvbbForScope(managed);
+          return [...managed];
         }
       }
     }
   }
   return [...managed];
+}
+
+// Fetch GVBB codes from fruit_roles for profiles whose NDD is in the given scope set
+async function _addGvbbForScope(scopeSet) {
+  try {
+    const ndds = [...scopeSet].join(',');
+    // Get profile_ids of profiles whose NDD is in scope
+    const pRes = await sbFetch(`/rest/v1/profiles?ndd_staff_code=in.(${ndds})&select=id`);
+    const profiles = await pRes.json();
+    if (!profiles.length) return;
+    const pids = profiles.map(p => `"${p.id}"`).join(',');
+    // Get all fruit_groups for those profiles
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=in.(${pids})&select=fruit_roles(staff_code,role_type)`);
+    const fgs = await fgRes.json();
+    (fgs || []).forEach(fg => (fg.fruit_roles || []).forEach(r => {
+      if (r.staff_code) scopeSet.add(r.staff_code); // includes NDD, TVV, GVBB
+    }));
+  } catch(e) { console.warn('_addGvbbForScope:', e); }
 }
 
 // ─── CREATE NOTIFICATIONS ──────────────────────────────────────────────────────
@@ -279,20 +303,24 @@ async function getApproverCodes() {
   } catch(e) { console.warn('getApproverCodes:', e); return []; }
 }
 
-// Get all staff involved with a profile (NDD + fruit_roles)
+// Get all staff involved with a profile (NDD + TVV + GVBB) + their managers up chain
 async function getProfileStakeholders(profileId) {
   const codes = new Set();
+  const myCode = getEffectiveStaffCode();
   const p = (allProfiles || []).find(x => x.id === profileId);
-  if (p?.ndd_staff_code) {
-    codes.add(p.ndd_staff_code);
-    // Also notify ndd's managers
-    getManagersForStaffCode(p.ndd_staff_code).forEach(m => codes.add(m));
-  }
+  if (p?.ndd_staff_code) codes.add(p.ndd_staff_code);
   try {
     const res = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=fruit_roles(staff_code,role_type)`);
     const fgs = await res.json();
-    (fgs || []).forEach(fg => (fg.fruit_roles || []).forEach(r => { if (r.staff_code) codes.add(r.staff_code); }));
+    (fgs || []).forEach(fg => (fg.fruit_roles || []).forEach(r => {
+      if (r.staff_code) codes.add(r.staff_code); // NDD, TVV, GVBB
+    }));
   } catch(e) {}
+  // Also notify managers up the chain for EACH stakeholder (NDD, TVV, GVBB)
+  const directCodes = [...codes];
+  directCodes.forEach(sc => {
+    if (sc !== myCode) getManagersForStaffCode(sc).forEach(m => codes.add(m));
+  });
   return [...codes];
 }
 

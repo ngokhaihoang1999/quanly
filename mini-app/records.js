@@ -634,9 +634,22 @@ async function saveChotBB() {
     // === Auto-triggers for Chốt BB ===
     const p = allProfiles.find(x => x.id === currentProfileId);
     const pName = p?.full_name || '';
+
+    // Notify all stakeholders (NDD, TVV, GVBB + their managers)
     if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
       const stakeholders = await getProfileStakeholders(currentProfileId);
       createNotification(stakeholders, 'chot_bb', '🎓 Chốt BB', pName, currentProfileId);
+    }
+
+    // Create priority task "Học BB" for GVBB (if assigned), else for NDD as reminder
+    if (typeof createPriorityTask === 'function') {
+      const gvbbCode = gvbb || null;
+      const assignee = gvbbCode || (p?.ndd_staff_code) || getEffectiveStaffCode();
+      createPriorityTask(
+        assignee, currentProfileId, 'hoc_bb',
+        `Học BB lần 1 — ${pName}`,
+        null
+      );
     }
 
     await _refreshCurrentProfile();
