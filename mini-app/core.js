@@ -261,7 +261,7 @@ async function loadStaffInfo() {
 // ============ NAVIGATION ============
 function backToList() {
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
-  ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+activeTab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (activeTab==='unit'||activeTab==='personal')?'flex':'none';
@@ -273,7 +273,7 @@ function switchFormTab(el, cardId) {
 }
 function switchMainTab(el, tab) {
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+tab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
@@ -281,6 +281,8 @@ function switchMainTab(el, tab) {
   if (tab==='personal') loadDashboard();
   if (tab==='staff') loadStaff();
   if (tab==='structure') loadStructure();
+  if (tab==='calendar' && typeof loadCalendar === 'function') loadCalendar();
+  if (tab==='priority' && typeof loadPriority === 'function') loadPriority();
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============
@@ -398,6 +400,9 @@ function applyPermissions() {
   const fabBtn = document.getElementById('fabBtn');
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
   if (fabBtn) fabBtn.style.display = (hasPermission('create_hapja') && (activeTab==='unit'||activeTab==='personal')) ? 'flex' : 'none';
+  // Tab TĐ: only visible for admin (manage_positions permission)
+  const tabStaffBtn = document.getElementById('tabStaffBtn');
+  if (tabStaffBtn) tabStaffBtn.style.display = hasPermission('manage_positions') ? '' : 'none';
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
 }

@@ -17,6 +17,7 @@
     </div>
     <div class="header-right">
       <div class="badge" id="staffBadge">---</div>
+      <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo">🔔<span class="notif-badge" id="notifBadge" style="display:none;">0</span></button>
       <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Light/Dark">🌙</button>
     </div>
   </div>
@@ -36,8 +37,10 @@
   <div class="tab-bar" id="mainTabBar">
     <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')">🏢 Đơn vị</div>
     <div class="tab" data-tab="personal" onclick="switchMainTab(this,'personal')">👤 Cá nhân</div>
-    <div class="tab" data-tab="staff" onclick="switchMainTab(this,'staff')">👥 TĐ</div>
+    <div class="tab" data-tab="calendar" onclick="switchMainTab(this,'calendar')">📅 Lịch</div>
+    <div class="tab" data-tab="priority" onclick="switchMainTab(this,'priority')">⚡ Ưu tiên</div>
     <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')">🏗️ Cơ cấu</div>
+    <div class="tab" data-tab="staff" id="tabStaffBtn" onclick="switchMainTab(this,'staff')" style="display:none;">👥 TĐ</div>
   </div>
 </div>
 
@@ -83,6 +86,25 @@
     <div class="section-header"><div class="section-title">Tất cả TĐ</div><div class="section-count" id="staffCount">--</div></div>
     <div id="staffList"><div class="staff-card skeleton" style="height:68px;"></div></div>
     <button class="add-record-btn" onclick="openAddStaffModal()" style="margin-top:12px;">＋ Đăng ký TĐ mới</button>
+  </div>
+
+  <!-- LỊCH -->
+  <div id="tab-calendar" style="display:none;">
+    <div class="section-header"><div class="section-title">📅 Lịch</div><button class="add-record-btn" onclick="openAddEventModal()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;">+ Sự kiện</button></div>
+    <div id="calendarNav" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <button onclick="calNavMonth(-1)" style="background:none;border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;font-size:14px;">◀</button>
+      <div id="calMonthLabel" style="font-weight:700;font-size:15px;"></div>
+      <button onclick="calNavMonth(1)" style="background:none;border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;font-size:14px;">▶</button>
+    </div>
+    <div id="calendarGrid" style="margin-bottom:12px;"></div>
+    <div class="section-header" style="margin-top:8px;"><div class="section-title" id="calDayTitle" style="font-size:13px;">Sự kiện hôm nay</div></div>
+    <div id="calEventList"></div>
+  </div>
+
+  <!-- ƯU TIÊN -->
+  <div id="tab-priority" style="display:none;">
+    <div class="section-header"><div class="section-title">⚡ Ưu tiên xử lý</div></div>
+    <div id="priorityList"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-sub">Không có việc ưu tiên</div></div></div>
   </div>
 
   <!-- CẤU TRÚC -->
@@ -449,13 +471,16 @@
     </div>
   </div>
 </div></div>
-<script src="core.js?v=2024031962"></script>
-<script src="dashboard.js?v=2024031962"></script>
-<script src="profiles.js?v=2024031962"></script>
-<script src="hapja.js?v=2024031962"></script>
-<script src="records.js?v=2024031962"></script>
-<script src="staff.js?v=2024031962"></script>
-<script src="structure.js?v=2024031962"></script>
+<script src="core.js?v=2024032201"></script>
+<script src="dashboard.js?v=2024032201"></script>
+<script src="profiles.js?v=2024032201"></script>
+<script src="hapja.js?v=2024032201"></script>
+<script src="records.js?v=2024032201"></script>
+<script src="staff.js?v=2024032201"></script>
+<script src="structure.js?v=2024032201"></script>
+<script src="calendar.js?v=2024032201"></script>
+<script src="notification.js?v=2024032201"></script>
+<script src="priority.js?v=2024032201"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>

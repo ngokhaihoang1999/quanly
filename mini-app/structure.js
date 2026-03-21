@@ -271,12 +271,32 @@ async function updateStructure() {
   const mgr = getStaffCodeFromInput('edit_mgr1');
   const mgr2 = getStaffCodeFromInput('edit_mgr2');
   const tables = {area:'areas', group:'org_groups', team:'teams'};
+  const oldItem = findStructItem(type, id);
   let body = { name };
   if (type==='area') body.yjyn_staff_code = mgr||null;
   else if (type==='group') body.tjn_staff_code = mgr||null;
   else { body.gyjn_staff_code = mgr||null; body.bgyjn_staff_code = mgr2||null; }
   try {
     await sbFetch(`/rest/v1/${tables[type]}?id=eq.${id}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify(body) });
+    // Sync staff.position when structural managers change
+    const syncMgr = async (oldCode, newCode, posCode) => {
+      if (oldCode === (newCode||null)) return;
+      if (oldCode && oldCode !== newCode) {
+        const fallback = getHighestStructuralPosition(oldCode, type, id);
+        await sbFetch(`/rest/v1/staff?staff_code=eq.${oldCode}`, { method:'PATCH', body: JSON.stringify({ position: fallback }) });
+      }
+      if (newCode) {
+        await sbFetch(`/rest/v1/staff?staff_code=eq.${newCode}`, { method:'PATCH', body: JSON.stringify({ position: posCode }) });
+      }
+    };
+    if (type === 'team' && oldItem) {
+      await syncMgr(oldItem.gyjn_staff_code, mgr, 'gyjn');
+      await syncMgr(oldItem.bgyjn_staff_code, mgr2, 'bgyjn');
+    } else if (type === 'group' && oldItem) {
+      await syncMgr(oldItem.tjn_staff_code, mgr, 'tjn');
+    } else if (type === 'area' && oldItem) {
+      await syncMgr(oldItem.yjyn_staff_code, mgr, 'yjyn');
+    }
     // Auto-add GYJN/BGYJN as team members
     if (type==='team') {
       if (mgr) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:id}) });
@@ -329,13 +349,63 @@ async function removeMemberFromTeam(staffCode) {
     await loadStaff();
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
+// Returns highest structural position a staff holds (excluding a specific unit being edited)
+function getHighestStructuralPosition(staffCode, excludeType, excludeId) {
+  for (const a of (structureData || [])) {
+    if (a.yjyn_staff_code === staffCode && !(excludeType === 'area' && a.id === excludeId)) return 'yjyn';
+  }
+  for (const a of (structureData || [])) {
+    for (const g of (a.org_groups || [])) {
+      if (g.tjn_staff_code === staffCode && !(excludeType === 'group' && g.id === excludeId)) return 'tjn';
+    }
+  }
+  for (const a of (structureData || [])) {
+    for (const g of (a.org_groups || [])) {
+      for (const t of (g.teams || [])) {
+        if (t.gyjn_staff_code === staffCode && !(excludeType === 'team' && t.id === excludeId)) return 'gyjn';
+        if (t.bgyjn_staff_code === staffCode && !(excludeType === 'team' && t.id === excludeId)) return 'bgyjn';
+      }
+    }
+  }
+  return 'td';
+}
+
 async function assignMemberPos(staffCode, newPos, posType) {
   try {
+    const teamId = document.getElementById('edit_struct_id').value;
+
+    if (posType === 'management') {
+      const TEAM_POS_FIELDS = { gyjn: 'gyjn_staff_code', bgyjn: 'bgyjn_staff_code' };
+      const teamItem = findStructItem('team', teamId);
+
+      if (teamItem) {
+        // Assigning TO a structural position → enforce uniqueness
+        if (TEAM_POS_FIELDS[newPos]) {
+          const field = TEAM_POS_FIELDS[newPos];
+          const currentHolder = teamItem[field];
+          if (currentHolder && currentHolder !== staffCode) {
+            const hn = allStaff.find(s => s.staff_code === currentHolder)?.full_name || currentHolder;
+            if (!confirm(`⚠️ Mỗi Tổ chỉ có 1 ${getPositionName(newPos)}.\n\nHiện tại: ${hn} (${currentHolder})\nĐổi sang ${staffCode}?`)) return;
+            const fallback = getHighestStructuralPosition(currentHolder, 'team', teamId);
+            await sbFetch(`/rest/v1/staff?staff_code=eq.${currentHolder}`, { method:'PATCH', body: JSON.stringify({ position: fallback }) });
+          }
+          const su = {}; su[field] = staffCode;
+          await sbFetch(`/rest/v1/teams?id=eq.${teamId}`, { method:'PATCH', body: JSON.stringify(su) });
+        }
+        // Moving AWAY from a structural position → clear structural column
+        for (const [pc, fld] of Object.entries(TEAM_POS_FIELDS)) {
+          if (pc !== newPos && teamItem[fld] === staffCode) {
+            const cl = {}; cl[fld] = null;
+            await sbFetch(`/rest/v1/teams?id=eq.${teamId}`, { method:'PATCH', body: JSON.stringify(cl) });
+          }
+        }
+      }
+    }
+
     const body = posType === 'specialist' ? { specialist_position: newPos || null } : { position: newPos };
     await sbFetch(`/rest/v1/staff?staff_code=eq.${staffCode}`, { method:'PATCH', body: JSON.stringify(body) });
     const label = posType === 'specialist' ? (newPos ? getPositionName(newPos) : 'Không') : getPositionName(newPos);
     showToast(`\u2705 \u0110\u00e3 ch\u1ec9 \u0111\u1ecbnh ${label} cho ${staffCode}`);
-    const teamId = document.getElementById('edit_struct_id').value;
     await loadStructure();
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);

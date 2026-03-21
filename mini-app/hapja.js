@@ -204,6 +204,19 @@ async function approveHapja(id) {
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newPid }) });
     showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
     closeModal('hapjaDetailModal');
+
+    // === Auto-triggers for Hapja approval ===
+    if (newPid) {
+      // Priority: "Chốt TV lần 1" for NDD
+      if (typeof createPriorityTask === 'function' && nddCode) {
+        createPriorityTask(nddCode, newPid, 'chot_tv_1', `Chốt TV lần 1 — ${h.full_name}`, null);
+      }
+      // Notification: notify creator
+      if (typeof createNotification === 'function') {
+        createNotification([h.created_by, nddCode], 'hapja_approved', '✅ Hapja đã duyệt', h.full_name, newPid);
+      }
+    }
+
     loadDashboard(); loadProfiles();
   } catch(e) { showToast('❌ Lỗi khi duyệt'); console.error(e); }
 }

@@ -520,6 +520,32 @@ async function saveScheduleTV() {
 
     closeModal('scheduleTVModal');
     showToast(editingSessionId ? '✅ Đã cập nhật Chốt TV' : '✅ Đã chốt Tư vấn');
+
+    // === Auto-triggers for NEW Chốt TV ===
+    if (!editingSessionId) {
+      const p = allProfiles.find(x => x.id === currentProfileId);
+      const pName = p?.full_name || '';
+      // Calendar: create Chốt TV event + deadline BC TV
+      if (typeof createCalEventFromChotTV === 'function') {
+        createCalEventFromChotTV(currentProfileId, num, dt || null);
+      }
+      // Notification: notify stakeholders
+      if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+        const stakeholders = await getProfileStakeholders(currentProfileId);
+        createNotification(stakeholders, 'chot_tv', `📅 Chốt TV lần ${num}`, `${pName} — ${tool}`, currentProfileId);
+      }
+      // Priority: create "viết BC TV" task (deadline +1h)
+      if (typeof createPriorityTask === 'function') {
+        const deadline = dt ? new Date(new Date(dt).getTime() + 3600000).toISOString() : null;
+        const myCode = getEffectiveStaffCode();
+        createPriorityTask(myCode, currentProfileId, 'viet_bc_tv', `Viết BC TV lần ${num} — ${pName}`, deadline);
+      }
+      // Priority: complete "chot_tv_1" if this is session 1
+      if (num === 1 && typeof completePriorityTask === 'function') {
+        completePriorityTask(currentProfileId, 'chot_tv_1');
+      }
+    }
+
     editingSessionId = null;
     await _refreshCurrentProfile();
   } catch(e) {
@@ -604,6 +630,15 @@ async function saveChotBB() {
     }
     closeModal('chotBBModal');
     showToast('🎓 Đã chốt BB!' + (gvbb ? ` GVBB: ${gvbb}` : ' Hãy tạo group Telegram và gắn hồ sơ.'));
+
+    // === Auto-triggers for Chốt BB ===
+    const p = allProfiles.find(x => x.id === currentProfileId);
+    const pName = p?.full_name || '';
+    if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+      const stakeholders = await getProfileStakeholders(currentProfileId);
+      createNotification(stakeholders, 'chot_bb', '🎓 Chốt BB', pName, currentProfileId);
+    }
+
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
@@ -740,6 +775,29 @@ async function saveRecord() {
     } else {
       await sbFetch('/rest/v1/records', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
       showToast('✅ Đã thêm!');
+
+      // === Auto-triggers for NEW records ===
+      const p = allProfiles.find(x => x.id === currentProfileId);
+      const pName = p?.full_name || '';
+      if (isTV) {
+        // Complete "viet_bc_tv" priority task
+        if (typeof completePriorityTask === 'function') completePriorityTask(currentProfileId, 'viet_bc_tv');
+        // Notification
+        if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+          const stakeholders = await getProfileStakeholders(currentProfileId);
+          createNotification(stakeholders, 'bc_tv', `📝 BC TV lần ${data.lan_thu}`, pName, currentProfileId);
+        }
+      } else {
+        // BB report: complete "viet_bc_bb" priority + create next BB event if buoi_tiep
+        if (typeof completePriorityTask === 'function') completePriorityTask(currentProfileId, 'viet_bc_bb');
+        if (data.buoi_tiep && typeof createCalEventFromBBReport === 'function') {
+          createCalEventFromBBReport(currentProfileId, data.buoi_tiep);
+        }
+        if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+          const stakeholders = await getProfileStakeholders(currentProfileId);
+          createNotification(stakeholders, 'bc_bb', `📋 BC BB buổi ${data.buoi_thu}`, pName, currentProfileId);
+        }
+      }
     }
     closeModal('addRecordModal');
     currentRecordId = null;
