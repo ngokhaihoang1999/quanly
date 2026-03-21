@@ -701,6 +701,18 @@ function openAddRecordModal(type, existingContent = null, readOnly = false) {
       <div class="field-group"><label>Điểm hái trái</label><textarea id="rm_diem_hai" placeholder="...">${c.diem_hai||''}</textarea></div>
       <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
   } else {
+    // Parse existing buoi_tiep to date/time values (support old DD/MM/YYYY and ISO formats)
+    const parseBuoiTiep = (val) => {
+      if (!val) return { date: '', time: '' };
+      // ISO format: YYYY-MM-DDTHH:mm or datetime-local
+      const isoMatch = val.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (isoMatch) return { date: `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`, time: `${isoMatch[4]}:${isoMatch[5]}` };
+      // Old format: DD/MM/YYYY HH:mm
+      const oldMatch = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
+      if (oldMatch) return { date: `${oldMatch[3]}-${String(oldMatch[2]).padStart(2,'0')}-${String(oldMatch[1]).padStart(2,'0')}`, time: `${String(oldMatch[4]).padStart(2,'0')}:${oldMatch[5]}` };
+      return { date: '', time: '' };
+    };
+    const bt = parseBuoiTiep(c.buoi_tiep);
     body.innerHTML = `
       <div class="field-group"><label>Buổi thứ</label><input type="text" id="rm_buoi_thu" placeholder="1, 2, 3..." value="${c.buoi_thu||''}"/></div>
       <div class="field-group"><label>Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung||''}</textarea></div>
@@ -708,7 +720,13 @@ function openAddRecordModal(type, existingContent = null, readOnly = false) {
       <div class="field-group"><label>Khai thác mới về HS</label><textarea id="rm_khai_thac" placeholder="...">${c.khai_thac||''}</textarea></div>
       <div class="field-group"><label>Tương tác với HS đáng chú ý</label><textarea id="rm_tuong_tac" placeholder="...">${c.tuong_tac||''}</textarea></div>
       <div class="field-group"><label>Đề xuất hướng chăm sóc tiếp theo</label><textarea id="rm_de_xuat_cs" placeholder="...">${c.de_xuat_cs||''}</textarea></div>
-      <div class="field-group"><label>Buổi gặp tiếp theo</label><input type="text" id="rm_buoi_tiep" placeholder="DD/MM/YYYY HH:mm" value="${c.buoi_tiep||''}"/></div>
+      <div class="field-group">
+        <label>📅 Buổi gặp tiếp theo</label>
+        <div class="grid-2">
+          <div class="field-group"><label style="font-size:11px;">Ngày</label><input type="date" id="rm_buoi_tiep_date" value="${bt.date}"/></div>
+          <div class="field-group"><label style="font-size:11px;">Giờ</label><input type="time" id="rm_buoi_tiep_time" value="${bt.time}"/></div>
+        </div>
+      </div>
       <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   }
   document.getElementById('addRecordModal').classList.add('open');
@@ -741,6 +759,10 @@ async function saveRecord() {
       de_xuat:       document.getElementById('rm_de_xuat')?.value,
     };
   } else {
+    // Build ISO datetime from date + time pickers
+    const btDate = document.getElementById('rm_buoi_tiep_date')?.value; // YYYY-MM-DD
+    const btTime = document.getElementById('rm_buoi_tiep_time')?.value; // HH:mm
+    const buoiTiepISO = btDate ? (btTime ? `${btDate}T${btTime}:00` : `${btDate}T00:00:00`) : null;
     data = {
       buoi_thu:      document.getElementById('rm_buoi_thu')?.value,
       noi_dung:      document.getElementById('rm_noi_dung')?.value,
@@ -748,7 +770,7 @@ async function saveRecord() {
       khai_thac:     document.getElementById('rm_khai_thac')?.value,
       tuong_tac:     document.getElementById('rm_tuong_tac')?.value,
       de_xuat_cs:    document.getElementById('rm_de_xuat_cs')?.value,
-      buoi_tiep:     document.getElementById('rm_buoi_tiep')?.value,
+      buoi_tiep:     buoiTiepISO,
       noi_dung_tiep: document.getElementById('rm_noi_dung_tiep')?.value,
     };
   }

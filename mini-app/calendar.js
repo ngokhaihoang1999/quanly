@@ -307,14 +307,23 @@ async function createCalEventFromBBReport(profileId, buoiTiepStr) {
   const p = allProfiles.find(x => x.id === profileId);
   const pName = p?.full_name || '';
   const myCode = getEffectiveStaffCode();
-  
-  // Parse DD/MM/YYYY HH:mm
-  const match = buoiTiepStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
-  if (!match) return;
-  const [, dd, mm, yyyy, hh, mi] = match;
-  const dateStr = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-  const timeStr = `${hh.padStart(2,'0')}:${mi}`;
-  
+
+  let dateStr, timeStr;
+
+  // Try ISO format first: YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+  const isoMatch = buoiTiepStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (isoMatch) {
+    dateStr = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    timeStr = `${isoMatch[4]}:${isoMatch[5]}`;
+  } else {
+    // Fallback: old DD/MM/YYYY HH:mm format
+    const oldMatch = buoiTiepStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
+    if (!oldMatch) return;
+    const [, dd, mm, yyyy, hh, mi] = oldMatch;
+    dateStr = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+    timeStr = `${hh.padStart(2,'0')}:${mi}`;
+  }
+
   try {
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'hoc_bb',
