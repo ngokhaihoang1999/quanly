@@ -356,9 +356,27 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt) {
   const p = allProfiles.find(x => x.id === profileId);
   const pName = p?.full_name || '';
   const myCode = getEffectiveStaffCode();
-  const eventDate = scheduledAt ? new Date(scheduledAt) : new Date();
-  const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth()+1).padStart(2,'0')}-${String(eventDate.getDate()).padStart(2,'0')}`;
-  const timeStr = scheduledAt ? `${String(eventDate.getHours()).padStart(2,'0')}:${String(eventDate.getMinutes()).padStart(2,'0')}` : null;
+  // Extract date/time DIRECTLY from string to avoid timezone conversion issues
+  // scheduledAt from datetime-local input is already "YYYY-MM-DDTHH:mm" in local time
+  let dateStr, timeStr;
+  if (scheduledAt) {
+    const isoMatch = String(scheduledAt).match(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    if (isoMatch) {
+      dateStr = isoMatch[1];   // "YYYY-MM-DD"
+      timeStr = isoMatch[2];   // "HH:mm"  ← local time, no conversion
+    } else {
+      // Fallback: use Date object
+      const d = new Date(scheduledAt);
+      const pad = n => String(n).padStart(2,'0');
+      dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+  } else {
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    timeStr = null;
+  }
   
   try {
     // Create Chốt TV event
