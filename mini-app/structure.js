@@ -1,4 +1,4 @@
-﻿// ============ STRUCTURE ============
+// ============ STRUCTURE ============
 async function loadStructure() {
   try {
     const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
@@ -36,7 +36,10 @@ async function loadStructure() {
               if (m.staff_code === t.gyjn_staff_code) ep = 'gyjn';
               if (m.staff_code === t.bgyjn_staff_code) ep = 'bgyjn';
               const posBadge = ep && ep !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(ep)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(ep)}</span>` : '';
-              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}</div>`;
+              const cmBadge = m.specialist_position
+                ? `<span class="staff-role-badge" style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(139,92,246,0.12);color:#7c3aed;border:1px solid rgba(139,92,246,0.25);">CM: ${getPositionName(m.specialist_position)}</span>`
+                : '';
+              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}${cmBadge}</div>`;
             });
           }
         });
@@ -230,6 +233,9 @@ function renderTeamMembers(teamItem) {
       if (m.staff_code === teamItem.gyjn_staff_code) effectivePos = 'gyjn';
       if (m.staff_code === teamItem.bgyjn_staff_code) effectivePos = 'bgyjn';
       const posBadge = `<span class="staff-role-badge ${getBadgeClass(effectivePos)}" style="font-size:9px;padding:1px 6px;">${getPositionName(effectivePos)}</span>`;
+      const cmBadge = m.specialist_position
+        ? `<span class="staff-role-badge" style="font-size:9px;padding:1px 6px;margin-left:3px;background:rgba(139,92,246,0.15);color:#7c3aed;border:1px solid rgba(139,92,246,0.3);">CM: ${getPositionName(m.specialist_position)}</span>`
+        : '';
       const assignHtml = canAssignPos ? `
         <div style="display:flex;gap:4px;margin-top:4px;">
           <select onchange="assignMemberPos('${m.staff_code}',this.value,'management')" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;flex:1;">
@@ -243,7 +249,7 @@ function renderTeamMembers(teamItem) {
       return `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;">${m.staff_code} ${posBadge}</div>
+          <div style="font-size:13px;font-weight:600;">${m.staff_code} ${posBadge}${cmBadge}</div>
           ${assignHtml}
         </div>
         <button onclick="removeMemberFromTeam('${m.staff_code}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;" title="G\u1ee1 kh\u1ecfi t\u1ed5">\u2716</button>
@@ -297,8 +303,16 @@ async function updateStructure() {
     } else if (type === 'area' && oldItem) {
       await syncMgr(oldItem.yjyn_staff_code, mgr, 'yjyn');
     }
-    // Auto-add GYJN/BGYJN as team members
+    // Auto-add GYJN/BGYJN as team members, and clear old GYJN/BGYJN's position to prevent duplicates
     if (type==='team') {
+      // Clear old GYJN position if changing to someone else
+      if (oldItem?.gyjn_staff_code && oldItem.gyjn_staff_code !== (mgr||null)) {
+        await sbFetch(`/rest/v1/staff?staff_code=eq.${oldItem.gyjn_staff_code}&position=eq.gyjn`, { method:'PATCH', body:JSON.stringify({position:'td'}) });
+      }
+      // Clear old BGYJN position if changing to someone else
+      if (oldItem?.bgyjn_staff_code && oldItem.bgyjn_staff_code !== (mgr2||null)) {
+        await sbFetch(`/rest/v1/staff?staff_code=eq.${oldItem.bgyjn_staff_code}&position=eq.bgyjn`, { method:'PATCH', body:JSON.stringify({position:'td'}) });
+      }
       if (mgr) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:id}) });
       if (mgr2) await sbFetch(`/rest/v1/staff?staff_code=eq.${mgr2}&team_id=is.null`, { method:'PATCH', body:JSON.stringify({team_id:id}) });
     }
