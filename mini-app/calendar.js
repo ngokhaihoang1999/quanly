@@ -136,9 +136,9 @@ function renderCalendarGrid() {
     
     let labels = '';
     if (dayEvents.length > 0) {
-      // Count TV sessions (chot_tv + related) and BB sessions (hoc_bb + related)
-      const tvCount = dayEvents.filter(e => ['chot_tv','deadline_bc_tv','bc_tv'].includes(e.event_type)).length;
-      const bbCount = dayEvents.filter(e => ['hoc_bb','deadline_bc_bb','bc_bb'].includes(e.event_type)).length;
+      // Count: only chot_tv for TV sessions, only hoc_bb for BB sessions
+      const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv').length;
+      const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb').length;
       const customEvents = dayEvents.filter(e => e.event_type === 'custom');
 
       const parts = [];
@@ -369,17 +369,6 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt) {
       is_auto: true, is_system: true
     })});
     
-    // Create deadline BC TV (+1h)
-    const deadlineDate = new Date(eventDate.getTime() + 60*60*1000);
-    const dlDateStr = `${deadlineDate.getFullYear()}-${String(deadlineDate.getMonth()+1).padStart(2,'0')}-${String(deadlineDate.getDate()).padStart(2,'0')}`;
-    const dlTimeStr = `${String(deadlineDate.getHours()).padStart(2,'0')}:${String(deadlineDate.getMinutes()).padStart(2,'0')}`;
-    
-    await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
-      staff_code: myCode, profile_id: profileId, event_type: 'deadline_bc_tv',
-      title: `Deadline BC TV lần ${sessionNum}  E${pName}`,
-      event_date: dlDateStr, event_time: dlTimeStr,
-      is_auto: true, is_system: true
-    })});
   } catch(e) { console.warn('createCalEventFromChotTV:', e); }
 }
 
