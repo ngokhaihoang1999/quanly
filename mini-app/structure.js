@@ -3,6 +3,7 @@ async function loadStructure() {
   try {
     const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
     structureData = await res.json();
+    if (typeof buildStaffUnitMap === 'function') buildStaffUnitMap(); // build unit lookup
     const el = document.getElementById('structureTree');
     const pos = getCurrentPosition();
     const myCode = getEffectiveStaffCode();

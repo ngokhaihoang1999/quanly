@@ -94,9 +94,11 @@ async function openProfile(p) {
       });
     });
   } catch(e) {}
-  const nddDisplay = p.ndd_staff_code || rolesInfo.ndd || '—';
-  const tvvDisplay = rolesInfo.tvv.length ? rolesInfo.tvv.join(', ') : '—';
-  const gvbbDisplay = rolesInfo.gvbb || '—';
+  const nddDisplay = p.ndd_staff_code || rolesInfo.ndd
+    ? getStaffLabel(p.ndd_staff_code || rolesInfo.ndd) : '—';
+  const tvvDisplay = rolesInfo.tvv.length
+    ? rolesInfo.tvv.map(c => getStaffLabel(c)).join(', ') : '—';
+  const gvbbDisplay = rolesInfo.gvbb ? getStaffLabel(rolesInfo.gvbb) : '—';
 
   // Per-profile role of current user
   const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);

@@ -6,6 +6,36 @@ let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
 let allPositions = [];
 
+// ============ STAFF UNIT MAP ============
+// Builds a lookup: staffCode → "Area · Group · Team"
+let staffUnitMap = {};
+
+function buildStaffUnitMap() {
+  staffUnitMap = {};
+  (structureData || []).forEach(a => {
+    (a.org_groups || []).forEach(g => {
+      (g.teams || []).forEach(t => {
+        (t.staff || []).forEach(m => {
+          staffUnitMap[m.staff_code] = `${a.name} · ${g.name} · ${t.name}`;
+        });
+      });
+    });
+  });
+}
+
+// Returns unit label for a staff code, e.g. "HCM2 · Nhóm 1 · Tổ 3"
+function getStaffUnit(code) {
+  return staffUnitMap[code] || '';
+}
+
+// Returns display label: "code (unit)" or just "code" if no unit
+function getStaffLabel(code) {
+  if (!code) return '';
+  const unit = getStaffUnit(code);
+  return unit ? `${code} (${unit})` : code;
+}
+
+
 // ============ CUSTOM CONFIRM (replaces browser confirm() which shows domain) ============
 function showConfirm(message, onOk, onCancel) {
   let modal = document.getElementById('customConfirmModal');
