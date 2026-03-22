@@ -36,7 +36,8 @@ async function loadPriority() {
         ? sbFetch(`/rest/v1/check_hapja?status=eq.pending&select=id,full_name,created_by,created_at,data&order=created_at.asc`)
         : Promise.resolve(null),
       // Priority tasks — only show if visible_at has passed (or is null)
-      sbFetch(`/rest/v1/priority_tasks?staff_code=in.(${codesStr})&is_completed=eq.false&or=(visible_at.is.null,visible_at.lte.${nowIso})&select=*&order=created_at.desc`)
+      // Note: encode ISO timestamp to avoid URL issues with colons
+      sbFetch(`/rest/v1/priority_tasks?staff_code=in.(${codesStr})&is_completed=eq.false&or=(visible_at.is.null,visible_at.lte.${encodeURIComponent(nowIso)})&select=*&order=created_at.desc`)
     ]);
 
     const pendingHapjas = hapjaRes ? await hapjaRes.json() : [];
