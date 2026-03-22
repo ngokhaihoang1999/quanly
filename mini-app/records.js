@@ -748,6 +748,7 @@ function openAddRecordModal(type, existingContent = null, readOnly = false) {
           <div class="field-group"><label style="font-size:11px;">Ngày</label><input type="date" id="rm_buoi_tiep_date" value="${bt.date}"/></div>
           <div class="field-group"><label style="font-size:11px;">Giờ</label><input type="time" id="rm_buoi_tiep_time" value="${bt.time}"/></div>
         </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Bạn có thể thay đổi thời gian này sau đó</div>
       </div>
       <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   }

@@ -1,4 +1,4 @@
-﻿// ============ CALENDAR MODULE ============
+// ============ CALENDAR MODULE ============
 // Lịch tháng với auto-events từ hềEthống + events cá nhân
 
 let calYear, calMonth, calEvents = [], calSelectedDate = null;
@@ -134,15 +134,26 @@ function renderCalendarGrid() {
     if (isToday) cls += ' cal-today';
     if (isSelected) cls += ' cal-selected';
     
-    let dots = '';
+    let labels = '';
     if (dayEvents.length > 0) {
-      const types = [...new Set(dayEvents.map(e => e.event_type))];
-      dots = '<div class="cal-dots">' + types.slice(0, 3).map(t => 
-        `<span class="cal-dot" style="background:${CAL_COLORS[t] || '#6b7280'}"></span>`
-      ).join('') + '</div>';
+      // Count TV sessions (chot_tv + related) and BB sessions (hoc_bb + related)
+      const tvCount = dayEvents.filter(e => ['chot_tv','deadline_bc_tv','bc_tv'].includes(e.event_type)).length;
+      const bbCount = dayEvents.filter(e => ['hoc_bb','deadline_bc_bb','bc_bb'].includes(e.event_type)).length;
+      const customEvents = dayEvents.filter(e => e.event_type === 'custom');
+
+      const parts = [];
+      if (tvCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#8b5cf6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tvCount} ca TV</span>`);
+      if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
+      customEvents.slice(0, 2).forEach(e => {
+        const short = (e.title || '').substring(0, 10) + (e.title?.length > 10 ? '…' : '');
+        parts.push(`<span style="display:block;font-size:9px;color:#3b82f6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${short}</span>`);
+      });
+
+      if (parts.length) labels = `<div style="width:100%;overflow:hidden;">${parts.join('')}</div>`;
     }
-    
-    html += `<div class="${cls}" onclick="calSelectDay(${d})"><span class="cal-day-num">${d}</span>${dots}</div>`;
+
+    html += `<div class="${cls}" onclick="calSelectDay(${d})"><span class="cal-day-num">${d}</span>${labels}</div>`;
+
   }
   
   html += '</div>';
