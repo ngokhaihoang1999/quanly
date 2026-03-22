@@ -364,7 +364,7 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt) {
     // Create Chốt TV event
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'chot_tv',
-      title: `Chốt TV lần ${sessionNum}  E${pName}`,
+      title: `Chốt TV lần ${sessionNum} — ${pName}`,
       event_date: dateStr, event_time: timeStr,
       is_auto: true, is_system: true
     })});
@@ -397,7 +397,7 @@ async function createCalEventFromBBReport(profileId, buoiTiepStr) {
   try {
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'hoc_bb',
-      title: `Học BB tiếp  E${pName}`,
+      title: `Học BB tiếp — ${pName}`,
       event_date: dateStr, event_time: timeStr,
       is_auto: true, is_system: true
     })});
