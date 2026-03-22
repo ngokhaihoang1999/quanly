@@ -1,4 +1,4 @@
-﻿const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
 const tg = window.Telegram?.WebApp;
 
@@ -725,20 +725,10 @@ async function executeKTToggle(profileId, newState, buoiThu) {
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('executeKTToggle:', e); }
 }
 
-// ============ THEME TOGGLE ============
-function toggleTheme() {
-  const html = document.documentElement;
-  const isLight = html.getAttribute('data-theme') === 'light';
-  html.setAttribute('data-theme', isLight ? 'dark' : 'light');
-  document.getElementById('themeToggle').textContent = isLight ? '\uD83C\uDF19' : '\u2600\uFE0F';
-  localStorage.setItem('cj_theme', isLight ? 'dark' : 'light');
-}
-// Restore saved theme
+// ============ THEME TOGGLE (tạm thời bỏ dark mode) ============
+function toggleTheme() { /* dark mode tạm thời bị tắt */ }
+// Force light mode, clear any saved dark preference
 (function() {
-  const saved = localStorage.getItem('cj_theme');
-  if (saved === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-    const btn = document.getElementById('themeToggle');
-    if (btn) btn.textContent = '\u2600\uFE0F';
-  }
+  document.documentElement.setAttribute('data-theme', 'light');
+  localStorage.removeItem('cj_theme');
 })();
