@@ -210,14 +210,48 @@ function openAddEventModal() {
   const today = calSelectedDate || new Date();
   const dateVal = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   
-  // Reuse addRecordModal for simplicity
+  // Check if user has management scope to distribute
+  const myPos = getCurrentPosition();
+  const mySpec = getCurrentSpecialistPosition();
+  const posObj = getPositionObj(myPos);
+  const specObj = getPositionObj(mySpec);
+  const scopeLevel = (SCOPE_LEVELS[posObj?.scope_level]||0) >= (SCOPE_LEVELS[specObj?.scope_level]||0)
+    ? posObj?.scope_level : specObj?.scope_level;
+  const canDistribute = (SCOPE_LEVELS[scopeLevel] || 0) >= 1 &&
+    (myPos !== 'td' || mySpec); // not plain TD
+
+  // Build position chips for distribution filter
+  const mgmtPosChips = getManagementPositions()
+    .map(p => `<div class="chip" data-pos="${p.code}" onclick="toggleChip(this)">${p.name}</div>`).join('');
+  const specPosChips = getSpecialistPositions()
+    .map(p => `<div class="chip" data-pos="${p.code}" onclick="toggleChip(this)">${p.name}</div>`).join('');
+
+  const distributeSection = canDistribute ? `
+    <div class="field-group" style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+      <label style="font-weight:600;color:var(--accent);">📢 Phân phối cho</label>
+      <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;">
+        <button id="dist_me" onclick="setDistMode('me')" class="dist-btn active"
+          style="font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;">Chỉ tôi</button>
+        <button id="dist_all" onclick="setDistMode('all')"
+          style="font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;">Tất cả trong scope</button>
+        <button id="dist_pos" onclick="setDistMode('pos')"
+          style="font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;">Theo chức vụ</button>
+      </div>
+      <div id="dist_pos_wrap" style="display:none;margin-top:4px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Chọn chức vụ nhận sự kiện:</div>
+        <div class="chips" id="chips_dist_pos" style="flex-wrap:wrap;gap:6px;">${mgmtPosChips}${specPosChips}</div>
+      </div>
+      <div id="dist_count" style="font-size:11px;color:var(--text3);margin-top:6px;"></div>
+    </div>` : '';
+
+  // Reuse addRecordModal
   document.getElementById('recordModalTitle').textContent = '📅 Tạo sự kiện mới';
   const body = document.getElementById('recordModalBody');
   body.innerHTML = `
-    <div class="field-group"><label>Tiêu đềE*</label><input type="text" id="ev_title" placeholder="Nội dung sự kiện..." /></div>
+    <div class="field-group"><label>Tiêu đề *</label><input type="text" id="ev_title" placeholder="Nội dung sự kiện..." /></div>
     <div class="grid-2">
       <div class="field-group"><label>Ngày *</label><input type="date" id="ev_date" value="${dateVal}" /></div>
-      <div class="field-group"><label>GiềE/label><input type="time" id="ev_time" /></div>
+      <div class="field-group"><label>Giờ</label><input type="time" id="ev_time" /></div>
     </div>
     <div class="field-group"><label>Mô tả</label><textarea id="ev_desc" placeholder="Chi tiết..." style="min-height:60px;"></textarea></div>
     <div class="field-group"><label>Nhắc trước</label>
@@ -225,29 +259,63 @@ function openAddEventModal() {
         <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">15 phút</div>
         <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">30 phút</div>
         <div class="chip" onclick="toggleChip(this);document.getElementById('ev_remind_custom_wrap').style.display='none';">60 phút</div>
-        <div class="chip" id="chip_custom_remind" onclick="toggleCustomReminder(this)">⏰ Chọn giềE/div>
+        <div class="chip" id="chip_custom_remind" onclick="toggleCustomReminder(this)">⏰ Chọn giờ</div>
       </div>
       <div id="ev_remind_custom_wrap" style="display:none;">
         <div class="grid-2">
           <div class="field-group" style="margin:0;"><label style="font-size:11px;">Ngày nhắc</label><input type="date" id="ev_remind_date" /></div>
-          <div class="field-group" style="margin:0;"><label style="font-size:11px;">GiềEnhắc</label><input type="time" id="ev_remind_time" /></div>
+          <div class="field-group" style="margin:0;"><label style="font-size:11px;">Giờ nhắc</label><input type="time" id="ev_remind_time" /></div>
         </div>
-        <div id="ev_remind_warn" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">⚠�E�EPhải trước thời điểm sự kiện</div>
+        <div id="ev_remind_warn" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">⚠️ Phải trước thời điểm sự kiện</div>
       </div>
     </div>
+    ${distributeSection}
   `;
-  // When event date/time changes, auto-validate reminder
+  // Event listeners
   document.getElementById('ev_date').addEventListener('change', validateReminderTime);
   document.getElementById('ev_time').addEventListener('change', validateReminderTime);
   document.getElementById('ev_remind_date')?.addEventListener('change', validateReminderTime);
   document.getElementById('ev_remind_time')?.addEventListener('change', validateReminderTime);
-  // Override save button behavior
+  // Override save button
   const saveBtn = document.querySelector('#addRecordModal .save-btn');
-  if (saveBtn) {
-    saveBtn.textContent = '📅 Tạo sự kiện';
-    saveBtn.onclick = saveCalEvent;
-  }
+  if (saveBtn) { saveBtn.textContent = '📅 Tạo sự kiện'; saveBtn.onclick = saveCalEvent; }
   document.getElementById('addRecordModal').classList.add('open');
+}
+
+// Distribution mode toggle
+let _distMode = 'me';
+function setDistMode(mode) {
+  _distMode = mode;
+  ['me','all','pos'].forEach(m => {
+    const btn = document.getElementById(`dist_${m}`);
+    if (!btn) return;
+    const isActive = m === mode;
+    btn.style.background = isActive ? 'var(--accent)' : 'var(--surface2)';
+    btn.style.color = isActive ? '#fff' : 'var(--text2)';
+    btn.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
+  });
+  const posWrap = document.getElementById('dist_pos_wrap');
+  if (posWrap) posWrap.style.display = mode === 'pos' ? '' : 'none';
+  updateDistCount();
+}
+async function updateDistCount() {
+  const countEl = document.getElementById('dist_count');
+  if (!countEl || _distMode === 'me') { if (countEl) countEl.textContent = ''; return; }
+  const codes = await _getDistTargetCodes();
+  countEl.textContent = `→ Gửi cho ${codes.length} TĐ trong scope`;
+}
+async function _getDistTargetCodes() {
+  const myCode = getEffectiveStaffCode();
+  if (_distMode === 'me') return [myCode];
+  // Get all managed codes
+  const allCodes = await getMyManagedStaffCodes();
+  if (_distMode === 'all') return allCodes;
+  // Filter by selected positions
+  const selectedPos = [...document.querySelectorAll('#chips_dist_pos .chip.active')].map(c => c.dataset.pos).filter(Boolean);
+  if (!selectedPos.length) return allCodes; // nothing selected = all
+  return (allStaff || []).filter(s => allCodes.includes(s.staff_code) &&
+    (selectedPos.includes(s.position) || selectedPos.includes(s.specialist_position))
+  ).map(s => s.staff_code);
 }
 
 async function saveCalEvent() {
@@ -256,12 +324,10 @@ async function saveCalEvent() {
   const time  = document.getElementById('ev_time')?.value || null;
   const desc  = document.getElementById('ev_desc')?.value?.trim() || null;
 
-  if (!title || !date) { showToast('⚠�E�ENhập tiêu đềEvà ngày'); return; }
+  if (!title || !date) { showToast('⚠️ Nhập tiêu đề và ngày'); return; }
 
-  // Reminder: custom datetime OR preset minutes
-  let reminderAt = null;
-  let reminderMinutes = [];
-
+  // Reminder
+  let reminderAt = null, reminderMinutes = [];
   const customWrap = document.getElementById('ev_remind_custom_wrap');
   const isCustom = customWrap?.style.display !== 'none';
   if (isCustom) {
@@ -269,43 +335,58 @@ async function saveCalEvent() {
     const rt = document.getElementById('ev_remind_time')?.value;
     if (rd) {
       reminderAt = rt ? `${rd}T${rt}:00` : `${rd}T08:00:00`;
-      // Validate: must be before event
       const eventDt = time ? new Date(`${date}T${time}:00`) : new Date(`${date}T23:59:59`);
       if (new Date(reminderAt) >= eventDt) {
-        showToast('⚠�E�EGiềEnhắc phải trước thời điểm sự kiện');
+        showToast('⚠️ Giờ nhắc phải trước thời điểm sự kiện');
         document.getElementById('ev_remind_warn').style.display = '';
         return;
       }
     }
   } else {
-    const chips = getChipValues('chips_ev_reminder');
-    reminderMinutes = chips
-      .map(v => parseInt(v))
-      .filter(v => !isNaN(v));
+    reminderMinutes = getChipValues('chips_ev_reminder').map(v => parseInt(v)).filter(v => !isNaN(v));
   }
 
+  // Determine distribution targets
+  const targetCodes = await _getDistTargetCodes();
+  const isDistributed = _distMode !== 'me' && targetCodes.length > 1;
+  const myCode = getEffectiveStaffCode();
+
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⌛ Đang tạo...'; }
+
   try {
-    await sbFetch('/rest/v1/calendar_events', {
-      method: 'POST',
-      body: JSON.stringify({
-        staff_code: getEffectiveStaffCode(),
-        event_type: 'custom',
-        title, description: desc,
-        event_date: date,
-        event_time: time,
-        reminder_minutes: reminderMinutes.length ? reminderMinutes : null,
-        reminder_at: reminderAt,
-        reminder_channels: ['app','chat'],
-        is_auto: false,
-        is_system: false
-      })
-    });
+    // Build event rows for each target
+    const rows = targetCodes.map(code => ({
+      staff_code: code,
+      created_by: myCode, // track who created
+      event_type: 'custom',
+      title, description: desc,
+      event_date: date, event_time: time,
+      reminder_minutes: reminderMinutes.length ? reminderMinutes : null,
+      reminder_at: reminderAt,
+      reminder_channels: ['app','chat'],
+      is_auto: false,
+      is_system: isDistributed // system=true so scope-based visibility applies
+    }));
+
+    // Insert in batches of 50
+    for (let i = 0; i < rows.length; i += 50) {
+      await sbFetch('/rest/v1/calendar_events', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows.slice(i, i + 50))
+      });
+    }
+
     closeModal('addRecordModal');
-    const saveBtn = document.querySelector('#addRecordModal .save-btn');
-    if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; }
-    showToast('✁EĐã tạo sự kiện');
+    if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; saveBtn.disabled = false; }
+    showToast(`✅ Đã tạo sự kiện${isDistributed ? ` cho ${targetCodes.length} TĐ` : ''}`);
+    _distMode = 'me'; // reset
     loadCalendar();
-  } catch(e) { showToast('❁ELỗi'); console.error(e); }
+  } catch(e) {
+    showToast('❌ Lỗi tạo sự kiện'); console.error(e);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '📅 Tạo sự kiện'; }
+  }
 }
 
 function toggleCustomReminder(chipEl) {
