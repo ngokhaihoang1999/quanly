@@ -1,21 +1,17 @@
 // ============ CALENDAR MODULE ============
-// Lịch tháng với auto-events từ hềEthống + events cá nhân
+// Lịch tháng với auto-events từ hệ thống + events cá nhân
 
 let calYear, calMonth, calEvents = [], calSelectedDate = null;
 
 const CAL_COLORS = {
-  chot_tv: '#8b5cf6',      // purple
-  hoc_bb: '#22c55e',       // green
-  deadline_bc_tv: '#f97316', // orange
-  deadline_bc_bb: '#ef4444', // red
-  custom: '#3b82f6'         // blue
+  chot_tv: '#8b5cf6',   // purple
+  hoc_bb:  '#22c55e',   // green
+  custom:  '#3b82f6'    // blue
 };
 const CAL_LABELS = {
   chot_tv: 'Chốt TV',
-  hoc_bb: 'Học BB',
-  deadline_bc_tv: 'Deadline BC TV',
-  deadline_bc_bb: 'Deadline BC BB',
-  custom: 'Cá nhân'
+  hoc_bb:  'Học BB',
+  custom:  'Cá nhân'
 };
 
 function initCalendar() {
@@ -80,19 +76,35 @@ async function loadCalendar() {
 }
 
 function isEventInScope(ev, myCode, scope) {
-  // If admin/system scope, see all
+  // Admin sees all
   if (scope === 'system') return true;
-  // If the event belongs to this user, always show
+
+  // Owner always sees their own event
   if (ev.staff_code === myCode) return true;
-  // For scope-based visibility of system events:
-  // Check if the event's profile is within the user's scope
-  // Simple approach: check if the event's staff_code is in a team under user's management
+
+  // Creator of a distributed event always sees it (even if staff_code = recipient)
+  if (ev.created_by && ev.created_by === myCode) return true;
+
+  // Distributed events (is_system=true + created_by set) — only visible to the specific recipient
+  // (staff_code is the recipient, already caught above if matches myCode)
+  if (ev.created_by) return false; // has a creator → it's a distributed event, not for us
+
+  // Auto-generated system events (chot_tv, hoc_bb): show if profile is in user's scope
   if (ev.profile_id) {
     const p = allProfiles.find(x => x.id === ev.profile_id);
+    // NDD of the profile sees it
     if (p && p.ndd_staff_code === myCode) return true;
+    // If manager is in staffUnitMap scope (managed by user): show
+    if (p && p.ndd_staff_code && getStaffUnit(p.ndd_staff_code)) {
+      // Check if ndd is in my managed scope
+      const nddUnit = getStaffUnit(p.ndd_staff_code);
+      const myUnit = getStaffUnit(myCode);
+      if (nddUnit && myUnit && nddUnit.startsWith(myUnit.split(' · ')[0])) return true;
+    }
   }
-  // For now, show system events to all (they can be filtered further)
-  return true;
+
+  // Default: show auto system events to all (chot_tv, hoc_bb visible to scope)
+  return !ev.created_by; // only if NOT a distributed event
 }
 
 function renderCalendarGrid() {
