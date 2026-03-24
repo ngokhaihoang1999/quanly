@@ -70,9 +70,10 @@ function renderProfileCard(p, opts = {}) {
 
   const clickFn = opts.clickFn || `openProfileById('${p.id}')`;
   const avatarLetter = (p.full_name || '?')[0].toUpperCase();
+  const avatarBg = p.avatar_color ? p.avatar_color : 'linear-gradient(135deg,var(--accent),#ec4899)';
 
   return `<div class="profile-card" onclick="${clickFn}">
-    <div class="avatar" style="background:linear-gradient(135deg,var(--accent),#ec4899);">${avatarLetter}</div>
+    <div class="avatar" style="background:${avatarBg};">${avatarLetter}</div>
     <div class="profile-info">
       <div class="profile-name">${p.full_name}${phaseBadge}${ktBadge}${extraBadges}</div>
       <div class="profile-meta"><span class="status-dot" style="background:${statusColor};"></span>${statusLabel}${metaStr ? ' · ' + metaStr : ''}</div>
@@ -614,6 +615,20 @@ function showUnitPopup(type) {
   document.getElementById('unitPopupTitle').textContent = title;
   document.getElementById('unitPopupBody').innerHTML = items.length ? items.join('') : '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có dữ liệu</div>';
   document.getElementById('unitPopupModal').classList.add('open');
+}
+// ============ AVATAR COLOR ============
+async function changeAvatarColor(profileId, color) {
+  try {
+    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ avatar_color: color })
+    });
+    // Immediately update local cache and UI
+    const p = allProfiles.find(x => x.id === profileId);
+    if (p) p.avatar_color = color;
+    if (typeof _refreshCurrentProfile === 'function') _refreshCurrentProfile();
+    else if (typeof loadDashboard === 'function') loadDashboard();
+  } catch(e) { console.error('changeAvatarColor:', e); showToast('❌ Lỗi đổi màu nền'); }
 }
 
 // ============ FRUIT STATUS TOGGLE ============

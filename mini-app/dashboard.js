@@ -372,7 +372,7 @@ async function loadDashboard() {
     let myRoles = [], myHapja = 0;
     if (myCode) {
       // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
-      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened,fruit_status,birth_year,dropout_reason,gender),fruit_roles(staff_code,role_type))`);
+      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened,fruit_status,birth_year,dropout_reason,gender,avatar_color),fruit_roles(staff_code,role_type))`);
       myRoles = await rRes.json();
       const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id`);
       myHapja = (await mhRes.json()).length;
