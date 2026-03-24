@@ -372,7 +372,7 @@ async function loadDashboard() {
     let myRoles = [], myHapja = 0;
     if (myCode) {
       // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
-      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened),fruit_roles(staff_code,role_type))`);
+      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened,fruit_status,birth_year,dropout_reason,gender),fruit_roles(staff_code,role_type))`);
       myRoles = await rRes.json();
       const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id`);
       myHapja = (await mhRes.json()).length;
@@ -437,7 +437,9 @@ async function loadDashboard() {
         const gvbbList = allRolesInGroup.filter(x=>x.role_type==='gvbb').map(x=>x.staff_code).join(', ');
         // Latest activity — unified via latestActivityLabel()
         const latestActivity = latestActivityLabel(recordMap[pid], sessionMap[pid]);
-        return renderProfileCard(p, {
+        // Use full profile from allProfiles cache if available (has all fields)
+        const fullP = allProfiles.find(x => x.id === pid) || p;
+        return renderProfileCard(fullP, {
           extraMeta: [tvvList ? '💬 TVV: ' + tvvList : '', gvbbList ? '🎓 GVBB: ' + gvbbList : '', latestActivity ? '⏱ ' + latestActivity : ''].filter(Boolean).join(' · ')
         });
       }).join('');
@@ -461,8 +463,9 @@ async function loadDashboard() {
         const isKT = p?.is_kt_opened;
         const showKT = ['bb', 'center', 'completed'].includes(ph);
         const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-right:6px;">${isKT ? '📖 KT' : '📕 Chưa KT'}</span>` : '';
+        const fullP2 = allProfiles.find(x => x.id === r.fruit_groups?.profile_id) || p;
         const roleBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${role}</span>`;
-        return renderProfileCard(p, { extraBadges: roleBadge });
+        return renderProfileCard(fullP2, { extraBadges: roleBadge });
       }).join('');
       if (otherItems) myListEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
     }
