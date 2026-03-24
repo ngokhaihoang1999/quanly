@@ -539,34 +539,23 @@ function showUnitPopup(type) {
     title = '💬 Trái TV';
     const list = window._unitTvvFruits || [];
     items = list.map(r => {
-      const p = r.fruit_groups?.profiles;
-      const ph = p?.phase || 'chakki';
-      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
-          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
-        </div>
-        <div style="font-size:11px;color:var(--text2);">TĐ Q.Lý: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
-      </div>`;
+      const pid = r.fruit_groups?.profile_id;
+      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
+      return renderProfileCard(fullP, {
+        extraMeta: 'TĐ: ' + r.staff_code + ' (' + (r.role_type||'').toUpperCase() + ')',
+        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
+      });
     });
   } else if (type === 'gvbb') {
     title = '🎓 Trái BB';
     const list = window._unitGvbbFruits || [];
     items = list.map(r => {
-      const p = r.fruit_groups?.profiles;
-      const ph = p?.phase || 'bb';
-      const isKT = p?.is_kt_opened;
-      const ktLabel = `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`;
-      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
-          <div style="flex-shrink:0;">
-            <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${phColor[ph]};color:white;">${phMap[ph]||ph}</span>
-            ${ktLabel}
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--text2);">TĐ Q.Lý: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
-      </div>`;
+      const pid = r.fruit_groups?.profile_id;
+      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
+      return renderProfileCard(fullP, {
+        extraMeta: 'TĐ: ' + r.staff_code + ' (' + (r.role_type||'').toUpperCase() + ')',
+        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
+      });
     });
   } else if (type === 'bbgroup' || type === 'bbgroup_phase') {
     title = type === 'bbgroup_phase' ? '👥 Group BB (giai đoạn BB)' : '👥 Group BB (tích luỹ)';
@@ -579,40 +568,34 @@ function showUnitPopup(type) {
     title = '💬 Trái TV (đang ở giai đoạn TV)';
     const list = window._unitPhaseTVFruits || [];
     items = list.map(r => {
-      const p = r.fruit_groups?.profiles;
-      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
-          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--accent);color:white;">💬 TV</span>
-        </div>
-        <div style="font-size:11px;color:var(--text2);">TĐ: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
-      </div>`;
+      const pid = r.fruit_groups?.profile_id;
+      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
+      return renderProfileCard(fullP, {
+        extraMeta: 'TĐ: ' + r.staff_code,
+        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
+      });
     });
   } else if (type === 'gvbb_phase') {
     title = '🎓 Trái BB (đang ở giai đoạn BB)';
     const list = window._unitPhaseBBFruits || [];
     items = list.map(r => {
-      const p = r.fruit_groups?.profiles;
-      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
-          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--green);color:white;">🎓 BB</span>
-        </div>
-        <div style="font-size:11px;color:var(--text2);">TĐ: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
-      </div>`;
+      const pid = r.fruit_groups?.profile_id;
+      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
+      return renderProfileCard(fullP, {
+        extraMeta: 'TĐ: ' + r.staff_code,
+        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
+      });
     });
   } else if (type === 'center') {
     title = '🏛️ Trái Center';
     const list = window._unitCenterFruits || [];
     items = list.map(r => {
-      const p = r.fruit_groups?.profiles;
-      return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="openProfileById('${r.fruit_groups?.profile_id}');closeModal('unitPopupModal')">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:700;font-size:13px;">${p?.full_name||'N/A'}</div>
-          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:#8b5cf6;color:white;">🏛️ Center</span>
-        </div>
-        <div style="font-size:11px;color:var(--text2);">TĐ: ${r.staff_code} (${(r.role_type||'').toUpperCase()})</div>
-      </div>`;
+      const pid = r.fruit_groups?.profile_id;
+      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
+      return renderProfileCard(fullP, {
+        extraMeta: 'TĐ: ' + r.staff_code,
+        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
+      });
     });
   }
   document.getElementById('unitPopupTitle').textContent = title;
