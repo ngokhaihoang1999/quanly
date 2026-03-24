@@ -9,25 +9,11 @@ async function loadProfiles() {
 function renderProfiles(profiles) {
   const el = document.getElementById('profileList');
   document.getElementById('profileCount').textContent = profiles.length + ' hồ sơ';
-  if (!profiles.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Chưa có hồ sơ</div><div class="empty-sub">Nhấn ➕ để thêm</div></div>'; return; }
-  el.innerHTML = profiles.map(p => {
-    const isDropout = p.fruit_status === 'dropout';
-    const statusColor = isDropout ? 'var(--red)' : 'var(--green)';
-    const statusLabel = isDropout ? 'Drop-out' : 'Alive';
-    // Drop-out: show phone number | Alive: show birth_year
-    const metaExtra = isDropout
-      ? (p.dropout_reason || '')
-      : (p.birth_year || '');
-    return `
-    <div class="profile-card" onclick="openProfileById('${p.id}')">
-      <div class="avatar">${(p.full_name||'?')[0]}</div>
-      <div class="profile-info">
-        <div class="profile-name">${p.full_name}</div>
-        <div class="profile-meta"><span class="status-dot" style="background:${statusColor};"></span>${statusLabel}${metaExtra ? ' · ' + metaExtra : ''}</div>
-      </div>
-      <div class="profile-arrow">›</div>
-    </div>`;
-  }).join('');
+  if (!profiles.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Chưa có hồ sơ</div><div class="empty-sub">Nhấn ➕ để thêm</div></div>';
+    return;
+  }
+  el.innerHTML = profiles.map(p => renderProfileCard(p)).join('');
 }
 
 let currentStatusFilter = 'all';

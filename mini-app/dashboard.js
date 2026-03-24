@@ -259,21 +259,9 @@ async function loadDashboard() {
         const showKT = ['bb', 'center', 'completed'].includes(ph);
         const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>` : '';
         
-        return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin:4px 0;" onclick="openProfileById('${pid}')">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;">${sDot} ${name}</div>
-            <div style="flex-shrink:0;">
-              <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
-              ${ktLabel}
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;font-size:10px;color:var(--text2);">
-            <div>NDD: <b style="color:var(--text);">${ndd}</b></div>
-            <div>TVV: <b style="color:var(--text);">${tvv}</b></div>
-            <div>GVBB: <b style="color:var(--text);">${gvbb}</b></div>
-            ${latest ? `<div style="color:var(--accent);">⏱ ${latest}</div>` : ''}
-          </div>
-        </div>`;
+        return renderProfileCard(p, {
+          extraMeta: [ndd ? 'NDD: ' + ndd : '', tvv ? 'TVV: ' + tvv : '', latest ? '⏱ ' + latest : ''].filter(Boolean).join(' · ')
+        });
       }).join('');
     }
 
@@ -449,19 +437,9 @@ async function loadDashboard() {
         const gvbbList = allRolesInGroup.filter(x=>x.role_type==='gvbb').map(x=>x.staff_code).join(', ');
         // Latest activity — unified via latestActivityLabel()
         const latestActivity = latestActivityLabel(recordMap[pid], sessionMap[pid]);
-        return `<div style="cursor:pointer;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;" onclick="openProfileById('${pid}')">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;">${name}</div>
-            <div style="flex-shrink:0;">
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${phaseColor};color:white;">${phaseLabel}</span>
-              ${ktLabel}
-            </div>
-          </div>
-          ${tvvList ? `<div style="font-size:11px;color:var(--text2);">💬 TVV: ${tvvList}</div>` : ''}
-          ${gvbbList ? `<div style="font-size:11px;color:var(--text2);">🎓 GVBB: ${gvbbList}</div>` : ''}
-          ${latestActivity ? `<div style="font-size:11px;color:var(--accent);margin-top:4px;">⏱ ${latestActivity}</div>` : ''}
-          <div style="text-align:right;font-size:11px;color:var(--text3);margin-top:2px;">Bấm để xem hồ sơ ›</div>
-        </div>`;
+        return renderProfileCard(p, {
+          extraMeta: [tvvList ? '💬 TVV: ' + tvvList : '', gvbbList ? '🎓 GVBB: ' + gvbbList : '', latestActivity ? '⏱ ' + latestActivity : ''].filter(Boolean).join(' · ')
+        });
       }).join('');
     }
 
@@ -483,12 +461,8 @@ async function loadDashboard() {
         const isKT = p?.is_kt_opened;
         const showKT = ['bb', 'center', 'completed'].includes(ph);
         const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-right:6px;">${isKT ? '📖 KT' : '📕 Chưa KT'}</span>` : '';
-        return `<div style="cursor:pointer;display:flex;align-items:center;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:4px;" onclick="openProfileById('${r.fruit_groups?.profile_id}')">
-          <div style="font-size:13px;font-weight:600;flex:1;">${name}</div>
-          ${ktLabel}
-          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-right:6px;">${role}</span>
-          <span style="color:var(--text3);">›</span>
-        </div>`;
+        const roleBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${role}</span>`;
+        return renderProfileCard(p, { extraBadges: roleBadge });
       }).join('');
       if (otherItems) myListEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
     }

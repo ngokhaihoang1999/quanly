@@ -36,6 +36,51 @@ function getStaffLabel(code) {
 }
 
 
+// ============ SHARED PROFILE CARD RENDERER ============
+// Use this everywhere a profile box appears — ensures consistent UI
+// opts: { extraMeta: string, clickFn: string, showPhase: bool, extraBadges: string }
+function renderProfileCard(p, opts = {}) {
+  if (!p) return '';
+  const isDropout = p.fruit_status === 'dropout';
+  const statusColor = isDropout ? 'var(--red)' : 'var(--green)';
+  const statusLabel = isDropout ? 'Drop-out' : 'Alive';
+  const metaBase = isDropout ? (p.dropout_reason || '') : (p.birth_year || '');
+  const ph = p.phase || 'chakki';
+
+  // Phase badge (always show unless hidden)
+  const showPhase = opts.showPhase !== false && ph && ph !== 'new';
+  const phaseBadge = showPhase
+    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${(typeof PHASE_COLORS!=='undefined'?PHASE_COLORS[ph]:{})||'#f59e0b'};color:white;margin-left:6px;">${(typeof PHASE_LABELS!=='undefined'?PHASE_LABELS[ph]:ph)||ph}</span>`
+    : '';
+
+  // KT badge for BB+ phases
+  const showKT = ['bb','center','completed'].includes(ph);
+  const ktBadge = showKT
+    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${p.is_kt_opened?'var(--green)':'#f59e0b'};color:white;margin-left:4px;">${p.is_kt_opened?'📖 KT':'📕 KT'}</span>`
+    : '';
+
+  // Extra badges from opts (e.g. role badges)
+  const extraBadges = opts.extraBadges || '';
+
+  // Meta line: status + base info + extra
+  const metaParts = [];
+  if (metaBase) metaParts.push(metaBase);
+  if (opts.extraMeta) metaParts.push(opts.extraMeta);
+  const metaStr = metaParts.join(' · ');
+
+  const clickFn = opts.clickFn || `openProfileById('${p.id}')`;
+  const avatarLetter = (p.full_name || '?')[0].toUpperCase();
+
+  return `<div class="profile-card" onclick="${clickFn}">
+    <div class="avatar" style="background:linear-gradient(135deg,var(--accent),#ec4899);">${avatarLetter}</div>
+    <div class="profile-info">
+      <div class="profile-name">${p.full_name}${phaseBadge}${ktBadge}${extraBadges}</div>
+      <div class="profile-meta"><span class="status-dot" style="background:${statusColor};"></span>${statusLabel}${metaStr ? ' · ' + metaStr : ''}</div>
+    </div>
+    <div class="profile-arrow">›</div>
+  </div>`;
+}
+
 // ============ CUSTOM CONFIRM (replaces browser confirm() which shows domain) ============
 function showConfirm(message, onOk, onCancel) {
   let modal = document.getElementById('customConfirmModal');
