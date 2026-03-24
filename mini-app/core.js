@@ -5,6 +5,7 @@ const tg = window.Telegram?.WebApp;
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
 let allPositions = [];
+let _pendingPrefs = {}; // live personalization edits not yet saved
 
 // ============ STAFF UNIT MAP ============
 // Builds a lookup: staffCode → "Area · Group · Team"
@@ -357,6 +358,8 @@ async function loadStaffInfo() {
       if (hasPermission('manage_positions')) {
         document.getElementById('viewAsBar').classList.add('active');
       }
+      // Apply saved personalization
+      if (myStaff.preferences) applyUserPreferences(myStaff.preferences);
       const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code');
       const allS = await allRes.json();
       const dl = document.getElementById('staffSuggest');
@@ -923,3 +926,306 @@ function toggleTheme() { /* dark mode tạm thời bị tắt */ }
   document.documentElement.setAttribute('data-theme', 'light');
   localStorage.removeItem('cj_theme');
 })();
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║              PERSONALIZATION SYSTEM                             ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+const ACCENT_PRESETS = [
+  { name: 'Tím Mặc Định',  hex: '#7c6af7' },
+  { name: 'Xanh Blue',     hex: '#3b82f6' },
+  { name: 'Xanh Google',   hex: '#1a73e8' },
+  { name: 'Tím Violet',    hex: '#8b5cf6' },
+  { name: 'Hồng Pink',     hex: '#ec4899' },
+  { name: 'Cam Orange',    hex: '#f97316' },
+  { name: 'Xanh Lá',       hex: '#10b981' },
+  { name: 'Đỏ',            hex: '#ef4444' },
+  { name: 'Vàng',          hex: '#eab308' },
+  { name: 'Cyan',          hex: '#06b6d4' },
+];
+
+const ALL_TABS_DEF = [
+  { key: 'unit',      label: '🏢 Đơn vị' },
+  { key: 'personal',  label: '👤 Cá nhân' },
+  { key: 'priority',  label: '⚡ Ưu tiên' },
+  { key: 'calendar',  label: '📅 Lịch' },
+  { key: 'structure', label: '🏗️ Cơ cấu' },
+  { key: 'staff',     label: '👥 TĐ' },
+];
+
+// ── Color helpers ──
+function _hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function _rgbToHex(r,g,b) { return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join(''); }
+function _hexToRgba(hex, a) { const [r,g,b] = _hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+function _hexToHsl(hex) {
+  let [r,g,b] = _hexToRgb(hex).map(v=>v/255);
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if (max===min) { h=s=0; } else {
+    const d=max-min; s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}
+    h/=6;
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+function _hslToHex(h,s,l) {
+  s/=100; l/=100;
+  const a=s*Math.min(l,1-l);
+  const f=n => { const k=(n+h/30)%12; return Math.round(255*(l-a*Math.max(Math.min(k-3,9-k,1),-1))).toString(16).padStart(2,'0'); };
+  return '#'+f(0)+f(8)+f(4);
+}
+function _lighten(hex, pct) { const [h,s,l]=_hexToHsl(hex); return _hslToHex(h,s,Math.min(95,l+pct)); }
+function _darken(hex, pct)  { const [h,s,l]=_hexToHsl(hex); return _hslToHex(h,s,Math.max(5,l-pct)); }
+
+// ── Apply saved prefs ──
+function applyUserPreferences(prefs = {}) {
+  if (!prefs) return;
+  if (prefs.accent) _applyAccentLive(prefs.accent);
+  if (prefs.tab_order) _applyTabOrder(prefs.tab_order, prefs.tab_hidden || []);
+}
+
+function _applyAccentLive(hex) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  const root = document.documentElement;
+  root.style.setProperty('--accent', hex);
+  root.style.setProperty('--accent2', _lighten(hex, 20));
+  root.style.setProperty('--header-bg', `linear-gradient(135deg, ${_darken(hex, 30)} 0%, ${hex} 100%)`);
+  root.style.setProperty('--header-border', _hexToRgba(hex, 0.3));
+  root.style.setProperty('--badge-bg', _hexToRgba(hex, 0.2));
+  root.style.setProperty('--badge-border', _hexToRgba(hex, 0.4));
+  root.style.setProperty('--badge-text', _lighten(hex, 25));
+  root.style.setProperty('--chip-bg', _hexToRgba(hex, 0.1));
+  root.style.setProperty('--chip-border', _hexToRgba(hex, 0.3));
+  root.style.setProperty('--chip-sel-bg', hex);
+  root.style.setProperty('--fab-shadow', _hexToRgba(hex, 0.5));
+  // Update preview bar if open
+  const bar = document.getElementById('pref_preview_bar');
+  if (bar) bar.style.background = hex;
+}
+
+function _applyTabOrder(order, hidden = []) {
+  const bar = document.getElementById('mainTabBar');
+  if (!bar) return;
+  const hiddenSet = new Set(hidden);
+  order.forEach(key => {
+    const tab = bar.querySelector(`[data-tab="${key}"]`);
+    if (!tab) return;
+    bar.appendChild(tab);  // reorder
+    if (key === 'staff') return; // staff tab visibility controlled by applyPermissions
+    tab.style.display = hiddenSet.has(key) ? 'none' : '';
+  });
+}
+
+// ── Open Panel ──
+function openPersonalizationPanel() {
+  const prefs = myStaff?.preferences || {};
+  const currentAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7c6af7';
+  const hex0 = /^#[0-9a-fA-F]{6}$/.test(currentAccent) ? currentAccent : '#7c6af7';
+  const [h0,s0,l0] = _hexToHsl(hex0);
+  const [r0,g0,b0] = _hexToRgb(hex0);
+  const currentOrder = prefs.tab_order || ALL_TABS_DEF.map(t=>t.key);
+  const hiddenSet = new Set(prefs.tab_hidden || []);
+
+  const presetHtml = ACCENT_PRESETS.map(p =>
+    `<div onclick="_liveAccent('${p.hex}')" title="${p.name}"
+       style="width:34px;height:34px;border-radius:50%;background:${p.hex};cursor:pointer;
+              border:3px solid transparent;transition:transform 0.15s;flex-shrink:0;"
+       onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''"></div>`
+  ).join('');
+
+  const sortedTabs = [...ALL_TABS_DEF].sort((a,b) => {
+    const ai=currentOrder.indexOf(a.key), bi=currentOrder.indexOf(b.key);
+    return (ai<0?99:ai)-(bi<0?99:bi);
+  });
+
+  const existing = document.getElementById('personalizationModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'personalizationModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.55);';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.3);">
+      <div style="position:sticky;top:0;background:var(--surface);padding:16px 16px 12px;border-radius:20px 20px 0 0;z-index:2;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-weight:700;font-size:16px;">⚙️ Cá nhân hoá</div>
+          <button onclick="document.getElementById('personalizationModal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);">✕</button>
+        </div>
+        <div id="pref_preview_bar" style="height:5px;border-radius:3px;background:${hex0};transition:background 0.25s;"></div>
+      </div>
+      <div style="padding:0 16px 36px;">
+        <!-- ═══ MÀU SẮC ═══ -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:14px 0 8px;">🎨 MÀU CHỦ ĐẠO</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">${presetHtml}</div>
+        <!-- System tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          ${['HEX','HSL','RGB'].map((s,i) => `<button id="pref_sys_${s}" onclick="_switchSys('${s}')"
+            style="flex:1;padding:6px 0;font-size:11px;font-weight:600;border-radius:8px;border:1px solid var(--border);
+            background:${i===0?'var(--accent)':'var(--surface2)'};color:${i===0?'#fff':'var(--text2)'};cursor:pointer;">${s}</button>`).join('')}
+        </div>
+        <!-- HEX -->
+        <div id="sys_HEX" style="margin-bottom:14px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="pref_wheel" value="${hex0}" oninput="_liveAccent(this.value);_syncInputs(this.value)" style="width:46px;height:46px;border:none;border-radius:10px;cursor:pointer;flex-shrink:0;">
+            <input type="text" id="pref_hex" value="${hex0}" maxlength="7" placeholder="#7c6af7" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)){_liveAccent(this.value);_syncInputs(this.value,true)}"
+              style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-family:monospace;">
+          </div>
+        </div>
+        <!-- HSL -->
+        <div id="sys_HSL" style="display:none;margin-bottom:14px;">
+          ${[['Hue (H)','pref_h',0,360,h0,'deg'],['Saturation (S)','pref_s',0,100,s0,'%'],['Lightness (L)','pref_l',10,90,l0,'%']].map(([name,id,min,max,val,unit])=>`
+          <div style="margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px;">
+              <span>${name}</span><b id="${id}_v">${val}${unit}</b>
+            </div>
+            <input type="range" id="${id}" min="${min}" max="${max}" value="${val}"
+              oninput="document.getElementById('${id}_v').textContent=this.value+'${unit}';_fromHsl()"
+              style="width:100%;accent-color:var(--accent);">
+          </div>`).join('')}
+        </div>
+        <!-- RGB -->
+        <div id="sys_RGB" style="display:none;margin-bottom:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            ${[['R','pref_r',r0],['G','pref_g',g0],['B','pref_b',b0]].map(([lbl,id,val])=>`
+            <div>
+              <div style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:4px;">${lbl}</div>
+              <input type="number" id="${id}" min="0" max="255" value="${val}" oninput="_fromRgb()"
+                style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);
+                background:var(--surface2);color:var(--text);text-align:center;font-size:13px;">
+            </div>`).join('')}
+          </div>
+        </div>
+        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+        <!-- ═══ TABS ═══ -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">📌 VỊ TRÍ & HIỂN THỊ TAB</div>
+        <div id="pref_tab_list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+          ${_renderTabRows(sortedTabs, hiddenSet)}
+        </div>
+        <!-- Buttons -->
+        <button onclick="_savePrefs()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Lưu cá nhân hoá</button>
+        <button onclick="_resetPrefs()" style="width:100%;padding:10px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:12px;cursor:pointer;">↩ Về mặc định hệ thống</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  _pendingPrefs = { accent: hex0 };
+  _prefTabOrder = [...currentOrder];
+  _prefTabHidden = new Set(hiddenSet);
+}
+
+let _prefTabOrder = null;
+let _prefTabHidden = null;
+
+function _renderTabRows(tabs, hiddenSet) {
+  return tabs.map((t, i) => `
+    <div id="pref_tr_${t.key}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+      <span style="font-size:14px;flex:1;">${t.label}</span>
+      <button onclick="_moveTab('${t.key}',-1)" ${i===0?'disabled':''}
+        style="width:28px;height:28px;border:1px solid var(--border);background:var(--surface);border-radius:6px;cursor:pointer;font-size:12px;${i===0?'opacity:.35':''}">↑</button>
+      <button onclick="_moveTab('${t.key}',1)" ${i===tabs.length-1?'disabled':''}
+        style="width:28px;height:28px;border:1px solid var(--border);background:var(--surface);border-radius:6px;cursor:pointer;font-size:12px;${i===tabs.length-1?'opacity:.35':''}">↓</button>
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" ${!hiddenSet.has(t.key)?'checked':''} onchange="_toggleTabHide('${t.key}',this.checked)" style="accent-color:var(--accent);"> Hiện
+      </label>
+    </div>`).join('');
+}
+
+function _switchSys(sys) {
+  ['HEX','HSL','RGB'].forEach(s => {
+    const el = document.getElementById(`sys_${s}`);
+    const btn = document.getElementById(`pref_sys_${s}`);
+    if (el) el.style.display = s===sys ? '' : 'none';
+    if (btn) { btn.style.background = s===sys ? 'var(--accent)' : 'var(--surface2)'; btn.style.color = s===sys ? '#fff' : 'var(--text2)'; }
+  });
+}
+
+function _liveAccent(hex) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  _pendingPrefs.accent = hex;
+  _applyAccentLive(hex);
+}
+
+function _syncInputs(hex, skipHex = false) {
+  if (!skipHex) { const h = document.getElementById('pref_hex'); if(h) h.value = hex; }
+  const w = document.getElementById('pref_wheel'); if(w) w.value = hex;
+  const [h,s,l] = _hexToHsl(hex);
+  const [r,g,b] = _hexToRgb(hex);
+  [['pref_h',h,'deg'],['pref_s',s,'%'],['pref_l',l,'%']].forEach(([id,val,u]) => {
+    const el=document.getElementById(id); if(el) el.value=val;
+    const vl=document.getElementById(id+'_v'); if(vl) vl.textContent=val+u;
+  });
+  [['pref_r',r],['pref_g',g],['pref_b',b]].forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.value=val; });
+}
+
+function _fromHsl() {
+  const h=parseInt(document.getElementById('pref_h')?.value||0);
+  const s=parseInt(document.getElementById('pref_s')?.value||70);
+  const l=parseInt(document.getElementById('pref_l')?.value||60);
+  const hex = _hslToHex(h,s,l);
+  _syncInputs(hex); _liveAccent(hex);
+}
+function _fromRgb() {
+  const r=parseInt(document.getElementById('pref_r')?.value||0);
+  const g=parseInt(document.getElementById('pref_g')?.value||0);
+  const b=parseInt(document.getElementById('pref_b')?.value||0);
+  if([r,g,b].every(v=>v>=0&&v<=255)) { const hex=_rgbToHex(r,g,b); _syncInputs(hex); _liveAccent(hex); }
+}
+
+function _moveTab(key, dir) {
+  const order = _prefTabOrder || ALL_TABS_DEF.map(t=>t.key);
+  const i = order.indexOf(key);
+  if (i < 0) return;
+  const j = i + dir;
+  if (j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  _prefTabOrder = order;
+  const hidden = _prefTabHidden || new Set();
+  const sortedTabs = order.map(k => ALL_TABS_DEF.find(t=>t.key===k)).filter(Boolean);
+  const list = document.getElementById('pref_tab_list');
+  if (list) list.innerHTML = _renderTabRows(sortedTabs, hidden);
+  _applyTabOrder(order, [...hidden]);
+}
+function _toggleTabHide(key, show) {
+  if (!_prefTabHidden) _prefTabHidden = new Set(myStaff?.preferences?.tab_hidden || []);
+  show ? _prefTabHidden.delete(key) : _prefTabHidden.add(key);
+  _applyTabOrder(_prefTabOrder || ALL_TABS_DEF.map(t=>t.key), [..._prefTabHidden]);
+}
+
+async function _savePrefs() {
+  const prefs = {
+    ...(myStaff?.preferences || {}),
+    accent: _pendingPrefs.accent || '#7c6af7',
+    tab_order: _prefTabOrder || ALL_TABS_DEF.map(t=>t.key),
+    tab_hidden: [...(_prefTabHidden || new Set())],
+  };
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
+      method: 'PATCH', body: JSON.stringify({ preferences: prefs })
+    });
+    if (myStaff) myStaff.preferences = prefs;
+    document.getElementById('personalizationModal')?.remove();
+    _pendingPrefs = {}; _prefTabOrder = null; _prefTabHidden = null;
+    showToast('✅ Đã lưu cá nhân hoá');
+  } catch(e) { showToast('❌ Lỗi lưu'); console.error(e); }
+}
+
+async function _resetPrefs() {
+  if (!await showConfirmAsync('Đặt lại về mặc định hệ thống?')) return;
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
+      method: 'PATCH', body: JSON.stringify({ preferences: {} })
+    });
+    if (myStaff) myStaff.preferences = {};
+    document.getElementById('personalizationModal')?.remove();
+    _pendingPrefs = {}; _prefTabOrder = null; _prefTabHidden = null;
+    // Remove all runtime CSS overrides
+    ['--accent','--accent2','--header-bg','--header-border','--badge-bg','--badge-border',
+     '--badge-text','--chip-bg','--chip-border','--chip-sel-bg','--fab-shadow'
+    ].forEach(v => document.documentElement.style.removeProperty(v));
+    // Restore default tab order & visibility
+    _applyTabOrder(ALL_TABS_DEF.map(t=>t.key), []);
+    showToast('✅ Đã về mặc định');
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
