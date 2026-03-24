@@ -128,20 +128,20 @@ async function openProfile(p) {
     ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
-  // Avatar color & Color picker
+  // Avatar color & Gradient picker
   const avatarBg = p.avatar_color ? p.avatar_color : 'linear-gradient(135deg,var(--accent),#ec4899)';
-  const colorPickerHtml = (hasFullEdit || isProfileNDD)
-    ? `<input type="color" value="${p.avatar_color || '#ec4899'}" onchange="changeAvatarColor('${p.id}', this.value)" style="opacity:0;position:absolute;inset:0;width:100%;height:100%;cursor:pointer;" title="Đổi màu nền">`
-    : '';
+  const canEditColor = hasFullEdit || isProfileNDD;
+  const avatarClick = canEditColor ? `onclick="openAvatarGradientPicker('${p.id}','${encodeURIComponent(avatarBg)}')"` : '';
+  const editHint = canEditColor ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.45);text-align:center;font-size:8px;color:white;padding:2px 0;">🎨</div>` : '';
 
   // ONE unified card
   document.getElementById('profileSummaryCard').innerHTML = `
     <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;">
       <!-- Top: avatar + name + badges + refresh -->
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-        <div style="position:relative;width:56px;height:56px;border-radius:16px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0;box-shadow:0 4px 16px rgba(124,106,247,0.3);overflow:hidden;">
+        <div style="position:relative;width:56px;height:56px;border-radius:16px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0;box-shadow:0 4px 16px rgba(124,106,247,0.3);overflow:hidden;cursor:${canEditColor?'pointer':'default'};" ${avatarClick}>
           ${(p.full_name||'?')[0]}
-          ${colorPickerHtml}
+          ${editHint}
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:18px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.full_name}</div>

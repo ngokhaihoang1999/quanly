@@ -617,18 +617,119 @@ function showUnitPopup(type) {
   document.getElementById('unitPopupModal').classList.add('open');
 }
 // ============ AVATAR COLOR ============
-async function changeAvatarColor(profileId, color) {
+const AVATAR_GRADIENT_PRESETS = [
+  { label: 'Tím Hồng',   val: 'linear-gradient(135deg,#6366f1,#ec4899)' },
+  { label: 'Xanh Cyan',  val: 'linear-gradient(135deg,#3b82f6,#06b6d4)' },
+  { label: 'Xanh Lá',    val: 'linear-gradient(135deg,#10b981,#3b82f6)' },
+  { label: 'Cam Đỏ',     val: 'linear-gradient(135deg,#f97316,#ef4444)' },
+  { label: 'Tím Xanh',   val: 'linear-gradient(135deg,#8b5cf6,#3b82f6)' },
+  { label: 'Hồng Cam',   val: 'linear-gradient(135deg,#ec4899,#f59e0b)' },
+  { label: 'Xanh Vàng',  val: 'linear-gradient(135deg,#10b981,#84cc16)' },
+  { label: 'Hoàng Hôn',  val: 'linear-gradient(135deg,#f97316,#eab308)' },
+  { label: 'Đại Dương',  val: 'linear-gradient(135deg,#06b6d4,#8b5cf6)' },
+  { label: 'Hoa Đào',    val: 'linear-gradient(135deg,#ef4444,#ec4899)' },
+  { label: 'Bầu Trời',   val: 'linear-gradient(135deg,#38bdf8,#818cf8)' },
+  { label: 'Rừng Xanh',  val: 'linear-gradient(135deg,#166534,#15803d)' },
+];
+
+function openAvatarGradientPicker(profileId, encodedCurrent) {
+  const current = decodeURIComponent(encodedCurrent);
+  // Parse current gradient to pre-fill custom pickers
+  const colorMatch = current.match(/#([0-9a-fA-F]{6})/g) || [];
+  const c1 = colorMatch[0] || '#6366f1';
+  const c2 = colorMatch[1] || '#ec4899';
+  const angleMatch = current.match(/(\d+)deg/);
+  const angle = angleMatch ? angleMatch[1] : '135';
+
+  // Build modal HTML
+  const presetHtml = AVATAR_GRADIENT_PRESETS.map(g =>
+    `<div onclick="previewAvatarGradient('${g.val}')" title="${g.label}"
+       style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${g.val};
+              border:2px solid transparent;transition:transform 0.15s,border-color 0.15s;flex-shrink:0;"
+       onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''"></div>`
+  ).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'avatarColorModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.5);';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;box-shadow:0 -8px 40px rgba(0,0,0,0.25);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-weight:700;font-size:15px;">🎨 Chọn màu Avatar</div>
+        <button onclick="document.getElementById('avatarColorModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">✕</button>
+      </div>
+
+      <!-- Preview -->
+      <div style="display:flex;justify-content:center;margin-bottom:18px;">
+        <div id="avatarColorPreview" style="width:72px;height:72px;border-radius:20px;background:${current};
+          display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;color:white;
+          box-shadow:0 4px 20px rgba(0,0,0,0.25);transition:background 0.4s ease;">
+          ${(document.querySelector('#profileSummaryCard .profile-name')?.textContent||'A')[0]}
+        </div>
+      </div>
+
+      <!-- Presets -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">⚡ BỘ MÀU SẴN</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">${presetHtml}</div>
+
+      <!-- Custom -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">🖌 TÙY CHỈNH</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Màu 1</div>
+          <input type="color" id="avatarC1" value="${c1}" oninput="updateCustomAvatarGradient()" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;">
+        </div>
+        <div style="font-size:20px;color:var(--text3);">→</div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Màu 2</div>
+          <input type="color" id="avatarC2" value="${c2}" oninput="updateCustomAvatarGradient()" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;">
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Góc chuyển màu: <b id="avatarAngleLabel">${angle}°</b></div>
+        <input type="range" id="avatarAngle" min="0" max="360" value="${angle}" oninput="document.getElementById('avatarAngleLabel').textContent=this.value+'°';updateCustomAvatarGradient()" style="width:100%;accent-color:var(--accent);">
+      </div>
+
+      <!-- Save -->
+      <button onclick="saveAvatarGradient('${profileId}')" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">✅ Lưu màu nền</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+let _pendingAvatarGradient = null;
+function previewAvatarGradient(gradient) {
+  _pendingAvatarGradient = gradient;
+  const prev = document.getElementById('avatarColorPreview');
+  if (prev) prev.style.background = gradient;
+}
+function updateCustomAvatarGradient() {
+  const c1 = document.getElementById('avatarC1')?.value || '#6366f1';
+  const c2 = document.getElementById('avatarC2')?.value || '#ec4899';
+  const angle = document.getElementById('avatarAngle')?.value || '135';
+  const gradient = `linear-gradient(${angle}deg,${c1},${c2})`;
+  previewAvatarGradient(gradient);
+}
+async function saveAvatarGradient(profileId) {
+  const gradient = _pendingAvatarGradient || document.getElementById('avatarColorPreview')?.style.background;
+  if (!gradient) return;
+  await changeAvatarColor(profileId, gradient);
+  document.getElementById('avatarColorModal')?.remove();
+  _pendingAvatarGradient = null;
+}
+
+async function changeAvatarColor(profileId, gradient) {
   try {
     await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ avatar_color: color })
+      body: JSON.stringify({ avatar_color: gradient })
     });
-    // Immediately update local cache and UI
     const p = allProfiles.find(x => x.id === profileId);
-    if (p) p.avatar_color = color;
+    if (p) p.avatar_color = gradient;
     if (typeof _refreshCurrentProfile === 'function') _refreshCurrentProfile();
     else if (typeof loadDashboard === 'function') loadDashboard();
-  } catch(e) { console.error('changeAvatarColor:', e); showToast('❌ Lỗi đổi màu nền'); }
+    showToast('✅ Đã đổi màu avatar');
+  } catch(e) { console.error('changeAvatarColor:', e); showToast('❌ Lỗi đổi màu'); }
 }
 
 // ============ FRUIT STATUS TOGGLE ============
