@@ -42,7 +42,7 @@ export async function handleGroupChat(update: any) {
 
       // Send welcome message
       await sendText(chatId,
-        `🍎 *Bot Checking Jondo đã vào group!*\n\nGroup này đã được đăng ký làm Group Trái quả.\nĐể quản lý, gõ lệnh: /menu`
+        `🍎 *Bot Checking Jondo đã vào group!*\n\nGroup này đã được đăng ký làm Group Trái quả.\nĐể quản lý, gõ lệnh: /start`
       );
 
       // Fetch profiles with REAL group (exclude NULL and -Date.now() placeholders)
@@ -195,8 +195,8 @@ export async function handleGroupChat(update: any) {
     return;
   }
 
-  // /menu — Menu lệnh cho group
-  if (text === '/menu' || text.startsWith('/menu@')) {
+  // /start — Menu lệnh cho group
+  if (text === '/start' || text.startsWith('/start@')) {
     // Auto-register group if not yet registered
     const { data: existingFg } = await supabase.from('fruit_groups')
       .select('id').eq('telegram_group_id', chatId).single();

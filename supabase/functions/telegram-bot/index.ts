@@ -9,7 +9,7 @@
  *   permissions.ts    → Permission checks (canDefineStructure, canAssignRole, etc.)
  *   telegram.ts       → Telegram API helpers (sendText, sendKeyboard, etc.)
  *   handlers/
- *     group.ts        → Group chat: /menu, bot added, /link_profile, /assign_role, /set_level
+ *     group.ts        → Group chat: /start, bot added, /link_profile, /assign_role, /set_level
  *     callbacks.ts    → All callback_query handlers (menu_*, link_fg_*, approve_*, setpos_*)
  *     private.ts      → Private chat: /start, /search, /check_hapja, /support, /reply
  */
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
           return new Response("OK");
         }
         await supabase.from('staff').update({ telegram_id: telegramId }).eq('staff_code', code);
-        await sendText(chatId, `✅ Đăng ký thành công! Mừng *${existing.full_name}* (${code}).\nDùng /menu để bắt đầu.`);
+        await sendText(chatId, `✅ Đăng ký thành công! Mừng *${existing.full_name}* (${code}).\nDùng /start để bắt đầu.`);
         return new Response("OK");
       }
       await sendText(chatId, `⚠️ Chưa nhận diện!\n👉 \`/register [Mã_TĐ]\`\nVD: \`/register 012345-ABC\``);

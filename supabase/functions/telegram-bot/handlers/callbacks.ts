@@ -226,7 +226,7 @@ export async function handleCallback(update: any, staffData: any) {
         telegram_group_title: cbQuery.message.chat.title || null,
         level: 'bb'
       }).select().single();
-      if (!newFg) return sendText(chatId, `❌ Không thể đăng ký group. Hãy thử gõ /menu trước.`);
+      if (!newFg) return sendText(chatId, `❌ Không thể đăng ký group. Hãy thử gõ /start trước.`);
       fg = newFg;
     }
 
@@ -378,7 +378,7 @@ export async function handleCallback(update: any, staffData: any) {
       .update({ telegram_id: ps.pending_telegram_id, pending_telegram_id: null, pending_requested_at: null })
       .eq('staff_code', staffCode);
     await sendText(chatId, `✅ Đã duyệt đổi Telegram cho *${ps.full_name}*.`);
-    await sendText(ps.pending_telegram_id, `✅ Yêu cầu đổi Telegram đã được *duyệt*! Dùng /menu.`);
+    await sendText(ps.pending_telegram_id, `✅ Yêu cầu đổi Telegram đã được *duyệt*! Dùng /start.`);
     return;
   }
   if (isAdmin && cbData.startsWith("deny_")) {

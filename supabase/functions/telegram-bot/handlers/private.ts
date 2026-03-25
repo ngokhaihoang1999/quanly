@@ -12,7 +12,7 @@ export async function handlePrivateChat(update: any, staffData: any) {
   const messageId = msg.message_id;
   const pos = staffData.position || 'td';
 
-  if (text === '/start' || text === '/menu') {
+  if (text === '/start') {
     const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html`;
     const posLabel = POSITION_LABELS[pos] || pos;
 
