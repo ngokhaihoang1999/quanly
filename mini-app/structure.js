@@ -3,6 +3,33 @@ async function loadStructure() {
   try {
     const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
     structureData = await res.json();
+    structureData.sort((a,b) => a.name.localeCompare(b.name, 'vi', {numeric:true}));
+    structureData.forEach(a => {
+      a.org_groups = (a.org_groups||[]).sort((x,y) => x.name.localeCompare(y.name, 'vi', {numeric:true}));
+      a.org_groups.forEach(g => {
+        g.teams = (g.teams||[]).sort((x,y) => x.name.localeCompare(y.name, 'vi', {numeric:true}));
+        g.teams.forEach(t => {
+          t.staff = (t.staff||[]).sort((m1, m2) => {
+            let ep1 = m1.position||'td', ep2 = m2.position||'td';
+            if (m1.staff_code===a.yjyn_staff_code) ep1='yjyn';
+            if (m1.staff_code===g.tjn_staff_code) ep1='tjn';
+            if (m1.staff_code===t.gyjn_staff_code) ep1='gyjn';
+            if (m1.staff_code===t.bgyjn_staff_code) ep1='bgyjn';
+            if (m2.staff_code===a.yjyn_staff_code) ep2='yjyn';
+            if (m2.staff_code===g.tjn_staff_code) ep2='tjn';
+            if (m2.staff_code===t.gyjn_staff_code) ep2='gyjn';
+            if (m2.staff_code===t.bgyjn_staff_code) ep2='bgyjn';
+            if (ep1==='gyjn' && ep2!=='gyjn') return -1;
+            if (ep2==='gyjn' && ep1!=='gyjn') return 1;
+            if (ep1==='bgyjn' && ep2!=='bgyjn') return -1;
+            if (ep2==='bgyjn' && ep1!=='bgyjn') return 1;
+            if (ep1!=='td' && ep2==='td') return -1;
+            if (ep2!=='td' && ep1==='td') return 1;
+            return m1.staff_code.localeCompare(m2.staff_code);
+          });
+        });
+      });
+    });
     if (typeof buildStaffUnitMap === 'function') buildStaffUnitMap(); // build unit lookup
     const el = document.getElementById('structureTree');
     const pos = getCurrentPosition();
@@ -224,6 +251,27 @@ function renderTeamMembers(teamItem) {
   if (!members.length) {
     listEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px;">Ch\u01b0a c\u00f3 th\u00e0nh vi\u00ean</div>';
   } else {
+    members.sort((m1, m2) => {
+      let ep1 = m1.position || 'td';
+      let ep2 = m2.position || 'td';
+      if (parentArea && m1.staff_code === parentArea.yjyn_staff_code) ep1 = 'yjyn';
+      if (parentGroup && m1.staff_code === parentGroup.tjn_staff_code) ep1 = 'tjn';
+      if (m1.staff_code === teamItem.gyjn_staff_code) ep1 = 'gyjn';
+      if (m1.staff_code === teamItem.bgyjn_staff_code) ep1 = 'bgyjn';
+      
+      if (parentArea && m2.staff_code === parentArea.yjyn_staff_code) ep2 = 'yjyn';
+      if (parentGroup && m2.staff_code === parentGroup.tjn_staff_code) ep2 = 'tjn';
+      if (m2.staff_code === teamItem.gyjn_staff_code) ep2 = 'gyjn';
+      if (m2.staff_code === teamItem.bgyjn_staff_code) ep2 = 'bgyjn';
+      
+      if (ep1 === 'gyjn' && ep2 !== 'gyjn') return -1;
+      if (ep2 === 'gyjn' && ep1 !== 'gyjn') return 1;
+      if (ep1 === 'bgyjn' && ep2 !== 'bgyjn') return -1;
+      if (ep2 === 'bgyjn' && ep1 !== 'bgyjn') return 1;
+      if (ep1 !== 'td' && ep2 === 'td') return -1;
+      if (ep2 !== 'td' && ep1 === 'td') return 1;
+      return m1.staff_code.localeCompare(m2.staff_code);
+    });
     listEl.innerHTML = members.map(m => {
       let effectivePos = m.position || 'td';
       if (parentArea && m.staff_code === parentArea.yjyn_staff_code) effectivePos = 'yjyn';
@@ -274,12 +322,14 @@ async function updateStructure() {
   if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
   let mgr = getStaffCodeFromInput('edit_mgr1');
   let mgr2 = getStaffCodeFromInput('edit_mgr2');
+  const tables = {area:'areas', group:'org_groups', team:'teams'};
+  const oldItem = findStructItem(type, id);
+  
   if (type === 'team') {
     mgr = oldItem?.gyjn_staff_code || null;
     mgr2 = oldItem?.bgyjn_staff_code || null;
   }
-  const tables = {area:'areas', group:'org_groups', team:'teams'};
-  const oldItem = findStructItem(type, id);
+  
   let body = { name };
   if (type==='area') body.yjyn_staff_code = mgr||null;
   else if (type==='group') body.tjn_staff_code = mgr||null;
