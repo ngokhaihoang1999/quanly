@@ -95,11 +95,8 @@ function openAddTeamModal(groupId) {
   const allGroups = structureData.flatMap(a => (a.org_groups||[]).map(g => ({...g, area: a.name})));
   const sel = document.getElementById('struct_parent');
   sel.innerHTML = allGroups.map(g => `<option value="${g.id}" ${g.id===groupId?'selected':''}>${g.name} (${g.area})</option>`).join('');
-  document.getElementById('struct_manager_wrap').style.display = 'block';
-  document.getElementById('struct_manager_label').textContent = 'GYJN (T\u1ed5 tr\u01b0\u1edfng)';
-  populateStaffSelect('struct_manager','Ch\u1ecdn GYJN...');
-  document.getElementById('struct_manager2_wrap').style.display = 'block';
-  populateStaffSelect('struct_manager2','Ch\u1ecdn BGYJN...');
+  document.getElementById('struct_manager_wrap').style.display = 'none';
+  document.getElementById('struct_manager2_wrap').style.display = 'none';
   document.getElementById('structureModal').classList.add('open');
 }
 async function saveStructure() {
@@ -107,8 +104,9 @@ async function saveStructure() {
   if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
   const type = document.getElementById('struct_type').value;
   const parentId = document.getElementById('struct_parent').value;
-  const mgr = getStaffCodeFromInput('struct_manager');
-  const mgr2 = getStaffCodeFromInput('struct_manager2');
+  let mgr = getStaffCodeFromInput('struct_manager');
+  let mgr2 = getStaffCodeFromInput('struct_manager2');
+  if (type === 'team') { mgr = null; mgr2 = null; }
 
   // Check duplicate name
   if (type === 'area' && structureData.some(a => a.name.toLowerCase() === name.toLowerCase())) {
@@ -189,15 +187,14 @@ function openEditStructModal(type, id) {
     setStaffInputValue('edit_mgr1', item.tjn_staff_code);
     document.getElementById('edit_mgr2_wrap').style.display = 'none';
   } else {
-    document.getElementById('edit_mgr1_label').textContent = 'GYJN (T\u1ed5 tr\u01b0\u1edfng)';
-    populateStaffSelect('edit_mgr1', 'Ch\u1ecdn GYJN...');
-    setStaffInputValue('edit_mgr1', item.gyjn_staff_code);
-    document.getElementById('edit_mgr2_wrap').style.display = 'block';
-    document.getElementById('edit_mgr2_label').textContent = 'BGYJN (T\u1ed5 ph\u00f3)';
-    populateStaffSelect('edit_mgr2', 'Ch\u1ecdn BGYJN...');
-    setStaffInputValue('edit_mgr2', item.bgyjn_staff_code);
+    document.getElementById('edit_mgr1_wrap').style.display = 'none';
+    document.getElementById('edit_mgr2_wrap').style.display = 'none';
   }
-  document.getElementById('edit_mgr1_wrap').style.display = 'block';
+  
+  if (type !== 'team') {
+    document.getElementById('edit_mgr1_wrap').style.display = 'block';
+  }
+
   // Members section (only for teams)
   const membersWrap = document.getElementById('edit_members_wrap');
   if (type==='team') {
@@ -275,8 +272,12 @@ async function updateStructure() {
   const type = document.getElementById('edit_struct_type').value;
   const name = document.getElementById('edit_struct_name').value.trim();
   if (!name) { showToast('\u26a0\ufe0f Nh\u1eadp t\u00ean'); return; }
-  const mgr = getStaffCodeFromInput('edit_mgr1');
-  const mgr2 = getStaffCodeFromInput('edit_mgr2');
+  let mgr = getStaffCodeFromInput('edit_mgr1');
+  let mgr2 = getStaffCodeFromInput('edit_mgr2');
+  if (type === 'team') {
+    mgr = oldItem?.gyjn_staff_code || null;
+    mgr2 = oldItem?.bgyjn_staff_code || null;
+  }
   const tables = {area:'areas', group:'org_groups', team:'teams'};
   const oldItem = findStructItem(type, id);
   let body = { name };
@@ -524,4 +525,22 @@ async function deletePosition() {
     await loadPositions();
     showPositionList();
   } catch(e) { showToast('\u274c L\u1ed7i x\u00f3a'); console.error(e); }
+}
+
+// ============ ADMIN: ORPHAN STAFF ============
+async function showStaffWithoutTeam() {
+  if (!allStaff || allStaff.length === 0) return;
+  const orphans = allStaff.filter(s => !s.team_id && s.position !== 'admin');
+  
+  if (orphans.length === 0) {
+    await showConfirmAsync('Tất cả TĐ (trừ Admin) đều đã xếp vào cơ cấu.');
+    return;
+  }
+  
+  const content = orphans.map(s => {
+    let posLabel = getPositionName(s.position || 'td');
+    return `<div style="padding:4px 0;border-bottom:1px solid #eee;">• <b>${s.staff_code}</b> - ${s.full_name} <span class="staff-role-badge ${getBadgeClass(s.position||'td')}" style="font-size:9px;padding:1px 6px;">${posLabel}</span></div>`;
+  }).join('');
+  
+  await showConfirmAsync(`<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:var(--red);">👥 TĐ CHƯA CÓ ĐƠN VỊ TỔ </div><div style="font-size:13px;line-height:1.6;max-height:60vh;overflow-y:auto;text-align:left;">${content}</div>`);
 }
