@@ -91,7 +91,7 @@ function showConfirm(message, onOk, onCancel) {
     modal.id = 'customConfirmModal';
     modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);';
     modal.innerHTML = `
-      <div style="background:var(--surface,#fff);border-radius:14px;padding:20px 20px 14px;max-width:280px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+      <div style="background:var(--surface,#fff);border-radius:14px;padding:20px 20px 14px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
         <div id="customConfirmMsg" style="font-size:14px;color:var(--text,#111);line-height:1.5;margin-bottom:16px;white-space:pre-line;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
           <button id="customConfirmCancel" style="padding:8px 16px;border:1px solid var(--border,#ddd);border-radius:8px;background:transparent;color:var(--text2,#555);font-size:13px;cursor:pointer;">Huỷ</button>
@@ -100,7 +100,13 @@ function showConfirm(message, onOk, onCancel) {
       </div>`;
     document.body.appendChild(modal);
   }
-  document.getElementById('customConfirmMsg').textContent = message;
+  const msgEl = document.getElementById('customConfirmMsg');
+  // If message contains HTML tags, use innerHTML; otherwise use textContent for safety
+  if (/<[a-z][\s\S]*>/i.test(message)) {
+    msgEl.innerHTML = message;
+  } else {
+    msgEl.textContent = message;
+  }
   modal.style.display = 'flex';
 
   const cleanup = () => { modal.style.display = 'none'; };
@@ -148,7 +154,9 @@ function getPositionObj(code) {
 }
 function getPositionName(p) {
   const obj = getPositionObj(p);
-  return obj ? obj.name : (p || 'TĐ');
+  if (obj) return obj.name;
+  const fallback = {td:'TĐ', gyjn:'GYJN', bgyjn:'BGYJN', tjn:'TJN', yjyn:'YJYN', admin:'Admin', ndd:'NĐD', tvv:'TVV', gvbb:'GVBB'};
+  return fallback[p] || p || 'TĐ';
 }
 function getPosLevel(p) {
   const obj = getPositionObj(p);
