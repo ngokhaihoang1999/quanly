@@ -261,6 +261,7 @@ async function loadDashboard() {
         
         const fullP = allProfiles.find(x => x.id === pid) || p;
         return renderProfileCard(fullP, {
+          profileId: pid,
           ndd: ndd !== '—' ? ndd : '',
           tvv: tvv !== '—' ? tvv : '',
           gvbb: gvbb !== '—' ? gvbb : '',
@@ -444,6 +445,7 @@ async function loadDashboard() {
         // Use full profile from allProfiles cache if available (has all fields)
         const fullP = allProfiles.find(x => x.id === pid) || p;
         return renderProfileCard(fullP, {
+          profileId: pid,
           ndd: fullP?.ndd_staff_code || '',
           tvv: tvvList,
           gvbb: gvbbList,
@@ -472,7 +474,7 @@ async function loadDashboard() {
         const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-right:6px;">${isKT ? '📖 KT' : '📕 Chưa KT'}</span>` : '';
         const fullP2 = allProfiles.find(x => x.id === r.fruit_groups?.profile_id) || p;
         const roleBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${role}</span>`;
-        return renderProfileCard(fullP2, { extraBadges: roleBadge });
+        return renderProfileCard(fullP2, { profileId: r.fruit_groups?.profile_id, extraBadges: roleBadge });
       }).join('');
       if (otherItems) myListEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
     }
