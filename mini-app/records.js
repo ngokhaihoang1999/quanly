@@ -521,16 +521,16 @@ async function saveScheduleTV() {
     closeModal('scheduleTVModal');
     showToast(editingSessionId ? '✅ Đã cập nhật Chốt TV' : '✅ Đã chốt Tư vấn');
 
+    // Calendar: sync Chốt TV event (Create or Update)
+    if (typeof createCalEventFromChotTV === 'function') {
+      createCalEventFromChotTV(currentProfileId, num, dt || null, tool);
+    }
+
     // === Auto-triggers for NEW Chốt TV ===
     if (!editingSessionId) {
       const p = allProfiles.find(x => x.id === currentProfileId);
       const pName = p?.full_name || '';
       const myCode = getEffectiveStaffCode();
-
-      // Calendar: create Chốt TV event ONLY (no Deadline BC TV on calendar)
-      if (typeof createCalEventFromChotTV === 'function') {
-        createCalEventFromChotTV(currentProfileId, num, dt || null);
-      }
       // Notification: notify stakeholders
       if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
         const stakeholders = await getProfileStakeholders(currentProfileId);
@@ -838,7 +838,8 @@ async function saveRecord() {
 
         // Calendar: add Học BB next session event
         if (data.buoi_tiep && typeof createCalEventFromBBReport === 'function') {
-          createCalEventFromBBReport(currentProfileId, data.buoi_tiep);
+          const nextNum = (parseInt(data.buoi_thu) || 1) + 1;
+          createCalEventFromBBReport(currentProfileId, nextNum, data.buoi_tiep);
         }
 
         // Priority: create next "viet_bc_bb" task — visible 1 hour AFTER next BB session

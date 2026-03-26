@@ -198,19 +198,32 @@ function renderCalendarDayEvents(date) {
     const color = CAL_COLORS[ev.event_type] || '#6b7280';
     const time = ev.event_time ? ev.event_time.substring(0, 5) : '';
     const typeLabel = CAL_LABELS[ev.event_type] || ev.event_type;
-    const profileName = ev.profile_id ? (allProfiles.find(p => p.id === ev.profile_id)?.full_name || '') : '';
+    const profile = ev.profile_id ? allProfiles.find(p => p.id === ev.profile_id) : null;
     const completedCls = ev.is_completed ? 'style="opacity:0.5;text-decoration:line-through;"' : '';
+    
+    let metaHtml = `<span class="cal-event-type" style="color:${color}">${typeLabel}</span>`;
+    if (time) metaHtml += `<span>\u23f0 ${time}</span>`;
+    if (profile && ev.event_type === 'chot_tv') {
+        const ndd = profile.ndd_staff_code || '?';
+        const tvv = profile.tvv_staff_code || '?';
+        metaHtml += `<span>NDD: ${ndd}</span><span>TVV: ${tvv}</span>`;
+    } else if (profile && ev.event_type === 'hoc_bb') {
+        const ndd = profile.ndd_staff_code || '?';
+        const gvbb = profile.gvbb_staff_code || '?';
+        metaHtml += `<span>NDD: ${ndd}</span><span>GVBB: ${gvbb}</span>`;
+    } else if (profile) {
+        // Fallback for custom events with profile assigned
+        metaHtml += `<span>\ud83d\udc64 ${profile.full_name}</span>`;
+    }
     
     return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
       <div class="cal-event-bar" style="background:${color}"></div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${ev.title}</div>
-        <div class="cal-event-meta">
-          <span class="cal-event-type" style="color:${color}">${typeLabel}</span>
-          ${time ? `<span>⏰ ${time}</span>` : ''}
-          ${profileName ? `<span>👤 ${profileName}</span>` : ''}
+        <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px;">${ev.title}</div>
+        <div class="cal-event-meta" style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text3);align-items:center;">
+          ${metaHtml}
         </div>
-        ${ev.description ? `<div class="cal-event-desc">${ev.description}</div>` : ''}
+        ${ev.description ? `<div class="cal-event-desc" style="margin-top:8px;font-size:13px;color:var(--text2);">${ev.description}</div>` : ''}
       </div>
       ${!ev.is_auto ? `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">ÁE/button>` : ''}
     </div>`;
@@ -445,45 +458,43 @@ async function deleteCalEvent(eventId) {
 
 // ============ AUTO-CREATE CALENDAR EVENTS ============
 // Called from records.js when Chốt TV or creating BB report with buoi_tiep
-async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt) {
+async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, toolStr) {
   const p = allProfiles.find(x => x.id === profileId);
   const pName = p?.full_name || '';
   const myCode = getEffectiveStaffCode();
-  // Extract date/time DIRECTLY from string to avoid timezone conversion issues
-  // scheduledAt from datetime-local input is already "YYYY-MM-DDTHH:mm" in local time
-  let dateStr, timeStr;
-  if (scheduledAt) {
+  const toolText = toolStr ? ` (${toolStr})` : '';
+  const titleStr = `Chốt TV lần ${sessionNum}${toolText} — ${pName}`;
+  const oldTitlePattern = `Chốt TV lần ${sessionNum}`;
+
+  try {
+    // Delete old event with similar pattern for this session (idempotent update)
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.%${oldTitlePattern}%`, { method: 'DELETE' });
+
+    // ONLY create calendar event if a date was actually scheduled
+    if (!scheduledAt) return;
+
+    let dateStr, timeStr;
     const isoMatch = String(scheduledAt).match(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
     if (isoMatch) {
-      dateStr = isoMatch[1];   // "YYYY-MM-DD"
-      timeStr = isoMatch[2];   // "HH:mm"  ← local time, no conversion
+      dateStr = isoMatch[1];
+      timeStr = isoMatch[2];
     } else {
-      // Fallback: use Date object
       const d = new Date(scheduledAt);
       const pad = n => String(n).padStart(2,'0');
       dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
-  } else {
-    const d = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    timeStr = null;
-  }
-  
-  try {
-    // Create Chốt TV event
+    
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'chot_tv',
-      title: `Chốt TV lần ${sessionNum} — ${pName}`,
+      title: titleStr,
       event_date: dateStr, event_time: timeStr,
       is_auto: true, is_system: true
     })});
-    
   } catch(e) { console.warn('createCalEventFromChotTV:', e); }
 }
 
-async function createCalEventFromBBReport(profileId, buoiTiepStr) {
+async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
   if (!buoiTiepStr) return;
   const p = allProfiles.find(x => x.id === profileId);
   const pName = p?.full_name || '';
@@ -491,13 +502,11 @@ async function createCalEventFromBBReport(profileId, buoiTiepStr) {
 
   let dateStr, timeStr;
 
-  // Try ISO format first: YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
   const isoMatch = buoiTiepStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (isoMatch) {
     dateStr = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
     timeStr = `${isoMatch[4]}:${isoMatch[5]}`;
   } else {
-    // Fallback: old DD/MM/YYYY HH:mm format
     const oldMatch = buoiTiepStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
     if (!oldMatch) return;
     const [, dd, mm, yyyy, hh, mi] = oldMatch;
@@ -506,9 +515,13 @@ async function createCalEventFromBBReport(profileId, buoiTiepStr) {
   }
 
   try {
+    const eventTitle = `Học BB buổi ${nextNum} — ${pName}`;
+    // Delete old matching upcoming BB event to avoid dupes if they edit the report
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=eq.${encodeURIComponent(eventTitle)}`, { method: 'DELETE' });
+
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'hoc_bb',
-      title: `Học BB tiếp — ${pName}`,
+      title: eventTitle,
       event_date: dateStr, event_time: timeStr,
       is_auto: true, is_system: true
     })});
