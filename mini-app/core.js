@@ -45,7 +45,7 @@ function renderProfileCard(p, opts = {}) {
   const isDropout = p.fruit_status === 'dropout';
   const statusColor = isDropout ? 'var(--red)' : 'var(--green)';
   const statusLabel = isDropout ? 'Drop-out' : 'Alive';
-  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isDropout?'rgba(248,113,113,0.15)':'rgba(52,211,153,0.15)'};color:${statusColor};border:1px solid ${isDropout?'rgba(248,113,113,0.3)':'rgba(52,211,153,0.3)'};margin-left:6px;white-space:nowrap;display:inline-flex;align-items:center;vertical-align:middle;"><span style="background:${statusColor};width:6px;height:6px;border-radius:50%;margin-right:4px;display:inline-block;"></span>${statusLabel}</span>`;
+  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isDropout?'rgba(248,113,113,0.15)':'rgba(52,211,153,0.15)'};color:${statusColor};border:1px solid ${isDropout?'rgba(248,113,113,0.3)':'rgba(52,211,153,0.3)'};margin-left:4px;white-space:nowrap;vertical-align:middle;"><span style="background:${statusColor};width:6px;height:6px;border-radius:50%;margin-right:4px;display:inline-block;"></span>${statusLabel}</span>`;
 
   const ph = p.phase || 'chakki';
   const showPhase = opts.showPhase !== false && ph && ph !== 'new';
@@ -59,21 +59,23 @@ function renderProfileCard(p, opts = {}) {
     : '';
 
   const extraBadges = opts.extraBadges || '';
-  // Use profileId from opts as fallback when p.id is undefined (nested Supabase joins)
   const resolvedId = p.id || opts.profileId || '';
   const clickFn = opts.clickFn || `openProfileById('${resolvedId}')`;
 
-  // Data fields
+  // Birth year or dropout reason — shown inline on row 1 after name
+  const birthYear = !isDropout && p.birth_year ? p.birth_year : '';
+  const yearTag = birthYear ? `<span style="font-size:12px;color:var(--text2);margin-left:4px;vertical-align:middle;">(${birthYear})</span>` : '';
+
+  // Data fields for rows below
   const nddStr = opts.ndd || p.ndd_staff_code || '';
   const tvvStr = opts.tvv || '';
   const gvbbStr = opts.gvbb || '';
   const latestStr = opts.latestActivity || '';
-  const metaBase = isDropout ? (p.dropout_reason || '') : (p.birth_year || '');
 
-  // Build detail rows using a simple table-like layout for perfect alignment
+  // Build detail rows
   let detailsHtml = '';
   const hasRow2 = nddStr || tvvStr;
-  const hasRow3 = gvbbStr || latestStr || metaBase || opts.extraMeta;
+  const hasRow3 = gvbbStr || latestStr || opts.extraMeta;
 
   if (hasRow2 || hasRow3) {
     detailsHtml += '<div style="margin-top:6px;font-size:11.5px;color:var(--text2);line-height:1.6;">';
@@ -81,9 +83,9 @@ function renderProfileCard(p, opts = {}) {
       detailsHtml += `<div style="display:flex;gap:16px;"><span><b style="opacity:0.7;">NDD:</b> ${nddStr || '—'}</span>${tvvStr ? `<span><b style="opacity:0.7;">TVV:</b> ${tvvStr}</span>` : ''}</div>`;
     }
     if (hasRow3) {
-      const rightText = opts.extraMeta || (latestStr ? `<span style="color:var(--accent2);">⏱ ${latestStr}</span>` : metaBase);
+      const rightText = opts.extraMeta || (latestStr ? `<span style="color:var(--accent2);">⏱ ${latestStr}</span>` : '');
       if (gvbbStr) {
-        detailsHtml += `<div style="display:flex;justify-content:space-between;"><span><b style="opacity:0.7;">GVBB:</b> ${gvbbStr}</span><span>${rightText}</span></div>`;
+        detailsHtml += `<div style="display:flex;justify-content:space-between;"><span><b style="opacity:0.7;">GVBB:</b> ${gvbbStr}</span>${rightText ? `<span>${rightText}</span>` : ''}</div>`;
       } else if (rightText) {
         detailsHtml += `<div style="display:flex;justify-content:${hasRow2?'flex-end':'flex-start'};"><span>${rightText}</span></div>`;
       }
@@ -91,13 +93,15 @@ function renderProfileCard(p, opts = {}) {
     detailsHtml += '</div>';
   }
 
+  // Dropout reason as a small note under name
+  const dropoutNote = isDropout && p.dropout_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;">Lý do: ${p.dropout_reason}</div>` : '';
+
   return `<div class="profile-card" onclick="${clickFn}" style="padding:12px 14px;">
     <div class="profile-info" style="width:100%;">
-      <div class="profile-name" style="margin-bottom:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;">
-        <span style="font-size:14px;margin-right:2px;">${p.full_name}</span>
-        ${statusBadge}${phaseBadge}${ktBadge}${extraBadges}
+      <div class="profile-name" style="margin-bottom:0;line-height:1.5;">
+        <span style="font-size:14px;">${p.full_name}</span>${yearTag} ${statusBadge}${phaseBadge}${ktBadge}${extraBadges}
       </div>
-      ${detailsHtml}
+      ${dropoutNote}${detailsHtml}
     </div>
     <div class="profile-arrow" style="margin-left:6px;align-self:center;">›</div>
   </div>`;
