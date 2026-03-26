@@ -49,10 +49,25 @@ function mdBranches(text) {
 function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'\u2026'; }
 
 // ═══════════════════════════════════════════════════
-// OpenAI API KEY
+// AI PROXY — calls Supabase Edge Function (key is server-side)
 // ═══════════════════════════════════════════════════
-var _AI_KEY = atob('c2stcHJvai10bExCMkZZTVc4NzF3bHV4enZfZkw5SXd6QVRRdkJfMUIzQ0lyOWdrdkZfZlBUSkdqaHdYN1pnNnMwWm1Va05vOXdzX2EtYzBPWlQzQmxia0ZKMllzM0kwdHcyMEs1bGY3NHZpZ1BhSlNkRE1TaXhVM2hLSnhQTkxid0J6eTZlNEkyTWhENzlwcmFZbVFEcVlHZy1sZEtmUXlBa0E=');
-function getOpenAIKey() { return _AI_KEY; }
+async function callAIProxy(messages, opts = {}) {
+  const model = opts.model || 'gpt-4.1-mini';
+  const temperature = opts.temperature || 0.3;
+  const max_tokens = opts.max_tokens || 1000;
+  
+  const res = await sbFetch('/functions/v1/ai-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model, temperature, max_tokens })
+  });
+  
+  if (!res.ok) {
+    const err = await res.json().catch(function(){ return {}; });
+    throw new Error(err.error || 'AI proxy error ' + res.status);
+  }
+  return await res.json();
+}
 
 // Admin cost tracking
 var _aiGlobalCost = parseFloat(localStorage.getItem('cj_ai_cost') || '0');
@@ -135,7 +150,6 @@ async function runAIAnalysis() {
   var container = document.getElementById('mindmapContainer');
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!container || !p) return;
-  var apiKey = getOpenAIKey();
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udc7c AI \u0111ang ph\u00e2n t\u00edch...<br><small style="color:var(--text3);">10-20 gi\u00e2y</small></div>';
   container.style.height = 'auto';
   try {
@@ -196,13 +210,10 @@ async function runAIAnalysis() {
       'NGUY\u00caN T\u1eaeC: Ch\u1ec9 d\u1ef1a tr\u00ean d\u1eef li\u1ec7u th\u1ef1c t\u1ebf. Kh\u00f4ng b\u1ecba. N\u1ebfu thi\u1ebfu -> "Ch\u01b0a c\u00f3 th\u00f4ng tin".\n' +
       'QUAN TR\u1eccNG: To\u00e0n b\u1ed9 output PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7.';
 
-    var res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: 'gpt-4.1-mini', messages: [{role:'system',content:sysPrompt},{role:'user',content:context}], temperature: 0.3, max_tokens: 1000 })
-    });
-    if (!res.ok) { var err = await res.json().catch(function(){return {};}); throw new Error(err.error?err.error.message:'API '+res.status); }
-    var data = await res.json();
+    var data = await callAIProxy(
+      [{role:'system',content:sysPrompt},{role:'user',content:context}],
+      { model: 'gpt-4.1-mini', temperature: 0.3, max_tokens: 1000 }
+    );
     var md = (data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '').trim();
     if (!md || md.charAt(0) !== '#') throw new Error('AI response invalid');
     var u = data.usage || {};
@@ -354,14 +365,8 @@ async function sendAIChat() {
     var msgs = [
       { role: 'system', content: LACIE_SYSTEM_PROMPT + '\n\nHO SO TRAI QUA HIEN TAI:\n' + context }
     ].concat(_aiChatHistory.slice(-8));
-    var res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getOpenAIKey() },
-      body: JSON.stringify({ model: 'gpt-4.1-mini', messages: msgs, temperature: 0.4, max_tokens: 400 })
-    });
+    var data = await callAIProxy(msgs, { model: 'gpt-4.1-mini', temperature: 0.4, max_tokens: 400 });
     var el = document.getElementById('aiTyping'); if(el) el.remove();
-    if (!res.ok) { var e = await res.json().catch(function(){return {};}); throw new Error(e.error?e.error.message:'API '+res.status); }
-    var data = await res.json();
     var answer = (data.choices && data.choices[0] ? data.choices[0].message.content : 'Kh\u00f4ng c\u00f3 ph\u1ea3n h\u1ed3i');
     var u = data.usage || {};
     trackCost((u.prompt_tokens||0)/1e6*0.40 + (u.completion_tokens||0)/1e6*1.60);
