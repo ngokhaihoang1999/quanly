@@ -259,7 +259,8 @@ async function loadDashboard() {
         const showKT = ['bb', 'center', 'completed'].includes(ph);
         const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>` : '';
         
-        return renderProfileCard(p, {
+        const fullP = allProfiles.find(x => x.id === pid) || p;
+        return renderProfileCard(fullP, {
           ndd: ndd !== '—' ? ndd : '',
           tvv: tvv !== '—' ? tvv : '',
           gvbb: gvbb !== '—' ? gvbb : '',
