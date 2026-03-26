@@ -373,11 +373,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadStaffInfo() {
   const userId = tg?.initDataUnsafe?.user?.id;
   if (!userId) {
-    document.getElementById('staffBadge').textContent = 'Demo';
-    myStaff = { staff_code: 'DEMO', position: 'admin', specialist_position: null, full_name: 'Demo Admin' };
-    document.getElementById('viewAsBar').classList.add('active');
-    applyPermissions();
-    return;
+    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:18px;color:red;padding:20px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">\u26a0\ufe0f Truy c\u1eadp b\u1ecb t\u1eeb ch\u1ed1i.<br>Vui l\u00f2ng m\u1edf \u1ee9ng d\u1ee5ng qua Telegram \u0111\u1ec3 x\u00e1c th\u1ef1c danh t\u00ednh.</div>';
+    throw new Error('Unauthorized Access - Telegram required');
   }
   try {
     const res = await sbFetch(`/rest/v1/staff?telegram_id=eq.${userId}&select=*`);
