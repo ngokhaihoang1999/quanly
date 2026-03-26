@@ -162,7 +162,7 @@ async function runAIAnalysis() {
       container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>';
       return;
     }
-    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? '\nDROPOUT_REASON: '+p.dropout_reason : '')+'\n\n';
+    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? '\nDROPOUT_REASON: '+p.dropout_reason : '')+'\nNGUOI_PHU_TRACH: '+(p.ndd_staff_code?('NDD:'+p.ndd_staff_code+' '):'')+(p.tvv_staff_code?('TVV:'+p.tvv_staff_code+' '):'')+(p.gvbb_staff_code?('GVBB:'+p.gvbb_staff_code):'')+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
@@ -182,8 +182,10 @@ async function runAIAnalysis() {
       '- T\u1ed1i \u0111a 6 nh\u00e1nh ch\u00ednh, m\u1ed7i nh\u00e1nh 3-4 m\u1ee5c con, t\u1ed5ng max 30 nodes\n\n' +
       'L\u01af\u1ee4U \u00dd CONCEPT (Concept):\n' +
       '- Concept l\u00e0 t\u00ean t\u1ed5 ch\u1ee9c/ch\u01b0\u01a1ng tr\u00ecnh m\u00e0 NDD d\u1ef1ng l\u00ean \u0111\u1ec3 che gi\u1ea5u m\u1ee5c \u0111\u00edch h\u1ecdc KT. V\u00ed d\u1ee5: "H\u1ecdc vi\u1ec7n t\u00e2m l\u00fd", "CLB k\u1ef9 n\u0103ng s\u1ed1ng".\n' +
-      '- Enneagram, MBTI, t\u00e2m linh, t\u00f4n gi\u00e1o, \u0111\u1eb7c \u0111i\u1ec3m c\u00e1 nh\u00e2n c\u1ee7a tr\u00e1i qu\u1ea3 KH\u00d4NG PH\u1ea2I l\u00e0 concept.\n' +
-      '- N\u1ebfu trong d\u1eef li\u1ec7u KH\u00d4NG c\u00f3 th\u00f4ng tin r\u00f5 r\u00e0ng v\u1ec1 concept: ghi "\u0110ang d\u00f9ng: Ch\u01b0a r\u00f5" ho\u1eb7c "Ch\u01b0a c\u00f3 th\u00f4ng tin". KH\u00d4NG T\u1ef0 \u0110I\u1ec0N b\u1eefa.\n\n' +
+      '- Enneagram, MBTI, t\u00e2m linh, t\u00f4n gi\u00e1o, \u0111\u1eb7c \u0111i\u1ec3m c\u00e1 nh\u00e2n c\u1ee7a tr\u00e1i qu\u1ea3 KH\u00d4NG PH\u1ea2I l\u00e0 concept. N\u1ebfu thi\u1ebfu -> ghi "Ch\u01b0a r\u00f5".\n\n' +
+      'L\u01af\u1ee4U \u00dd \u0110I\u1ec2M H\u00c1I TR\u00c1I:\n' +
+      '-L\u00e0 m\u1ea5u ch\u1ed1t (n\u1ed7i \u0111au, kh\u00f3 kh\u0103n, tr\u0103n tr\u1edf, t\u01b0 t\u01b0\u1edfng) \u0111\u1ec3 x\u00e2y d\u1ef1ng l\u00fd do d\u1eabn d\u1eaft h\u1ecdc Kinh th\u00e1nh.\n' +
+      '- VD: thi\u1ebfu t\u00ecnh th\u01b0\u01a1ng gia \u0111\u00ecnh -> \u0111i\u1ec3m h\u00e1i tr\u00e1i l\u00e0 t\u00ecnh y\u00eau th\u01b0\u01a1ng, h\u1ecdc KT \u0111\u1ec3 b\u00f9 \u0111\u1eafp nỗi đau, củng cố m\u1ea5t m\u00e1t. Ph\u1ea3i đưa ra nh\u1eadn \u0111\u1ecbnh & l\u1eddi khuy\u00ean k\u1ebft n\u1ed1i vi\u1ec7c h\u1ecdc KT.\n\n' +
       (p.fruit_status === 'dropout'
         ? '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (DROP-OUT):\n' +
           '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n ngh\u1ec9, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, l\u00fd do ngh\u1ec9\n' +
@@ -194,17 +196,17 @@ async function runAIAnalysis() {
           '## \ud83d\udee0\ufe0f H\u01b0\u1edbng kh\u1eafc ph\u1ee5c \u2014 C\u00e1ch l\u00e0m t\u1ed1t h\u01a1n\n\n'
         : p.is_kt_opened
           ? '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (SAU M\u1ede KT):\n' +
-            '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, \u0111\u00e3 m\u1edf KT\n' +
+            '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, \u0111\u1ed9i ph\u1ee5 tr\u00e1ch (NDD/TVV/GVBB), \u0111\u00e3 m\u1edf KT\n' +
             '## \ud83d\udcd6 C\u1ea3m nh\u1eadn KT \u2014 Ph\u1ea3n \u1ee9ng c\u1ee7a tr\u00e1i qu\u1ea3 v\u1edbi KT, m\u1ee9c \u0111\u1ed9 ti\u1ebfp nh\u1eadn\n' +
-            '## \ud83d\udc8e Li\u00ean k\u1ebft KT & \u0111i\u1ec3m h\u00e1i tr\u00e1i \u2014 C\u00e2u chuy\u1ec7n KT gi\u1ea3i quy\u1ebft v\u1ea5n \u0111\u1ec1 s\u00e2u\n' +
-            '## \ud83d\udee1\ufe0f B\u1ea3o an \u2014 M\u00f4i tr\u01b0\u1eddng h\u1ecdc, ly do che \u0111\u1eady, r\u1ee7i ro hi\u1ec7n t\u1ea1i\n' +
+            '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 L\u00fd do s\u00e2u xa c\u1ea7n h\u1ecdc KT. Đ\u01b0a l\u1eddi khuy\u00ean k\u1ebft n\u1ed1i kh\u00f3 kh\u0103n th\u1ef1c t\u1ebf với b\u00e0i học\n' +
+            '## \ud83d\udee1\ufe0f B\u1ea3o an \u2014 M\u00f4i tr\u01b0\u1eddng h\u1ecdc, lý do che \u0111\u1eady, r\u1ee7i ro hi\u1ec7n t\u1ea1i\n' +
             '## \ud83e\udd1d Chi\u1ebfn l\u01b0\u1ee3c \u2014 C\u00e1ch gi\u00fap c\u1ea3m nh\u1eadn KT t\u1ed1t h\u01a1n, gi\u1eef \u0111\u1ed9ng l\u1ef1c\n' +
             '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf, chu\u1ea9n b\u1ecb Center\n\n'
           : '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (TR\u01af\u1edcC M\u1ede KT):\n' +
-            '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, Concept NDD\n' +
+            '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, \u0111\u1ed9i ph\u1ee5 tr\u00e1ch (NDD/TVV/GVBB), Concept NDD\n' +
             '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa, c\u1ea3m x\u00fac, nhu c\u1ea7u \u1ea9n\n' +
-            '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 \u0110i\u1ec3m ch\u1ea1m c\u1ea3m x\u00fac. N\u1ebfu thi\u1ebfu: "C\u1ea7n khai th\u00e1c"\n' +
-            '## \ud83d\udd13 Chu\u1ea9n b\u1ecb m\u1edf KT \u2014 M\u1ee9c s\u1eb5n s\u00e0ng, c\u00e1ch m\u1edf m\u01b0\u1ee3t m\u00e0, th\u1eddi \u0111i\u1ec3m\n' +
+            '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 Đ\u00e2u l\u00e0 \u0111i\u1ec3m m\u1ea5u ch\u1ed1t d\u1eabn d\u1eaft \u0111\u1ebfn KT? L\u1eddi khuy\u00ean c\u1ee5 th\u1ec3\n' +
+            '## \ud83d\udd13 Chu\u1ea9n b\u1ecb m\u1edf KT \u2014 Ph\u00e2n t\u00edch t\u00ecnh h\u00ecnh th\u1ea7n t\u00ednh, s\u1ef1 h\u1ee3p t\u00e1c -> h\u01b0\u1edbng m\u1edf KT ph\u00f9 h\u1ee3p\n' +
             '## \ud83d\udee1\ufe0f B\u1ea3o an \u2014 Concept, t\u00f4n gi\u00e1o tr\u00e1i qu\u1ea3, r\u1ee7i ro l\u1ed9\n' +
             '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf ti\u1ebfp r\u00f5 r\u00e0ng\n\n') +
       'NGUY\u00caN T\u1eaeC: Ch\u1ec9 d\u1ef1a tr\u00ean d\u1eef li\u1ec7u th\u1ef1c t\u1ebf. Kh\u00f4ng b\u1ecba. N\u1ebfu thi\u1ebfu -> "Ch\u01b0a c\u00f3 th\u00f4ng tin".\n' +
@@ -334,7 +336,7 @@ async function buildChatCtx() {
   var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content&order=created_at.asc');
   var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
   var d = window._currentInfoSheet || {};
-  var ctx = 'TRAI QUA: '+(p.full_name||'N/A')+' | GIAI DOAN: '+(p.phase||'chakki')+' | IS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+' | FRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? ' | DROPOUT_REASON: '+p.dropout_reason : '')+'\n\n';
+  var ctx = 'TRAI QUA: '+(p.full_name||'N/A')+' | GIAI DOAN: '+(p.phase||'chakki')+' | IS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+' | FRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? ' | DROPOUT_REASON: '+p.dropout_reason : '')+' | NGUOI_PHU_TRACH: '+(p.ndd_staff_code?('NDD:'+p.ndd_staff_code+' '):'')+(p.tvv_staff_code?('TVV:'+p.tvv_staff_code+' '):'')+(p.gvbb_staff_code?('GVBB:'+p.gvbb_staff_code):'')+'\n\n';
   if (Object.keys(d).length) {
     ctx += 'PHI\u1ebeU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){

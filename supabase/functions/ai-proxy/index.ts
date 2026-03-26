@@ -9,7 +9,7 @@ const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, prefer',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
