@@ -260,7 +260,10 @@ async function loadDashboard() {
         const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>` : '';
         
         return renderProfileCard(p, {
-          extraMeta: [ndd ? 'NDD: ' + ndd : '', tvv ? 'TVV: ' + tvv : '', latest ? '⏱ ' + latest : ''].filter(Boolean).join(' · ')
+          ndd: ndd !== '—' ? ndd : '',
+          tvv: tvv !== '—' ? tvv : '',
+          gvbb: gvbb !== '—' ? gvbb : '',
+          latestActivity: latest
         });
       }).join('');
     }
@@ -440,7 +443,10 @@ async function loadDashboard() {
         // Use full profile from allProfiles cache if available (has all fields)
         const fullP = allProfiles.find(x => x.id === pid) || p;
         return renderProfileCard(fullP, {
-          extraMeta: [tvvList ? '💬 TVV: ' + tvvList : '', gvbbList ? '🎓 GVBB: ' + gvbbList : '', latestActivity ? '⏱ ' + latestActivity : ''].filter(Boolean).join(' · ')
+          ndd: fullP?.ndd_staff_code || '',
+          tvv: tvvList,
+          gvbb: gvbbList,
+          latestActivity: latestActivity
         });
       }).join('');
     }

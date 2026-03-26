@@ -39,47 +39,68 @@ function getStaffLabel(code) {
 
 // ============ SHARED PROFILE CARD RENDERER ============
 // Use this everywhere a profile box appears — ensures consistent UI
-// opts: { extraMeta: string, clickFn: string, showPhase: bool, extraBadges: string }
+// opts: { extraMeta: string, clickFn: string, showPhase: bool, extraBadges: string, ndd: string, tvv: string, gvbb: string, latestActivity: string }
 function renderProfileCard(p, opts = {}) {
   if (!p) return '';
   const isDropout = p.fruit_status === 'dropout';
   const statusColor = isDropout ? 'var(--red)' : 'var(--green)';
   const statusLabel = isDropout ? 'Drop-out' : 'Alive';
-  const metaBase = isDropout ? (p.dropout_reason || '') : (p.birth_year || '');
+  // Use inline badge for status in row 1
+  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isDropout?'rgba(248,113,113,0.15)':'rgba(52,211,153,0.15)'};color:${statusColor};border:1px solid ${isDropout?'rgba(248,113,113,0.3)':'rgba(52,211,153,0.3)'};margin-left:6px;display:inline-flex;align-items:center;"><span class="status-dot" style="background:${statusColor};width:6px;height:6px;margin-right:4px;display:inline-block;"></span>${statusLabel}</span>`;
+  
   const ph = p.phase || 'chakki';
-
-  // Phase badge (always show unless hidden)
   const showPhase = opts.showPhase !== false && ph && ph !== 'new';
   const phaseBadge = showPhase
     ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${(typeof PHASE_COLORS!=='undefined'?PHASE_COLORS[ph]:{})||'#f59e0b'};color:white;margin-left:6px;">${(typeof PHASE_LABELS!=='undefined'?PHASE_LABELS[ph]:ph)||ph}</span>`
     : '';
 
-  // KT badge for BB+ phases
   const showKT = ['bb','center','completed'].includes(ph);
   const ktBadge = showKT
     ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${p.is_kt_opened?'var(--green)':'#f59e0b'};color:white;margin-left:4px;">${p.is_kt_opened?'📖 KT':'📕 KT'}</span>`
     : '';
 
-  // Extra badges from opts (e.g. role badges)
   const extraBadges = opts.extraBadges || '';
-
-  // Meta line: status + base info + extra
-  const metaParts = [];
-  if (metaBase) metaParts.push(metaBase);
-  if (opts.extraMeta) metaParts.push(opts.extraMeta);
-  const metaStr = metaParts.join(' · ');
-
   const clickFn = opts.clickFn || `openProfileById('${p.id}')`;
-  const avatarLetter = (p.full_name || '?')[0].toUpperCase();
-  const avatarBg = p.avatar_color ? p.avatar_color : 'linear-gradient(135deg,var(--accent),#ec4899)';
 
-  return `<div class="profile-card" onclick="${clickFn}">
-    <div class="avatar" style="background:${avatarBg};">${avatarLetter}</div>
-    <div class="profile-info">
-      <div class="profile-name">${p.full_name}${phaseBadge}${ktBadge}${extraBadges}</div>
-      <div class="profile-meta"><span class="status-dot" style="background:${statusColor};"></span>${statusLabel}${metaStr ? ' · ' + metaStr : ''}</div>
+  // Row 2: NDD & TVV
+  const nddStr = opts.ndd || p.ndd_staff_code || '';
+  const tvvStr = opts.tvv || '';
+  
+  // Row 3: GVBB & Latest / extra
+  const gvbbStr = opts.gvbb || '';
+  let latestStr = opts.latestActivity || '';
+  const metaBase = isDropout ? (p.dropout_reason || '') : (p.birth_year ? `Sinh k${p.birth_year}` : '');
+  
+  // Assemble grid rows if data exists
+  let detailsHtml = '';
+  if (nddStr || tvvStr) {
+    detailsHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;color:var(--text2);margin-top:8px;">
+      <div><span style="font-weight:600;opacity:0.8;">NDD:</span> ${nddStr || '—'}</div>
+      <div>${tvvStr ? `<span style="font-weight:600;opacity:0.8;">TVV:</span> ${tvvStr}` : ''}</div>
+    </div>`;
+  }
+  
+  const bottomText = opts.extraMeta || (latestStr ? `<span style="color:var(--accent2);">⏱ ${latestStr}</span>` : metaBase);
+  
+  if (gvbbStr) {
+    detailsHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;color:var(--text2);margin-top:4px;">
+      <div><span style="font-weight:600;opacity:0.8;">GVBB:</span> ${gvbbStr}</div>
+      <div style="text-align:right;align-self:end;">${bottomText}</div>
+    </div>`;
+  } else if (bottomText) {
+    // If no GVBB but we have bottom text, just add it elegantly depending on if row 2 exists
+    detailsHtml += `<div style="font-size:11.5px;color:var(--text2);margin-top:4px;${(nddStr||tvvStr)?'text-align:right;':''}">${bottomText}</div>`;
+  }
+
+  return `<div class="profile-card" onclick="${clickFn}" style="padding:14px 16px;">
+    <div class="profile-info" style="width:100%;">
+      <div class="profile-name" style="margin-bottom:0;align-items:center;">
+        <span style="font-size:15px;">${p.full_name}</span>
+        ${statusBadge}${phaseBadge}${ktBadge}${extraBadges}
+      </div>
+      ${detailsHtml}
     </div>
-    <div class="profile-arrow">›</div>
+    <div class="profile-arrow" style="margin-left:8px;align-self:center;">›</div>
   </div>`;
 }
 
