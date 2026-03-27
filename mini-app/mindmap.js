@@ -209,7 +209,7 @@ async function runAIAnalysis() {
     var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
     var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
 
-    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? '\nDROPOUT_REASON: '+p.dropout_reason : '')+'\nNGUOI_PHU_TRACH: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
+    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+(p.phase||'chakki')+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do nghỉ: '+p.dropout_reason : '')+'\nNgư\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
@@ -226,6 +226,7 @@ async function runAIAnalysis() {
       '- Output CHỈ là Markdown, KHÔNG giải thích gì thêm\n' +
       '- # cho root (Họ Tên), ## nhánh chính, ### nhánh cấp 1, #### nhánh cấp 2 (dẫn chứng), - lá (kết luận/hướng đi).\n' +
       '- Hỗ trợ mở rộng 4 luồng. Luồng 4 (hoặc "-") LÀ KẾT LUẬN HOẶC HƯỚNG ĐI CHI TIẾT.\n' +
+      '- TUYỆT ĐỐI KHÔNG DÙNG TÊN BIẾN TIẾNG ANH (Ví dụ KHÔNG dùng "is_kt_opened", "fruit_status"). Hãy dùng ngôn ngữ tự nhiên.\n' +
       '- Mỗi node ngắn gọn, PHẢI có dấu tiếng Việt đầy đủ\n\n' +
       'LƯU Ý CONCEPT:\n' +
       '- Concept là tên vỏ bọc tổ chức mà NDD dựng lên. Enneagram, MBTI KHÔNG PHẢI là concept.\n\n' +
@@ -384,7 +385,7 @@ async function buildChatCtx() {
   var nddName = window._rolesDisplay?.ndd || 'chưa rõ';
   var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
   var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
-  var ctx = 'TRAI QUA: '+(p.full_name||'N/A')+' | GIAI DOAN: '+(p.phase||'chakki')+' | IS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+' | FRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? ' | DROPOUT_REASON: '+p.dropout_reason : '')+' | NGUOI_PHU_TRACH: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
+  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+(p.phase||'chakki')+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do nghỉ: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
   if (Object.keys(d).length) {
     ctx += 'PHI\u1ebeU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){
@@ -445,10 +446,7 @@ function toggleFullscreen(elId) {
     // Re-render mindmap at normal size
     if (elId === 'mindmapContainer') {
       el.style.height = '420px';
-      var pid = currentProfileId;
-      if (_mmCache[pid]) {
-        setTimeout(function(){ renderMarkmap(el, _mmCache[pid]); }, 50);
-      }
+      setTimeout(function(){ renderMindmap(); }, 50);
     }
   } else {
     // Enter fullscreen
@@ -464,10 +462,7 @@ function toggleFullscreen(elId) {
     // Mindmap: re-render at full size
     if (elId === 'mindmapContainer') {
       el.style.height = '100vh';
-      var pid2 = currentProfileId;
-      if (_mmCache[pid2]) {
-        setTimeout(function(){ renderMarkmap(el, _mmCache[pid2]); }, 100);
-      }
+      setTimeout(function(){ renderMindmap(); }, 100);
     }
     // Chat: auto-open body + focus input
     if (elId === 'aiChatCard') {
