@@ -117,33 +117,41 @@ function renderInfoMM(container, p) {
     d.gioi_tinh ? 'Giới tính: '+d.gioi_tinh : null,
     d.nghe_nghiep ? 'Nghề: '+d.nghe_nghiep : null,
     d.hon_nhan ? 'Hôn nhân: '+(Array.isArray(d.hon_nhan)?d.hon_nhan.join(', '):d.hon_nhan) : null,
-    d.dia_chi || d.que_quan ? 'Nơi sống: '+[d.que_quan, d.dia_chi].filter(Boolean).join(' - ') : null
+    d.quan_he_ndd ? 'Quan hệ với NDD: '+(Array.isArray(d.quan_he_ndd)?d.quan_he_ndd.join(', '):d.quan_he_ndd) : null,
+    d.khong_gian_song ? 'Ở chung: '+(Array.isArray(d.khong_gian_song)?d.khong_gian_song.join(', '):d.khong_gian_song) : null,
+    d.dia_chi ? 'Nơi ở hiện tại: '+d.dia_chi : null,
+    d.que_quan ? 'Nhà ba mẹ (Quê): '+d.que_quan : null
   ].filter(Boolean);
   if (dm.length) {
     md += '## 🏛️ Nhân thân & Nền tảng\n';
     dm.forEach(function(v){ md += '- '+formatNode(v, 45)+'\n'; });
   }
 
-  // 2. He tu truong (Ton giao, Quan diem)
+  // 2. Gia Dinh (nguoi_than)
+  var gd = '';
+  if (d.nguoi_than) gd += '### 👨‍👩‍👧‍👦 Hoàn cảnh gia đình\n' + mdSentences(d.nguoi_than, 55);
+  if (gd) md += '## 🏡 Gia đình & Hoàn cảnh\n' + gd;
+
+  // 3. He tu truong (Ton giao, Quan diem)
   var tt_md = '';
   if (d.ton_giao) tt_md += '- **Tôn giáo:** '+(Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao)+'\n';
   if (d.quan_diem) tt_md += mdSentences(d.quan_diem, 55);
   if (tt_md) md += '## ⚖️ Hệ tư tưởng & Niềm tin\n' + tt_md;
 
-  // 3. Chieu sau noi tam (Tinh cach, so thich, du dinh)
+  // 4. Chieu sau noi tam (Tinh cach, so thich, du dinh)
   var tl = '';
   if (d.tinh_cach) tl += '### 🧩 Tính cách\n' + mdSentences(d.tinh_cach, 50);
   if (d.so_thich) tl += '### 🎨 Đam mê / Sở thích\n' + mdSentences(d.so_thich, 50);
   if (d.du_dinh) tl += '### 🚀 Khát vọng / Dự định\n' + mdSentences(d.du_dinh, 50);
   if (tl) md += '## 🌊 Chiều sâu nội tâm\n' + tl;
 
-  // 4. Goc khuat (Chuyen cu, nguoi_quan_trong)
+  // 5. Goc khuat (Chuyen cu, nguoi_quan_trong)
   var qk = '';
-  if (d.nguoi_quan_trong) qk += '### 👥 Người ảnh hưởng\n' + mdSentences(d.nguoi_quan_trong, 50);
+  if (d.nguoi_quan_trong) qk += '### 👥 Người quan trọng nhất\n' + mdSentences(d.nguoi_quan_trong, 50);
   if (d.chuyen_cu) qk += '### 📖 Câu chuyện dấu ấn\n' + mdSentences(d.chuyen_cu, 50);
   if (qk) md += '## ⛓️ Góc khuất & Ràng buộc\n' + qk;
 
-  // 5. Canh bao
+  // 6. Canh bao
   if (d.luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdSentences(d.luu_y, 55);
 
   if (md.trim() === '# '+name) md += '## 📋 Trái quả này chưa có dữ liệu\n';
