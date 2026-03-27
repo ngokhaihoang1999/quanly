@@ -162,7 +162,12 @@ async function runAIAnalysis() {
       container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>';
       return;
     }
-    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? '\nDROPOUT_REASON: '+p.dropout_reason : '')+'\nNGUOI_PHU_TRACH: '+(p.ndd_staff_code?('NDD:'+p.ndd_staff_code+' '):'')+(p.tvv_staff_code?('TVV:'+p.tvv_staff_code+' '):'')+(p.gvbb_staff_code?('GVBB:'+p.gvbb_staff_code):'')+'\n\n';
+    var getName = function(c) { return c ? (typeof allStaff!=='undefined' && allStaff.find(s=>s.code===c)?.name || c) : null; };
+    var nddName = getName(p.ndd_staff_code);
+    var tvvName = getName(p.tvv_staff_code);
+    var gvbbName = getName(p.gvbb_staff_code);
+
+    var context = 'TRAI QUA: '+(p.full_name||'N/A')+'\nGIAI DOAN: '+(p.phase||'chakki')+'\nIS_KT_OPENED: '+(p.is_kt_opened ? 'true' : 'false')+'\nFRUIT_STATUS: '+(p.fruit_status||'alive')+(p.dropout_reason ? '\nDROPOUT_REASON: '+p.dropout_reason : '')+'\nNGUOI_PHU_TRACH: \n'+(nddName?('NDD: '+nddName+'\n'):'')+(tvvName?('TVV: '+tvvName+'\n'):'')+(gvbbName?('GVBB: '+gvbbName+'\n'):'')+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
@@ -173,44 +178,43 @@ async function runAIAnalysis() {
     nts.forEach(function(r){ var c=r.content||{}; if(c.title||c.body) context+='--- GHI CHU: '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
 
     var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\n' +
-      '=== NHI\u1ec6M V\u1ee4: T\u1ea0O MINDMAP ===\n' +
-      'Ph\u00e2n t\u00edch TO\u00c0N B\u1ed8 th\u00f4ng tin h\u1ed3 s\u01a1 v\u00e0 t\u1ea1o mindmap Markdown.\n\n' +
-      'QUY T\u1eaeC \u0110\u1ecaNH D\u1ea0NG:\n' +
-      '- Output CH\u1ec8 l\u00e0 Markdown, KH\u00d4NG gi\u1ea3i th\u00edch g\u00ec th\u00eam\n' +
-      '- # cho root (t\u00ean tr\u00e1i qu\u1ea3), ## nh\u00e1nh ch\u00ednh, ### nh\u00e1nh ph\u1ee5, - cho l\u00e1\n' +
-      '- M\u1ed7i node t\u1ed1i \u0111a 35 k\u00fd t\u1ef1, PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7\n' +
-      '- T\u1ed1i \u0111a 6 nh\u00e1nh ch\u00ednh, m\u1ed7i nh\u00e1nh 3-4 m\u1ee5c con, t\u1ed5ng max 30 nodes\n\n' +
-      'L\u01af\u1ee4U \u00dd CONCEPT (Concept):\n' +
-      '- Concept l\u00e0 t\u00ean t\u1ed5 ch\u1ee9c/ch\u01b0\u01a1ng tr\u00ecnh m\u00e0 NDD d\u1ef1ng l\u00ean \u0111\u1ec3 che gi\u1ea5u m\u1ee5c \u0111\u00edch h\u1ecdc KT. V\u00ed d\u1ee5: "H\u1ecdc vi\u1ec7n t\u00e2m l\u00fd", "CLB k\u1ef9 n\u0103ng s\u1ed1ng".\n' +
-      '- Enneagram, MBTI, t\u00e2m linh, t\u00f4n gi\u00e1o, \u0111\u1eb7c \u0111i\u1ec3m c\u00e1 nh\u00e2n c\u1ee7a tr\u00e1i qu\u1ea3 KH\u00d4NG PH\u1ea2I l\u00e0 concept. N\u1ebfu thi\u1ebfu -> ghi "Ch\u01b0a r\u00f5".\n\n' +
-      'L\u01af\u1ee4U \u00dd \u0110I\u1ec2M H\u00c1I TR\u00c1I:\n' +
-      '-L\u00e0 m\u1ea5u ch\u1ed1t (n\u1ed7i \u0111au, kh\u00f3 kh\u0103n, tr\u0103n tr\u1edf, t\u01b0 t\u01b0\u1edfng) \u0111\u1ec3 x\u00e2y d\u1ef1ng l\u00fd do d\u1eabn d\u1eaft h\u1ecdc Kinh th\u00e1nh.\n' +
-      '- VD: thi\u1ebfu t\u00ecnh th\u01b0\u01a1ng gia \u0111\u00ecnh -> \u0111i\u1ec3m h\u00e1i tr\u00e1i l\u00e0 t\u00ecnh y\u00eau th\u01b0\u01a1ng, h\u1ecdc KT \u0111\u1ec3 b\u00f9 \u0111\u1eafp nỗi đau, củng cố m\u1ea5t m\u00e1t. Ph\u1ea3i đưa ra nh\u1eadn \u0111\u1ecbnh & l\u1eddi khuy\u00ean k\u1ebft n\u1ed1i vi\u1ec7c h\u1ecdc KT.\n\n' +
+      '=== NHIỆM VỤ: TẠO MINDMAP ===\n' +
+      'Phân tích TOÀN BỘ thông tin hồ sơ và tạo mindmap Markdown.\n\n' +
+      'QUY TẮC ĐỊNH DẠNG:\n' +
+      '- Output CHỈ là Markdown, KHÔNG giải thích gì thêm\n' +
+      '- # cho root (Họ Tên), ## nhánh chính, ### nhánh cấp 1, #### nhánh cấp 2 (dẫn chứng), - lá (kết luận/hướng đi).\n' +
+      '- Hỗ trợ mở rộng 4 luồng. Luồng 3 có thể là diễn giải/dẫn chứng, luồng 4 (hoặc "-") LÀ KẾT LUẬN HOẶC HƯỚNG ĐI CHI TIẾT.\n' +
+      '- Mỗi node ngắn gọn, PHẢI có dấu tiếng Việt đầy đủ\n\n' +
+      'LƯU Ý CONCEPT:\n' +
+      '- Concept là tên vỏ bọc tổ chức mà NDD dựng lên. Enneagram, MBTI KHÔNG PHẢI là concept.\n\n' +
+      'LƯU Ý ĐIỂM HÁI TRÁI:\n' +
+      '- Phải CÓ KẾT LUẬN về điểm hái trái là gì (điểm chạm nào sẽ chốt hạ).\n' +
+      '- Phải CÓ HƯỚNG ĐI CỤ THỂ để nắm bắt điểm hái trái đó bằng cách dùng Kinh Thánh.\n\n' +
       (p.fruit_status === 'dropout'
-        ? '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (DROP-OUT):\n' +
-          '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n ngh\u1ec9, ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch, l\u00fd do ngh\u1ec9\n' +
-          '## \u26a0\ufe0f Nguy\u00ean nh\u00e2n ti\u1ec1m n\u0103ng \u2014 V\u00ec sao ngh\u1ec9? Ph\u00e2n t\u00edch s\u00e2u t\u1eeb BC\n' +
-          '## \ud83d\udea9 D\u1ea5u hi\u1ec7u c\u1ea3nh b\u00e1o \u2014 T\u00edn hi\u1ec7u nh\u1eadn ra s\u1edbm t\u1eeb BC TV/BB\n' +
-          '## \ud83d\udc94 \u0110i\u1ec3m th\u1ea5t b\u1ea1i \u2014 Sai s\u00f3t: concept, b\u1ea3o an, t\u1ed1c \u0111\u1ed9?\n' +
-          '## \ud83d\udca1 B\u00e0i h\u1ecdc r\u00fat ra \u2014 Kinh nghi\u1ec7m cho TH t\u01b0\u01a1ng t\u1ef1\n' +
-          '## \ud83d\udee0\ufe0f H\u01b0\u1edbng kh\u1eafc ph\u1ee5c \u2014 C\u00e1ch l\u00e0m t\u1ed1t h\u01a1n\n\n'
+        ? 'CÁC NHÁNH (DROP-OUT):\n' +
+          '## 📋 Tổng quan — Giai đoạn nghỉ, NGƯỜI PHỤ TRÁCH (liệt kê tên cụ thể NDD, TVV...), lý do nghỉ\n' +
+          '## ⚠️ Nguyên nhân tiềm năng — Vì sao nghỉ? Phân tích sâu\n' +
+          '## 🚩 Dấu hiệu cảnh báo — Tín hiệu nhận ra sớm\n' +
+          '## 💔 Điểm thất bại — Sai sót concept, bảo an, tốc độ?\n' +
+          '## 💡 Bài học rút ra — Kinh nghiệm\n' +
+          '## 🛠️ Hướng khắc phục — Cách làm tốt hơn kèm action cụ thể\n\n'
         : p.is_kt_opened
-          ? '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (SAU M\u1ede KT):\n' +
-            '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, \u0111\u1ed9i ph\u1ee5 tr\u00e1ch (NDD/TVV/GVBB), \u0111\u00e3 m\u1edf KT\n' +
-            '## \ud83d\udcd6 C\u1ea3m nh\u1eadn KT \u2014 Ph\u1ea3n \u1ee9ng c\u1ee7a tr\u00e1i qu\u1ea3 v\u1edbi KT, m\u1ee9c \u0111\u1ed9 ti\u1ebfp nh\u1eadn\n' +
-            '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 L\u00fd do s\u00e2u xa c\u1ea7n h\u1ecdc KT. Đ\u01b0a l\u1eddi khuy\u00ean k\u1ebft n\u1ed1i kh\u00f3 kh\u0103n th\u1ef1c t\u1ebf với b\u00e0i học\n' +
-            '## \ud83d\udee1\ufe0f B\u1ea3o an \u2014 M\u00f4i tr\u01b0\u1eddng h\u1ecdc, lý do che \u0111\u1eady, r\u1ee7i ro hi\u1ec7n t\u1ea1i\n' +
-            '## \ud83e\udd1d Chi\u1ebfn l\u01b0\u1ee3c \u2014 C\u00e1ch gi\u00fap c\u1ea3m nh\u1eadn KT t\u1ed1t h\u01a1n, gi\u1eef \u0111\u1ed9ng l\u1ef1c\n' +
-            '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf, chu\u1ea9n b\u1ecb Center\n\n'
-          : '6 NH\u00c1NH B\u1eaeT BU\u1ed8C (TR\u01af\u1edcC M\u1ede KT):\n' +
-            '## \ud83d\udccb T\u1ed5ng quan \u2014 Giai \u0111o\u1ea1n, \u0111\u1ed9i ph\u1ee5 tr\u00e1ch (NDD/TVV/GVBB), Concept NDD\n' +
-            '## \ud83c\udfaf V\u1ea5n \u0111\u1ec1 & T\u00e2m l\u00fd \u2014 V\u1ea5n \u0111\u1ec1 s\u00e2u xa, c\u1ea3m x\u00fac, nhu c\u1ea7u \u1ea9n\n' +
-            '## \ud83d\udc8e \u0110i\u1ec3m h\u00e1i tr\u00e1i \u2014 Đ\u00e2u l\u00e0 \u0111i\u1ec3m m\u1ea5u ch\u1ed1t d\u1eabn d\u1eaft \u0111\u1ebfn KT? L\u1eddi khuy\u00ean c\u1ee5 th\u1ec3\n' +
-            '## \ud83d\udd13 Chu\u1ea9n b\u1ecb m\u1edf KT \u2014 Ph\u00e2n t\u00edch t\u00ecnh h\u00ecnh th\u1ea7n t\u00ednh, s\u1ef1 h\u1ee3p t\u00e1c -> h\u01b0\u1edbng m\u1edf KT ph\u00f9 h\u1ee3p\n' +
-            '## \ud83d\udee1\ufe0f B\u1ea3o an \u2014 Concept, t\u00f4n gi\u00e1o tr\u00e1i qu\u1ea3, r\u1ee7i ro l\u1ed9\n' +
-            '## \u26a1 H\u00e0nh \u0111\u1ed9ng ti\u1ebfp \u2014 B\u01b0\u1edbc k\u1ebf ti\u1ebfp r\u00f5 r\u00e0ng\n\n') +
-      'NGUY\u00caN T\u1eaeC: Ch\u1ec9 d\u1ef1a tr\u00ean d\u1eef li\u1ec7u th\u1ef1c t\u1ebf. Kh\u00f4ng b\u1ecba. N\u1ebfu thi\u1ebfu -> "Ch\u01b0a c\u00f3 th\u00f4ng tin".\n' +
-      'QUAN TR\u1eccNG: To\u00e0n b\u1ed9 output PH\u1ea2I c\u00f3 d\u1ea5u ti\u1ebfng Vi\u1ec7t \u0111\u1ea7y \u0111\u1ee7.';
+          ? 'CÁC NHÁNH (SAU MỞ KT):\n' +
+            '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (Ghi rõ TÊN NDD, TVV, GVBB)\n' +
+            '## 📖 Cảm nhận KT — Phản ứng với KT, mức độ tiếp nhận (luồng 4 đánh giá detail)\n' +
+            '## 💎 Điểm hái trái — Chỉ mặt điểm hái trái, đưa kết luận & hướng đi cụ thể xoáy vào điểm chạm\n' +
+            '## 🛡️ Bảo an — Môi trường học, lý do che đậy, rủi ro\n' +
+            '## 🤝 Chiến lược — Cách giúp cảm nhận KT tốt hơn\n' +
+            '## ⚡ Hành động — Bước kế, phân công chuẩn bị Center\n\n'
+          : 'CÁC NHÁNH (TRƯỚC MỞ KT):\n' +
+            '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (Ghi rõ TÊN NDD, TVV, GVBB), Concept hiện tại\n' +
+            '## 🎯 Vấn đề & Tâm lý — Vấn đề sâu xa, cảm xúc, nhu cầu ẩn\n' +
+            '## 💎 Điểm hái trái — KẾT LUẬN RÕ điểm hái trái. Có hướng đi cụ thể để bẻ lái sang KT\n' +
+            '## 🔓 Chuẩn bị mở KT — ĐÁNH GIÁ MỨC ĐỘ SẴN SÀNG (Thần tính, sự hợp tác) rất rõ. Kịch bản mở KT.\n' +
+            '## 🛡️ Bảo an — Rủi ro lộ, tôn giáo trái quả ảnh hưởng gì?\n' +
+            '## ⚡ Hành động — Bước kế tiếp cụ thể cho từng nhân sự\n\n') +
+      'NGUYÊN TẮC: Dựa vào dữ liệu. Nếu thiếu -> "Chưa rõ".\n' +
+      'QUAN TRỌNG: Toàn bộ output PHẢI có dấu tiếng Việt.';
 
     var data = await callAIProxy(
       [{role:'system',content:sysPrompt},{role:'user',content:context}],
