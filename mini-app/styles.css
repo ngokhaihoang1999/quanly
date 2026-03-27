@@ -250,6 +250,9 @@
     .view-as-bar select { flex: 1; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(248,113,113,0.3); border-radius: 6px; color: var(--text); font-size: 12px; font-family: inherit; }
     .view-as-bar button { background: none; border: 1px solid rgba(248,113,113,0.3); color: var(--red); font-size: 11px; padding: 3px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 
+    .semester-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(124,106,247,0.08); border: 1px solid rgba(124,106,247,0.2); border-radius: 10px; margin-bottom: 8px; }
+    [data-theme="light"] .semester-bar { background: rgba(124,106,247,0.06); border-color: rgba(124,106,247,0.15); }
+
     /* ── Timeline ── */
     .tl-container {
       border-radius: var(--radius-sm);

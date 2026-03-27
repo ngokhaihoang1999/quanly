@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026032727" />
+  <link rel="stylesheet" href="styles.css?v=2026032728" />
 </head>
 <body>
 <div class="header">
@@ -34,6 +34,11 @@
       <option value="la">Lá</option>
     </select>
     <button onclick="resetViewAs()">Reset</button>
+  </div>
+  <div class="semester-bar" id="semesterBar">
+    <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap;">📅 Kỳ:</span>
+    <select id="semesterSelect" onchange="switchSemester(this.value)" style="flex:1;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text1);"></select>
+    <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙️ Quản lý</button>
   </div>
   <div class="tab-bar" id="mainTabBar">
     <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')">🏢 Đơn vị</div>
@@ -476,22 +481,39 @@
     </div>
   </div>
 </div></div>
+
+<!-- Semester Manager Modal -->
+<div class="modal-overlay" id="semesterManagerModal">
+<div class="modal" style="max-height:85vh;">
+  <div class="modal-handle"></div>
+  <div class="modal-title">📅 Quản lý Khai Giảng</div>
+  <div id="semesterListBody" style="max-height:30vh;overflow-y:auto;margin-bottom:12px;"></div>
+  <div style="border-top:1px solid var(--border);padding-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">➕ Tạo Khai Giảng mới</div>
+    <div class="field-group"><label>Tên kỳ</label><input type="text" id="newSemName" placeholder="VD: Tháng 4/2026" /></div>
+    <div class="field-group"><label>Ghi chú (tuỳ chọn)</label><input type="text" id="newSemDesc" placeholder="Mô tả ngắn..." /></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:8px 0;"><input type="checkbox" id="newSemActive" checked /> Đặt làm kỳ hoạt động chính</label>
+    <button class="save-btn" onclick="createSemester()">➕ Tạo Khai Giảng</button>
+  </div>
+  <button onclick="closeModal('semesterManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
+</div>
+</div>
 <script src="webhook.js?v=2026032727"></script>
-<script src="core.js?v=2026032727"></script>
-<script src="dashboard.js?v=2026032727"></script>
-<script src="profiles.js?v=2026032727"></script>
-<script src="hapja.js?v=2026032727"></script>
-<script src="records.js?v=2026032727"></script>
-<script src="staff.js?v=2026032727"></script>
-<script src="structure.js?v=2026032727"></script>
-<script src="calendar.js?v=2026032727"></script>
-<script src="notification.js?v=2026032727"></script>
-<script src="priority.js?v=2026032727"></script>
+<script src="core.js?v=2026032728"></script>
+<script src="dashboard.js?v=2026032728"></script>
+<script src="profiles.js?v=2026032728"></script>
+<script src="hapja.js?v=2026032728"></script>
+<script src="records.js?v=2026032728"></script>
+<script src="staff.js?v=2026032728"></script>
+<script src="structure.js?v=2026032728"></script>
+<script src="calendar.js?v=2026032728"></script>
+<script src="notification.js?v=2026032728"></script>
+<script src="priority.js?v=2026032728"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
-<script src="lacie.js?v=2026032727"></script>
-<script src="mindmap.js?v=2026032727"></script>
+<script src="lacie.js?v=2026032728"></script>
+<script src="mindmap.js?v=2026032728"></script>
 </body>
 </html>

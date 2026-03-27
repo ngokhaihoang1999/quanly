@@ -66,7 +66,8 @@ async function saveCheckHapja() {
       sdt: document.getElementById('hj_sdt')?.value || ''
     },
     status: 'pending',
-    created_by: getEffectiveStaffCode() || 'unknown'
+    created_by: getEffectiveStaffCode() || 'unknown',
+    semester_id: currentSemesterId || null
   };
 
   const btn = document.querySelector('#checkHapjaModal .save-btn');
@@ -182,7 +183,8 @@ async function approveHapja(id) {
     // Create profile with NDD + phase chakki + phone
     const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
       full_name: h.full_name, birth_year: h.birth_year, gender: h.gender,
-      phone_number: d.sdt || '', ndd_staff_code: nddCode, created_by: h.created_by, phase: 'chakki'
+      phone_number: d.sdt || '', ndd_staff_code: nddCode, created_by: h.created_by, phase: 'chakki',
+      semester_id: h.semester_id || currentSemesterId || null
     })});
     const newProfile = await pRes.json();
     const newPid = newProfile?.[0]?.id;

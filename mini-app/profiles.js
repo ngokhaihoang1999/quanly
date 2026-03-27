@@ -1,7 +1,8 @@
 // ============ PROFILES ============
 async function loadProfiles() {
   try {
-    const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(fruit_roles(staff_code,role_type))&order=created_at.desc');
+    const semFilter = typeof getSemesterFilter === 'function' ? getSemesterFilter() : '';
+    const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(fruit_roles(staff_code,role_type))&order=created_at.desc' + semFilter);
     const rawData = await res.json();
     allProfiles = rawData.map(p => {
       let tvv = [], gvbb = null, nddRole = null;

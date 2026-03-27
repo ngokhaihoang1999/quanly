@@ -6,6 +6,10 @@ let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
 let allPositions = [];
 let _pendingPrefs = {}; // live personalization edits not yet saved
 
+// ============ SEMESTER (KHAI GIẢNG) ============
+let allSemesters = [];
+let currentSemesterId = null; // null = show all (legacy compat)
+
 // ============ STAFF UNIT MAP ============
 // Builds a lookup: staffCode → "Area · Group · Team"
 let staffUnitMap = {};
@@ -149,7 +153,8 @@ const ALL_PERMISSION_KEYS = [
   'manage_positions', 'manage_structure', 'assign_position', 'manage_staff',
   'create_hapja', 'approve_hapja',
   'edit_profile',
-  'view_dashboard'
+  'view_dashboard',
+  'manage_semester'
 ];
 const PERMISSION_LABELS = {
   manage_positions: 'Quản lý Chức vụ',
@@ -159,7 +164,8 @@ const PERMISSION_LABELS = {
   create_hapja:     'Tạo Hapja',
   approve_hapja:    'Duyệt Hapja',
   edit_profile:     'Sửa Hồ sơ (toàn quyền với hồ sơ trong scope)',
-  view_dashboard:   'Xem Dashboard'
+  view_dashboard:   'Xem Dashboard',
+  manage_semester:  'Quản lý Khai Giảng'
 };
 const SCOPE_LABELS = { system:'Toàn hệ thống', area:'Khu vực', group:'Nhóm', team:'Tổ' };
 const SCOPE_LEVELS = { system:4, area:3, group:2, team:1 };
@@ -360,12 +366,124 @@ async function sbFetch(path, opts={}) {
   return fetch(SUPABASE_URL + path, { ...opts, headers });
 }
 
+// ============ SEMESTER LOGIC ============
+async function loadSemesters() {
+  try {
+    const res = await sbFetch('/rest/v1/semesters?select=*&order=created_at.desc');
+    allSemesters = await res.json();
+  } catch(e) { console.warn('loadSemesters:', e); allSemesters = []; }
+
+  // Auto-select: saved preference > active semester > first > null
+  const saved = localStorage.getItem('cj_semester_id');
+  if (saved && allSemesters.find(s => s.id === saved)) {
+    currentSemesterId = saved;
+  } else {
+    const active = allSemesters.find(s => s.is_active);
+    currentSemesterId = active ? active.id : (allSemesters[0]?.id || null);
+  }
+  renderSemesterSelector();
+}
+
+function renderSemesterSelector() {
+  const sel = document.getElementById('semesterSelect');
+  if (!sel) return;
+  let opts = allSemesters.map(s => {
+    const selected = s.id === currentSemesterId ? 'selected' : '';
+    const label = s.name + (s.is_active ? ' 🟢' : '');
+    return `<option value="${s.id}" ${selected}>${label}</option>`;
+  }).join('');
+  if (!allSemesters.length) opts = '<option value="">Chưa có kỳ</option>';
+  sel.innerHTML = opts;
+  // Show manage button if permitted
+  const mgr = document.getElementById('semesterManageBtn');
+  if (mgr) mgr.style.display = hasPermission('manage_semester') ? '' : 'none';
+}
+
+async function switchSemester(id) {
+  if (id === currentSemesterId) return;
+  currentSemesterId = id || null;
+  localStorage.setItem('cj_semester_id', currentSemesterId || '');
+  // Reload fruit-scoped data
+  await Promise.all([loadProfiles(), loadDashboard()]);
+  showToast('📂 Đã chuyển Khai Giảng');
+}
+
+async function createSemester() {
+  const name = document.getElementById('newSemName')?.value?.trim();
+  if (!name) { showToast('⚠️ Nhập tên Khai Giảng'); return; }
+  const desc = document.getElementById('newSemDesc')?.value?.trim() || '';
+  const setActive = document.getElementById('newSemActive')?.checked || false;
+  const btn = document.querySelector('#semesterManagerModal .save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⌛ Đang tạo...'; }
+  try {
+    // If setting as active, deactivate all others first
+    if (setActive) {
+      await sbFetch('/rest/v1/semesters?is_active=eq.true', { method:'PATCH', body: JSON.stringify({ is_active: false }) });
+    }
+    const res = await sbFetch('/rest/v1/semesters', { method:'POST', body: JSON.stringify({
+      name, description: desc || null, is_active: setActive, created_by: getEffectiveStaffCode()
+    })});
+    const created = await res.json();
+    await loadSemesters();
+    if (setActive && created[0]) {
+      await switchSemester(created[0].id);
+    }
+    showToast('✅ Đã tạo Khai Giảng: ' + name);
+    if (document.getElementById('newSemName')) document.getElementById('newSemName').value = '';
+    if (document.getElementById('newSemDesc')) document.getElementById('newSemDesc').value = '';
+    renderSemesterList();
+  } catch(e) { showToast('❌ Lỗi: ' + e.message); }
+  if (btn) { btn.disabled = false; btn.textContent = '➕ Tạo Khai Giảng'; }
+}
+
+async function setActiveSemester(id) {
+  try {
+    await sbFetch('/rest/v1/semesters?is_active=eq.true', { method:'PATCH', body: JSON.stringify({ is_active: false }) });
+    await sbFetch(`/rest/v1/semesters?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ is_active: true }) });
+    await loadSemesters();
+    renderSemesterList();
+    showToast('✅ Đã đặt Khai Giảng hoạt động');
+  } catch(e) { showToast('❌ Lỗi: ' + e.message); }
+}
+
+function renderSemesterList() {
+  const el = document.getElementById('semesterListBody');
+  if (!el) return;
+  if (!allSemesters.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);">Chưa có kỳ nào</div>';
+    return;
+  }
+  el.innerHTML = allSemesters.map(s => {
+    const active = s.is_active ? '<span style="color:var(--green);font-weight:700;">🟢 Đang hoạt động</span>' : `<button onclick="setActiveSemester('${s.id}')" style="font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--text2);cursor:pointer;">Đặt làm kỳ chính</button>`;
+    const count = allProfiles.filter(p => p.semester_id === s.id).length;
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-weight:600;font-size:13px;">${s.name}</div><div style="font-size:11px;color:var(--text3);">${s.description||''} · ${count} hồ sơ</div></div>
+      <div>${active}</div>
+    </div>`;
+  }).join('');
+}
+
+function openSemesterManager() {
+  renderSemesterList();
+  // Suggest default name
+  const now = new Date();
+  const suggested = `Tháng ${now.getMonth()+1}/${now.getFullYear()}`;
+  const nameInput = document.getElementById('newSemName');
+  if (nameInput && !nameInput.value) nameInput.value = suggested;
+  document.getElementById('semesterManagerModal').classList.add('open');
+}
+
+function getSemesterFilter() {
+  return currentSemesterId ? `&semester_id=eq.${currentSemesterId}` : '';
+}
+
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) { tg.ready(); tg.expand(); }
   initCustomAutocomplete();
   await loadPositions();
   await loadStaffInfo();
+  await loadSemesters();
   await Promise.all([loadProfiles(), loadDashboard(), loadStaff()]);
 });
 
