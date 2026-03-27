@@ -197,7 +197,7 @@ async function runAIAnalysis() {
       container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>';
       return;
     }
-    var getName = function(c) { return c ? (typeof allStaff!=='undefined' && allStaff.find(s=>s.code===c)?.name || c) : null; };
+    var getName = function(c) { return c ? (typeof allStaff!=='undefined' && allStaff.find(s=>s.staff_code===c)?.full_name || c) : null; };
     var nddName = getName(p.ndd_staff_code);
     var tvvName = getName(p.tvv_staff_code);
     var gvbbName = getName(p.gvbb_staff_code);
