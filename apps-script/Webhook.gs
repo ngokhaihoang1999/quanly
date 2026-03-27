@@ -33,9 +33,10 @@ function doPost(e) {
     // Helper to generate a full row array from payload data
     var createRowData = function(itemData, rowNum) {
       var p = itemData.p || {};
-      var d = itemData.d || {};
-      var hinhThuc = arrStr(d.hinh_thuc).toUpperCase(); 
-      var phuongThuc = arrStr(d.ket_noi); 
+      var d = itemData.d || {};   // form_hanh_chinh.data (t2_ prefix fields)
+      var hj = itemData.hj || {}; // check_hapja.data (no prefix: hinh_thuc, ket_noi, concept, ngay_chakki)
+      var hinhThuc = arrStr(hj.hinh_thuc || d.hinh_thuc || "").toUpperCase(); 
+      var phuongThuc = arrStr(hj.ket_noi || d.ket_noi || ""); 
       var trangThai = (p.fruit_status === 'dropout') ? "Drop-out" : "Alive";
       var dangKyBB = "";
       if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = "O";
@@ -47,12 +48,14 @@ function doPost(e) {
       var lyDo = p.dropout_reason || "";
       var nhomNDD = itemData.nddGroup || ""; 
       var mucTieuThang = itemData.semesterName || ""; 
-      var reqDataPhone = p.phone_number || d.sdt || "";
+      var reqDataPhone = p.phone_number || d.t2_sdt || hj.sdt || "";
       if (reqDataPhone && !reqDataPhone.startsWith("'")) reqDataPhone = "'" + reqDataPhone;
+      var ngayChakki = hj.ngay_chakki || d.ngay_chakki || "";
+      var concept = hj.concept || d.concept || "";
       
       return [
         nhomNDD, rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, mucTieuThang, ghiChu,
-        dangKyBB, "", "", gvbb, d.ngay_chakki || "", hinhThuc, phuongThuc, "", lyDo, d.concept || "", reqDataPhone, "", itemData.profile_id || ""
+        dangKyBB, "", "", gvbb, ngayChakki, hinhThuc, phuongThuc, "", lyDo, concept, reqDataPhone, "", itemData.profile_id || ""
       ];
     };
 
@@ -82,9 +85,10 @@ function doPost(e) {
     
     // Normal UPSERT 
     var p = data.p || {}; 
-    var d = data.d || {}; 
-    var hinhThuc = arrStr(d.hinh_thuc).toUpperCase(); 
-    var phuongThuc = arrStr(d.ket_noi); 
+    var d = data.d || {};   // form_hanh_chinh.data (t2_ fields)
+    var hj = data.hj || {}; // check_hapja.data (no prefix)
+    var hinhThuc = arrStr(hj.hinh_thuc || d.hinh_thuc || "").toUpperCase(); 
+    var phuongThuc = arrStr(hj.ket_noi || d.ket_noi || ""); 
     
     var trangThai = "Alive";
     if (p.fruit_status === 'dropout') trangThai = "Drop-out";
@@ -110,9 +114,11 @@ function doPost(e) {
     var nhomNDD = data.nddGroup || ""; // Ví dụ HCM2-Nhóm 1-Tổ 3
     var mucTieuThang = data.semesterName || ""; // Cột 8: Khai giảng tháng
     var no = Math.max(1, sheet.getLastRow()); 
-    var reqDataPhone = p.phone_number || d.sdt || "";
+    var ngayChakki = hj.ngay_chakki || d.ngay_chakki || "";
+    var concept = hj.concept || d.concept || "";
+    var reqDataPhone = p.phone_number || d.t2_sdt || hj.sdt || "";
     if (reqDataPhone && !reqDataPhone.startsWith("'")) {
-        // chống form excel đổi 0 định dạng format number
+        // chong form excel doi 0 dinh dang format number
         reqDataPhone = "'" + reqDataPhone;
     }
 
@@ -144,12 +150,12 @@ function doPost(e) {
         "",                             // 11. Tham gia talkshow
         "",                             // 12. Tư vấn sau talkshow
         gvbb,                           // 13. GVBB찾기
-        d.ngay_chakki || "",            // 14. Ngày Chakki
+        ngayChakki,                     // 14. Ngay Chakki
         hinhThuc,                       // 15. ONLINE/OFFLINE
-        phuongThuc,                     // 16. Phương thức đầu vào
-        "",                             // 17. Tỉnh
-        lyDo,                           // 18. Lí do nghỉ học
-        d.concept || "",                // 19. Chủ đề
+        phuongThuc,                     // 16. Phuong thuc dau vao
+        "",                             // 17. Tinh
+        lyDo,                           // 18. Li do nghi hoc
+        concept,                        // 19. Chu de
         reqDataPhone,                   // 20. Số điện thoại (giữ số 0)
         "",                             // 21. Tuần chuyển BB
         pid                             // 22. ID Ẩn
