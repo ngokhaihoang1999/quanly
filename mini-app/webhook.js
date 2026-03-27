@@ -58,13 +58,17 @@ async function bulkSyncDatabaseToSheet() {
   
   try {
     showToast('⏳ Đang tải toàn bộ dữ liệu để đồng bộ...', 3000);
-    // Fetch all profiles, hanh_chinh, hapja, notes, tu_van
-    const [pRes, hcRes, hjRes, noteRes, tvRes] = await Promise.all([
+
+    // Fetch ALL required data in parallel — do not rely on global state
+    const [pRes, hcRes, hjRes, noteRes, tvRes, fgRes, structRes, semRes] = await Promise.all([
       sbFetch(`/rest/v1/profiles?select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/form_hanh_chinh?select=profile_id,data`),
       sbFetch(`/rest/v1/check_hapja?status=eq.approved&select=profile_id,data&order=created_at.asc`),
       sbFetch(`/rest/v1/records?record_type=eq.note&select=profile_id,content,created_at&order=created_at.desc`),
-      sbFetch(`/rest/v1/records?record_type=eq.tu_van&select=profile_id,content,created_at&order=created_at.desc`)
+      sbFetch(`/rest/v1/records?record_type=eq.tu_van&select=profile_id,content,created_at&order=created_at.desc`),
+      sbFetch(`/rest/v1/fruit_groups?select=profile_id,fruit_roles(staff_code,role_type)`),
+      sbFetch(`/rest/v1/areas?select=name,org_groups(name,teams(name,staff:staff!staff_team_id_fkey(staff_code)))`),
+      sbFetch(`/rest/v1/semesters?select=id,name&order=created_at.asc`)
     ]);
     
     const prs = await pRes.json();
@@ -72,19 +76,43 @@ async function bulkSyncDatabaseToSheet() {
     const hjs = await hjRes.json();
     const notes = await noteRes.json();
     const tvs = await tvRes.json();
+    const fgs = await fgRes.json();
+    const structs = await structRes.json();
+    const sems = await semRes.json();
     
-    // Build maps
+    // ── Build maps ──
     const hcMap = {}; hcs.forEach(h => hcMap[h.profile_id] = h.data || {});
-    // Hapja map: dùng data của hapja đã approved (hinh_thuc, ket_noi, concept, ngay_chakki)
     const hjMap = {}; hjs.forEach(h => { if (!hjMap[h.profile_id]) hjMap[h.profile_id] = h.data || {}; });
+    const semMap = {}; sems.forEach(s => semMap[s.id] = s.name);
     
-    // Only take the latest note per profile
+    // staffUnitMap from fresh structure data
+    const freshUnitMap = {};
+    (structs || []).forEach(a => {
+      (a.org_groups || []).forEach(g => {
+        (g.teams || []).forEach(t => {
+          (t.staff || []).forEach(m => {
+            freshUnitMap[m.staff_code] = `${a.name} · ${g.name} · ${t.name}`;
+          });
+        });
+      });
+    });
+    
+    // GVBB map from fruit_roles per profile
+    const gvbbMap = {};
+    (fgs || []).forEach(fg => {
+      const pid = fg.profile_id;
+      (fg.fruit_roles || []).forEach(r => {
+        if (r.role_type === 'gvbb' && !gvbbMap[pid]) gvbbMap[pid] = r.staff_code;
+      });
+    });
+
+    // Latest note per profile
     const noteMap = {}; 
     notes.forEach(n => {
       if (!noteMap[n.profile_id]) noteMap[n.profile_id] = n.content?.body || '';
     });
     
-    // Collect all tools from all TV records (dedup)
+    // Collect all tools from TV records (dedup)
     const tvToolsMap = {};
     tvs.forEach(t => {
       const pid = t.profile_id;
@@ -98,18 +126,23 @@ async function bulkSyncDatabaseToSheet() {
     // Prepare payload
     const profilesPayload = prs.map(p => {
       const pid = p.id;
-      const d = hcMap[pid] || {};    // form_hanh_chinh.data  (t2_* fields)
-      const hj = hjMap[pid] || {};   // check_hapja.data (hinh_thuc, ket_noi, concept, ngay_chakki)
-      const nddGroup = (typeof staffUnitMap !== 'undefined' && p.ndd_staff_code) ? (staffUnitMap[p.ndd_staff_code] || '') : '';
-      const semName = (typeof allSemesters !== 'undefined' && p.semester_id) ? (allSemesters.find(s => s.id === p.semester_id)?.name || '') : '';
+      const d = hcMap[pid] || {};
+      const hj = hjMap[pid] || {};
+      // Use freshly fetched GVBB (fruit_roles) or fall back to profiles field
+      const gvbbCode = gvbbMap[pid] || p.gvbb_staff_code || '';
+      const nddGroup = p.ndd_staff_code ? (freshUnitMap[p.ndd_staff_code] || '') : '';
+      const semName = p.semester_id ? (semMap[p.semester_id] || '') : '';
       const recentNote = noteMap[pid] || '';
       const tools = (tvToolsMap[pid] ? [...tvToolsMap[pid]].join(', ') : '') || d.t2_cong_cu || '';
       
+      // Inject gvbb into p so Webhook.gs can read p.gvbb_staff_code
+      const pWithGvbb = { ...p, gvbb_staff_code: gvbbCode };
+      
       return {
         profile_id: pid,
-        p: p,
-        d: d,   // form_hanh_chinh data (t2_ prefix fields)
-        hj: hj, // hapja data (no prefix: hinh_thuc, ket_noi, concept, ngay_chakki)
+        p: pWithGvbb,
+        d: d,
+        hj: hj,
         recentNote: recentNote,
         tools: tools,
         nddGroup: nddGroup,
@@ -117,15 +150,10 @@ async function bulkSyncDatabaseToSheet() {
       };
     });
 
-    const bodyData = {
-      action: 'bulk_sync',
-      profiles: profilesPayload
-    };
-
     await fetch(window.HAPJA_SHEET_WEBHOOK, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyData)
+      body: JSON.stringify({ action: 'bulk_sync', profiles: profilesPayload })
     });
     
     showToast('✅ Đã đồng bộ Sheet thành công!');
