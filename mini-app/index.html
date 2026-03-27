@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026032802" />
+  <link rel="stylesheet" href="styles.css?v=2026032803" />
 </head>
 <body>
 <div class="header">
@@ -93,7 +93,8 @@
     <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã TĐ..." id="staffSearchInput" oninput="filterStaff()" /></div>
     <div class="section-header"><div class="section-title">Tất cả TĐ</div><div class="section-count" id="staffCount">--</div></div>
     <div id="staffList"><div class="staff-card skeleton" style="height:68px;"></div></div>
-    <button class="add-record-btn" onclick="openAddStaffModal()" style="margin-top:12px;">＋ Đăng ký TĐ mới</button>
+    <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">＋ Đăng ký TĐ mới</button>
+    <button class="add-record-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="margin-top:8px;background:var(--accent);display:none;">🔄 Tái đồng bộ toàn bộ Data ➔ Sheet</button>
   </div>
 
   <!-- LỊCH -->
@@ -498,22 +499,22 @@
   <button onclick="closeModal('semesterManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
 </div>
 </div>
-<script src="webhook.js?v=2026032802"></script>
-<script src="core.js?v=2026032802"></script>
-<script src="dashboard.js?v=2026032802"></script>
-<script src="profiles.js?v=2026032802"></script>
-<script src="hapja.js?v=2026032802"></script>
-<script src="records.js?v=2026032802"></script>
-<script src="staff.js?v=2026032802"></script>
-<script src="structure.js?v=2026032802"></script>
-<script src="calendar.js?v=2026032802"></script>
-<script src="notification.js?v=2026032802"></script>
-<script src="priority.js?v=2026032802"></script>
+<script src="webhook.js?v=2026032803"></script>
+<script src="core.js?v=2026032803"></script>
+<script src="dashboard.js?v=2026032803"></script>
+<script src="profiles.js?v=2026032803"></script>
+<script src="hapja.js?v=2026032803"></script>
+<script src="records.js?v=2026032803"></script>
+<script src="staff.js?v=2026032803"></script>
+<script src="structure.js?v=2026032803"></script>
+<script src="calendar.js?v=2026032803"></script>
+<script src="notification.js?v=2026032803"></script>
+<script src="priority.js?v=2026032803"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
-<script src="lacie.js?v=2026032802"></script>
-<script src="mindmap.js?v=2026032802"></script>
+<script src="lacie.js?v=2026032803"></script>
+<script src="mindmap.js?v=2026032803"></script>
 </body>
 </html>

@@ -655,6 +655,10 @@ function applyPermissions() {
   if (btnManagePos) btnManagePos.style.display = hasPermission('manage_positions') ? '' : 'none';
   const btnStaffWt = document.getElementById('btnStaffWithoutTeam');
   if (btnStaffWt) btnStaffWt.style.display = hasPermission('manage_positions') ? '' : 'none';
+  
+  const btnSyncSheet = document.getElementById('btnSyncSheet');
+  if (btnSyncSheet) btnSyncSheet.style.display = hasPermission('manage_positions') ? '' : 'none';
+
   // FAB: only for those who can create Hapja
   const fabBtn = document.getElementById('fabBtn');
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';

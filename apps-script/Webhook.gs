@@ -18,10 +18,71 @@ function doPost(e) {
     }
     
     var pid = data.profile_id || "";
+    var action = data.action || "upsert";
+    
+    var arrStr = function(val) { return Array.isArray(val) ? val.join(', ') : (val || ""); };
+    var getPhaseName = function(ph) {
+      if (ph === 'chakki') return 'Chakki';
+      if (ph === 'tu_van') return 'Tư vấn';
+      if (ph === 'bb') return 'BB';
+      if (ph === 'center') return 'Center';
+      if (ph === 'completed') return 'Hoàn thành';
+      return ph ? ph : 'Chakki';
+    };
+
+    // Helper to generate a full row array from payload data
+    var createRowData = function(itemData, rowNum) {
+      var p = itemData.p || {};
+      var d = itemData.d || {};
+      var hinhThuc = arrStr(d.hinh_thuc).toUpperCase(); 
+      var phuongThuc = arrStr(d.ket_noi); 
+      var trangThai = (p.fruit_status === 'dropout') ? "Drop-out" : "Alive";
+      var dangKyBB = "";
+      if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = "O";
+      else if (p.fruit_status === 'dropout') dangKyBB = "X";
+      var giaiDoan = getPhaseName(p.phase);
+      var congCu = itemData.tools || d.t2_cong_cu || ""; 
+      var ghiChu = itemData.recentNote || ""; 
+      var gvbb = p.gvbb_staff_code || "";
+      var lyDo = p.dropout_reason || "";
+      var nhomNDD = itemData.nddGroup || ""; 
+      var mucTieuThang = itemData.semesterName || ""; 
+      var reqDataPhone = p.phone_number || d.sdt || "";
+      if (reqDataPhone && !reqDataPhone.startsWith("'")) reqDataPhone = "'" + reqDataPhone;
+      
+      return [
+        nhomNDD, rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, mucTieuThang, ghiChu,
+        dangKyBB, "", "", gvbb, d.ngay_chakki || "", hinhThuc, phuongThuc, "", lyDo, d.concept || "", reqDataPhone, "", itemData.profile_id || ""
+      ];
+    };
+
+    if (action === "bulk_sync") {
+      var profiles = data.profiles || [];
+      if (profiles.length > 0) {
+        // Clear everything below header
+        if (sheet.getLastRow() > 1) {
+          sheet.getRange(2, 1, sheet.getLastRow() - 1, 22).clearContent();
+        }
+        var newValues = [];
+        var redCells = [];
+        for (var i = 0; i < profiles.length; i++) {
+          var rowObj = createRowData(profiles[i], i + 1);
+          newValues.push(rowObj);
+          if (rowObj[9] === "O" || rowObj[9] === "X") redCells.push(i + 2); // Row index (1-based, +1 for header)
+        }
+        sheet.getRange(2, 1, newValues.length, 22).setValues(newValues);
+        // Clean all font colors then set RED for column J (10) manually
+        sheet.getRange(2, 10, newValues.length, 1).setFontColor(null).setFontWeight("normal");
+        for (var k = 0; k < redCells.length; k++) {
+          sheet.getRange(redCells[k], 10).setFontColor("red").setFontWeight("bold");
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "bulk_success"})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Normal UPSERT 
     var p = data.p || {}; 
     var d = data.d || {}; 
-    var arrStr = function(val) { return Array.isArray(val) ? val.join(', ') : (val || ""); };
-    
     var hinhThuc = arrStr(d.hinh_thuc).toUpperCase(); 
     var phuongThuc = arrStr(d.ket_noi); 
     

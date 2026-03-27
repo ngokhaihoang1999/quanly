@@ -49,3 +49,83 @@ async function syncToGoogleSheet(pid) {
     });
   } catch(e) { console.warn('Sync Sheet Fail:', e); }
 }
+
+async function bulkSyncDatabaseToSheet() {
+  if (!window.HAPJA_SHEET_WEBHOOK) {
+    alert('Chưa cấu hình HAPJA_SHEET_WEBHOOK');
+    return;
+  }
+  if (!confirm('Bạn có chắc chắn muốn Tái đồng bộ toàn bộ dữ liệu xuống Google Sheet? Thao tác này có thể tốn vài chục giây.')) return;
+  
+  try {
+    showToast('⏳ Đang tải toàn bộ dữ liệu để đồng bộ...', 3000);
+    // Fetch all profiles, hanh_chinh, notes, tu_van
+    const [pRes, hcRes, noteRes, tvRes] = await Promise.all([
+      sbFetch(`/rest/v1/profiles?select=*`),
+      sbFetch(`/rest/v1/form_hanh_chinh?select=profile_id,data`),
+      sbFetch(`/rest/v1/records?record_type=eq.note&select=profile_id,content,created_at&order=created_at.desc`),
+      sbFetch(`/rest/v1/records?record_type=eq.tu_van&select=profile_id,content,created_at&order=created_at.desc`)
+    ]);
+    
+    const prs = await pRes.json();
+    const hcs = await hcRes.json();
+    const notes = await noteRes.json();
+    const tvs = await tvRes.json();
+    
+    // Build maps
+    const hcMap = {}; hcs.forEach(h => hcMap[h.profile_id] = h.data);
+    
+    // Only take the latest note per profile
+    const noteMap = {}; 
+    notes.forEach(n => {
+      if (!noteMap[n.profile_id]) noteMap[n.profile_id] = n.content?.body || '';
+    });
+    
+    // Collect all tools from all TV records
+    const tvToolsMap = {};
+    tvs.forEach(t => {
+      const p = t.profile_id;
+      const toolName = t.content?.ten_cong_cu;
+      if (toolName) {
+        if (!tvToolsMap[p]) tvToolsMap[p] = [];
+        tvToolsMap[p].push(toolName);
+      }
+    });
+
+    // Prepare payload
+    const profilesPayload = prs.map(p => {
+      const pid = p.id;
+      const d = hcMap[pid] || {};
+      const nddGroup = (typeof staffUnitMap !== 'undefined' && p.ndd_staff_code) ? (staffUnitMap[p.ndd_staff_code] || '') : '';
+      const semName = (typeof allSemesters !== 'undefined' && p.semester_id) ? (allSemesters.find(s => s.id === p.semester_id)?.name || '') : '';
+      const recentNote = noteMap[pid] || '';
+      const tools = (tvToolsMap[pid] || []).join(', ') || d.t2_cong_cu || '';
+      
+      return {
+        profile_id: pid,
+        p: p,
+        d: d,
+        recentNote: recentNote,
+        tools: tools,
+        nddGroup: nddGroup,
+        semesterName: semName
+      };
+    });
+
+    const bodyData = {
+      action: 'bulk_sync',
+      profiles: profilesPayload
+    };
+
+    const res = await fetch(window.HAPJA_SHEET_WEBHOOK, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyData)
+    });
+    
+    showToast('✅ Đã đồng bộ Sheet thành công!');
+  } catch(e) {
+    console.error('Bulk Sync Fail:', e);
+    showToast('❌ Lỗi đồng bộ Sheet');
+  }
+}
