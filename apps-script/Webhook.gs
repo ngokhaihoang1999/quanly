@@ -32,6 +32,16 @@ function doPost(e) {
     if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = "O";
     else if (p.fruit_status === 'dropout') dangKyBB = "X";
     
+    var getPhaseName = function(ph) {
+      if (ph === 'chakki') return 'Chakki';
+      if (ph === 'tu_van') return 'Tư vấn';
+      if (ph === 'bb') return 'BB';
+      if (ph === 'center') return 'Center';
+      if (ph === 'completed') return 'Hoàn thành';
+      return ph ? ph : 'Chakki';
+    };
+    var giaiDoan = getPhaseName(p.phase);
+    
     var congCu = data.tools || d.t2_cong_cu || ""; 
     var ghiChu = data.recentNote || ""; 
     var gvbb = p.gvbb_staff_code || "";
@@ -64,7 +74,7 @@ function doPost(e) {
         no,                             // 2. No.
         p.ndd_staff_code || "",         // 3. ID NDD
         p.full_name || "",              // 4. Tên học sinh
-        "Chakki",                       // 5. Giai đoạn
+        giaiDoan,                       // 5. Giai đoạn
         congCu,                         // 6. Công cụ tư vấn
         trangThai,                      // 7. Trạng thái
         mucTieuThang,                   // 8. Mục tiêu Tháng
@@ -87,7 +97,7 @@ function doPost(e) {
     } else {
       // 2. TRÁI ĐANG HỌC RỚT ĐÀI/CHỐT BB/THÊM GVBB -> NHÍP TRỰC TIẾP VÀO Ô GHI ĐÈ 
       if (nhomNDD) sheet.getRange(rowIdx, 1).setValue(nhomNDD);
-      if (p.phase) sheet.getRange(rowIdx, 5).setValue(p.phase);
+      sheet.getRange(rowIdx, 5).setValue(giaiDoan);
       if (congCu) sheet.getRange(rowIdx, 6).setValue(congCu);
       sheet.getRange(rowIdx, 7).setValue(trangThai);
       if (mucTieuThang) sheet.getRange(rowIdx, 8).setValue(mucTieuThang);
