@@ -1,8 +1,22 @@
 // ============ PROFILES ============
 async function loadProfiles() {
   try {
-    const res = await sbFetch('/rest/v1/profiles?select=*&order=created_at.desc');
-    allProfiles = await res.json();
+    const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(fruit_roles(staff_code,role_type))&order=created_at.desc');
+    const rawData = await res.json();
+    allProfiles = rawData.map(p => {
+      let tvv = [], gvbb = null, nddRole = null;
+      (p.fruit_groups || []).forEach(fg => {
+        (fg.fruit_roles || []).forEach(r => {
+          if (r.role_type === 'ndd') nddRole = r.staff_code;
+          if (r.role_type === 'tvv') tvv.push(r.staff_code);
+          if (r.role_type === 'gvbb') gvbb = r.staff_code;
+        });
+      });
+      p.ndd_staff_code = nddRole || p.ndd_staff_code;
+      p.tvv_staff_code = tvv.length ? tvv.join(', ') : '';
+      p.gvbb_staff_code = gvbb || '';
+      return p;
+    });
     renderProfiles(allProfiles);
   } catch { document.getElementById('profileList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải dữ liệu</div></div>'; }
 }
