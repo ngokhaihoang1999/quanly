@@ -96,6 +96,7 @@ async function openProfile(p) {
   const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['bb','center','completed'].includes(ph);
   // Store for use in other functions
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
+  window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };
 
   // Warning: BB phase but no real Telegram group
   const bbNoGroupWarning = ['bb','center'].includes(ph) && !hasRealBBGroup
