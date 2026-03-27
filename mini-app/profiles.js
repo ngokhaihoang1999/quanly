@@ -324,6 +324,8 @@ async function saveInfoSheet() {
     }
 
     showToast('✅ Đã lưu Phữu Thông tin!');
+    // Auto-sync form changes to Google Sheets
+    if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
   } catch { showToast('❌ Lỗi khi lưu'); }
 }
 

@@ -861,6 +861,10 @@ async function saveRecord() {
         }
       }
     }
+    
+    // Auto-sync TV records updates to Google Sheets
+    if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
+
     closeModal('addRecordModal');
     currentRecordId = null;
     await _refreshCurrentProfile();
@@ -932,6 +936,9 @@ async function saveNote() {
     titleEl.value = '';
     bodyEl.value = '';
     loadNotes(currentProfileId);
+    
+    // Auto-sync notes updates to Google Sheets
+    if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
   } catch(e) { showToast('❌ Lỗi lưu ghi chú'); }
 }
 
