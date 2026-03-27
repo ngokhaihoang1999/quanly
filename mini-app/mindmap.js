@@ -218,16 +218,15 @@ async function runAIAnalysis() {
       'QUY TẮC ĐỊNH DẠNG:\n' +
       '- Output CHỈ là Markdown, KHÔNG giải thích gì thêm\n' +
       '- # cho root (Họ Tên), ## nhánh chính, ### nhánh cấp 1, #### nhánh cấp 2 (dẫn chứng), - lá (kết luận/hướng đi).\n' +
-      '- Hỗ trợ mở rộng 4 luồng. Luồng 3 có thể là diễn giải/dẫn chứng, luồng 4 (hoặc "-") LÀ KẾT LUẬN HOẶC HƯỚNG ĐI CHI TIẾT.\n' +
+      '- Hỗ trợ mở rộng 4 luồng. Luồng 4 (hoặc "-") LÀ KẾT LUẬN HOẶC HƯỚNG ĐI CHI TIẾT.\n' +
       '- Mỗi node ngắn gọn, PHẢI có dấu tiếng Việt đầy đủ\n\n' +
       'LƯU Ý CONCEPT:\n' +
       '- Concept là tên vỏ bọc tổ chức mà NDD dựng lên. Enneagram, MBTI KHÔNG PHẢI là concept.\n\n' +
-      'LƯU Ý ĐIỂM HÁI TRÁI:\n' +
-      '- Phải CÓ KẾT LUẬN về điểm hái trái là gì (điểm chạm nào sẽ chốt hạ).\n' +
-      '- Phải CÓ HƯỚNG ĐI CỤ THỂ để nắm bắt điểm hái trái đó bằng cách dùng Kinh Thánh.\n\n' +
+      'LƯU Ý ĐIỂM HÁI TRÁI & KINH THÁNH:\n' +
+      '- Điểm hái trái: Cần CHỈ MẶT ĐIỂM CHẠM. Từ điểm hái trái đó, phân tích SÂU: Kinh Thánh (KT) có thể GIÚP ĐƯỢC GÌ cho trái quả? (Dùng luồng 4 để làm rõ ý này giúp GVBB dễ chuẩn bị).\n\n' +
       (p.fruit_status === 'dropout'
         ? 'CÁC NHÁNH (DROP-OUT):\n' +
-          '## 📋 Tổng quan — Giai đoạn nghỉ, NGƯỜI PHỤ TRÁCH (liệt kê tên cụ thể NDD, TVV...), lý do nghỉ\n' +
+          '## 📋 Tổng quan — Giai đoạn nghỉ, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB), lý do nghỉ\n' +
           '## ⚠️ Nguyên nhân tiềm năng — Vì sao nghỉ? Phân tích sâu\n' +
           '## 🚩 Dấu hiệu cảnh báo — Tín hiệu nhận ra sớm\n' +
           '## 💔 Điểm thất bại — Sai sót concept, bảo an, tốc độ?\n' +
@@ -235,19 +234,19 @@ async function runAIAnalysis() {
           '## 🛠️ Hướng khắc phục — Cách làm tốt hơn kèm action cụ thể\n\n'
         : p.is_kt_opened
           ? 'CÁC NHÁNH (SAU MỞ KT):\n' +
-            '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (Ghi rõ TÊN NDD, TVV, GVBB)\n' +
-            '## 📖 Cảm nhận KT — Phản ứng với KT, mức độ tiếp nhận (luồng 4 đánh giá detail)\n' +
-            '## 💎 Điểm hái trái — Chỉ mặt điểm hái trái, đưa kết luận & hướng đi cụ thể xoáy vào điểm chạm\n' +
+            '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB)\n' +
+            '## 📖 Cảm nhận KT — Phản ứng với KT, mức độ tiếp nhận\n' +
+            '## 💎 Điểm hái trái — Xác định điểm hái trái. Luồng 4: KT giúp được gì?\n' +
             '## 🛡️ Bảo an — Môi trường học, lý do che đậy, rủi ro\n' +
             '## 🤝 Chiến lược — Cách giúp cảm nhận KT tốt hơn\n' +
             '## ⚡ Hành động — Bước kế, phân công chuẩn bị Center\n\n'
           : 'CÁC NHÁNH (TRƯỚC MỞ KT):\n' +
-            '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (Ghi rõ TÊN NDD, TVV, GVBB), Concept hiện tại\n' +
+            '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB), Concept hiện tại\n' +
             '## 🎯 Vấn đề & Tâm lý — Vấn đề sâu xa, cảm xúc, nhu cầu ẩn\n' +
-            '## 💎 Điểm hái trái — KẾT LUẬN RÕ điểm hái trái. Có hướng đi cụ thể để bẻ lái sang KT\n' +
+            '## 💎 Điểm hái trái & Mở KT — Kết luận điểm hái trái. Luồng 4: KT giúp giải quyết nỗi đau đó như thế nào?\n' +
             '## 🔓 Chuẩn bị mở KT — ĐÁNH GIÁ MỨC ĐỘ SẴN SÀNG (Thần tính, sự hợp tác) rất rõ. Kịch bản mở KT.\n' +
             '## 🛡️ Bảo an — Rủi ro lộ, tôn giáo trái quả ảnh hưởng gì?\n' +
-            '## ⚡ Hành động — Bước kế tiếp cụ thể cho từng nhân sự\n\n') +
+            '## ⚡ Hành động — Bước kế tiếp cụ thể cho từng nhân sự (Ai làm gì)\n\n') +
       'NGUYÊN TẮC: Dựa vào dữ liệu. Nếu thiếu -> "Chưa rõ".\n' +
       'QUAN TRỌNG: Toàn bộ output PHẢI có dấu tiếng Việt.';
 
