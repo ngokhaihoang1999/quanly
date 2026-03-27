@@ -223,7 +223,7 @@ async function runAIAnalysis() {
       'LƯU Ý CONCEPT:\n' +
       '- Concept là tên vỏ bọc tổ chức mà NDD dựng lên. Enneagram, MBTI KHÔNG PHẢI là concept.\n\n' +
       'LƯU Ý ĐIỂM HÁI TRÁI & KINH THÁNH:\n' +
-      '- Điểm hái trái: Cần CHỈ MẶT ĐIỂM CHẠM. Từ điểm hái trái đó, phân tích SÂU: Kinh Thánh (KT) có thể GIÚP ĐƯỢC GÌ cho trái quả? (Dùng luồng 4 để làm rõ ý này giúp GVBB dễ chuẩn bị).\n\n' +
+      '- Điểm hái trái: Cần CHỈ MẶT ĐIỂM CHẠM. Từ điểm hái trái đó, phân tích SÂU: Kinh Thánh (KT) có thể GIÚP ĐƯỢC GÌ cho trái quả? (Tạo các nhánh con chi tiết để làm rõ ý này giúp GVBB dễ chuẩn bị).\n\n' +
       (p.fruit_status === 'dropout'
         ? 'CÁC NHÁNH (DROP-OUT):\n' +
           '## 📋 Tổng quan — Giai đoạn nghỉ, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB), lý do nghỉ\n' +
@@ -236,14 +236,14 @@ async function runAIAnalysis() {
           ? 'CÁC NHÁNH (SAU MỞ KT):\n' +
             '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB)\n' +
             '## 📖 Cảm nhận KT — Phản ứng với KT, mức độ tiếp nhận\n' +
-            '## 💎 Điểm hái trái — Xác định điểm hái trái. Luồng 4: KT giúp được gì?\n' +
+            '## 💎 Điểm hái trái — Xác định điểm hái trái. Phân tích: KT giúp được gì?\n' +
             '## 🛡️ Bảo an — Môi trường học, lý do che đậy, rủi ro\n' +
             '## 🤝 Chiến lược — Cách giúp cảm nhận KT tốt hơn\n' +
             '## ⚡ Hành động — Bước kế, phân công chuẩn bị Center\n\n'
           : 'CÁC NHÁNH (TRƯỚC MỞ KT):\n' +
             '## 📋 Tổng quan — Giai đoạn, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB), Concept hiện tại\n' +
             '## 🎯 Vấn đề & Tâm lý — Vấn đề sâu xa, cảm xúc, nhu cầu ẩn\n' +
-            '## 💎 Điểm hái trái & Mở KT — Kết luận điểm hái trái. Luồng 4: KT giúp giải quyết nỗi đau đó như thế nào?\n' +
+            '## 💎 Điểm hái trái & Mở KT — Kết luận điểm hái trái. Viết rõ: KT giúp giải quyết nỗi đau đó thế nào?\n' +
             '## 🔓 Chuẩn bị mở KT — ĐÁNH GIÁ MỨC ĐỘ SẴN SÀNG (Thần tính, sự hợp tác) rất rõ. Kịch bản mở KT.\n' +
             '## 🛡️ Bảo an — Rủi ro lộ, tôn giáo trái quả ảnh hưởng gì?\n' +
             '## ⚡ Hành động — Bước kế tiếp cụ thể cho từng nhân sự (Ai làm gì)\n\n') +
