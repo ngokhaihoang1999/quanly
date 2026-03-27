@@ -31,21 +31,36 @@ function renderMarkmap(container, md) {
 }
 
 // ═══════════════════════════════════════════════════
-// UTILITIES
+// UTILITIES (SMART FORMATTERS FOR MINDMAP)
 // ═══════════════════════════════════════════════════
-function splitToBranches(text) {
-  if (!text || text.length < 10) return text ? [text] : [];
-  text = text.replace(/\n+/g, ', ').replace(/\s+/g, ' ').trim();
-  var parts = text.split(/[,;.!?\n]+|(?:\s+(?:v\u00e0|nh\u01b0ng|tuy nhi\u00ean|ngo\u00e0i ra|do \u0111\u00f3|v\u00ec v\u1eady|c\u0169ng|c\u00f2n|n\u00ean|m\u00e0|r\u1ed3i|th\u00ec)\s+)/i);
-  var cleaned = parts.map(function(p){return p.trim();}).filter(function(p){return p.length > 4;}).map(function(p){return p.length > 38 ? p.substring(0,36)+'\u2026' : p;});
-  if (cleaned.length > 4) return cleaned.slice(0, 4);
-  return cleaned.length ? cleaned : [text.length > 38 ? text.substring(0,36)+'\u2026' : text];
+function formatNode(text, maxWidth) {
+  if (!text) return '';
+  text = String(text).replace(/\n+/g, ' ').trim();
+  if (text.length <= maxWidth) return text;
+  var words = text.split(' '), lines = [], cur = [], len = 0;
+  for (var i=0; i<words.length; i++) {
+    if (len + words[i].length > maxWidth) {
+      if(cur.length) lines.push(cur.join(' '));
+      cur = [words[i]]; len = words[i].length;
+    } else {
+      cur.push(words[i]); len += words[i].length + 1;
+    }
+  }
+  if (cur.length) lines.push(cur.join(' '));
+  return lines.join('<br>');
 }
-function mdBranches(text) {
-  var parts = splitToBranches(text);
-  if (parts.length <= 1) return '- ' + (parts[0] || '') + '\n';
-  return parts.map(function(p){return '- '+p+'\n';}).join('');
+
+function mdSentences(text, limit) {
+  if (!text) return '';
+  if (Array.isArray(text)) text = text.join(', ');
+  // Split securely without lookbehind for old Safari compatibility
+  var sentences = text.match(/[^.!?\n]+[.!?\n]*/g);
+  if (!sentences) return '- '+formatNode(text, limit||55)+'\n';
+  var cleaned = sentences.map(function(s) { return s.trim(); }).filter(Boolean);
+  if (cleaned.length === 0) return '';
+  return cleaned.map(function(s) { return '- '+formatNode(s, limit||55)+'\n'; }).join('');
 }
+
 function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t.length<=n?t:t.substring(0,n-1)+'\u2026'; }
 
 // ═══════════════════════════════════════════════════
@@ -89,29 +104,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ═══════════════════════════════════════════════════
-// TAB 1: Ca nhan
+// TAB 1: Ca nhan (SMART GROUPING)
 // ═══════════════════════════════════════════════════
 function renderInfoMM(container, p) {
   var d = window._currentInfoSheet || {};
-  var name = p.full_name || 'Trai qua';
+  var name = p.full_name || 'Hồ sơ chưa có tên';
   var md = '# ' + name + '\n';
-  var id = [d.gioi_tinh||p.gender, d.nam_sinh?'Sinh '+d.nam_sinh:null, d.nghe_nghiep].filter(Boolean);
-  if (id.length) { md += '## \ud83d\udc64 Nh\u00e2n th\u00e2n\n'; id.forEach(function(v){md += '- '+v+'\n';}); }
-  var gd = [];
-  if (d.hon_nhan) gd.push(Array.isArray(d.hon_nhan)?d.hon_nhan.join(', '):d.hon_nhan);
-  if (d.nguoi_quan_trong) gd.push('QT: '+d.nguoi_quan_trong);
-  if (d.nguoi_than) gd.push(short(d.nguoi_than,35));
-  if (gd.length) { md += '## \ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67 Gia \u0111\u00ecnh\n'; gd.forEach(function(v){md += '- '+v+'\n';}); }
-  if (d.tinh_cach) { md += '## \ud83e\udde9 T\u00ednh c\u00e1ch\n'; md += mdBranches(d.tinh_cach); }
-  if (d.so_thich) { md += '## \u2b50 S\u1edf th\u00edch\n'; md += mdBranches(d.so_thich); }
-  if (d.ton_giao) md += '## \ud83d\ude4f T\u00f4n gi\u00e1o\n- '+(Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao)+'\n';
-  if (d.du_dinh) { md += '## \ud83c\udfaf D\u1ef1 \u0111\u1ecbnh\n'; md += mdBranches(d.du_dinh); }
-  if (d.quan_diem) { md += '## \ud83c\udf1f Quan \u0111i\u1ec3m\n'; md += mdBranches(d.quan_diem); }
-  if (d.chuyen_cu) { md += '## \ud83d\udcd6 C\u00e2u chuy\u1ec7n\n'; md += mdBranches(d.chuyen_cu); }
-  if (d.luu_y) { md += '## \u26a0\ufe0f L\u01b0u \u00fd\n'; md += mdBranches(d.luu_y); }
-  var noi = [d.dia_chi, d.que_quan].filter(Boolean);
-  if (noi.length) { md += '## \ud83d\udccd N\u01a1i s\u1ed1ng\n'; noi.forEach(function(v){md += '- '+short(v,30)+'\n';}); }
-  if (md.trim() === '# '+name) md += '## \ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u\n';
+  
+  // 1. Dinh vi xa hoi (Nhan than)
+  var dm = [
+    d.nam_sinh ? 'Sinh: '+d.nam_sinh : null,
+    d.gioi_tinh ? 'Giới tính: '+d.gioi_tinh : null,
+    d.nghe_nghiep ? 'Nghề: '+d.nghe_nghiep : null,
+    d.hon_nhan ? 'Hôn nhân: '+(Array.isArray(d.hon_nhan)?d.hon_nhan.join(', '):d.hon_nhan) : null,
+    d.dia_chi || d.que_quan ? 'Nơi sống: '+[d.que_quan, d.dia_chi].filter(Boolean).join(' - ') : null
+  ].filter(Boolean);
+  if (dm.length) {
+    md += '## 🏛️ Nhân thân & Nền tảng\n';
+    dm.forEach(function(v){ md += '- '+formatNode(v, 45)+'\n'; });
+  }
+
+  // 2. He tu truong (Ton giao, Quan diem)
+  var tt_md = '';
+  if (d.ton_giao) tt_md += '- **Tôn giáo:** '+(Array.isArray(d.ton_giao)?d.ton_giao.join(', '):d.ton_giao)+'\n';
+  if (d.quan_diem) tt_md += mdSentences(d.quan_diem, 55);
+  if (tt_md) md += '## ⚖️ Hệ tư tưởng & Niềm tin\n' + tt_md;
+
+  // 3. Chieu sau noi tam (Tinh cach, so thich, du dinh)
+  var tl = '';
+  if (d.tinh_cach) tl += '### 🧩 Tính cách\n' + mdSentences(d.tinh_cach, 50);
+  if (d.so_thich) tl += '### 🎨 Đam mê / Sở thích\n' + mdSentences(d.so_thich, 50);
+  if (d.du_dinh) tl += '### 🚀 Khát vọng / Dự định\n' + mdSentences(d.du_dinh, 50);
+  if (tl) md += '## 🌊 Chiều sâu nội tâm\n' + tl;
+
+  // 4. Goc khuat (Chuyen cu, nguoi_quan_trong)
+  var qk = '';
+  if (d.nguoi_quan_trong) qk += '### 👥 Người ảnh hưởng\n' + mdSentences(d.nguoi_quan_trong, 50);
+  if (d.chuyen_cu) qk += '### 📖 Câu chuyện dấu ấn\n' + mdSentences(d.chuyen_cu, 50);
+  if (qk) md += '## ⛓️ Góc khuất & Ràng buộc\n' + qk;
+
+  // 5. Canh bao
+  if (d.luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdSentences(d.luu_y, 55);
+
+  if (md.trim() === '# '+name) md += '## 📋 Trái quả này chưa có dữ liệu\n';
   renderMarkmap(container, md);
 }
 
