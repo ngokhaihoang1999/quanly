@@ -1,4 +1,4 @@
-﻿// ============ CHECK HAPJA ============
+// ============ CHECK HAPJA ============
 function canCreateHapja(pos) { return hasPermission('create_hapja'); }
 function openCheckHapjaModal() {
   document.getElementById('checkHapjaModal').classList.add('open');
@@ -221,6 +221,27 @@ async function approveHapja(id) {
       } catch(e) { console.warn('form_hanh_chinh creation:', e); }
     }
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newPid }) });
+    
+    // Auto-sync into Google Sheets via Webhook
+    try {
+      if (window.HAPJA_SHEET_WEBHOOK) {
+        // We use mode: 'no-cors' so it sends the request to Google Apps Script silently without running into browser CORS blocks.
+        fetch(window.HAPJA_SHEET_WEBHOOK, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+             full_name: h.full_name,
+             birth_year: h.birth_year,
+             gender: h.gender,
+             nddCode: nddCode,
+             approved_by: getEffectiveStaffCode(),
+             d: d
+          })
+        });
+      }
+    } catch(e) { console.warn('Lỗi ghi Sheet:', e); }
+
     showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
     closeModal('hapjaDetailModal');
 
