@@ -28,6 +28,10 @@ async function syncToGoogleSheet(pid) {
     const nddGroup = (typeof staffUnitMap !== 'undefined' && p.ndd_staff_code) 
                     ? (staffUnitMap[p.ndd_staff_code] || '') 
                     : '';
+                    
+    const semName = (typeof allSemesters !== 'undefined' && p.semester_id)
+                    ? (allSemesters.find(s => s.id === p.semester_id)?.name || '')
+                    : '';
 
     fetch(window.HAPJA_SHEET_WEBHOOK, {
       method: 'POST', mode: 'no-cors',
@@ -39,7 +43,8 @@ async function syncToGoogleSheet(pid) {
         d: d,
         recentNote: recentNote,
         tools: tools || d.t2_cong_cu || '',
-        nddGroup: nddGroup
+        nddGroup: nddGroup,
+        semesterName: semName
       })
     });
   } catch(e) { console.warn('Sync Sheet Fail:', e); }

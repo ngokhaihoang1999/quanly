@@ -37,6 +37,7 @@ function doPost(e) {
     var gvbb = p.gvbb_staff_code || "";
     var lyDo = p.dropout_reason || "";
     var nhomNDD = data.nddGroup || ""; // Ví dụ HCM2-Nhóm 1-Tổ 3
+    var mucTieuThang = data.semesterName || ""; // Cột 8: Khai giảng tháng
     var no = Math.max(1, sheet.getLastRow()); 
     var reqDataPhone = p.phone_number || d.sdt || "";
     if (reqDataPhone && !reqDataPhone.startsWith("'")) {
@@ -66,7 +67,7 @@ function doPost(e) {
         "Chakki",                       // 5. Giai đoạn
         congCu,                         // 6. Công cụ tư vấn
         trangThai,                      // 7. Trạng thái
-        "",                             // 8. Mục tiêu Tháng
+        mucTieuThang,                   // 8. Mục tiêu Tháng
         ghiChu,                         // 9. Ghi chú
         dangKyBB,                       // 10. Đăng kýBB
         "",                             // 11. Tham gia talkshow
@@ -89,6 +90,7 @@ function doPost(e) {
       if (p.phase) sheet.getRange(rowIdx, 5).setValue(p.phase);
       if (congCu) sheet.getRange(rowIdx, 6).setValue(congCu);
       sheet.getRange(rowIdx, 7).setValue(trangThai);
+      if (mucTieuThang) sheet.getRange(rowIdx, 8).setValue(mucTieuThang);
       if (ghiChu) sheet.getRange(rowIdx, 9).setValue(ghiChu);
       
       var cell10 = sheet.getRange(rowIdx, 10);
