@@ -14,6 +14,7 @@ function doPost(e) {
       ];
       sheet.appendRow(headers);
       sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#d9ead3");
+      sheet.hideColumns(22); // Giấu cột ID đi cho đẹp
     }
     
     var pid = data.profile_id || "";
