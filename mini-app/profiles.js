@@ -150,6 +150,11 @@ async function openProfile(p) {
   const avatarClick = canEditColor ? `onclick="openAvatarGradientPicker('${p.id}','${encodeURIComponent(avatarBg)}')"` : '';
   const editHint = canEditColor ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.45);text-align:center;font-size:8px;color:white;padding:2px 0;">🎨</div>` : '';
 
+  // Khoá/Mở Khai Giảng - Tag Semester
+  const semName = p.semester_id ? (allSemesters.find(s => s.id === p.semester_id)?.name || 'Kỳ ẩn') : 'Chưa có kỳ (Kỳ cũ)';
+  const canEditSem = hasPermission('edit_profile') || hasPermission('manage_semester') || isProfileNDD;
+  const semTag = `<span ${canEditSem ? `onclick="event.stopPropagation();promptChangeSemester('${p.id}', '${p.semester_id||''}')" style="cursor:pointer;"` : 'style="opacity:0.8;"'} class="semester-badge" title="Nhấn để Đổi Khai Giảng cho Trái này">📅 ${semName}</span>`;
+
   // ONE unified card
   document.getElementById('profileSummaryCard').innerHTML = `
     <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;">
@@ -165,7 +170,9 @@ async function openProfile(p) {
             ${statusBtn}
             <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
             ${ktHtml}
+            ${semTag}
             ${p.birth_year ? `<span style="font-size:11px;color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px;color:var(--text2);">${p.gender}</span>` : '')}
+
           </div>
           ${reasonHtml}
           ${bbNoGroupWarning}

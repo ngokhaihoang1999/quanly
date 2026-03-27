@@ -683,6 +683,17 @@ function showUnitPopup(type) {
       <div style="font-weight:700;font-size:13px;">${h.full_name}</div>
       <div style="font-size:11px;color:var(--text2);">NDD: ${h.data?.ndd_staff_code||h.created_by} · ${new Date(h.created_at).toLocaleDateString('vi-VN')}</div>
     </div>`);
+  } else if (type === 'wait_tv') {
+    title = '⏳ Chờ TV (Đã duyệt Hapja nhưng chưa qua TV)';
+    const list = window._unitWaitTV || [];
+    items = list.map(r => {
+      const pid = r.fruit_groups?.profile_id;
+      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
+      return renderProfileCard(fullP, {
+        extraMeta: 'TĐ: ' + r.staff_code,
+        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
+      });
+    });
   } else if (type === 'tvv') {
     title = '💬 Trái TV';
     const list = window._unitTvvFruits || [];
@@ -864,6 +875,42 @@ async function changeAvatarColor(profileId, gradient) {
     else if (typeof loadDashboard === 'function') loadDashboard();
     showToast('✅ Đã đổi màu avatar');
   } catch(e) { console.error('changeAvatarColor:', e); showToast('❌ Lỗi đổi màu'); }
+}
+
+// ============ KỲ KHAI GIẢNG (SEMESTER) ============
+async function promptChangeSemester(profileId, currentSemId) {
+  if (!allSemesters || allSemesters.length === 0) return;
+  const opts = '<option value="">(Không có kỳ / Gỡ kỳ)</option>' + allSemesters.map(s => `<option value="${s.id}" ${s.id === currentSemId ? 'selected' : ''}>${s.name}</option>`).join('');
+  const msg = `<div style="text-align:left;">
+      <b>Chuyển Khai Giảng cho trái quả này?</b><br><br>
+      Dữ liệu trên dashboard tích luỹ/giai đoạn của kỳ cũ sẽ giảm, và kỳ mới sẽ tăng.<br><br>
+      <select id="moveSemSelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);">${opts}</select>
+    </div>`;
+  const confirm = await showConfirmAsync(msg);
+  if (!confirm) return;
+  
+  const moveSel = document.getElementById('moveSemSelect');
+  if (!moveSel) return;
+  const newSem = moveSel.value || null;
+  if (newSem === currentSemId) return;
+
+  try {
+    const semVal = newSem ? newSem : null;
+    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify({ semester_id: semVal }) });
+    await sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify({ semester_id: semVal }) });
+    showToast('✅ Đã chuyển Khai Giảng');
+    
+    // Nếu vẫn ở kỳ hiện tại, tải lại dữ liệu in-place
+    if (typeof loadProfiles === 'function') await loadProfiles();
+    if (typeof loadDashboard === 'function') await loadDashboard();
+    
+    if (currentProfileId === profileId) {
+      if (typeof refreshProfileInPlace === 'function') refreshProfileInPlace();
+    }
+  } catch(e) {
+    showToast('❌ Lỗi đổi Khai Giảng');
+    console.error(e);
+  }
 }
 
 // ============ FRUIT STATUS TOGGLE ============

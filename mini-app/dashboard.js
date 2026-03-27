@@ -192,7 +192,7 @@ async function loadDashboard() {
             <div class="num">${centerFruits.length}</div>
             <div class="lbl">🏛️ Center</div>
           </div>
-          <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup('hapja')">
+          <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup(${isCum ? "'hapja'" : "'wait_tv'"})">
             ${infoBtnLeft(isCum ? 'hapja_cum' : 'wait_tv')}
             <div class="num">${isCum ? approvedHapjaList.length : waitTVFruits.length}</div>
             <div class="lbl">${isCum ? '🍎 Trái Hapja' : '⏳ Chờ TV'}</div>

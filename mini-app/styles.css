@@ -253,6 +253,8 @@
     .semester-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(124,106,247,0.08); border: 1px solid rgba(124,106,247,0.2); border-radius: 10px; margin-bottom: 8px; }
     [data-theme="light"] .semester-bar { background: rgba(124,106,247,0.06); border-color: rgba(124,106,247,0.15); }
 
+    .semester-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: rgba(124,106,247,0.15); border: 1px solid rgba(124,106,247,0.3); color: var(--accent); }
+
     /* ── Timeline ── */
     .tl-container {
       border-radius: var(--radius-sm);
