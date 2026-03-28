@@ -115,11 +115,13 @@ async function openProfile(p) {
       });
     });
   } catch(e) {}
-  const nddDisplay = p.ndd_staff_code || rolesInfo.ndd
-    ? getStaffLabel(p.ndd_staff_code || rolesInfo.ndd) : '—';
+  const nddCode    = p.ndd_staff_code || rolesInfo.ndd || null;
+  const tvvCode    = rolesInfo.tvv.length ? rolesInfo.tvv[0] : null; // primary TVV
+  const gvbbCode   = rolesInfo.gvbb || null;
+  const nddDisplay = nddCode ? getStaffLabel(nddCode) : '—';
   const tvvDisplay = rolesInfo.tvv.length
     ? rolesInfo.tvv.map(c => getStaffLabel(c)).join(', ') : '—';
-  const gvbbDisplay = rolesInfo.gvbb ? getStaffLabel(rolesInfo.gvbb) : '—';
+  const gvbbDisplay = gvbbCode ? getStaffLabel(gvbbCode) : '—';
 
   // Per-profile role of current user
   const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);
@@ -205,9 +207,9 @@ async function openProfile(p) {
       </div>
       <!-- Bottom: roles grid + latest -->
       <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
-        <div><span style="color:var(--text3);">NDD:</span> <b>${nddDisplay}</b></div>
-        <div><span style="color:var(--text3);">TVV:</span> <b>${tvvDisplay}</b></div>
-        <div><span style="color:var(--text3);">GVBB:</span> <b>${gvbbDisplay}</b></div>
+        <div><span style="color:var(--text3);">NDD:</span> ${nddCode ? `<b onclick="showStaffCard('${nddCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</b>` : `<b>${nddDisplay||'---'}</b>`}</div>
+        <div><span style="color:var(--text3);">TVV:</span> ${tvvCode ? `<b onclick="showStaffCard('${tvvCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${tvvDisplay}</b>` : `<b>${tvvDisplay||'---'}</b>`}</div>
+        <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>` : `<b>${gvbbDisplay||'---'}</b>`}</div>
         ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
       </div>
       ${hasRealBBGroup && ['bb','center','completed'].includes(ph) ? `
