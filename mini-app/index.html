@@ -342,6 +342,17 @@
 </div>
 </div>
 
+<!-- Add Record Modal -->
+<div class="modal-overlay" id="addRecordModal">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="recordModalTitle">📋 Báo cáo</div>
+  <div id="recordModalBody" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+  <button class="save-btn" onclick="saveRecord()">💾 Lưu Báo cáo</button>
+  <button onclick="closeModal('addRecordModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Đóng</button>
+</div>
+</div>
+
 <!-- Hapja Detail Modal -->
 <div class="modal-overlay" id="hapjaDetailModal">
 <div class="modal">
