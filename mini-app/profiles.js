@@ -128,7 +128,7 @@ async function openProfile(p) {
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
   const canEditBB     = hasFullEdit || isProfileGVBB;
-  const canAccessTuDuy = hasFullEdit || isProfileGVBB || isProfileTVV || isProfileNDD;
+  const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['bb','center','completed'].includes(ph);
   // Store for use in other functions
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
   window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };

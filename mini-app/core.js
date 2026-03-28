@@ -528,6 +528,10 @@ function backToList() {
 function switchFormTab(el, cardId) {
   document.querySelectorAll('.form-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
   document.querySelectorAll('.form-card').forEach(c=>c.classList.remove('active')); document.getElementById(cardId).classList.add('active');
+  // Trigger mindmap render when Tư Duy tab is opened
+  if (cardId === 'mindmapTab' && typeof renderMindmap === 'function') {
+    setTimeout(renderMindmap, 50);
+  }
 }
 function switchMainTab(el, tab) {
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');

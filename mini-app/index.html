@@ -216,8 +216,38 @@
 
     <!-- MINDMAP TAB -->
     <div class="form-card" id="mindmapTab">
-      <div class="form-card-header"><div class="form-card-title">📚 TƯ DUY</div></div>
-      <div class="form-card-body" id="mindmapBody"></div>
+      <div class="form-card-header"><div class="form-card-title" id="mmTitle">📚 TU DUY</div></div>
+      <div class="form-card-body" style="padding:8px;">
+        <div style="display:flex;gap:4px;margin-bottom:10px;align-items:center;">
+          <button class="chip active" id="mmBtnInfo" onclick="switchMindmap('info',this)">Thong tin co ban</button>
+          <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)">Lacie Insight</button>
+          <span style="flex:1;"></span>
+          <button onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;" title="Phan tich lai">🔄</button>
+        </div>
+        <div id="mindmapContainer" style="width:100%;height:380px;overflow:hidden;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
+        <button onclick="toggleFullscreen('mindmapContainer')" style="margin-top:4px;background:none;border:1px solid var(--border);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">Toan man hinh</button>
+        <!-- Lacie Chat -->
+        <div id="aiChatCard" style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+          <div class="ai-chat-header" onclick="toggleAIChat()" style="border-radius:var(--radius-sm);">
+            <div class="ai-chat-avatar">👼</div>
+            <div style="flex:1;">
+              <div class="ai-chat-name">Lacie</div>
+              <div class="ai-chat-status">Tro ly AI · Bam de mo</div>
+            </div>
+            <span class="ai-chat-arrow" id="aiChatArrow">▾</span>
+            <button class="ai-chat-fs-btn" onclick="event.stopPropagation();toggleFullscreen('aiChatCard')" title="Toan man hinh">⛶</button>
+          </div>
+          <div id="aiChatBody" class="ai-chat-body" style="display:none;">
+            <div class="ai-chat-msgs" id="aiChatMessages">
+              <div class="ai-msg ai-msg-system">Tro ly AI cho ho so nay. Moi nguoi cung thay.</div>
+            </div>
+            <div class="ai-chat-input-area">
+              <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hoi ve ban nay..." onkeydown="if(event.key==='Enter')sendAIChat();" />
+              <button class="ai-chat-send" onclick="sendAIChat()">➤</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
