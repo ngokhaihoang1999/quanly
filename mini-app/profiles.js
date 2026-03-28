@@ -128,7 +128,7 @@ async function openProfile(p) {
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
   const canEditBB     = hasFullEdit || isProfileGVBB;
-  const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['bb','center','completed'].includes(ph);
+  const canAccessTuDuy = hasFullEdit || isProfileGVBB || isProfileTVV || isProfileNDD;
   // Store for use in other functions
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
   window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };
@@ -202,6 +202,11 @@ async function openProfile(p) {
           background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
           display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
           ">🔄</button>
+        ${hasPermission('edit_profile') ? `<button onclick="deleteProfile('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}')" title="Xoá hồ sơ" style="
+          flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid rgba(248,113,113,0.4);
+          background:rgba(248,113,113,0.08);color:var(--red);font-size:16px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
+          ">🗑️</button>` : ''}
       </div>
       <!-- Bottom: roles grid + latest -->
       <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
@@ -427,4 +432,40 @@ function openBBGroup(btnEl) {
   }).catch(() => {
     alert('⚠️ Lỗi kiểm tra link. Hãy thử đóng Mini App và mở lại.');
   });
+}
+
+// ── XOÁ HỒ SƠ ──────────────────────────────────────────────────────────────
+async function deleteProfile(profileId, name) {
+  if (!hasPermission('edit_profile')) { showToast('🚫 Không có quyền xoá'); return; }
+  const confirmed = await showConfirmAsync(
+    `🗑️ Xoá hồ sơ "${name}"?\n\nHành động này sẽ xoá TOÀN BỘ dữ liệu liên quan (records, ghi chú, TV, BB, Hapja...) và KHÔNG THỂ KHÔI PHỤC.`
+  );
+  if (!confirmed) return;
+  try {
+    showToast('⏳ Đang xoá...');
+    // Cascade delete in correct order (FK constraints)
+    await Promise.all([
+      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}`, { method: 'DELETE' }),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}`, { method: 'DELETE' }),
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}`, { method: 'DELETE' }),
+      sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}`, { method: 'DELETE' }),
+    ]);
+    // Delete fruit_roles → fruit_groups → profiles
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id`);
+    const fgs = await fgRes.json();
+    if (fgs && fgs.length) {
+      const fgIds = fgs.map(g => g.id).join(',');
+      await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=in.(${fgIds})`, { method: 'DELETE' });
+      await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}`, { method: 'DELETE' });
+    }
+    await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'DELETE' });
+    // Remove from local cache and go back
+    allProfiles = allProfiles.filter(x => x.id !== profileId);
+    renderProfiles(allProfiles);
+    backToList();
+    showToast('🗑️ Đã xoá hồ sơ thành công');
+  } catch(e) {
+    console.error('deleteProfile:', e);
+    showToast('❌ Lỗi khi xoá hồ sơ');
+  }
 }

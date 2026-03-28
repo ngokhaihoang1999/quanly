@@ -203,10 +203,14 @@
 
     <!-- NOTES TAB -->
     <div class="form-card" id="notesTab">
-      <div class="form-card-header"><div class="form-card-title">🗒️ GHI CHÚ</div></div>
+      <div class="form-card-header"><div class="form-card-title">🗒️ GHI CHÚ</div><div class="form-card-meta" id="noteCount"></div></div>
       <div class="form-card-body">
         <div id="notesList"></div>
-        <button class="add-record-btn" onclick="openAddNoteModal()">＋ Thêm ghi chú</button>
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+          <div class="field-group"><label>Tiêu đề (tuỳ chọn)</label><input type="text" id="note_title" placeholder="Tiêu đề ngắn..." /></div>
+          <div class="field-group"><label>Nội dung</label><textarea id="note_body" placeholder="Ghi chú..." style="resize:vertical;min-height:80px;"></textarea></div>
+          <button class="save-btn" id="noteSaveBtn" onclick="saveNote()" style="margin-top:4px;">📌 Thêm ghi chú</button>
+        </div>
       </div>
     </div>
 
