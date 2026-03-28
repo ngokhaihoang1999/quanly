@@ -29,8 +29,22 @@ async function submitCreateHapja() {
   if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
   if (!ngayChakki) { showToast('⚠️ Vui lòng chọn Ngày chakki'); return; }
   if (!concept) { showToast('⚠️ Vui lòng nhập Concept'); return; }
-  if (!fullName) { showToast('⚠️ Vui lòng nhập họ tên'); return; }
-  if (!hinhThuc) { showToast('⚠️ Vui lòng nhập Hình thức chakki'); return; }
+  if (!fullName) { showToast('⚠️ Vui lòng nhập Họ tên (mục 1)'); return; }
+  if (!birthYear) { showToast('⚠️ Vui lòng nhập Năm sinh (mục 1)'); return; }
+  if (!gender) { showToast('⚠️ Vui lòng chọn Giới tính (mục 1)'); return; }
+  if (!hinhThuc) { showToast('⚠️ Vui lòng nhập Hình thức chakki (mục 2)'); return; }
+  if (!thanThiet) { showToast('⚠️ Vui lòng chọn Mức độ thân thiết (mục 2)'); return; }
+  if (!noiO) { showToast('⚠️ Vui lòng nhập Nơi ở (mục 3)'); return; }
+  if (!ngheNghiep) { showToast('⚠️ Vui lòng nhập Nghề nghiệp/Nơi làm làm việc (mục 4)'); return; }
+  if (!tcCongCu) { showToast('⚠️ Vui lòng nhập Tính cách theo công cụ (mục 5)'); return; }
+  if (!tcKetNoi) { showToast('⚠️ Vui lòng chọn Kết nối tin nhắn (mục 5)'); return; }
+  if (!ttCoKhong) { showToast('⚠️ Vui lòng chọn Thần tính phân loại (mục 6)'); return; }
+  if (ttCoKhong !== 'Chưa khai thác' && !ttChiTiet) { showToast('⚠️ Vui lòng nhập Chi tiết thần tính (mục 6)'); return; }
+  if (!hcHienTai) { showToast('⚠️ Vui lòng nhập Hoàn cảnh hiện tại (mục 7)'); return; }
+  if (!hcHocKi) { showToast('⚠️ Vui lòng nhập Kì nghỉ/Học kì (mục 7)'); return; }
+  if (!nlLoLang) { showToast('⚠️ Vui lòng nhập Nỗi lo lắng (mục 8)'); return; }
+  if (!nlQuanTam) { showToast('⚠️ Vui lòng nhập Sự quan tâm (mục 8)'); return; }
+  if (!sdt) { showToast('⚠️ Vui lòng nhập Số điện thoại (mục 9)'); return; }
 
   const payload = {
     full_name: fullName,
