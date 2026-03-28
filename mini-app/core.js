@@ -35,8 +35,10 @@ function getStaffUnit(code) {
 // Returns display label: "code (unit)" or just "code" if no unit
 function getStaffLabel(code) {
   if (!code) return '';
+  const s = allStaff.find(x => x.staff_code === code);
+  const displayName = s?.nickname || code;
   const unit = getStaffUnit(code);
-  return unit ? `${code} (${unit})` : code;
+  return unit ? `${displayName} (${unit})` : displayName;
 }
 
 
@@ -1307,29 +1309,54 @@ function openPersonalizationPanel() {
             </div>
           </div>
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname (hiển thị trong app)</label>
-            <input type="text" id="prof_nickname" value="${myStaff?.nickname||''}" placeholder="Tên gọi thân mật..." style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(thay thế tên viết tắt hiện tại)</span></label>
+            <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="VD: NKH, Tuấn Anh, Khải..."
+              oninput="const v=this.value.trim();document.getElementById('nickname_preview').textContent=v||(myStaff?.staff_code||'');"
+              style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Hiện tại: <b>${myStaff?.staff_code||''}</b> → sẽ hiện là <b id="nickname_preview">${myStaff?.nickname||myStaff?.staff_code||''}</b></div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:8px;align-items:end;">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Avatar</label>
+              <div id="prof_emoji_display" onclick="toggleEmojiPicker()" title="Chọn emoji"
+                style="width:46px;height:46px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px dashed var(--border);position:relative;">
+                ${myStaff?.avatar_emoji || (myStaff?.nickname||myStaff?.full_name||'?')[0]}
+              </div>
+              <input type="hidden" id="prof_avatar_emoji" value="${myStaff?.avatar_emoji||''}" />
+            </div>
             <div>
               <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Giới tính</label>
-              <select id="prof_gender" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+              <select id="prof_gender" data-val="${myStaff?.gender||''}"
+                style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
                 <option value="">Không rõ</option>
-                <option value="Nam" ${myStaff?.gender==='Nam'?'selected':''}>Nam</option>
-                <option value="Nữ" ${myStaff?.gender==='Nữ'?'selected':''}>Nữ</option>
-                <option value="Khác" ${myStaff?.gender==='Khác'?'selected':''}>Khác</option>
+                <option value="Nam">Nam</option>
+                <option value="Nu">Nữ</option>
+                <option value="Khac">Khác</option>
               </select>
             </div>
             <div>
               <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Năm sinh</label>
-              <input type="text" id="prof_birth_year" value="${myStaff?.birth_year||''}" placeholder="YYYY" maxlength="4" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
+              <input type="text" id="prof_birth_year" value="${myStaff?.birth_year||''}" placeholder="YYYY" maxlength="4"
+                style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
             </div>
           </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Bio (tuỳ ý)</label>
-            <textarea id="prof_bio" placeholder="Giới thiệu bản thân ngắn gọn..." maxlength="200" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;">${myStaff?.bio||''}</textarea>
+          <!-- Emoji picker popup -->
+          <div id="emojiPickerBox" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,0.2);flex-wrap:wrap;gap:6px;">
+            ${['😎','🔥','⚡','🌟','🎯','💎','🦁','🐯','🦊','🐺','🌈','🌙','☀️','❄️','🎸','🎮','⚽','🏆','🎩','✨','🙏','💪','🧠','❤️','🤝','🕊️','🌸','🍀','🦋','🎵'].map(e=>`<span onclick="selectEmoji('${e}')" style="font-size:24px;cursor:pointer;padding:4px;border-radius:8px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${e}</span>`).join('')}
           </div>
-          <button onclick="saveMyStaffProfile()" style="padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">💾 Lưu hồ sơ TĐ</button>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">💬 Motto</label>
+            <input type="text" id="prof_motto" value="${(myStaff?.motto||'').replace(/"/g,'&quot;')}" placeholder="Câu khẩu hiệu cá nhân..." maxlength="80"
+              style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">📝 Bio</label>
+            <textarea id="prof_bio" placeholder="Giới thiệu bản thân ngắn gọn..." maxlength="200"
+              oninput="document.getElementById('bio_char').textContent=this.value.length"
+              style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;">${myStaff?.bio||''}</textarea>
+            <div style="font-size:10px;color:var(--text3);text-align:right;margin-top:2px;"><span id="bio_char">${(myStaff?.bio||'').length}</span>/200</div>
+          </div>
+          <button onclick="saveMyStaffProfile()" style="padding:11px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">💾 Lưu hồ sơ TĐ</button>
         </div>
         <button onclick="_savePrefs()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Lưu cá nhân hoá</button>
         <button onclick="_resetPrefs()" style="width:100%;padding:10px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:12px;cursor:pointer;">↩ Về mặc định hệ thống</button>
@@ -1340,6 +1367,29 @@ function openPersonalizationPanel() {
   _pendingPrefs = { accent: hex0 };
   _prefTabOrder = [...currentOrder];
   _prefTabHidden = new Set(hiddenSet);
+  // Fix gender select: set value via JS after DOM is ready (avoids encoding issues with selected attr)
+  const gSel = document.getElementById('prof_gender');
+  if (gSel) {
+    const gVal = gSel.dataset.val || '';
+    // Map stored Vietnamese values to option values
+    const gMap = { 'Nam':'Nam', 'Nữ':'Nu', 'N\u1eef':'Nu', 'Khác':'Khac', 'Kh\u00e1c':'Khac' };
+    gSel.value = gMap[gVal] || gVal;
+  }
+}
+
+function toggleEmojiPicker() {
+  const box = document.getElementById('emojiPickerBox');
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+
+function selectEmoji(emoji) {
+  const display = document.getElementById('prof_emoji_display');
+  const input   = document.getElementById('prof_avatar_emoji');
+  if (display) display.textContent = emoji;
+  if (input)   input.value = emoji;
+  const box = document.getElementById('emojiPickerBox');
+  if (box) box.style.display = 'none';
 }
 
 let _prefTabOrder = null;
@@ -1461,10 +1511,15 @@ async function _resetPrefs() {
 async function saveMyStaffProfile() {
   if (!myStaff?.staff_code) { showToast('⚠️ Chưa đăng nhập'); return; }
   const nickname   = document.getElementById('prof_nickname')?.value?.trim() || null;
-  const gender     = document.getElementById('prof_gender')?.value || null;
+  // Gender: option values use ASCII keys; map back to Vietnamese for storage
+  const gRaw       = document.getElementById('prof_gender')?.value || '';
+  const gMap       = { 'Nam':'Nam', 'Nu':'Nữ', 'Khac':'Khác' };
+  const gender     = gMap[gRaw] || gRaw || null;
   const birth_year_raw = document.getElementById('prof_birth_year')?.value?.trim();
   const birth_year = birth_year_raw ? parseInt(birth_year_raw) : null;
   const bio        = document.getElementById('prof_bio')?.value?.trim() || null;
+  const avatar_emoji = document.getElementById('prof_avatar_emoji')?.value || null;
+  const motto      = document.getElementById('prof_motto')?.value?.trim() || null;
 
   if (birth_year && (birth_year < 1900 || birth_year > 2030)) {
     showToast('⚠️ Năm sinh không hợp lệ'); return;
@@ -1474,10 +1529,10 @@ async function saveMyStaffProfile() {
   try {
     await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
       method: 'PATCH',
-      body: JSON.stringify({ nickname, gender, birth_year, bio })
+      body: JSON.stringify({ nickname, gender, birth_year, bio, avatar_emoji, motto })
     });
     // Update local cache
-    Object.assign(myStaff, { nickname, gender, birth_year, bio });
+    Object.assign(myStaff, { nickname, gender, birth_year, bio, avatar_emoji, motto });
     // Update header badge if nickname set
     const badge = document.getElementById('myStaffBadge');
     if (badge && nickname) {
