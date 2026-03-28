@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+﻿const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
 const tg = window.Telegram?.WebApp;
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
@@ -1309,11 +1309,11 @@ function openPersonalizationPanel() {
             </div>
           </div>
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(thay thế tên viết tắt hiện tại)</span></label>
-            <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="VD: NKH, Tuấn Anh, Khải..."
-              oninput="const v=this.value.trim();document.getElementById('nickname_preview').textContent=v||(myStaff?.staff_code||'');"
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã TĐ)</span></label>
+            <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Khải, Phi, Hoa..."
+              oninput="const v=this.value.trim();document.getElementById('nickname_preview').textContent=v||'(chưa đặt)';"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
-            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Hiện tại: <b>${myStaff?.staff_code||''}</b> → sẽ hiện là <b id="nickname_preview">${myStaff?.nickname||myStaff?.staff_code||''}</b></div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Mã TĐ cố định: <b>${myStaff?.staff_code||''}</b> &nbsp;·&nbsp; Nickname: <b id="nickname_preview">${myStaff?.nickname||'(chưa đặt)'}</b></div>
           </div>
           <div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:8px;align-items:end;">
             <div>
@@ -1328,10 +1328,9 @@ function openPersonalizationPanel() {
               <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Giới tính</label>
               <select id="prof_gender" data-val="${myStaff?.gender||''}"
                 style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
-                <option value="">Không rõ</option>
+                <option value="">Chưa chọn</option>
                 <option value="Nam">Nam</option>
                 <option value="Nu">Nữ</option>
-                <option value="Khac">Khác</option>
               </select>
             </div>
             <div>
@@ -1372,8 +1371,8 @@ function openPersonalizationPanel() {
   if (gSel) {
     const gVal = gSel.dataset.val || '';
     // Map stored Vietnamese values to option values
-    const gMap = { 'Nam':'Nam', 'Nữ':'Nu', 'N\u1eef':'Nu', 'Khác':'Khac', 'Kh\u00e1c':'Khac' };
-    gSel.value = gMap[gVal] || gVal;
+    const gMap = { 'Nam':'Nam', 'Nữ':'Nu', 'Nu':'Nu' };
+    gSel.value = gMap[gVal] || '';
   }
 }
 
@@ -1513,8 +1512,8 @@ async function saveMyStaffProfile() {
   const nickname   = document.getElementById('prof_nickname')?.value?.trim() || null;
   // Gender: option values use ASCII keys; map back to Vietnamese for storage
   const gRaw       = document.getElementById('prof_gender')?.value || '';
-  const gMap       = { 'Nam':'Nam', 'Nu':'Nữ', 'Khac':'Khác' };
-  const gender     = gMap[gRaw] || gRaw || null;
+  const gMap       = { 'Nam':'Nam', 'Nu':'Nữ' };
+  const gender     = gMap[gRaw] || null;
   const birth_year_raw = document.getElementById('prof_birth_year')?.value?.trim();
   const birth_year = birth_year_raw ? parseInt(birth_year_raw) : null;
   const bio        = document.getElementById('prof_bio')?.value?.trim() || null;
