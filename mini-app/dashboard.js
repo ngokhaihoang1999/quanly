@@ -495,13 +495,16 @@ async function loadDashboard() {
   } catch(e) {
     console.error('Dashboard error:', e);
     // Clear any stuck loading states
-    const stuck = ['dashHapjaList','dashMyList','dashUnitList','dashNDDList'];
+    const stuck = ['dashHapjaList','dashMyList','dashUnitList','dashSubUnits','dashNDDList'];
     stuck.forEach(id => {
       const el = document.getElementById(id);
-      if (el && el.innerHTML.includes('ang t')) {
-        el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Không tải được dữ liệu</div>';
-      }
+      if (el) el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">⚠️ Không tải được dữ liệu</div>';
     });
+    // Also clear metrics areas
+    const metricsEl = document.getElementById('dashUnitMetrics');
+    const personalEl = document.getElementById('dashPersonalMetrics');
+    if (metricsEl && !metricsEl.innerHTML.trim()) metricsEl.innerHTML = '';
+    if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">⚠️ Không tải được dữ liệu</div>';
   }
 }
 

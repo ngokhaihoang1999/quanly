@@ -1,4 +1,4 @@
-﻿const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
 const tg = window.Telegram?.WebApp;
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
@@ -484,39 +484,68 @@ function getSemesterFilter() {
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) { tg.ready(); tg.expand(); }
   initCustomAutocomplete();
-  await loadPositions();
-  await loadStaffInfo();
-  await loadSemesters();
-  await Promise.all([loadProfiles(), loadDashboard(), loadStaff()]);
+  try {
+    await loadPositions();
+    const ok = await loadStaffInfo();
+    if (!ok) return; // Access denied — stop here, don't proceed to load data
+    await loadSemesters();
+    // Run independently so one failure doesn't block others
+    await Promise.allSettled([loadProfiles(), loadDashboard(), loadStaff()]);
+  } catch(e) {
+    console.error('Init error:', e);
+    _clearLoadingStates();
+  }
 });
 
 async function loadStaffInfo() {
   const userId = tg?.initDataUnsafe?.user?.id;
   if (!userId) {
     document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:18px;color:red;padding:20px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">\u26a0\ufe0f Truy c\u1eadp b\u1ecb t\u1eeb ch\u1ed1i.<br>Vui l\u00f2ng m\u1edf \u1ee9ng d\u1ee5ng qua Telegram \u0111\u1ec3 x\u00e1c th\u1ef1c danh t\u00ednh.</div>';
-    throw new Error('Unauthorized Access - Telegram required');
+    return false; // Signal failure — caller will stop init chain
   }
   try {
     const res = await sbFetch(`/rest/v1/staff?telegram_id=eq.${userId}&select=*`);
+    if (!res.ok) throw new Error('Network error: ' + res.status);
     const data = await res.json();
     if (data.length > 0) {
       myStaff = data[0];
       let badgeText = `${myStaff.staff_code} \u00b7 ${getPositionName(myStaff.position)}`;
       if (myStaff.specialist_position) badgeText += ` + ${getPositionName(myStaff.specialist_position)}`;
-      document.getElementById('staffBadge').textContent = badgeText;
+      const badgeEl = document.getElementById('staffBadge');
+      if (badgeEl) badgeEl.textContent = badgeText;
       if (hasPermission('manage_positions')) {
-        document.getElementById('viewAsBar').classList.add('active');
+        const bar = document.getElementById('viewAsBar');
+        if (bar) bar.classList.add('active');
       }
       // Apply saved personalization
-      if (myStaff.preferences) applyUserPreferences(myStaff.preferences);
-      const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,position,specialist_position,telegram_id');
-      const allS = await allRes.json();
-      allStaff = allS; // store full staff list for getStaffLabel, showStaffCard, etc.
-      const dl = document.getElementById('staffSuggest');
-      if (dl) dl.innerHTML = allS.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
+      if (myStaff.preferences && typeof applyUserPreferences === 'function') applyUserPreferences(myStaff.preferences);
+      try {
+        const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,position,specialist_position,telegram_id');
+        const allS = await allRes.json();
+        allStaff = allS;
+        const dl = document.getElementById('staffSuggest');
+        if (dl) dl.innerHTML = allS.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
+      } catch(e2) { console.warn('loadStaffInfo - allStaff fetch failed:', e2); }
+    } else {
+      // Telegram user exists but not in staff table
+      document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:16px;color:#b45309;padding:24px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">\u26a0\ufe0f T\u00e0i kho\u1ea3n c\u1ee7a b\u1ea1n ch\u01b0a \u0111\u01b0\u1ee3c \u0111\u0103ng k\u00fd trong h\u1ec7 th\u1ed1ng.<br><br>Vui l\u00f2ng li\u00ean h\u1ec7 qu\u1ea3n tr\u1ecb vi\u00ean \u0111\u1ec3 \u0111\u01b0\u1ee3c th\u00eam v\u00e0o.</div>';
+      return false;
     }
-  } catch {}
+  } catch(e) {
+    console.error('loadStaffInfo error:', e);
+    // Don't block init — just log the error, let applyPermissions run
+  }
   applyPermissions();
+  return true;
+}
+
+// Clear all "\u0110ang t\u1ea3i..." loading states when init fails or errors occur
+function _clearLoadingStates() {
+  const loadingIds = ['dashHapjaList','dashMyList','dashUnitList','dashSubUnits','dashPersonalMetrics','profileList','staffList'];
+  loadingIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">\u26a0\ufe0f Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c d\u1eef li\u1ec7u. Vui l\u00f2ng m\u1edf l\u1ea1i \u1ee9ng d\u1ee5ng.</div>';
+  });
 }
 
 // ============ NAVIGATION ============
