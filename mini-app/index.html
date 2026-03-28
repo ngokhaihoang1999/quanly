@@ -285,17 +285,69 @@
 <!-- MODALS -->
 <!-- Hapja Create Modal -->
 <div class="modal-overlay" id="createHapjaModal">
-<div class="modal">
-  <div class="modal-handle"></div>
-  <div class="modal-title">📋 Tạo Phiếu Hapja</div>
-  <div class="field-group"><label>Họ và tên <span style="color:var(--red);">*</span></label><input type="text" id="hj_full_name" placeholder="Nhập họ và tên..." /></div>
-  <div class="grid-2">
-    <div class="field-group"><label>Giới tính</label><select id="hj_gender"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
-    <div class="field-group"><label>Năm sinh</label><input type="text" id="hj_birth_year" placeholder="YYYY" /></div>
+<div class="modal" style="max-height:85vh; padding:0; display:flex; flex-direction:column;">
+  <div class="modal-handle" style="margin-top:12px;"></div>
+  <div class="modal-title" style="padding:0 16px;">🍎 BẢNG THÔNG TIN VỀ TRÁI</div>
+  <div style="overflow-y:auto; overflow-x:hidden; padding:0 16px 16px;">
+    <div class="field-group"><label>*Tên NDD <span style="color:var(--red);">*</span></label><input type="text" id="hj_ndd" data-list="staffSuggest" placeholder="Tìm mã hoặc tên TĐ..." /></div>
+    <div class="field-group"><label>*Ngày chakki <span style="color:var(--red);">*</span></label><input type="date" id="hj_ngay_chakki" /></div>
+    <div class="field-group"><label>*Concept <span style="color:var(--red);">*</span></label><input type="text" id="hj_concept" placeholder="..." /></div>
+    
+    <div class="field-group"><label>1. Họ tên cá(Năm sinh) & Giới tính <span style="color:var(--red);">*</span></label>
+      <input type="text" id="hj_full_name" placeholder="Họ và tên..." style="margin-bottom:6px;" />
+      <div class="grid-2">
+        <input type="number" id="hj_birth_year" placeholder="Năm sinh (YYYY)..." />
+        <select id="hj_gender"><option value="">Chọn giới tính...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select>
+      </div>
+    </div>
+    
+    <div class="field-group"><label>2. Hình thức chakki <span style="color:var(--red);">*</span></label>
+      <input type="text" id="hj_hinh_thuc" placeholder="Hình thức chakki..." style="margin-bottom:6px;" />
+      <label style="font-size:11px;color:var(--text2);margin-bottom:4px;display:block;">-> Mức độ thân thiết mối quan hệ:</label>
+      <select id="hj_than_thiet">
+        <option value="">Chọn mức độ...</option>
+        <option value="Cao">Cao</option>
+        <option value="Trung bình">Trung bình</option>
+        <option value="Thấp">Thấp</option>
+      </select>
+    </div>
+    
+    <div class="field-group"><label>3. Nơi ở</label><input type="text" id="hj_noi_o" placeholder="..." /></div>
+    <div class="field-group"><label>4. Nghề nghiệp/Nơi ở làm việc</label><input type="text" id="hj_nghe_nghiep" placeholder="VD: Sinh viên..." /></div>
+    
+    <div class="field-group"><label>5. Tính cách</label>
+      <input type="text" id="hj_tinh_cach_cong_cu" placeholder="- Theo công cụ (TSH, hình vẽ..):" style="margin-bottom:6px;" />
+      <select id="hj_kntn">
+        <option value="">- Kết nối qua tin nhắn:</option>
+        <option value="Phản hồi">Phản hồi</option>
+        <option value="Không phản hồi">Không phản hồi</option>
+      </select>
+    </div>
+    
+    <div class="field-group"><label>6. Thần tính</label>
+      <select id="hj_than_tinh_co_khong" style="margin-bottom:6px;">
+        <option value="Chưa khai thác">Chưa khai thác</option>
+        <option value="Có">Có</option>
+        <option value="Không">Không</option>
+      </select>
+      <input type="text" id="hj_than_tinh_chi_tiet" placeholder="Chi tiết (Catholic, Church, Buddhism, tin/không tin thần linh...)" />
+    </div>
+    
+    <div class="field-group"><label>7. Hoàn cảnh</label>
+      <input type="text" id="hj_hoan_canh_hien_tai" placeholder="- Hiện tại:" style="margin-bottom:6px;"/>
+      <input type="text" id="hj_hoc_ki" placeholder="- Kì nghỉ/Học kì:" />
+    </div>
+    
+    <div class="field-group"><label>8. Nỗi lo lắng</label>
+      <input type="text" id="hj_noi_lo_lang" placeholder="- Nỗi lo lắng:" style="margin-bottom:6px;" />
+      <textarea id="hj_su_quan_tam" placeholder="- Sự quan tâm (ex. xem kênh youtube nào? Sở thích?)" style="resize:vertical;min-height:50px;"></textarea>
+    </div>
+    
+    <div class="field-group"><label>9. Số điện thoại</label><input type="tel" id="hj_sdt" placeholder="..." /></div>
+    
+    <button class="save-btn" onclick="submitCreateHapja()" style="margin-top:12px;">📋 Tạo Phiếu</button>
+    <button onclick="closeModal('createHapjaModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
   </div>
-  <div class="field-group"><label>NDD phụ trách</label><input type="text" id="hj_ndd" data-list="staffSuggest" placeholder="Tìm mã hoặc tên TĐ..." /></div>
-  <button class="save-btn" onclick="submitCreateHapja()">📋 Tạo Phiếu</button>
-  <button onclick="closeModal('createHapjaModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
 </div>
 

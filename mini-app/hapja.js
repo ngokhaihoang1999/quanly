@@ -6,19 +6,53 @@ function openCreateHapjaModal() {
   if (sel) sel.value = '';
 }
 async function submitCreateHapja() {
+  const ndd = getStaffCodeFromInput('hj_ndd');
+  const ngayChakki = document.getElementById('hj_ngay_chakki')?.value;
+  const concept = document.getElementById('hj_concept')?.value?.trim();
   const fullName = document.getElementById('hj_full_name')?.value?.trim();
   const birthYear = document.getElementById('hj_birth_year')?.value?.trim() || '';
   const gender = document.getElementById('hj_gender')?.value || '';
-  const ndd = getStaffCodeFromInput('hj_ndd');
+  const hinhThuc = document.getElementById('hj_hinh_thuc')?.value?.trim();
+  const thanThiet = document.getElementById('hj_than_thiet')?.value;
+  const noiO = document.getElementById('hj_noi_o')?.value?.trim();
+  const ngheNghiep = document.getElementById('hj_nghe_nghiep')?.value?.trim();
+  const tcCongCu = document.getElementById('hj_tinh_cach_cong_cu')?.value?.trim();
+  const tcKetNoi = document.getElementById('hj_kntn')?.value;
+  const ttCoKhong = document.getElementById('hj_than_tinh_co_khong')?.value;
+  const ttChiTiet = document.getElementById('hj_than_tinh_chi_tiet')?.value?.trim();
+  const hcHienTai = document.getElementById('hj_hoan_canh_hien_tai')?.value?.trim();
+  const hcHocKi = document.getElementById('hj_hoc_ki')?.value?.trim();
+  const nlLoLang = document.getElementById('hj_noi_lo_lang')?.value?.trim();
+  const nlQuanTam = document.getElementById('hj_su_quan_tam')?.value?.trim();
+  const sdt = document.getElementById('hj_sdt')?.value?.trim();
 
+  if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
+  if (!ngayChakki) { showToast('⚠️ Vui lòng chọn Ngày chakki'); return; }
+  if (!concept) { showToast('⚠️ Vui lòng nhập Concept'); return; }
   if (!fullName) { showToast('⚠️ Vui lòng nhập họ tên'); return; }
+  if (!hinhThuc) { showToast('⚠️ Vui lòng nhập Hình thức chakki'); return; }
 
   const payload = {
     full_name: fullName,
     birth_year: birthYear,
     gender: gender,
     data: {
-      ndd_staff_code: ndd || '',
+      ndd_staff_code: ndd,
+      ngay_chakki: ngayChakki,
+      concept: concept,
+      hinh_thuc: hinhThuc,
+      than_thiet: thanThiet,
+      noi_o: noiO,
+      nghe_nghiep: ngheNghiep,
+      tinh_cach_cong_cu: tcCongCu,
+      tinh_cach_ket_noi: tcKetNoi,
+      than_tinh_co_khong: ttCoKhong,
+      than_tinh_chi_tiet: ttChiTiet,
+      hoan_canh_hien_tai: hcHienTai,
+      hoc_ki: hcHocKi,
+      noi_lo_lang: nlLoLang,
+      su_quan_tam: nlQuanTam,
+      sdt: sdt
     },
     status: 'pending',
     created_by: typeof getEffectiveStaffCode === 'function' ? getEffectiveStaffCode() : 'unknown',
@@ -42,10 +76,18 @@ async function submitCreateHapja() {
 
     closeModal('createHapjaModal');
     showToast('✅ Đã tạo phiếu Hapja!');
-    if(document.getElementById('hj_full_name')) document.getElementById('hj_full_name').value = '';
-    if(document.getElementById('hj_gender')) document.getElementById('hj_gender').selectedIndex = 0;
-    if(document.getElementById('hj_birth_year')) document.getElementById('hj_birth_year').value = '';
+    
+    const idsToClear = ['hj_ngay_chakki','hj_concept','hj_full_name','hj_birth_year',
+    'hj_hinh_thuc','hj_noi_o','hj_nghe_nghiep','hj_tinh_cach_cong_cu','hj_than_tinh_chi_tiet',
+    'hj_hoan_canh_hien_tai','hj_hoc_ki','hj_noi_lo_lang','hj_su_quan_tam','hj_sdt'];
+    idsToClear.forEach(id => {
+      if(document.getElementById(id)) document.getElementById(id).value = '';
+    });
     if(document.getElementById('hj_ndd')) document.getElementById('hj_ndd').value = '';
+    if(document.getElementById('hj_gender')) document.getElementById('hj_gender').selectedIndex = 0;
+    if(document.getElementById('hj_than_thiet')) document.getElementById('hj_than_thiet').selectedIndex = 0;
+    if(document.getElementById('hj_kntn')) document.getElementById('hj_kntn').selectedIndex = 0;
+    if(document.getElementById('hj_than_tinh_co_khong')) document.getElementById('hj_than_tinh_co_khong').selectedIndex = 0;
 
     // === Notify approvers about new Hapja ===
     try {
@@ -88,17 +130,17 @@ async function openHapjaDetail(id) {
       ['NDD', d.ndd_staff_code || h.created_by],
       ['Ngày Chakki', d.ngay_chakki],
       ['Concept', d.concept],
-      ['Hình thức', Array.isArray(d.hinh_thuc) ? d.hinh_thuc.join(', ') : d.hinh_thuc],
-      ['Mức thân thiết', Array.isArray(d.than_thiet) ? d.than_thiet.join(', ') : d.than_thiet],
+      ['Hình thức', d.hinh_thuc || (Array.isArray(d.hinh_thuc) ? d.hinh_thuc.join(', ') : '')],
+      ['Mức thân thiết', d.than_thiet || (Array.isArray(d.than_thiet) ? d.than_thiet.join(', ') : '')],
       ['Nơi ở', d.noi_o],
       ['Nghề nghiệp', d.nghe_nghiep],
-      ['Tính cách', d.tinh_cach],
-      ['Kết nối', Array.isArray(d.ket_noi) ? d.ket_noi.join(', ') : d.ket_noi],
-      ['Thời gian rảnh', d.tg_ranh],
-      ['Thân tình', Array.isArray(d.than_tinh) ? d.than_tinh.join(', ') : d.than_tinh],
-      ['Hoàn cảnh', d.hoan_canh],
+      ['Tính cách (CC)', d.tinh_cach_cong_cu || d.tinh_cach],
+      ['Tính cách (TN)', d.tinh_cach_ket_noi],
+      ['Thần tính', (d.than_tinh_co_khong || '') + (d.than_tinh_chi_tiet ? ` - ${d.than_tinh_chi_tiet}` : '') || (Array.isArray(d.than_tinh) ? d.than_tinh.join(', ') : d.than_tinh)],
+      ['Hoàn cảnh HT', d.hoan_canh_hien_tai || d.hoan_canh],
       ['Học kì', d.hoc_ki],
-      ['Nỗi lo', d.noi_lo],
+      ['Nỗi lo', d.noi_lo_lang || d.noi_lo],
+      ['Sự quan tâm', d.su_quan_tam],
       ['SĐT', d.sdt],
       ['Trạng thái', h.status === 'pending' ? '⏳ Chờ duyệt' : h.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'],
       ['Ngày tạo', date],
@@ -162,13 +204,13 @@ async function approveHapja(id) {
           t2_nam_sinh: h.birth_year || '',
           t2_sdt: d.sdt || '',
           t2_nghe_nghiep: d.nghe_nghiep || '',
-          t2_tinh_cach: d.tinh_cach || '',
+          t2_tinh_cach: d.tinh_cach_cong_cu || d.tinh_cach || '',
           t2_dia_chi: d.noi_o || '',
           t2_que_quan: '',
           t2_khung_ranh: d.tg_ranh || '',
-          t2_so_thich: '',
-          t2_chuyen_cu: d.hoan_canh || '',
-          t2_luu_y: d.noi_lo || '',
+          t2_so_thich: d.su_quan_tam || '',
+          t2_chuyen_cu: d.hoan_canh_hien_tai || d.hoan_canh || '',
+          t2_luu_y: d.noi_lo_lang || d.noi_lo || '',
         };
         await sbFetch('/rest/v1/form_hanh_chinh', { method:'POST', body: JSON.stringify({ profile_id: newPid, data: infoData }) });
       } catch(e) { console.warn('form_hanh_chinh creation:', e); }
