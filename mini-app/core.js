@@ -509,8 +509,9 @@ async function loadStaffInfo() {
       }
       // Apply saved personalization
       if (myStaff.preferences) applyUserPreferences(myStaff.preferences);
-      const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code');
+      const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,position,specialist_position,telegram_id');
       const allS = await allRes.json();
+      allStaff = allS; // store full staff list for getStaffLabel, showStaffCard, etc.
       const dl = document.getElementById('staffSuggest');
       if (dl) dl.innerHTML = allS.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
     }

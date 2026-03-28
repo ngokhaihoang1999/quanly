@@ -492,6 +492,16 @@ async function loadDashboard() {
       }).join('');
       if (otherItems) myListEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
     }
-  } catch(e) { console.error('Dashboard error:', e); }
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    // Clear any stuck loading states
+    const stuck = ['dashHapjaList','dashMyList','dashUnitList','dashNDDList'];
+    stuck.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.innerHTML.includes('ang t')) {
+        el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Không tải được dữ liệu</div>';
+      }
+    });
+  }
 }
 
