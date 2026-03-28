@@ -365,7 +365,17 @@ function attachAutocomplete(input) {
 async function sbFetch(path, opts={}) {
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...opts.headers };
   if (opts.method === 'POST' && !headers['Prefer']) headers['Prefer'] = 'return=representation';
-  return fetch(SUPABASE_URL + path, { ...opts, headers });
+  // Timeout: 25s for reads, 60s for writes — prevents infinite hangs when network/Supabase is slow
+  const isWrite = opts.method && opts.method !== 'GET';
+  const timeoutMs = isWrite ? 60000 : 25000;
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 // ============ SEMESTER LOGIC ============
