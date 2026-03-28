@@ -1295,6 +1295,42 @@ function openPersonalizationPanel() {
           ${_renderTabRows(sortedTabs, hiddenSet)}
         </div>
         <!-- Buttons -->
+        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+        <!-- ═══ HỒ SƠ TĐ ═══ -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">👤 HỒ SƠ CÁ NHÂN TĐ</div>
+        <div style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+            <div style="width:46px;height:46px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;flex-shrink:0;">${(myStaff?.full_name||'?')[0]}</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;">${myStaff?.full_name||'---'}</div>
+              <div style="font-size:11px;color:var(--text3);">${myStaff?.staff_code||''} · ${getPositionName(myStaff?.position)}</div>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname (hiển thị trong app)</label>
+            <input type="text" id="prof_nickname" value="${myStaff?.nickname||''}" placeholder="Tên gọi thân mật..." style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Giới tính</label>
+              <select id="prof_gender" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;">
+                <option value="">Không rõ</option>
+                <option value="Nam" ${myStaff?.gender==='Nam'?'selected':''}>Nam</option>
+                <option value="Nữ" ${myStaff?.gender==='Nữ'?'selected':''}>Nữ</option>
+                <option value="Khác" ${myStaff?.gender==='Khác'?'selected':''}>Khác</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Năm sinh</label>
+              <input type="text" id="prof_birth_year" value="${myStaff?.birth_year||''}" placeholder="YYYY" maxlength="4" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Bio (tuỳ ý)</label>
+            <textarea id="prof_bio" placeholder="Giới thiệu bản thân ngắn gọn..." maxlength="200" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;">${myStaff?.bio||''}</textarea>
+          </div>
+          <button onclick="saveMyStaffProfile()" style="padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">💾 Lưu hồ sơ TĐ</button>
+        </div>
         <button onclick="_savePrefs()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Lưu cá nhân hoá</button>
         <button onclick="_resetPrefs()" style="width:100%;padding:10px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:12px;cursor:pointer;">↩ Về mặc định hệ thống</button>
       </div>
@@ -1419,4 +1455,42 @@ async function _resetPrefs() {
     _applyTabOrder(ALL_TABS_DEF.map(t=>t.key), []);
     showToast('✅ Đã về mặc định');
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
-}
+}
+
+// ── Lưu hồ sơ TĐ cá nhân ──────────────────────────────────────────────────
+async function saveMyStaffProfile() {
+  if (!myStaff?.staff_code) { showToast('⚠️ Chưa đăng nhập'); return; }
+  const nickname   = document.getElementById('prof_nickname')?.value?.trim() || null;
+  const gender     = document.getElementById('prof_gender')?.value || null;
+  const birth_year_raw = document.getElementById('prof_birth_year')?.value?.trim();
+  const birth_year = birth_year_raw ? parseInt(birth_year_raw) : null;
+  const bio        = document.getElementById('prof_bio')?.value?.trim() || null;
+
+  if (birth_year && (birth_year < 1900 || birth_year > 2030)) {
+    showToast('⚠️ Năm sinh không hợp lệ'); return;
+  }
+  const btn = document.querySelector('#personalizationModal button[onclick="saveMyStaffProfile()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang lưu...'; }
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nickname, gender, birth_year, bio })
+    });
+    // Update local cache
+    Object.assign(myStaff, { nickname, gender, birth_year, bio });
+    // Update header badge if nickname set
+    const badge = document.getElementById('myStaffBadge');
+    if (badge && nickname) {
+      const code = myStaff.staff_code;
+      const pos  = getPositionName(myStaff.position);
+      let txt = `${nickname} (${code}) · ${pos}`;
+      if (myStaff.specialist_position) txt += ` + ${getPositionName(myStaff.specialist_position)}`;
+      badge.textContent = txt;
+    }
+    showToast('✅ Đã lưu hồ sơ TĐ!');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu hồ sơ TĐ'; }
+  } catch(e) {
+    showToast('❌ Lỗi lưu hồ sơ'); console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu hồ sơ TĐ'; }
+  }
+}

@@ -10,19 +10,27 @@ function renderStaff(list) {
   const el = document.getElementById('staffList');
   document.getElementById('staffCount').textContent = list.length + ' TĐ';
   if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Chưa có TĐ</div></div>'; return; }
-  el.innerHTML = list.map(s => `
+  el.innerHTML = list.map(s => {
+    const displayName = s.nickname ? `${s.nickname} <span style="color:var(--text3);font-size:11px;">(${s.full_name})</span>` : s.full_name;
+    const metaLine2 = [
+      s.gender || null,
+      s.birth_year ? `${s.birth_year}` : null,
+      s.telegram_id ? '🟢 Đã kết nối' : '⚪ Chưa kết nối'
+    ].filter(Boolean).join(' · ');
+    return `
     <div class="staff-card">
-      <div class="staff-avatar">${(s.full_name||'?')[0]}</div>
+      <div class="staff-avatar">${(s.nickname||s.full_name||'?')[0]}</div>
       <div class="profile-info">
-        <div class="profile-name">${s.full_name} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
+        <div class="profile-name">${displayName} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
         <div class="profile-meta">
           <span class="staff-role-badge ${getBadgeClass(s.position)}">${getPositionName(s.position)}</span>
           ${s.specialist_position ? `<span class="staff-role-badge role-tvv">${getPositionName(s.specialist_position)}</span>` : ''}
-          ${s.telegram_id ? '🟢 Đã kết nối' : '⚪ Chưa kết nối'}
+          ${metaLine2}
         </div>
+        ${s.bio ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;font-style:italic;">${s.bio}</div>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 function filterStaff() { const q=document.getElementById('staffSearchInput').value.toLowerCase(); renderStaff(allStaff.filter(s=>s.full_name.toLowerCase().includes(q)||s.staff_code.toLowerCase().includes(q)||(s.position||'').includes(q))); }
 function openAddStaffModal() {
