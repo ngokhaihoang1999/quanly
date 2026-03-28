@@ -6,24 +6,24 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026032803" />
+  <link rel="stylesheet" href="styles.css?v=2026032809" />
 </head>
 <body>
 <div class="header">
   <div class="header-top">
     <div class="logo">
-      <div class="logo-icon">✅</div>
-      <div class="logo-text"><h1>Checking Jondo</h1><span>Hệ thống quản lý</span></div>
+      <div class="logo-icon">✁E/div>
+      <div class="logo-text"><h1>Checking Jondo</h1><span>HềEthống quản lý</span></div>
     </div>
     <div class="header-right">
       <div class="badge" id="staffBadge">---</div>
       <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo">🔔<span class="notif-badge" id="notifBadge" style="display:none;">0</span></button>
-      <button class="theme-toggle" id="settingsBtn" onclick="openPersonalizationPanel()" title="Cá nhân hoá" style="display:flex;">⚙️</button>
-      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Light/Dark" style="display:none;">☀️</button>
+      <button class="theme-toggle" id="settingsBtn" onclick="openPersonalizationPanel()" title="Cá nhân hoá" style="display:flex;">⚙︁E/button>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Light/Dark" style="display:none;">☀�E�E/button>
     </div>
   </div>
   <div class="view-as-bar" id="viewAsBar">
-    <label>👁️ Test:</label>
+    <label>👁�E�ETest:</label>
     <select id="viewAsPos" onchange="applyViewAs()" style="flex:1;"></select>
     <select id="viewAsSpec" onchange="applyViewAs()" style="flex:1;"></select>
     <select id="viewAsRole" onchange="applyViewAs()" style="flex:1;">
@@ -38,24 +38,24 @@
   <div class="semester-bar" id="semesterBar">
     <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap;">📅 Kỳ:</span>
     <select id="semesterSelect" onchange="switchSemester(this.value)" style="flex:1;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text1);"></select>
-    <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙️ Quản lý</button>
+    <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙︁EQuản lý</button>
   </div>
   <div class="tab-bar" id="mainTabBar">
-    <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')">🏢 Đơn vị</div>
+    <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')">🏢 Đơn vềE/div>
     <div class="tab" data-tab="personal" onclick="switchMainTab(this,'personal')">👤 Cá nhân</div>
     <div class="tab" data-tab="priority" onclick="switchMainTab(this,'priority')">⚡ Ưu tiên</div>
     <div class="tab" data-tab="calendar" onclick="switchMainTab(this,'calendar')">📅 Lịch</div>
-    <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')">🏗️ Cơ cấu</div>
-    <div class="tab" data-tab="staff" id="tabStaffBtn" onclick="switchMainTab(this,'staff')" style="display:none;">👥 TĐ</div>
+    <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')">🏗�E�ECơ cấu</div>
+    <div class="tab" data-tab="staff" id="tabStaffBtn" onclick="switchMainTab(this,'staff')" style="display:none;">👥 TāE/div>
   </div>
 </div>
 
 <div class="content" id="mainContent">
 
-  <!-- ĐƠN VỊ -->
+  <!-- ĐƠN VềE-->
   <div id="tab-unit">
     <div class="section-header" style="cursor:pointer;" onclick="toggleDashMetrics()">
-      <div class="section-title" id="dashUnitTitle">🏢 Đơn vị</div>
+      <div class="section-title" id="dashUnitTitle">🏢 Đơn vềE/div>
       <span id="dashToggleIcon" style="font-size:16px;transition:transform 0.3s;">▲</span>
     </div>
     <div id="dashUnitMetrics" class="dash-collapsible"></div>
@@ -67,7 +67,7 @@
       <div id="dashHapjaList"><div class="empty-state"><div class="empty-sub">Đang tải...</div></div></div>
     </div>
 
-    <div class="section-header" style="margin-top:16px;"><div class="section-title">📁 Hồ sơ Trái quả</div><div class="section-count" id="profileCount">--</div></div>
+    <div class="section-header" style="margin-top:16px;"><div class="section-title">📁 HềEsơ Trái quả</div><div class="section-count" id="profileCount">--</div></div>
     <div style="display:flex;gap:6px;margin-bottom:8px;" id="statusFilter">
       <div class="chip active" onclick="setStatusFilter('all',this)">Tất cả</div>
       <div class="chip" onclick="setStatusFilter('alive',this)">🟢 Alive</div>
@@ -80,7 +80,7 @@
     </div>
   </div>
 
-  <!-- CÁ NHÂN -->
+  <!-- CÁENHÁE -->
   <div id="tab-personal" style="display:none;">
     <div class="section-header"><div class="section-title">👤 Cá nhân</div></div>
     <div id="dashPersonalMetrics"></div>
@@ -88,13 +88,13 @@
     <div id="dashMyList"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-sub">Đang tải...</div></div></div>
   </div>
 
-  <!-- TĐ -->
+  <!-- TāE-->
   <div id="tab-staff" style="display:none;">
-    <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã TĐ..." id="staffSearchInput" oninput="filterStaff()" /></div>
-    <div class="section-header"><div class="section-title">Tất cả TĐ</div><div class="section-count" id="staffCount">--</div></div>
+    <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã TāE.." id="staffSearchInput" oninput="filterStaff()" /></div>
+    <div class="section-header"><div class="section-title">Tất cả TāE/div><div class="section-count" id="staffCount">--</div></div>
     <div id="staffList"><div class="staff-card skeleton" style="height:68px;"></div></div>
-    <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">＋ Đăng ký TĐ mới</button>
-    <button class="add-record-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="margin-top:8px;background:var(--accent);display:none;">🔄 Tái đồng bộ toàn bộ Data ➔ Sheet</button>
+    <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">�E�EĐăng ký TāEmới</button>
+    <button class="sync-sheet-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="margin-top:8px;display:none;">🔄 Tái đồng bềEtoàn bềEData ➁ESheet</button>
   </div>
 
   <!-- LỊCH -->
@@ -113,16 +113,16 @@
   <!-- ƯU TIÊN -->
   <div id="tab-priority" style="display:none;">
     <div class="section-header"><div class="section-title">⚡ Ưu tiên xử lý</div></div>
-    <div id="priorityList"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-sub">Không có việc ưu tiên</div></div></div>
+    <div id="priorityList"><div class="empty-state"><div class="empty-icon">✁E/div><div class="empty-sub">Không có việc ưu tiên</div></div></div>
   </div>
 
   <!-- CẤU TRÚC -->
   <div id="tab-structure" style="display:none;">
     <div class="section-header">
-      <div class="section-title">Cơ cấu tổ chức</div>
+      <div class="section-title">Cơ cấu tềEchức</div>
       <div style="display:flex;gap:8px;">
-        <button class="add-record-btn" id="btnStaffWithoutTeam" onclick="showStaffWithoutTeam()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;display:none;background:var(--red);">⚠️ TĐ tự do</button>
-        <button class="add-record-btn" id="btnManagePositions" onclick="openPositionManager()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;display:none;">⚙️ Chức vụ</button>
+        <button class="add-record-btn" id="btnStaffWithoutTeam" onclick="showStaffWithoutTeam()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;display:none;background:var(--red);">⚠�E�ETāEtự do</button>
+        <button class="add-record-btn" id="btnManagePositions" onclick="openPositionManager()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;display:none;">⚙︁EChức vụ</button>
         <button class="add-record-btn" id="btnAddArea" onclick="openAddAreaModal()" style="width:auto;padding:6px 14px;font-size:11px;margin:0;">+ Khu vực</button>
       </div>
     </div>
@@ -131,15 +131,15 @@
 
   <!-- DETAIL VIEW -->
   <div id="detailView" class="detail-view">
-    <button class="back-btn" onclick="backToList()">← Quay lại</button>
+    <button class="back-btn" onclick="backToList()">ↁEQuay lại</button>
     <div id="profileSummaryCard" style="padding:0 0 12px;"></div>
     <datalist id="staffSuggest"></datalist>
     <div class="form-tabs" id="profileTabs">
-      <div class="form-tab active" onclick="switchFormTab(this,'infoSheet')">ℹ️ Thông tin</div>
+      <div class="form-tab active" onclick="switchFormTab(this,'infoSheet')">ℹ�E�EThông tin</div>
       <div class="form-tab" onclick="switchFormTab(this,'journeyTab')">📅 Giai đoạn</div>
       <div class="form-tab" onclick="switchFormTab(this,'tuVan')" id="tabTV" style="display:none;">💬 TV</div>
       <div class="form-tab" onclick="switchFormTab(this,'bienBan')" id="tabBB" style="display:none;">📖 BB</div>
-      <div class="form-tab" onclick="switchFormTab(this,'notesTab')">🗒️ Ghi chú</div>
+      <div class="form-tab" onclick="switchFormTab(this,'notesTab')">🗒�E�EGhi chú</div>
       <div class="form-tab" onclick="switchFormTab(this,'mindmapTab')" id="tabMindmap" style="display:none;">📚 Tư Duy</div>
     </div>
 
@@ -147,37 +147,37 @@
     <div class="form-card" id="infoSheet">
       <div class="form-card-header"><div class="form-card-title">📋 PHIẾU THÔNG TIN</div><div class="form-card-meta">23 mục</div></div>
       <div class="form-card-body">
-        <div class="field-group"><label>1. Họ và tên đầy đủ</label><input type="text" id="t2_ho_ten" placeholder="..." /></div>
+        <div class="field-group"><label>1. HềEvà tên đầy đủ</label><input type="text" id="t2_ho_ten" placeholder="..." /></div>
         <div class="grid-2">
           <div class="field-group"><label>2. Giới tính</label><select id="t2_gioi_tinh"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
           <div class="field-group"><label>3. Năm sinh</label><input type="text" id="t2_nam_sinh" placeholder="YYYY" /></div>
         </div>
-        <div class="field-group"><label>4. Nghề nghiệp</label><input type="text" id="t2_nghe_nghiep" placeholder="..." /></div>
+        <div class="field-group"><label>4. NghềEnghiệp</label><input type="text" id="t2_nghe_nghiep" placeholder="..." /></div>
         <div class="field-group"><label>5. Thời gian làm việc</label><input type="text" id="t2_thoi_gian_lam_viec" placeholder="Ca sáng, chiều, tối..." /></div>
         <div class="field-group"><label>6. Tôn giáo</label><div class="chips" id="chips_ton_giao"><div class="chip" onclick="toggleChip(this)">Không</div><div class="chip" onclick="toggleChip(this)">Phật giáo</div><div class="chip" onclick="toggleChip(this)">Thiên Chúa</div><div class="chip" onclick="toggleChip(this)">Tin Lành</div><div class="chip" onclick="toggleChip(this)">Khác</div></div></div>
-        <div class="field-group"><label>7. Số điện thoại</label><input type="tel" id="t2_sdt" placeholder="0xxxx..." /></div>
+        <div class="field-group"><label>7. SềEđiện thoại</label><input type="tel" id="t2_sdt" placeholder="0xxxx..." /></div>
         <div class="field-group"><label>8. Tình trạng hôn nhân</label><div class="chips" id="chips_hon_nhan"><div class="chip" onclick="toggleChip(this)">Độc thân</div><div class="chip" onclick="toggleChip(this)">Kết hôn</div><div class="chip" onclick="toggleChip(this)">Ly hôn</div><div class="chip" onclick="toggleChip(this)">Có người yêu</div></div></div>
-        <div class="field-group"><label>9. Mối quan hệ với NDD</label><div class="chips" id="chips_quan_he_ndd"><div class="chip" onclick="toggleChip(this)">Người thân</div><div class="chip" onclick="toggleChip(this)">Bạn bè</div><div class="chip" onclick="toggleChip(this)">Đồng nghiệp</div><div class="chip" onclick="toggleChip(this)">Chakki offline</div><div class="chip" onclick="toggleChip(this)">Khác</div></div></div>
-        <div class="field-group"><label>10. Địa chỉ nơi ở</label><input type="text" id="t2_dia_chi" placeholder="..." /></div>
+        <div class="field-group"><label>9. Mối quan hềEvới NDD</label><div class="chips" id="chips_quan_he_ndd"><div class="chip" onclick="toggleChip(this)">Người thân</div><div class="chip" onclick="toggleChip(this)">Bạn bè</div><div class="chip" onclick="toggleChip(this)">Đồng nghiệp</div><div class="chip" onclick="toggleChip(this)">Chakki offline</div><div class="chip" onclick="toggleChip(this)">Khác</div></div></div>
+        <div class="field-group"><label>10. Địa chềEnơi ềE/label><input type="text" id="t2_dia_chi" placeholder="..." /></div>
         <div class="field-group"><label>11. Quê quán</label><input type="text" id="t2_que_quan" placeholder="..." /></div>
-        <div class="field-group"><label>12. Không gian sống</label><div class="chips" id="chips_khong_gian_song"><div class="chip" onclick="toggleChip(this)">Ở trọ một mình</div><div class="chip" onclick="toggleChip(this)">Ký túc xá</div><div class="chip" onclick="toggleChip(this)">Cùng gia đình</div><div class="chip" onclick="toggleChip(this)">Khác</div></div></div>
+        <div class="field-group"><label>12. Không gian sống</label><div class="chips" id="chips_khong_gian_song"><div class="chip" onclick="toggleChip(this)">ềEtrềEmột mình</div><div class="chip" onclick="toggleChip(this)">Ký túc xá</div><div class="chip" onclick="toggleChip(this)">Cùng gia đình</div><div class="chip" onclick="toggleChip(this)">Khác</div></div></div>
         <div class="field-group"><label>13. Khung thời gian rảnh</label><textarea id="t2_khung_ranh" placeholder="..." style="min-height:60px;"></textarea></div>
-        <div class="field-group"><label>14. Sở thích / Mối bận tâm</label><textarea id="t2_so_thich" placeholder="..." style="min-height:60px;"></textarea></div>
+        <div class="field-group"><label>14. SềEthích / Mối bận tâm</label><textarea id="t2_so_thich" placeholder="..." style="min-height:60px;"></textarea></div>
         <div class="field-group"><label>15. Tính cách / Enneagram</label><input type="text" id="t2_tinh_cach" placeholder="..." /></div>
         <div class="field-group"><label>16. Dự định tương lai</label><textarea id="t2_du_dinh" placeholder="..." style="min-height:60px;"></textarea></div>
         <div class="field-group"><label>17. Những câu chuyện / sự kiện đã trải qua</label><textarea id="t2_chuyen_cu" placeholder="..." style="min-height:80px;"></textarea></div>
         <div class="field-group"><label>18. Thông tin người thân</label><textarea id="t2_nguoi_than" placeholder="..." style="min-height:60px;"></textarea></div>
         <div class="field-group"><label>19. Người quan trọng nhất</label><input type="text" id="t2_nguoi_quan_trong" placeholder="..." /></div>
-        <div class="field-group"><label>20. Quan điểm về thần linh</label><textarea id="t2_quan_diem" placeholder="..." style="min-height:60px;"></textarea></div>
+        <div class="field-group"><label>20. Quan điểm vềEthần linh</label><textarea id="t2_quan_diem" placeholder="..." style="min-height:60px;"></textarea></div>
         <div class="field-group"><label>21. Công cụ đã tư vấn</label><textarea id="t2_cong_cu" placeholder="..." style="min-height:60px;"></textarea></div>
         <div class="field-group"><label>22. Lưu ý</label><textarea id="t2_luu_y" placeholder="..." style="min-height:60px;"></textarea></div>
         <button class="save-btn" onclick="saveInfoSheet()">💾 Lưu Phiếu Thông tin</button>
       </div>
     </div>
 
-    <!-- CHUYỂN GIAI ĐOẠN -->
+    <!-- CHUYềE GIAI ĐOẠN -->
     <div class="form-card" id="journeyTab">
-      <div class="form-card-header"><div class="form-card-title">🔄 CHUYỂN GIAI ĐOẠN</div></div>
+      <div class="form-card-header"><div class="form-card-title">🔄 CHUYềE GIAI ĐOẠN</div></div>
       <div class="form-card-body">
         <div id="phaseButtons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
         <div id="bbGroupBar" style="display:none;margin-bottom:12px;"></div>
@@ -190,23 +190,23 @@
     <div class="form-card" id="tuVan">
       <div class="form-card-header"><div class="form-card-title">💬 BÁO CÁO TƯ VẤN</div><div class="form-card-meta" id="tvCount">0 phiếu</div></div>
       <div class="form-card-body" id="tvList"></div>
-      <div style="padding:0 16px 16px;"><button class="add-record-btn" onclick="openAddRecordModal('tu_van')">＋ Thêm Báo cáo Tư vấn</button></div>
+      <div style="padding:0 16px 16px;"><button class="add-record-btn" onclick="openAddRecordModal('tu_van')">�E�EThêm Báo cáo Tư vấn</button></div>
     </div>
 
     <!-- BIÊN BẢN BB (nhiều) -->
     <div class="form-card" id="bienBan">
       <div class="form-card-header"><div class="form-card-title">📝 BIÊN BẢN BB</div><div class="form-card-meta" id="bbCount">0 phiếu</div></div>
       <div class="form-card-body" id="bbList"></div>
-      <div style="padding:0 16px 16px;"><button class="add-record-btn" onclick="openAddRecordModal('bien_ban')">＋ Thêm Biên bản BB</button></div>
+      <div style="padding:0 16px 16px;"><button class="add-record-btn" onclick="openAddRecordModal('bien_ban')">�E�EThêm Biên bản BB</button></div>
     </div>
 
-    <!-- GHI CHÚ -->
+    <!-- GHI CHÁE-->
     <div class="form-card" id="notesTab">
-      <div class="form-card-header"><div class="form-card-title">📝 GHI CHÚ</div><div class="form-card-meta" id="noteCount">0 ghi chú</div></div>
+      <div class="form-card-header"><div class="form-card-title">📝 GHI CHÁE/div><div class="form-card-meta" id="noteCount">0 ghi chú</div></div>
       <div class="form-card-body">
         <div id="notesList"></div>
         <div style="padding:8px 0;">
-          <div class="field-group"><label>Tiêu đề</label><input type="text" id="note_title" placeholder="Nhập tiêu đề..." /></div>
+          <div class="field-group"><label>Tiêu đềE/label><input type="text" id="note_title" placeholder="Nhập tiêu đềE.." /></div>
           <div class="field-group"><label>Nội dung</label><textarea id="note_body" placeholder="Nhập nội dung ghi chú..." style="min-height:80px;"></textarea></div>
           <button class="add-record-btn" id="noteSaveBtn" onclick="saveNote()">📌 Thêm ghi chú</button>
         </div>
@@ -232,17 +232,17 @@
             <div class="ai-chat-avatar">👼</div>
             <div style="flex:1;">
               <div class="ai-chat-name">Lacie 💫</div>
-              <div class="ai-chat-status">Trợ lý AI · Bấm để mở</div>
+              <div class="ai-chat-status">Trợ lý AI · Bấm đềEmềE/div>
             </div>
             <span class="ai-chat-arrow" id="aiChatArrow">▾</span>
             <button class="ai-chat-fs-btn" onclick="event.stopPropagation();toggleFullscreen('aiChatCard')" title="Toàn màn hình">⛶</button>
           </div>
           <div id="aiChatBody" class="ai-chat-body" style="display:none;">
             <div class="ai-chat-msgs" id="aiChatMessages">
-              <div class="ai-msg ai-msg-system">Trợ lý AI cho hồ sơ này. Mọi người cùng thấy.</div>
+              <div class="ai-msg ai-msg-system">Trợ lý AI cho hềEsơ này. Mọi người cùng thấy.</div>
             </div>
             <div class="ai-chat-input-area">
-              <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hỏi về bạn này..." onkeydown="if(event.key==='Enter')sendAIChat();" />
+              <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hỏi vềEbạn này..." onkeydown="if(event.key==='Enter')sendAIChat();" />
               <button class="ai-chat-send" onclick="sendAIChat()">➤</button>
             </div>
           </div>
@@ -251,34 +251,34 @@
     </div>
 
 
-    <button class="delete-profile-btn" onclick="deleteProfile()">🗑️ Xoá hồ sơ này</button>
+    <button class="delete-profile-btn" onclick="deleteProfile()">🗑�E�EXoá hềEsơ này</button>
   </div>
 </div>
 
-<button class="fab" id="fabBtn" onclick="openCheckHapjaModal()">＋</button>
+<button class="fab" id="fabBtn" onclick="openCheckHapjaModal()">�E�E/button>
 
 <!-- MODAL: CHECK HAPJA -->
 <div class="modal-overlay" id="checkHapjaModal"><div class="modal" style="max-height:90vh;">
   <div class="modal-handle"></div>
-  <div class="modal-title">🍎 Check Hapja - Bảng Thông Tin Về Trái</div>
+  <div class="modal-title">🍎 Check Hapja - Bảng Thông Tin VềETrái</div>
   <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:72vh;">
-    <div class="field-group"><label>* NDD (mã TĐ)</label><input type="text" id="hj_ndd" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Tìm NDD (Mã/Tên)..." /></div>
+    <div class="field-group"><label>* NDD (mã TāE</label><input type="text" id="hj_ndd" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Tìm NDD (Mã/Tên)..." /></div>
     <div class="grid-2">
       <div class="field-group"><label>* Ngày Chakki</label><input type="date" id="hj_ngay" /></div>
       <div class="field-group"><label>* Concept</label><input type="text" id="hj_concept" placeholder="..." /></div>
     </div>
-    <div class="field-group"><label>1. Họ tên cá</label><input type="text" id="hj_hoten" placeholder="VD: Nguyễn Văn A" /></div>
+    <div class="field-group"><label>1. HềEtên cá</label><input type="text" id="hj_hoten" placeholder="VD: NguyềE Văn A" /></div>
     <div class="grid-2">
       <div class="field-group"><label>Năm sinh</label><input type="text" id="hj_nam_sinh" placeholder="VD: 2000" /></div>
       <div class="field-group"><label>Giới tính</label><select id="hj_gioi_tinh"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
     </div>
     <div class="field-group"><label>2. Hình thức Chakki</label>
       <div class="chips" id="chips_hj_hinh_thuc"><div class="chip" onclick="toggleChip(this)">Online</div><div class="chip" onclick="toggleChip(this)">Offline</div><div class="chip" onclick="toggleChip(this)">Bạn</div><div class="chip" onclick="toggleChip(this)">Gia đình</div></div>
-      <label style="margin-top:6px;">Mức độ thân thiết</label>
+      <label style="margin-top:6px;">Mức đềEthân thiết</label>
       <div class="chips" id="chips_hj_than_thiet"><div class="chip" onclick="toggleChip(this)">Cao</div><div class="chip" onclick="toggleChip(this)">Trung bình</div><div class="chip" onclick="toggleChip(this)">Thấp</div></div>
     </div>
-    <div class="field-group"><label>3. Nơi ở</label><input type="text" id="hj_noi_o" placeholder="..." /></div>
-    <div class="field-group"><label>4. Nghề nghiệp / Nơi làm việc</label><input type="text" id="hj_nghe" placeholder="..." /></div>
+    <div class="field-group"><label>3. Nơi ềE/label><input type="text" id="hj_noi_o" placeholder="..." /></div>
+    <div class="field-group"><label>4. NghềEnghiệp / Nơi làm việc</label><input type="text" id="hj_nghe" placeholder="..." /></div>
     <div class="field-group"><label>5. Tính cách</label>
       <input type="text" id="hj_tinh_cach" placeholder="Theo công cụ: TSH, hình vẽ..." />
       <div class="chips" id="chips_hj_ket_noi" style="margin-top:6px;"><div class="chip" onclick="toggleChip(this)">Phản hồi</div><div class="chip" onclick="toggleChip(this)">Không phản hồi</div></div>
@@ -289,12 +289,12 @@
     </div>
     <div class="field-group"><label>7. Hoàn cảnh</label>
       <input type="text" id="hj_hoan_canh" placeholder="Hiện tại..." />
-      <input type="text" id="hj_hoc_ki" placeholder="Kỉ nghỉ/Học kì..." style="margin-top:6px;" />
+      <input type="text" id="hj_hoc_ki" placeholder="KềEnghềEHọc kì..." style="margin-top:6px;" />
     </div>
     <div class="field-group"><label>8. Nỗi lo lắng / Sự quan tâm</label>
-      <textarea id="hj_noi_lo" placeholder="Nỗi lo, sở thích, kênh YouTube..." style="min-height:60px;"></textarea>
+      <textarea id="hj_noi_lo" placeholder="Nỗi lo, sềEthích, kênh YouTube..." style="min-height:60px;"></textarea>
     </div>
-    <div class="field-group"><label>9. Số điện thoại</label><input type="tel" id="hj_sdt" placeholder="0xxx..." /></div>
+    <div class="field-group"><label>9. SềEđiện thoại</label><input type="tel" id="hj_sdt" placeholder="0xxx..." /></div>
     <button class="save-btn" onclick="saveCheckHapja()">🍎 Gửi Check Hapja</button>
     <button onclick="closeModal('checkHapjaModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
@@ -309,29 +309,29 @@
   <button onclick="closeModal('addRecordModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div></div>
 
-<!-- MODAL: XÁC NHẬN MỞ KT -->
+<!-- MODAL: XÁC NHẬN MềEKT -->
 <div class="modal-overlay" id="ktModal"><div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title">📖 Xác nhận Mở KT</div>
+  <div class="modal-title">📖 Xác nhận MềEKT</div>
   <div id="ktModalBody" style="display:flex;flex-direction:column;gap:14px;"></div>
-  <button class="save-btn" id="ktConfirmBtn" style="margin-top:16px;">Xác nhận Mở KT</button>
+  <button class="save-btn" id="ktConfirmBtn" style="margin-top:16px;">Xác nhận MềEKT</button>
   <button onclick="closeModal('ktModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div></div>
 
-<!-- MODAL: ĐĂNG KÝ TĐ -->
+<!-- MODAL: ĐāEG KÁETāE-->
 <div class="modal-overlay" id="addStaffModal"><div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title">👥 Đăng ký TĐ Mới</div>
+  <div class="modal-title">👥 Đăng ký TāEMới</div>
   <div style="display:flex;flex-direction:column;gap:14px;">
-    <div class="field-group"><label>Họ và tên *</label><input type="text" id="new_staff_name" placeholder="..." /></div>
-    <div class="field-group"><label>Mã TĐ *</label><input type="text" id="new_staff_code" placeholder="VD: 012345-ABC" /></div>
-    <div class="field-group"><label>Chức vụ Quản trị</label><select id="new_staff_position"></select></div>
+    <div class="field-group"><label>HềEvà tên *</label><input type="text" id="new_staff_name" placeholder="..." /></div>
+    <div class="field-group"><label>Mã TāE*</label><input type="text" id="new_staff_code" placeholder="VD: 012345-ABC" /></div>
+    <div class="field-group"><label>Chức vụ Quản trềE/label><select id="new_staff_position"></select></div>
     <div class="field-group"><label>Chức vụ Chuyên môn</label><select id="new_staff_specialist"><option value="">Không</option></select></div>
     <div class="grid-2">
       <div class="field-group"><label>SĐT</label><input type="tel" id="new_staff_phone" placeholder="0xxx..." /></div>
       <div class="field-group"><label>Email</label><input type="text" id="new_staff_email" placeholder="email@..." /></div>
     </div>
-    <button class="save-btn" onclick="addStaff()">✅ Đăng ký TĐ</button>
+    <button class="save-btn" onclick="addStaff()">✁EĐăng ký TāE/button>
     <button onclick="closeModal('addStaffModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
@@ -343,10 +343,10 @@
   <div style="display:flex;flex-direction:column;gap:14px;">
     <div class="field-group"><label>Tên *</label><input type="text" id="struct_name" placeholder="Nhập tên..." /></div>
     <div class="field-group" id="struct_parent_wrap" style="display:none;"><label id="struct_parent_label">Thuộc</label><select id="struct_parent" style="padding:10px 12px;"><option value="">Chọn...</option></select></div>
-    <div class="field-group" id="struct_manager_wrap"><label id="struct_manager_label">Chỉ định YJYN</label><input type="text" id="struct_manager" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Chọn TĐ..." /></div>
-    <div class="field-group" id="struct_manager2_wrap" style="display:none;"><label id="struct_manager2_label">BGYJN (Tổ phó)</label><input type="text" id="struct_manager2" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Chọn TĐ..." /></div>
+    <div class="field-group" id="struct_manager_wrap"><label id="struct_manager_label">ChềEđịnh YJYN</label><input type="text" id="struct_manager" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Chọn TāE.." /></div>
+    <div class="field-group" id="struct_manager2_wrap" style="display:none;"><label id="struct_manager2_label">BGYJN (TềEphó)</label><input type="text" id="struct_manager2" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Chọn TāE.." /></div>
     <input type="hidden" id="struct_type" value="area" />
-    <button class="save-btn" onclick="saveStructure()">✅ Tạo</button>
+    <button class="save-btn" onclick="saveStructure()">✁ETạo</button>
     <button onclick="closeModal('structureModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
@@ -354,7 +354,7 @@
 <!-- MODAL: SỬA CẤU TRÚC -->
 <div class="modal-overlay" id="editStructModal"><div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title" id="editStructTitle">✏️ Chỉnh sửa</div>
+  <div class="modal-title" id="editStructTitle">✏︁EChỉnh sửa</div>
   <div style="display:flex;flex-direction:column;gap:14px;">
     <div class="field-group"><label>Tên</label><input type="text" id="edit_struct_name" /></div>
     <div class="field-group" id="edit_mgr1_wrap"><label id="edit_mgr1_label">Quản lý</label><input type="text" id="edit_mgr1" data-list="staffSuggest" style="padding:10px 12px;" placeholder="Tìm quản lý (Mã/Tên)..." /></div>
@@ -364,14 +364,14 @@
       <label style="margin-bottom:8px;">👥 Thành viên</label>
       <div id="edit_members_list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
       <div style="display:flex;gap:8px;">
-        <input type="text" id="edit_add_member" data-list="staffSuggest" style="flex:1;padding:8px 10px;font-size:13px;" placeholder="Tìm TĐ để thêm..." />
+        <input type="text" id="edit_add_member" data-list="staffSuggest" style="flex:1;padding:8px 10px;font-size:13px;" placeholder="Tìm TāEđềEthêm..." />
         <button onclick="addMemberToTeam()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Thêm</button>
       </div>
     </div>
     <input type="hidden" id="edit_struct_id" />
     <input type="hidden" id="edit_struct_type" />
     <button class="save-btn" onclick="updateStructure()">💾 Lưu thay đổi</button>
-    <button class="delete-profile-btn" onclick="deleteStructure()" style="margin-top:4px;">🗑️ Xoá</button>
+    <button class="delete-profile-btn" onclick="deleteStructure()" style="margin-top:4px;">🗑�E�EXoá</button>
     <button onclick="closeModal('editStructModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">Huỷ</button>
   </div>
 </div></div>
@@ -393,7 +393,7 @@
       <div class="field-group">
         <label>Thời gian</label>
         <input type="datetime-local" id="stv_datetime" style="padding:10px 8px;font-size:14px;" />
-        <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px;">💡 Bạn có thể thay đổi thời gian này sau đó</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px;">💡 Bạn có thềEthay đổi thời gian này sau đó</div>
       </div>
     </div>
     <div class="field-group">
@@ -402,9 +402,9 @@
     </div>
     <div class="field-group">
       <label>👤 TVV phụ trách</label>
-      <input type="text" id="stv_tvv" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+      <input type="text" id="stv_tvv" data-list="staffSuggest" placeholder="Tìm mã TāEhoặc tên..." />
     </div>
-    <button class="save-btn" onclick="saveScheduleTV()" style="margin-top:4px;">✅ Chốt Tư Vấn</button>
+    <button class="save-btn" onclick="saveScheduleTV()" style="margin-top:4px;">✁EChốt Tư Vấn</button>
     <button onclick="closeModal('scheduleTVModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:6px;width:100%;text-align:center;">Huỷ</button>
   </div>
 </div>
@@ -416,7 +416,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">🎓 Chốt BB</div>
   <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Sau khi chốt BB hãy tạo Group BB, thêm bot vào Group, cho bot quyền Admin, sau đó gõ <code>/menu</code> và làm theo hướng dẫn.</div>
-  <div class="field-group"><label>GVBB phụ trách (tuỳ chọn)</label><input type="text" id="cbb_gvbb" data-list="staffSuggest" placeholder="Có thể gắn sau..." /></div>
+  <div class="field-group"><label>GVBB phụ trách (tuỳ chọn)</label><input type="text" id="cbb_gvbb" data-list="staffSuggest" placeholder="Có thềEgắn sau..." /></div>
   <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Chốt BB</button>
   <button onclick="closeModal('chotBBModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
@@ -445,27 +445,27 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- MODAL: QUẢN LÝ CHỨC VỤ -->
+<!-- MODAL: QUẢN LÁECHỨC VỤ -->
 <div class="modal-overlay" id="positionManagerModal"><div class="modal" style="max-height:90vh;">
   <div class="modal-handle"></div>
-  <div class="modal-title">⚙️ Quản lý Chức vụ</div>
+  <div class="modal-title">⚙︁EQuản lý Chức vụ</div>
   <div id="positionListView">
     <div style="margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Quản trị</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Quản trềE/div>
       <div id="posMgmtList"></div>
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px;">Chuyên môn</div>
       <div id="posSpecList"></div>
     </div>
-    <button class="add-record-btn" onclick="openPositionForm(null)" style="margin-top:8px;">＋ Tạo Chức vụ mới</button>
+    <button class="add-record-btn" onclick="openPositionForm(null)" style="margin-top:8px;">�E�ETạo Chức vụ mới</button>
     <button onclick="closeModal('positionManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Đóng</button>
   </div>
   <div id="positionFormView" style="display:none;">
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div class="field-group"><label>Mã code (không đổi sau tạo)</label><input type="text" id="pos_code" placeholder="vd: truong_phong" /></div>
-      <div class="field-group"><label>Tên hiển thị</label><input type="text" id="pos_name" placeholder="vd: Trưởng phòng" /></div>
+      <div class="field-group"><label>Tên hiển thềE/label><input type="text" id="pos_name" placeholder="vd: Trưởng phòng" /></div>
       <div class="grid-2">
-        <div class="field-group"><label>Phân loại</label><select id="pos_category"><option value="management">Quản trị</option><option value="specialist">Chuyên môn</option></select></div>
-        <div class="field-group"><label>Phạm vi (Scope)</label><select id="pos_scope"><option value="system">Toàn hệ thống</option><option value="area">Khu vực</option><option value="group">Nhóm</option><option value="team">Tổ</option></select></div>
+        <div class="field-group"><label>Phân loại</label><select id="pos_category"><option value="management">Quản trềE/option><option value="specialist">Chuyên môn</option></select></div>
+        <div class="field-group"><label>Phạm vi (Scope)</label><select id="pos_scope"><option value="system">Toàn hềEthống</option><option value="area">Khu vực</option><option value="group">Nhóm</option><option value="team">TềE/option></select></div>
       </div>
       <div class="grid-2">
         <div class="field-group"><label>Cấp bậc (0-100)</label><input type="number" id="pos_level" min="0" max="100" value="10" /></div>
@@ -477,8 +477,8 @@
       </div>
       <input type="hidden" id="pos_editing_id" />
       <button class="save-btn" onclick="savePosition()">💾 Lưu Chức vụ</button>
-      <button id="pos_delete_btn" class="delete-profile-btn" onclick="deletePosition()" style="display:none;">🗑️ Xoá Chức vụ</button>
-      <button onclick="showPositionList()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">← Quay lại</button>
+      <button id="pos_delete_btn" class="delete-profile-btn" onclick="deletePosition()" style="display:none;">🗑�E�EXoá Chức vụ</button>
+      <button onclick="showPositionList()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">ↁEQuay lại</button>
     </div>
   </div>
 </div></div>
@@ -490,31 +490,31 @@
   <div class="modal-title">📅 Quản lý Khai Giảng</div>
   <div id="semesterListBody" style="max-height:30vh;overflow-y:auto;margin-bottom:12px;"></div>
   <div style="border-top:1px solid var(--border);padding-top:12px;">
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">➕ Tạo Khai Giảng mới</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">➁ETạo Khai Giảng mới</div>
     <div class="field-group"><label>Tên kỳ</label><input type="text" id="newSemName" placeholder="VD: Tháng 4/2026" /></div>
     <div class="field-group"><label>Ghi chú (tuỳ chọn)</label><input type="text" id="newSemDesc" placeholder="Mô tả ngắn..." /></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:8px 0;"><input type="checkbox" id="newSemActive" checked /> Đặt làm kỳ hoạt động chính</label>
-    <button class="save-btn" onclick="createSemester()">➕ Tạo Khai Giảng</button>
+    <button class="save-btn" onclick="createSemester()">➁ETạo Khai Giảng</button>
   </div>
   <button onclick="closeModal('semesterManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
 </div>
 </div>
-<script src="webhook.js?v=2026032803"></script>
-<script src="core.js?v=2026032803"></script>
-<script src="dashboard.js?v=2026032803"></script>
-<script src="profiles.js?v=2026032803"></script>
-<script src="hapja.js?v=2026032803"></script>
-<script src="records.js?v=2026032803"></script>
-<script src="staff.js?v=2026032803"></script>
-<script src="structure.js?v=2026032803"></script>
-<script src="calendar.js?v=2026032803"></script>
-<script src="notification.js?v=2026032803"></script>
-<script src="priority.js?v=2026032803"></script>
+<script src="webhook.js?v=2026032809"></script>
+<script src="core.js?v=2026032809"></script>
+<script src="dashboard.js?v=2026032809"></script>
+<script src="profiles.js?v=2026032809"></script>
+<script src="hapja.js?v=2026032809"></script>
+<script src="records.js?v=2026032809"></script>
+<script src="staff.js?v=2026032809"></script>
+<script src="structure.js?v=2026032809"></script>
+<script src="calendar.js?v=2026032809"></script>
+<script src="notification.js?v=2026032809"></script>
+<script src="priority.js?v=2026032809"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
-<script src="lacie.js?v=2026032803"></script>
-<script src="mindmap.js?v=2026032803"></script>
+<script src="lacie.js?v=2026032809"></script>
+<script src="mindmap.js?v=2026032809"></script>
 </body>
 </html>

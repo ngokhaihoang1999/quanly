@@ -50,13 +50,33 @@ function filterProfiles() {
 // ============ PROFILE DETAIL ============
 async function openProfileById(id) {
   if (!id || id==='undefined') return;
-  const p = allProfiles.find(x=>x.id===id);
-  if (!p) { await loadProfiles(); return; }
+  let p = allProfiles.find(x=>x.id===id);
+  // Profile not in filtered cache (e.g. different semester) → fetch directly from DB
+  if (!p) {
+    try {
+      const res = await sbFetch(`/rest/v1/profiles?id=eq.${id}&select=*,fruit_groups(fruit_roles(staff_code,role_type))`);
+      const data = await res.json();
+      if (!data || !data.length) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
+      p = data[0];
+      // Inject roles like loadProfiles does
+      let tvv = [], gvbb = null, nddRole = null;
+      (p.fruit_groups || []).forEach(fg => {
+        (fg.fruit_roles || []).forEach(r => {
+          if (r.role_type === 'ndd') nddRole = r.staff_code;
+          if (r.role_type === 'tvv') tvv.push(r.staff_code);
+          if (r.role_type === 'gvbb') gvbb = r.staff_code;
+        });
+      });
+      p.ndd_staff_code = nddRole || p.ndd_staff_code;
+      p.tvv_staff_code = tvv.length ? tvv.join(', ') : '';
+      p.gvbb_staff_code = gvbb || '';
+    } catch(e) { showToast('❌ Lỗi mở hồ sơ'); return; }
+  }
   openProfile(p);
 }
 async function openProfile(p) {
   currentProfileId = p.id;
-  ['tab-unit','tab-personal','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority'].forEach(t=>{ const el=document.getElementById(t); if(el) el.style.display='none'; });
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
 
