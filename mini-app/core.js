@@ -403,8 +403,9 @@ async function switchSemester(id) {
   if (id === currentSemesterId) return;
   currentSemesterId = id || null;
   localStorage.setItem('cj_semester_id', currentSemesterId || '');
-  // Reload fruit-scoped data
-  await Promise.all([loadProfiles(), loadDashboard()]);
+  // Load profiles first so allProfiles is ready for dashboard semester filtering
+  await loadProfiles();
+  await loadDashboard();
   showToast('📂 Đã chuyển Khai Giảng');
 }
 

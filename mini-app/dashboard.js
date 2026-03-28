@@ -73,17 +73,29 @@ async function loadDashboard() {
     unitStaffCodes = [...new Set(unitStaffCodes)];
 
     // ── SECTION 1: ĐƠN VỊ ──
-    document.getElementById('dashUnitTitle').textContent = '🏢 ' + (unitLabel || 'Đơn vị');
+    const semName = currentSemesterId ? (allSemesters.find(s => s.id === currentSemesterId)?.name || '') : '';
+    const semLabel = semName ? ` · ${semName}` : '';
+    document.getElementById('dashUnitTitle').textContent = '🏢 ' + (unitLabel || 'Đơn vị') + semLabel;
     let unitFruits = 0, unitGroups = 0, unitHapja = 0, unitRoles = [];
     let approvedHapjaList = [], tvvFruits = [], gvbbFruits = [], bbGroups = [], centerFruits = [];
     let waitTVFruits = [], phaseTVFruits = [], phaseBBFruits = [], phaseBBGroups = [];
+    // Semester filter helper (appends &semester_id=eq.xxx when a semester is selected)
+    const semF = currentSemesterId ? `&semester_id=eq.${currentSemesterId}` : '';
+    // Set of profile IDs in current semester (for in-memory filtering of roles)
+    const semProfileIds = currentSemesterId
+      ? new Set(allProfiles.filter(p => p.semester_id === currentSemesterId).map(p => p.id))
+      : null; // null means "show all"
+    const inSem = (pid) => semProfileIds === null || semProfileIds.has(pid);
+
     if (unitStaffCodes.length > 0) {
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
       const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code,fruit_status,is_kt_opened),fruit_roles(staff_code,role_type))`);
-      unitRoles = await urRes.json();
+      const allUnitRoles = await urRes.json();
+      // Apply semester filter to unit roles
+      unitRoles = allUnitRoles.filter(r => inSem(r.fruit_groups?.profile_id));
       unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
-      // Approved Hapja by unit members
-      const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc`);
+      // Approved Hapja by unit members (filtered by semester)
+      const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc${semF}`);
       approvedHapjaList = await ahRes.json();
       // Get all UNIQUE profiles that belong to the unit
       const unitProfilesMap = new Map();
@@ -141,7 +153,7 @@ async function loadDashboard() {
         }
       });
       // Pending hapja for section below
-      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20`);
+      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20${semF}`);
       unitHapja = (await uhRes.json()).length;
     }
     // Store for popup use
@@ -351,12 +363,12 @@ async function loadDashboard() {
     const unitListEl = document.getElementById('dashUnitList');
     unitListEl.innerHTML = '';
 
-    // ── HAPJA (filter by unit scope) ──
+    // ── HAPJA (filter by unit scope + semester) ──
     const canApprove = hasPermission('approve_hapja');
-    let hapjaQuery = '/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20';
+    let hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20${semF}`;
     if (canApprove && unitStaffCodes.length > 0 && scope !== 'system') {
       const codeFilter2 = unitStaffCodes.map(c => `"${c}"`).join(',');
-      hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20`;
+      hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20${semF}`;
     } else if (!canApprove && myCode) {
       hapjaQuery += `&created_by=eq.${myCode}`;
     }
@@ -378,8 +390,10 @@ async function loadDashboard() {
     if (myCode) {
       // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
       const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened,fruit_status,birth_year,dropout_reason,gender,avatar_color),fruit_roles(staff_code,role_type))`);
-      myRoles = await rRes.json();
-      const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id`);
+      const allMyRoles = await rRes.json();
+      // Apply semester filter to personal roles
+      myRoles = allMyRoles.filter(r => inSem(r.fruit_groups?.profile_id));
+      const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id${semF}`);
       myHapja = (await mhRes.json()).length;
     }
     const nddRoles = myRoles.filter(r => r.role_type === 'ndd');
