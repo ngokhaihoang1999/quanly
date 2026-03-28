@@ -202,11 +202,6 @@ async function openProfile(p) {
           background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
           display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
           ">🔄</button>
-        ${hasPermission('edit_profile') ? `<button onclick="deleteProfile('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}')" title="Xoá hồ sơ" style="
-          flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid rgba(248,113,113,0.4);
-          background:rgba(248,113,113,0.08);color:var(--red);font-size:16px;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
-          ">🗑️</button>` : ''}
       </div>
       <!-- Bottom: roles grid + latest -->
       <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
@@ -246,6 +241,10 @@ async function openProfile(p) {
   document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
   document.getElementById('infoSheet')?.classList.add('active');
   
+  // Show/hide delete button at bottom of infoSheet
+  const delBtn = document.getElementById('deleteProfileBtn');
+  if (delBtn) delBtn.style.display = hasPermission('edit_profile') ? 'block' : 'none';
+
   // Hide add buttons if dropout
   document.querySelectorAll('.add-record-btn').forEach(b => {
       if (fStatus === 'dropout') b.style.display = 'none';
