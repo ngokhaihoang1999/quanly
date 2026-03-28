@@ -499,7 +499,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ok = await loadStaffInfo();
     if (!ok) return; // Access denied — stop here, don't proceed to load data
     await loadSemesters();
-    // Run independently so one failure doesn't block others
+    // Load structure FIRST so structureData is available for dashboard unit-scope calculation
+    try { await loadStructure(); } catch(e) { console.warn('loadStructure init error:', e); }
+    // Run remaining loads independently so one failure doesn't block others
     await Promise.allSettled([loadProfiles(), loadDashboard(), loadStaff()]);
   } catch(e) {
     console.error('Init error:', e);
