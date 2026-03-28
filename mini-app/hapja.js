@@ -1,110 +1,61 @@
 // ============ CHECK HAPJA ============
 function canCreateHapja(pos) { return hasPermission('create_hapja'); }
-function openCheckHapjaModal() {
-  document.getElementById('checkHapjaModal').classList.add('open');
+function openCreateHapjaModal() {
+  document.getElementById('createHapjaModal').classList.add('open');
   const sel = document.getElementById('hj_ndd');
   if (sel) sel.value = '';
 }
-async function saveCheckHapja() {
+async function submitCreateHapja() {
+  const fullName = document.getElementById('hj_full_name')?.value?.trim();
+  const birthYear = document.getElementById('hj_birth_year')?.value?.trim() || '';
+  const gender = document.getElementById('hj_gender')?.value || '';
   const ndd = getStaffCodeFromInput('hj_ndd');
-  const ngay = document.getElementById('hj_ngay')?.value;
-  const concept = document.getElementById('hj_concept')?.value?.trim();
-  const fullName = document.getElementById('hj_hoten')?.value?.trim();
-  const namSinh = document.getElementById('hj_nam_sinh')?.value?.trim();
-  const gioiTinh = document.getElementById('hj_gioi_tinh')?.value;
-  const hinhThuc = getChipValues('chips_hj_hinh_thuc');
-  const thanThiet = getChipValues('chips_hj_than_thiet');
-  const noiO = document.getElementById('hj_noi_o')?.value?.trim();
-  const ngheNghiep = document.getElementById('hj_nghe')?.value?.trim();
-  const tinhCach = document.getElementById('hj_tinh_cach')?.value?.trim();
-  const ketNoi = getChipValues('chips_hj_ket_noi');
-  const tgRanh = document.getElementById('hj_tg_ranh')?.value?.trim();
-  const thanTinh = getChipValues('chips_hj_than_tinh');
-  const hoanCanh = document.getElementById('hj_hoan_canh')?.value?.trim();
-  const hocKi = document.getElementById('hj_hoc_ki')?.value?.trim();
-  const noiLo = document.getElementById('hj_noi_lo')?.value?.trim();
-  const sdt = document.getElementById('hj_sdt')?.value?.trim();
 
-  if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
-  if (!ngay) { showToast('⚠️ Vui lòng chọn Ngày Chakki'); return; }
-  if (!concept) { showToast('⚠️ Vui lòng nhập Concept'); return; }
-  if (!fullName) { showToast('⚠️ Nhập họ tên trái (mục 1)'); return; }
-  if (!namSinh) { showToast('⚠️ Vui lòng nhập Năm sinh'); return; }
-  if (!gioiTinh) { showToast('⚠️ Vui lòng chọn Giới tính'); return; }
-  if (!hinhThuc || hinhThuc.length === 0) { showToast('⚠️ Vui lòng chọn Hình thức Chakki (mục 2)'); return; }
-  if (!thanThiet || thanThiet.length === 0) { showToast('⚠️ Vui lòng chọn Mức độ thân thiết'); return; }
-  if (!noiO) { showToast('⚠️ Vui lòng nhập Nơi ở (mục 3)'); return; }
-  if (!ngheNghiep) { showToast('⚠️ Vui lòng nhập Nghề nghiệp'); return; }
-  if (!tinhCach) { showToast('⚠️ Vui lòng nhập Tính cách'); return; }
-  if (!ketNoi || ketNoi.length === 0) { showToast('⚠️ Vui lòng chọn Kết nối'); return; }
-  if (!tgRanh) { showToast('⚠️ Vui lòng nhập Thời gian rảnh'); return; }
-  if (!thanTinh || thanTinh.length === 0) { showToast('⚠️ Vui lòng chọn Thân tình'); return; }
-  if (!hoanCanh) { showToast('⚠️ Vui lòng nhập Hoàn cảnh'); return; }
-  if (!hocKi) { showToast('⚠️ Vui lòng nhập Học kì'); return; }
-  if (!noiLo) { showToast('⚠️ Vui lòng nhập Nỗi lo'); return; }
-  if (!sdt) { showToast('⚠️ Vui lòng nhập Số điện thoại'); return; }
+  if (!fullName) { showToast('⚠️ Vui lòng nhập họ tên'); return; }
 
-  const data = {
+  const payload = {
     full_name: fullName,
-    birth_year: document.getElementById('hj_nam_sinh')?.value?.trim() || '',
-    gender: document.getElementById('hj_gioi_tinh')?.value || '',
+    birth_year: birthYear,
+    gender: gender,
     data: {
-      ndd_staff_code: ndd,
-      ngay_chakki: ngay,
-      concept: concept,
-      hinh_thuc: getChipValues('chips_hj_hinh_thuc'),
-      than_thiet: getChipValues('chips_hj_than_thiet'),
-      noi_o: document.getElementById('hj_noi_o')?.value || '',
-      nghe_nghiep: document.getElementById('hj_nghe')?.value || '',
-      tinh_cach: document.getElementById('hj_tinh_cach')?.value || '',
-      ket_noi: getChipValues('chips_hj_ket_noi'),
-      tg_ranh: document.getElementById('hj_tg_ranh')?.value || '',
-      than_tinh: getChipValues('chips_hj_than_tinh'),
-      hoan_canh: document.getElementById('hj_hoan_canh')?.value || '',
-      hoc_ki: document.getElementById('hj_hoc_ki')?.value || '',
-      noi_lo: document.getElementById('hj_noi_lo')?.value || '',
-      sdt: document.getElementById('hj_sdt')?.value || ''
+      ndd_staff_code: ndd || '',
     },
     status: 'pending',
-    created_by: getEffectiveStaffCode() || 'unknown',
-    semester_id: currentSemesterId || null
+    created_by: typeof getEffectiveStaffCode === 'function' ? getEffectiveStaffCode() : 'unknown',
+    semester_id: typeof currentSemesterId !== 'undefined' ? currentSemesterId : null
   };
 
-  const btn = document.querySelector('#checkHapjaModal .save-btn');
+  const btn = document.querySelector('#createHapjaModal .save-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⌛ Đang gửi...'; }
 
   try {
     const res = await sbFetch('/rest/v1/check_hapja', { 
       method: 'POST', 
       headers: {'Prefer':'return=representation'}, 
-      body: JSON.stringify(data) 
+      body: JSON.stringify(payload) 
     });
     
-    // Kiểm tra tên bảng - file cũ dùng check_hapja nhưng có thể user đổi?
-    // Thử lại với check_hapja nếu lỗi 404, nhưng ở đây ta cứ dùng check_hapja như cũ
     if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Lỗi từ máy chủ');
     }
 
-    closeModal('checkHapjaModal');
-    showToast('✅ Đã gửi Check Hapja!');
-    ['hj_ngay','hj_concept','hj_hoten','hj_nam_sinh','hj_noi_o','hj_nghe','hj_tinh_cach','hj_tg_ranh','hj_hoan_canh','hj_hoc_ki','hj_noi_lo','hj_sdt'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    document.getElementById('hj_ndd').selectedIndex = 0;
-    document.getElementById('hj_gioi_tinh').selectedIndex = 0;
-    ['chips_hj_hinh_thuc','chips_hj_than_thiet','chips_hj_ket_noi','chips_hj_than_tinh'].forEach(clearChips);
+    closeModal('createHapjaModal');
+    showToast('✅ Đã tạo phiếu Hapja!');
+    if(document.getElementById('hj_full_name')) document.getElementById('hj_full_name').value = '';
+    if(document.getElementById('hj_gender')) document.getElementById('hj_gender').selectedIndex = 0;
+    if(document.getElementById('hj_birth_year')) document.getElementById('hj_birth_year').value = '';
+    if(document.getElementById('hj_ndd')) document.getElementById('hj_ndd').value = '';
 
     // === Notify approvers about new Hapja ===
     try {
-      const approverCodes = typeof getApproverCodes === 'function'
-        ? await getApproverCodes()
-        : [];
+      const approverCodes = typeof getApproverCodes === 'function' ? await getApproverCodes() : [];
       if (typeof createNotification === 'function' && approverCodes.length > 0) {
         await createNotification(
           approverCodes,
           'hapja_created',
           `🍎 Phiếu Check Hapja mới`,
-          `${fullName} — NDD: ${ndd}`,
+          `${fullName} — NDD: ${ndd || 'Chưa chọn'}`,
           null
         );
       }
@@ -112,12 +63,12 @@ async function saveCheckHapja() {
       if (typeof loadNotifCount === 'function') loadNotifCount();
     } catch(e) { console.warn('Hapja notify error:', e); }
 
-    loadDashboard();
+    if (typeof loadDashboard === 'function') loadDashboard();
   } catch(e) { 
     showToast('❌ Lỗi: ' + e.message); 
     console.error(e); 
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🍎 Gửi Check Hapja'; }
+    if (btn) { btn.disabled = false; btn.textContent = '📋 Tạo Phiếu'; }
   }
 }
 async function openHapjaDetail(id) {
@@ -294,7 +245,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
       const delBtn = isGlobalNewest
         ? `<button class="record-delete" onclick="event.stopPropagation();deleteRecord('${r.id}','${type}')" title="Xóa (đây là mới nhất trên dòng thời gian)">🗑️</button>`
         : `<button class="record-delete" style="opacity:0.2;cursor:not-allowed;" title="Không thể xóa — không phải mới nhất trên dòng thời gian" onclick="event.stopPropagation();">🔒</button>`;
-      return `<div class="record-item" onclick="openRecord('${r.id}','${type}')" style="cursor:pointer;">
+      return `<div class="record-item" onclick="viewRecord('${r.id}','${type}')" style="cursor:pointer;">
         <div class="record-number">${i+1}</div>
         <div class="record-content">
           <div class="record-date">📅 ${date}</div>
