@@ -257,16 +257,6 @@
 
 </div>
 
-<!-- NOTIFICATION PANEL -->
-<div id="notifPanel" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.5);" onclick="if(event.target===this)toggleNotifPanel()">
-  <div style="position:absolute;top:0;right:0;width:min(360px,100%);height:100%;background:var(--surface);overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.2);padding:16px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:16px;font-weight:700;">🔔 Thông báo</div>
-      <button onclick="toggleNotifPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">✕</button>
-    </div>
-    <div id="notifList"><div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-sub">Chưa có thông báo</div></div></div>
-  </div>
-</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
