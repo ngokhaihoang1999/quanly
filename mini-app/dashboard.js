@@ -102,6 +102,8 @@ async function loadDashboard() {
       // Approved Hapja by unit members (filtered by semester) — used for Hapja cumulative metric
       const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc${semF}`);
       approvedHapjaList = await ahRes.json();
+      // Persist to window so popup can always access it regardless of closure
+      window._approvedHapjaList = approvedHapjaList;
 
       // Build profile maps (All = Alive+Dropout, Alive = only alive)
       unitRoles.forEach(r => {
@@ -211,11 +213,15 @@ async function loadDashboard() {
       const phCenter  = myUnitProfilesAlive.filter(scopeFn)
         .filter(x => ['center','completed'].includes(x.profile.phase));
 
-      // Store for popup
+      // Store for popup — also keep cumHapja in window for persistence
       window._unitPopupData = {
-        cumHapja, cumTVHinh, cumGroupTV, cumGroupBB, cumCenter,
+        cumHapja: cumHapja, cumTVHinh, cumGroupTV, cumGroupBB, cumCenter,
         phChakki, phTVHinh, phGroupTV, phGroupBB, phCenter
       };
+      // Always ensure cumHapja syncs with the persisted list
+      if (!cumHapja.length && window._approvedHapjaList?.length) {
+        window._unitPopupData.cumHapja = window._approvedHapjaList;
+      }
 
       const metricsEl = document.getElementById('dashUnitMetrics');
       metricsEl.innerHTML = `

@@ -726,94 +726,100 @@ function applyPermissions() {
 
 // ============ UNIT POPUP ============
 function showUnitPopup(type) {
-  const phMap = PHASE_LABELS;
-  const phColor = PHASE_COLORS;
+  const d = window._unitPopupData || {};
   let title = '', items = [];
+
+  function makeProfileItem(x, extraMeta) {
+    const p = x.profile;
+    const pid = x.role?.fruit_groups?.profile_id;
+    if (!p || !pid) return '';
+    const ph = p.phase || 'chakki';
+    const phLabel = PHASE_LABELS[ph] || ph;
+    const phColor = PHASE_COLORS[ph] || '#888';
+    return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;"
+      onclick="openProfileById('${pid}');closeModal('unitPopupModal')">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+        <div style="font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.full_name || '---'}</div>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${phColor};color:white;white-space:nowrap;">${phLabel}</span>
+      </div>
+      ${extraMeta ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;">${extraMeta}</div>` : ''}
+    </div>`;
+  }
+
+  function makeHapjaItem(h) {
+    return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;"
+      onclick="${h.profile_id ? `openProfileById('${h.profile_id}');closeModal('unitPopupModal')` : ''}">
+      <div style="font-weight:700;font-size:13px;">${h.full_name || '???'}</div>
+      <div style="font-size:11px;color:var(--text2);">NDD: ${h.data?.ndd_staff_code || h.created_by} · ${new Date(h.created_at).toLocaleDateString('vi-VN')}</div>
+    </div>`;
+  }
+
   if (type === 'hapja') {
     title = '🍎 Trái Hapja (đã duyệt)';
-    const list = window._unitApprovedHapja || [];
-    items = list.map(h => `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;" onclick="${h.profile_id ? `openProfileById('${h.profile_id}');closeModal('unitPopupModal')` : ''}">
-      <div style="font-weight:700;font-size:13px;">${h.full_name}</div>
-      <div style="font-size:11px;color:var(--text2);">NDD: ${h.data?.ndd_staff_code||h.created_by} · ${new Date(h.created_at).toLocaleDateString('vi-VN')}</div>
-    </div>`);
-  } else if (type === 'wait_tv') {
-    title = '⏳ Chờ TV (Đã duyệt Hapja nhưng chưa qua TV)';
-    const list = window._unitWaitTV || [];
-    items = list.map(r => {
-      const pid = r.fruit_groups?.profile_id;
-      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
-      return renderProfileCard(fullP, {
-        extraMeta: 'TĐ: ' + r.staff_code,
-        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
-      });
-    });
-  } else if (type === 'tvv') {
-    title = '💬 Trái TV';
-    const list = window._unitTvvFruits || [];
-    items = list.map(r => {
-      const pid = r.fruit_groups?.profile_id;
-      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
-      return renderProfileCard(fullP, {
-        extraMeta: 'TĐ: ' + r.staff_code + ' (' + (r.role_type||'').toUpperCase() + ')',
-        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
-      });
-    });
-  } else if (type === 'gvbb') {
-    title = '🎓 Trái BB';
-    const list = window._unitGvbbFruits || [];
-    items = list.map(r => {
-      const pid = r.fruit_groups?.profile_id;
-      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
-      return renderProfileCard(fullP, {
-        extraMeta: 'TĐ: ' + r.staff_code + ' (' + (r.role_type||'').toUpperCase() + ')',
-        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
-      });
-    });
-  } else if (type === 'bbgroup' || type === 'bbgroup_phase') {
-    title = type === 'bbgroup_phase' ? '👥 Group BB (giai đoạn BB)' : '👥 Group BB (tích luỹ)';
-    const list = type === 'bbgroup_phase' ? (window._unitPhaseBBGroups || []) : (window._unitBbGroups || []);
-    items = list.map(r => `<div style="padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;">
-      <div style="font-weight:700;font-size:13px;">${r.fruit_groups?.telegram_group_title || 'Group'}</div>
-      <div style="font-size:11px;color:var(--text2);">NDD: ${r.staff_code} · ${r.fruit_groups?.profiles?.full_name || ''}</div>
-    </div>`);
-  } else if (type === 'tvv_phase') {
-    title = '💬 Trái TV (đang ở giai đoạn TV)';
-    const list = window._unitPhaseTVFruits || [];
-    items = list.map(r => {
-      const pid = r.fruit_groups?.profile_id;
-      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
-      return renderProfileCard(fullP, {
-        extraMeta: 'TĐ: ' + r.staff_code,
-        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
-      });
-    });
-  } else if (type === 'gvbb_phase') {
-    title = '🎓 Trái BB (đang ở giai đoạn BB)';
-    const list = window._unitPhaseBBFruits || [];
-    items = list.map(r => {
-      const pid = r.fruit_groups?.profile_id;
-      const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
-      return renderProfileCard(fullP, {
-        extraMeta: 'TĐ: ' + r.staff_code,
-        clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
-      });
-    });
+    // Fallback to window._approvedHapjaList in case closure data lost
+    const hapjaSource = (d.cumHapja?.length ? d.cumHapja : null)
+      || window._approvedHapjaList || [];
+    items = hapjaSource.map(makeHapjaItem);
+
+  } else if (type === 'chakki') {
+    title = '🟡 Chakki (đang ở giai đoạn Chakki)';
+    items = (d.phChakki || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else if (type === 'tvhinh') {
+    title = '🖼️ TV Hình (tích luỹ — đã lên TV Hình trở lên)';
+    items = (d.cumTVHinh || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else if (type === 'tvhinh_phase') {
+    title = '🖼️ TV Hình (đang ở giai đoạn TV Hình)';
+    items = (d.phTVHinh || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else if (type === 'grouptv') {
+    title = '💬 Group TV (tích luỹ — đã lên Group TV trở lên)';
+    items = (d.cumGroupTV || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else if (type === 'grouptv_phase') {
+    title = '💬 Group TV (đang ở giai đoạn Tư Vấn)';
+    items = (d.phGroupTV || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else if (type === 'groupbb') {
+    title = '🎓 Group BB (tích luỹ — đã lên BB trở lên)';
+    items = (d.cumGroupBB || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else if (type === 'groupbb_phase') {
+    title = '🎓 Group BB (đang ở giai đoạn BB)';
+    items = (d.phGroupBB || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
   } else if (type === 'center') {
-    title = '🏛️ Trái Center';
-    const list = window._unitCenterFruits || [];
+    const isCum = window._dashMode === 'cumulative';
+    title = isCum ? '🏛️ Center (tích luỹ)' : '🏛️ Center (đang ở giai đoạn Center)';
+    items = (isCum ? d.cumCenter : d.phCenter || []).map(x => makeProfileItem(x, 'NDD: ' + (x.profile.ndd_staff_code || '---')));
+
+  } else {
+    // Legacy fallback types (wait_tv, tvv, gvbb, bbgroup, etc.)
+    const legacyMap = {
+      wait_tv: window._unitWaitTV,
+      tvv: window._unitTvvFruits,
+      gvbb: window._unitGvbbFruits,
+    };
+    title = type;
+    const list = legacyMap[type] || [];
     items = list.map(r => {
       const pid = r.fruit_groups?.profile_id;
       const fullP = allProfiles.find(x => x.id === pid) || r.fruit_groups?.profiles;
-      return renderProfileCard(fullP, {
+      return renderProfileCard ? renderProfileCard(fullP, {
         extraMeta: 'TĐ: ' + r.staff_code,
         clickFn: `openProfileById('${pid}');closeModal('unitPopupModal')`
-      });
+      }) : '';
     });
   }
+
   document.getElementById('unitPopupTitle').textContent = title;
-  document.getElementById('unitPopupBody').innerHTML = items.length ? items.join('') : '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có dữ liệu</div>';
+  document.getElementById('unitPopupBody').innerHTML = items.length
+    ? items.join('')
+    : '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có dữ liệu</div>';
   document.getElementById('unitPopupModal').classList.add('open');
 }
+
 // ============ AVATAR COLOR ============
 const AVATAR_GRADIENT_PRESETS = [
   { label: 'Tím Hồng',   val: 'linear-gradient(135deg,#6366f1,#ec4899)' },
