@@ -606,6 +606,23 @@ async function completeSession(sessionId) {
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
+async function openBaoCaoTV() {
+  openAddRecordModal('tu_van');
+  try {
+    const res = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number,tool&order=session_number.desc&limit=1`);
+    const sessions = await res.json();
+    if (sessions && sessions.length > 0) {
+      setTimeout(() => {
+        const lanEl = document.getElementById('rm_lan_thu');
+        const toolEl = document.getElementById('rm_ten_cong_cu');
+        // Chỉ điền tự động nếu đang trống (tránh ghi đè khi edit)
+        if (lanEl && !lanEl.value) lanEl.value = sessions[0].session_number;
+        if (toolEl && !toolEl.value) toolEl.value = sessions[0].tool || '';
+      }, 100);
+    }
+  } catch(e) { console.warn('Could not auto-fill session info:', e); }
+}
+
 function createTVFromSession(sessionId, num, tool) {
   openAddRecordModal('tu_van');
   setTimeout(() => {
