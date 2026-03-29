@@ -572,6 +572,15 @@ async function saveScheduleTV() {
       if (num === 1 && typeof completePriorityTask === 'function') {
         completePriorityTask(currentProfileId, 'chot_tv_1');
       }
+      // Priority: if session 2, profile is now TV Hình — create "chot_tv_hinh" task for NDD
+      // to remind them to transition to Group TV-BB when ready
+      if (num === 2 && typeof createPriorityTask === 'function') {
+        const nddCode = p?.ndd_staff_code || myCode;
+        // Complete old chot_tv_hinh if exists (re-schedule)
+        completePriorityTask(currentProfileId, 'chot_tv_hinh');
+        createPriorityTask(nddCode, currentProfileId, 'lap_group',
+          `Lập Group TV-BB — ${pName}`, null, null);
+      }
     }
 
     editingSessionId = null;
@@ -666,13 +675,15 @@ async function saveChotBB() {
     // Notify all stakeholders (NDD, TVV, GVBB + their managers)
     if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
       const stakeholders = await getProfileStakeholders(currentProfileId);
-      createNotification(stakeholders, 'chot_bb', '🎓 Lập Group TV-BB', pName, currentProfileId);
+      createNotification(stakeholders, 'lap_group_tv_bb', '🎓 Lập Group TV-BB', pName, currentProfileId);
     }
 
     // Create priority task "Học BB" for GVBB if assigned,
     // else for NDD + all managers in chain (so they know to assign GVBB)
     if (typeof createPriorityTask === 'function') {
       const gvbbCode = gvbb || null;
+      // Complete "lap_group" task since it's now done
+      completePriorityTask(currentProfileId, 'lap_group');
       if (gvbbCode) {
         // GVBB assigned → only their task
         createPriorityTask(gvbbCode, currentProfileId, 'hoc_bb', `Học BB lần 1 — ${pName}`, null);

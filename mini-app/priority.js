@@ -1,20 +1,25 @@
 // ============ PRIORITY TASKS MODULE ============
 
 const PRIORITY_ICONS = {
-  duyet_hapja: '🍎',
-  chot_tv_1: '🔴',
-  viet_bc_tv: '🟠',
-  hoc_bb: '🟢',
-  viet_bc_bb: '🟢'
+  duyet_hapja:  '🍎',
+  chot_tv_1:    '🔴',  // Chốt TV lần 1 → vào Chakki
+  chot_tv_hinh: '🖼️', // Chốt TV lần 2+ → vào TV Hình
+  viet_bc_tv:   '🟠',
+  lap_group:    '🎓',  // Lập Group TV-BB → vào giai đoạn Tư Vấn
+  hoc_bb:       '🟢',
+  viet_bc_bb:   '🟢'
 };
 const PRIORITY_GROUP_LABELS = {
-  duyet_hapja: 'Duyệt Check Hapja',
-  chot_tv_1: 'Cần Chốt TV lần 1',
-  viet_bc_tv: 'Cần viết Báo cáo TV',
-  hoc_bb: 'Cần học BB',
-  viet_bc_bb: 'Cần viết Báo cáo BB'
+  duyet_hapja:  'Duyệt Check Hapja',
+  chot_tv_1:    'Cần Chốt TV lần 1',
+  chot_tv_hinh: 'Cần Chốt TV Hình (lần 2+)',
+  viet_bc_tv:   'Cần viết Báo cáo TV',
+  lap_group:    'Cần Lập Group TV-BB',
+  hoc_bb:       'Cần học BB',
+  viet_bc_bb:   'Cần viết Báo cáo BB'
 };
-const PRIORITY_ORDER = ['duyet_hapja', 'chot_tv_1', 'viet_bc_tv', 'viet_bc_bb', 'hoc_bb'];
+const PRIORITY_ORDER = ['duyet_hapja', 'chot_tv_1', 'chot_tv_hinh', 'viet_bc_tv', 'lap_group', 'viet_bc_bb', 'hoc_bb'];
+
 
 async function loadPriority() {
   const myCode = getEffectiveStaffCode();
@@ -116,7 +121,13 @@ async function loadPriority() {
         }
 
         html += `<div class="priority-item ${unseenCls} ${overdueCls}" onclick="${clickAction}">
-          <div class="priority-item-dot" style="background:${type==='duyet_hapja'?'#f97316':type==='chot_tv_1'?'#ef4444':type==='viet_bc_tv'?'#f97316':'#22c55e'}"></div>
+          <div class="priority-item-dot" style="background:${
+            type==='duyet_hapja'?'#f97316':
+            type==='chot_tv_1'?'#ef4444':
+            type==='chot_tv_hinh'?'#ef4444':
+            type==='viet_bc_tv'?'#f97316':
+            type==='lap_group'?'#8b5cf6':'#22c55e'
+          }"></div>
           <div class="priority-item-main">
             <div class="priority-item-name">${t.title}</div>
             <div class="priority-item-meta">${t.meta || timeAgo}${deadlineStr ? ` · ${deadlineStr}` : ''}</div>

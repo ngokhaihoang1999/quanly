@@ -85,13 +85,12 @@ function getNotifNavFn(n) {
 
   switch (n.event_type) {
     case 'hapja_created':
-      // Navigate to unit tab, scroll to pending hapja section
       return `${markRead};${closePanel};switchMainTab(document.querySelector('[data-tab=\\'unit\\']'),'unit');setTimeout(()=>{ const el=document.getElementById('pendingHapjaSection'); if(el) el.scrollIntoView({behavior:'smooth'}); },300);`;
     case 'hapja_approved':
     case 'hapja_rejected':
     case 'chot_tv':
     case 'bc_tv':
-    case 'chot_bb':
+    case 'lap_group_tv_bb':
     case 'bc_bb':
     case 'mo_kt':
     case 'drop_out':
@@ -146,7 +145,12 @@ async function markAllRead() {
 }
 
 function getNotifIcon(type) {
-  const m = { hapja_created:'🍎', hapja_approved:'✅', hapja_rejected:'❌', chot_tv:'📅', bc_tv:'📝', chot_bb:'🎓', bc_bb:'📋', mo_kt:'📖', drop_out:'🔴', chot_center:'🏛️', reminder:'⏰' };
+  const m = {
+    hapja_created:'🍎', hapja_approved:'✅', hapja_rejected:'❌',
+    chot_tv:'📅', bc_tv:'📝',
+    lap_group_tv_bb:'🎓', bc_bb:'📋',
+    mo_kt:'📖', drop_out:'🔴', chot_center:'🏛️', reminder:'⏰'
+  };
   return m[type] || '🔔';
 }
 
@@ -251,7 +255,7 @@ async function _addGvbbForScope(scopeSet) {
 // ─── CREATE NOTIFICATIONS ──────────────────────────────────────────────────────
 const ALL_EVENT_TYPES = [
   'hapja_created','hapja_approved','hapja_rejected',
-  'chot_tv','bc_tv','chot_bb','bc_bb','mo_kt','drop_out','chot_center','reminder'
+  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','chot_center','reminder'
 ];
 
 async function getMyPrefs() {
@@ -351,17 +355,17 @@ async function getProfileStakeholders(profileId) {
 
 // ─── NOTIFICATION SETTINGS ─────────────────────────────────────────────────────
 const NOTIF_EVENT_LABELS = {
-  hapja_created:  { label: 'Phiếu Hapja mới',    icon: '🍎' },
-  hapja_approved: { label: 'Hapja được duyệt',    icon: '✅' },
-  hapja_rejected: { label: 'Hapja bị từ chối',    icon: '❌' },
-  chot_tv:        { label: 'Chốt TV',             icon: '📅' },
-  bc_tv:          { label: 'Báo cáo TV mới',      icon: '📝' },
-  chot_bb:        { label: 'Chốt BB',             icon: '🎓' },
-  bc_bb:          { label: 'Báo cáo BB mới',      icon: '📋' },
-  mo_kt:          { label: 'Mở KT',               icon: '📖' },
-  drop_out:       { label: 'Drop-out',            icon: '🔴' },
-  chot_center:    { label: 'Chốt Center',         icon: '🏛️' },
-  reminder:       { label: 'Nhắc nhở lịch',       icon: '⏰' },
+  hapja_created:     { label: 'Phiếu Hapja mới',        icon: '🍎' },
+  hapja_approved:    { label: 'Hapja được duyệt',        icon: '✅' },
+  hapja_rejected:    { label: 'Hapja bị từ chối',        icon: '❌' },
+  chot_tv:           { label: 'Chốt TV (lên lịch)',      icon: '📅' },
+  bc_tv:             { label: 'Báo cáo TV mới',          icon: '📝' },
+  lap_group_tv_bb:   { label: 'Lập Group TV-BB',         icon: '🎓' },
+  bc_bb:             { label: 'Báo cáo BB mới',          icon: '📋' },
+  mo_kt:             { label: 'Mở KT',                   icon: '📖' },
+  drop_out:          { label: 'Drop-out',                icon: '🔴' },
+  chot_center:       { label: 'Chốt Center',             icon: '🏛️' },
+  reminder:          { label: 'Nhắc nhở lịch',           icon: '⏰' },
 };
 
 async function openNotifSettings() {

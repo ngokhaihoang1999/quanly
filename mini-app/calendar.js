@@ -4,14 +4,16 @@
 let calYear, calMonth, calEvents = [], calSelectedDate = null;
 
 const CAL_COLORS = {
-  chot_tv: '#8b5cf6',   // purple
-  hoc_bb:  '#22c55e',   // green
-  custom:  '#3b82f6'    // blue
+  chot_tv:       '#8b5cf6',   // purple
+  hoc_bb:        '#22c55e',   // green
+  lap_group_tv_bb: '#f59e0b', // amber
+  custom:        '#3b82f6'    // blue
 };
 const CAL_LABELS = {
-  chot_tv: 'Chốt TV',
-  hoc_bb:  'Học BB',
-  custom:  'Cá nhân'
+  chot_tv:       'Lịch TV',
+  hoc_bb:        'Học BB',
+  lap_group_tv_bb: 'Lập Group TV-BB',
+  custom:        'Cá nhân'
 };
 
 function initCalendar() {
