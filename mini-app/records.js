@@ -47,7 +47,7 @@ async function loadJourney(profileId, currentPhase) {
   if (phBtnEl) phBtnEl.style.display = isDropout ? 'none' : 'flex'; // Force display or hide
   if (!isDropout) {
     if (['new','chakki'].includes(cp)) {
-      btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV lần 1</button>`;
+      btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn lần tiếp theo</button>`;
     } else if (cp === 'tu_van_hinh') {
       btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
         <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Lập group TV - BB</button>`;
@@ -540,6 +540,11 @@ async function saveScheduleTV() {
           await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify({
             fruit_group_id: fgId, staff_code: tvv, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
           })});
+          // TVV bổ sung → cập nhật priority task chot_tv_1
+          if (typeof updateChotTV1Task === 'function') {
+            const pp = allProfiles.find(x => x.id === currentProfileId);
+            updateChotTV1Task(currentProfileId, pp?.full_name || '', true, !!dt);
+          }
         }
       } catch(e) { console.warn('Assign role fail:', e); }
     }

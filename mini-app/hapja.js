@@ -254,9 +254,24 @@ async function approveHapja(id) {
 
     // === Auto-triggers for Hapja approval ===
     if (newPid) {
-      // Priority: "Chốt TV lần 1" for NDD
+      // Priority: Smart task "Chuẩn bị TV lần 1" for NDD
+      // Title reflects what's still missing: TVV và/hoặc lịch TV
       if (typeof createPriorityTask === 'function' && nddCode) {
-        createPriorityTask(nddCode, newPid, 'chot_tv_1', `Chốt TV lần 1 — ${h.full_name}`, null);
+        const tvvCode = d.tvv_staff_code || null; // TVV kèm trong phiếu Hapja (nếu có)
+        const hasSchedule = !!(d.hen_tv);          // Đã hẹn lịch TV chưa
+
+        let taskTitle;
+        if (!tvvCode && !hasSchedule) {
+          taskTitle = `Cần tìm TVV và xếp lịch TV — ${h.full_name}`;
+        } else if (!tvvCode) {
+          taskTitle = `Cần tìm TVV — ${h.full_name}`;
+        } else if (!hasSchedule) {
+          taskTitle = `Cần xếp lịch TV lần 1 — ${h.full_name}`;
+        } else {
+          // Đã có TVV và lịch → nhắc chốt TV theo lịch đã hẹn
+          taskTitle = `Chốt TV lần 1 đã hẹn — ${h.full_name}`;
+        }
+        createPriorityTask(nddCode, newPid, 'chot_tv_1', taskTitle, null);
       }
       // Notification: notify creator
       if (typeof createNotification === 'function') {

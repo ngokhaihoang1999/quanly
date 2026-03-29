@@ -11,7 +11,7 @@ const PRIORITY_ICONS = {
 };
 const PRIORITY_GROUP_LABELS = {
   duyet_hapja:  'Duyệt Check Hapja',
-  chot_tv_1:    'Cần Chốt TV lần 1',
+  chot_tv_1:    'Cần chuẩn bị TV lần 1',
   chot_tv_hinh: 'Cần Chốt TV Hình (lần 2+)',
   viet_bc_tv:   'Cần viết Báo cáo TV',
   lap_group:    'Cần Lập Group TV-BB',
@@ -231,3 +231,41 @@ async function completePriorityTask(profileId, taskType) {
 
 // Auto-refresh priority every 60s
 setInterval(() => { if (typeof loadPriority === 'function') loadPriority(); }, 60000);
+
+// ─── HELPER: cập nhật task chot_tv_1 khi TVV được bổ sung ───────────────────
+// Gọi sau khi gán TVV vào hồ sơ, để cập nhật title task còn thiếu gì.
+// Nếu đã CÓ TVV và ĐÃ có lịch hẹn → hoàn thành task (vì sẽ nhắc bằng calendar)
+async function updateChotTV1Task(profileId, profileName, hasTvv, hasSchedule) {
+  if (!profileId) return;
+  try {
+    // Kiểm tra task còn active không
+    const res = await sbFetch(
+      `/rest/v1/priority_tasks?profile_id=eq.${profileId}&task_type=eq.chot_tv_1&is_completed=eq.false&select=id,staff_code&limit=1`
+    );
+    const rows = await res.json();
+    if (!rows || rows.length === 0) return; // task đã xong hoặc không tồn tại
+
+    const taskId = rows[0].id;
+
+    if (hasTvv && hasSchedule) {
+      // Đầy đủ TVV + lịch → hoàn thành task (calendar event đã được tạo)
+      await sbFetch(`/rest/v1/priority_tasks?id=eq.${taskId}`,
+        { method: 'PATCH', body: JSON.stringify({ is_completed: true }) }
+      );
+    } else {
+      // Cập nhật title theo thứ còn thiếu
+      let newTitle;
+      if (!hasTvv && !hasSchedule) {
+        newTitle = `Cần tìm TVV và xếp lịch TV — ${profileName}`;
+      } else if (!hasTvv) {
+        newTitle = `Cần tìm TVV — ${profileName}`;
+      } else {
+        newTitle = `Cần xếp lịch TV lần 1 — ${profileName}`;
+      }
+      await sbFetch(`/rest/v1/priority_tasks?id=eq.${taskId}`,
+        { method: 'PATCH', body: JSON.stringify({ title: newTitle }) }
+      );
+    }
+    loadPriority();
+  } catch(e) { console.warn('updateChotTV1Task:', e); }
+}
