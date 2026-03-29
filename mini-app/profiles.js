@@ -130,7 +130,7 @@ async function openProfile(p) {
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
   const canEditBB     = hasFullEdit || isProfileGVBB;
-  const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['bb','center','completed'].includes(ph);
+  const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['tu_van','bb','center','completed'].includes(ph);
   // Store for use in other functions
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
   window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };
@@ -226,11 +226,12 @@ async function openProfile(p) {
       </div>
     </div>`;
 
-  // Tab visibility
+  // Tab visibility — TV tab hiện khi có TVV và từ phase tu_van_hinh trở lên
   const tabTV = document.getElementById('tabTV');
   const tabBB = document.getElementById('tabBB');
   const tabMM = document.getElementById('tabMindmap');
-  if (tabTV) tabTV.style.display = (canEditTV && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
+  const showTabTV = canEditTV && ['tu_van_hinh','tu_van','bb','center','completed'].includes(ph) && !!tvvCode;
+  if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
   clearFormFields();
@@ -239,9 +240,40 @@ async function openProfile(p) {
   loadRecords(p.id, 'tu_van', 'tvList', 'tvCount');
   loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount');
   loadNotes(p.id);
-  document.querySelectorAll('#profileTabs .form-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  document.querySelectorAll('.form-card').forEach((c)=>c.classList.remove('active'));
-  document.getElementById('infoSheet')?.classList.add('active');
+
+  // ── Smart default tab theo phase ──────────────────────────────────────────
+  // Phase tu_van_hinh hoặc chakki mà đã có TVV → mở tab TV để viết BC
+  // Phase tu_van (Group TV) → mở tab BB (và Tư Duy nếu accessible)
+  // Còn lại → Giai đoạn
+  let defaultTabId = 'journeyTab';    // mặc định Giai đoạn
+  let defaultTabEl = null;
+
+  if (['tu_van_hinh','chakki','new'].includes(ph) && showTabTV) {
+    // Có TVV → mở tab TV để viết báo cáo
+    defaultTabId = 'tuVan';
+  } else if (ph === 'tu_van' && canEditBB) {
+    // Đã vào Group TV (phase 3) → mở BB
+    defaultTabId = 'bienBan';
+  }
+
+  document.querySelectorAll('#profileTabs .form-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.form-card').forEach(c => c.classList.remove('active'));
+
+  // Tìm tab button và card tương ứng
+  defaultTabEl = [...document.querySelectorAll('#profileTabs .form-tab')]
+    .find(t => t.getAttribute('onclick')?.includes(defaultTabId));
+  const defaultCard = document.getElementById(defaultTabId);
+
+  if (defaultTabEl && defaultCard && defaultCard.style.display !== 'none' && defaultTabEl.style.display !== 'none') {
+    defaultTabEl.classList.add('active');
+    defaultCard.classList.add('active');
+  } else {
+    // Fallback: Giai đoạn
+    const journeyTabEl = [...document.querySelectorAll('#profileTabs .form-tab')]
+      .find(t => t.getAttribute('onclick')?.includes('journeyTab'));
+    if (journeyTabEl) journeyTabEl.classList.add('active');
+    document.getElementById('journeyTab')?.classList.add('active');
+  }
   
   // Show/hide delete button at bottom of infoSheet
   const delBtn = document.getElementById('deleteProfileBtn');
