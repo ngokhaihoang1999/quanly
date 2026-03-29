@@ -50,7 +50,7 @@ async function loadJourney(profileId, currentPhase) {
       btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn lần tiếp theo</button>`;
     } else if (cp === 'tu_van_hinh') {
       btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
-        <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Lập group TV - BB</button>`;
+        <button id="btnLapGroupTVBB" class="add-record-btn" onclick="openChotBBModal()" style="display:none;flex:1;background:var(--green);color:white;">🎓 Lập group TV - BB</button>`;
     } else if (cp === 'tu_van') {
       // (Báo cáo BB được thêm ở tab BB, nút Mở KT nằm trên Báo cáo BB)
     } else if (cp === 'bb') {
@@ -86,6 +86,12 @@ async function loadJourney(profileId, currentPhase) {
     const sessions = await sessRes.json();
     const recs = await recRes.json();
     const hapjas = await hjRes.json();
+
+    if (cp === 'tu_van_hinh') {
+      const hasBcTv2 = recs.some(r => r.record_type === 'tu_van' && Number(r.content?.lan_thu) >= 2);
+      const btn = document.getElementById('btnLapGroupTVBB');
+      if (btn && hasBcTv2) btn.style.display = '';
+    }
 
     let events = [];
 
