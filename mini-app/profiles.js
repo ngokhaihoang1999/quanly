@@ -226,11 +226,11 @@ async function openProfile(p) {
       </div>
     </div>`;
 
-  // Tab visibility — TV tab hiện khi có TVV và từ phase tu_van_hinh trở lên
+  // Tab TV: hiện khi có TVV, bất kể phase (vì Chốt TV có thể xảy ra ở phase Chakki)
   const tabTV = document.getElementById('tabTV');
   const tabBB = document.getElementById('tabBB');
   const tabMM = document.getElementById('tabMindmap');
-  const showTabTV = canEditTV && ['tu_van_hinh','tu_van','bb','center','completed'].includes(ph) && !!tvvCode;
+  const showTabTV = canEditTV && !!tvvCode;
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
