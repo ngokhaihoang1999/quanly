@@ -1,0 +1,13 @@
+name: Force DB Fix
+on: [push]
+jobs:
+  fixdb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Force Fix Constraints
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          export PGPASSWORD=$SUPABASE_DB_PASSWORD
+          psql -h smzoomekyvllsgppgvxw.supabase.co -U postgres -d postgres -p 6543 -c "ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_phase_check;"
+          psql -h smzoomekyvllsgppgvxw.supabase.co -U postgres -d postgres -p 6543 -c "ALTER TABLE public.profiles ADD CONSTRAINT profiles_phase_check CHECK (phase IN ('new', 'chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center', 'completed'));"
