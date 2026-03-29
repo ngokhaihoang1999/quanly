@@ -1,6 +1,6 @@
 // Phase display constants (shared across dashboard)
-const PHASE_LABELS = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van:'💬 TV',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
-const PHASE_COLORS = {new:'#f59e0b',chakki:'#f59e0b',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
+const PHASE_LABELS = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van_hinh:'🖼️ TV Hình',tu_van:'💬 Tư Vấn',bb:'🎓 BB',center:'🏛️ Center',completed:'✅'};
+const PHASE_COLORS = {new:'#f59e0b',chakki:'#f59e0b',tu_van_hinh:'#ef4444',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
 
 // ============ DASHBOARD ============
 async function loadDashboard() {
@@ -76,9 +76,8 @@ async function loadDashboard() {
     const semName = currentSemesterId ? (allSemesters.find(s => s.id === currentSemesterId)?.name || '') : '';
     const semLabel = semName ? ` · ${semName}` : '';
     document.getElementById('dashUnitTitle').textContent = '🏢 ' + (unitLabel || 'Đơn vị') + semLabel;
-    let unitFruits = 0, unitGroups = 0, unitHapja = 0, unitRoles = [];
-    let approvedHapjaList = [], tvvFruits = [], gvbbFruits = [], bbGroups = [], centerFruits = [];
-    let waitTVFruits = [], phaseTVFruits = [], phaseBBFruits = [], phaseBBGroups = [];
+    let unitFruits = 0, unitHapja = 0, unitRoles = [];
+    let approvedHapjaList = [];
     // Semester filter helper (appends &semester_id=eq.xxx when a semester is selected)
     const semF = currentSemesterId ? `&semester_id=eq.${currentSemesterId}` : '';
     // Set of profile IDs in current semester (for in-memory filtering of roles)
@@ -87,6 +86,11 @@ async function loadDashboard() {
       : null; // null means "show all"
     const inSem = (pid) => semProfileIds === null || semProfileIds.has(pid);
 
+    // ALL profiles in unit (Alive + Dropout) — used for cumulative metrics
+    const unitProfilesMapAll = new Map();
+    // Alive-only profiles map — used for phase metrics
+    const unitProfilesMapAlive = new Map();
+
     if (unitStaffCodes.length > 0) {
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
       const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code,fruit_status,is_kt_opened),fruit_roles(staff_code,role_type))`);
@@ -94,91 +98,69 @@ async function loadDashboard() {
       // Apply semester filter to unit roles
       unitRoles = allUnitRoles.filter(r => inSem(r.fruit_groups?.profile_id));
       unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
-      // Approved Hapja by unit members (filtered by semester)
+
+      // Approved Hapja by unit members (filtered by semester) — used for Hapja cumulative metric
       const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc${semF}`);
       approvedHapjaList = await ahRes.json();
-      // Get all UNIQUE profiles that belong to the unit
-      const unitProfilesMap = new Map();
+
+      // Build profile maps (All = Alive+Dropout, Alive = only alive)
       unitRoles.forEach(r => {
         const p = r.fruit_groups?.profiles;
         const pid = r.fruit_groups?.profile_id;
-        if (p && pid && p.fruit_status !== 'dropout') {
-          if (!unitProfilesMap.has(pid)) {
-            unitProfilesMap.set(pid, { profile: p, role: r });
+        if (!p || !pid) return;
+        // ALL map (Alive + Dropout)
+        if (!unitProfilesMapAll.has(pid)) {
+          unitProfilesMapAll.set(pid, { profile: p, role: r });
+        } else {
+          const ex = unitProfilesMapAll.get(pid).role;
+          if (r.role_type === 'ndd' && ex.role_type !== 'ndd') unitProfilesMapAll.set(pid, { profile: p, role: r });
+        }
+        // ALIVE-ONLY map
+        if (p.fruit_status !== 'dropout') {
+          if (!unitProfilesMapAlive.has(pid)) {
+            unitProfilesMapAlive.set(pid, { profile: p, role: r });
           } else {
-            const existing = unitProfilesMap.get(pid).role;
-            if (r.role_type === 'ndd' && existing.role_type !== 'ndd') {
-              unitProfilesMap.set(pid, { profile: p, role: r });
-            }
+            const ex = unitProfilesMapAlive.get(pid).role;
+            if (r.role_type === 'ndd' && ex.role_type !== 'ndd') unitProfilesMapAlive.set(pid, { profile: p, role: r });
           }
         }
       });
-      const myUnitProfiles = Array.from(unitProfilesMap.values());
-      
-      // ═══ TÍCH LUỸ (cumulative — ever reached that phase) ═══
-      // Trái TV: phase in tu_van, bb, center, completed
-      tvvFruits = myUnitProfiles.filter(x => ['tu_van','bb','center','completed'].includes(x.profile.phase)).map(x => x.role);
-      // Trái BB: phase in bb, center, completed
-      gvbbFruits = myUnitProfiles.filter(x => ['bb','center','completed'].includes(x.profile.phase)).map(x => x.role);
-      // Trái Center: phase in center, completed
-      centerFruits = myUnitProfiles.filter(x => ['center','completed'].includes(x.profile.phase)).map(x => x.role);
 
-      // ═══ THEO GIAI ĐOẠN (current phase only) ═══
-      // Chờ TV: phase is chakki or new (approved hapja but not yet TV)
-      waitTVFruits = myUnitProfiles.filter(x => ['new','chakki'].includes(x.profile.phase)).map(x => x.role);
-      // Trái TV (current): phase = tu_van
-      phaseTVFruits = myUnitProfiles.filter(x => x.profile.phase === 'tu_van').map(x => x.role);
-      // Trái BB (current): phase = bb
-      phaseBBFruits = myUnitProfiles.filter(x => x.profile.phase === 'bb').map(x => x.role);
-
-      // BB groups (real telegram group) — for cumulative
-      const bbSeen = new Set();
-      unitRoles.forEach(r => {
-        const fg = r.fruit_groups || {};
-        const isRealGroup = fg.telegram_group_id && fg.telegram_group_id > -1000000000000;
-        if (unitStaffCodes.includes(r.staff_code) && isRealGroup && fg.level === 'bb' && !bbSeen.has(r.fruit_group_id)) {
-          bbSeen.add(r.fruit_group_id);
-          bbGroups.push(r);
-        }
-      });
-      // BB groups — for current phase (only bb phase profiles)
-      const bbSeenPhase = new Set();
-      unitRoles.forEach(r => {
-        const fg = r.fruit_groups || {};
-        const p = fg.profiles;
-        const isRealGroup = fg.telegram_group_id && fg.telegram_group_id > -1000000000000;
-        if (unitStaffCodes.includes(r.staff_code) && isRealGroup && fg.level === 'bb' && p && p.phase === 'bb' && !bbSeenPhase.has(r.fruit_group_id)) {
-          bbSeenPhase.add(r.fruit_group_id);
-          phaseBBGroups.push(r);
-        }
-      });
       // Pending hapja for section below
       const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20${semF}`);
       unitHapja = (await uhRes.json()).length;
     }
-    // Store for popup use
-    window._unitApprovedHapja = approvedHapjaList;
-    window._unitTvvFruits = tvvFruits;
-    window._unitGvbbFruits = gvbbFruits;
-    window._unitBbGroups = bbGroups;
-    window._unitCenterFruits = centerFruits;
-    window._unitWaitTV = waitTVFruits;
-    window._unitPhaseTVFruits = phaseTVFruits;
-    window._unitPhaseBBFruits = phaseBBFruits;
-    window._unitPhaseBBGroups = phaseBBGroups;
 
-    // Info descriptions for each metric
+    const myUnitProfilesAll   = Array.from(unitProfilesMapAll.values());
+    const myUnitProfilesAlive = Array.from(unitProfilesMapAlive.values());
+
+    // ── Helper: check if a profile entry belongs to scope A or B ──
+    // A: NDD role belongs to unitStaffCodes
+    // B: NDD NOT in unit, but TVV or GVBB is in unit
+    function isInScopeA(x) {
+      const allRoles = x.role?.fruit_groups?.fruit_roles || [];
+      const nddCode = allRoles.find(r => r.role_type === 'ndd')?.staff_code || x.profile.ndd_staff_code;
+      return unitStaffCodes.includes(nddCode);
+    }
+    function isInScopeB(x) {
+      const allRoles = x.role?.fruit_groups?.fruit_roles || [];
+      const nddCode = allRoles.find(r => r.role_type === 'ndd')?.staff_code || x.profile.ndd_staff_code;
+      if (unitStaffCodes.includes(nddCode)) return false; // belongs to A
+      return allRoles.some(r => ['tvv','gvbb'].includes(r.role_type) && unitStaffCodes.includes(r.staff_code));
+    }
+
+    // ── Info descriptions ──
     const infoDescs = {
-      hapja_cum: 'Tổng số Trái đã được duyệt Hapja (tích luỹ)',
-      tv_cum: 'Số Trái đã và đang đạt giai đoạn Tư Vấn (TV) trở lên',
-      bb_cum: 'Số Trái đã và đang đạt giai đoạn Biến Bản (BB) trở lên',
-      bbg_cum: 'Số Trái đã và đang được gắn Group BB',
-      center_cum: 'Số Trái đã vào giai đoạn Chốt Center trở lên',
-      wait_tv: 'Trái đã duyệt Hapja nhưng chưa Chốt TV',
-      tv_phase: 'Trái đang ở giai đoạn Tư Vấn hiện tại',
-      bb_phase: 'Trái đang ở giai đoạn Biến Bản hiện tại',
-      bbg_phase: 'Trái đang ở giai đoạn BB và có Group BB',
-      center_phase: 'Trái đã vào giai đoạn Center'
+      hapja_cum:   'Tổng số Trái đã được duyệt Hapja (tích luỹ, tính cả Drop-out)',
+      tvh_cum:     'Số Trái đã đạt giai đoạn Tư Vấn Hình trở lên (tích luỹ, tính cả Drop-out)',
+      grptv_cum:   'Số Group TV (telegram) đã kết nối bot (tích luỹ, tính cả Drop-out)',
+      grpbb_cum:   'Số Trái đã vào giai đoạn BB / Đã mở KT (tích luỹ, tính cả Drop-out)',
+      center_cum:  'Số Trái đã vào giai đoạn Center (tích luỹ, tính cả Drop-out)',
+      chakki_ph:   'Trái đang ở giai đoạn Chakki (đã duyệt Hapja nhưng chưa lên TV Hình)',
+      tvh_ph:      'Trái đang ở giai đoạn TV Hình (chốt TV lần 2 nhưng chưa lên Group TV)',
+      grptv_ph:    'Trái đang ở giai đoạn Tư Vấn / Group TV (chưa mở KT)',
+      grpbb_ph:    'Trái đang ở giai đoạn BB / đã mở Kinh Thánh',
+      center_ph:   'Trái đang ở giai đoạn Center',
     };
     function infoBtn(key) {
       return `<span class="info-badge" onclick="event.stopPropagation();alert('${infoDescs[key]}')" title="${infoDescs[key]}">i</span>`;
@@ -189,45 +171,94 @@ async function loadDashboard() {
 
     // Save mode state
     if (!window._dashMode) window._dashMode = 'cumulative';
-    const mode = window._dashMode;
+    if (!window._dashScopeMode) window._dashScopeMode = 'A';
 
-    function renderDashMetrics(m) {
-      const isCum = m === 'cumulative';
+    function renderDashMetrics() {
+      const isCum  = window._dashMode === 'cumulative';
+      const isA    = window._dashScopeMode === 'A';
+      const scopeFn = isA ? isInScopeA : isInScopeB;
+
+      // ═══ TÍCH LUỸ (Alive + Dropout) ═══
+      // 1. Hapja (chỉ A mới tính từ approved hapja; B không có hapja riêng — hiển thị 0)
+      const cumHapja = isA ? approvedHapjaList : [];
+      // 2. TV Hình+ (arrived tu_van_hinh or beyond)
+      const cumTVHinh = myUnitProfilesAll.filter(scopeFn)
+        .filter(x => ['tu_van_hinh','tu_van','bb','center','completed'].includes(x.profile.phase));
+      // 3. Group TV — profile đã tới phase tu_van trở lên
+      const cumGroupTV = myUnitProfilesAll.filter(scopeFn)
+        .filter(x => ['tu_van','bb','center','completed'].includes(x.profile.phase));
+      // 4. Group BB / Đã mở KT (phase bb trở lên)
+      const cumGroupBB = myUnitProfilesAll.filter(scopeFn)
+        .filter(x => ['bb','center','completed'].includes(x.profile.phase));
+      // 5. Center
+      const cumCenter = myUnitProfilesAll.filter(scopeFn)
+        .filter(x => ['center','completed'].includes(x.profile.phase));
+
+      // ═══ THEO GIAI ĐOẠN (chỉ Alive) ═══
+      // 1. Chakki: new/chakki
+      const phChakki  = myUnitProfilesAlive.filter(scopeFn)
+        .filter(x => ['new','chakki'].includes(x.profile.phase));
+      // 2. TV Hình: tu_van_hinh
+      const phTVHinh  = myUnitProfilesAlive.filter(scopeFn)
+        .filter(x => x.profile.phase === 'tu_van_hinh');
+      // 3. Group TV: tu_van
+      const phGroupTV = myUnitProfilesAlive.filter(scopeFn)
+        .filter(x => x.profile.phase === 'tu_van');
+      // 4. Group BB: bb
+      const phGroupBB = myUnitProfilesAlive.filter(scopeFn)
+        .filter(x => x.profile.phase === 'bb');
+      // 5. Center: center/completed
+      const phCenter  = myUnitProfilesAlive.filter(scopeFn)
+        .filter(x => ['center','completed'].includes(x.profile.phase));
+
+      // Store for popup
+      window._unitPopupData = {
+        cumHapja, cumTVHinh, cumGroupTV, cumGroupBB, cumCenter,
+        phChakki, phTVHinh, phGroupTV, phGroupBB, phCenter
+      };
+
       const metricsEl = document.getElementById('dashUnitMetrics');
       metricsEl.innerHTML = `
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <div class="dash-mode-toggle" style="margin-bottom:0;flex:1;">
+            <button class="dash-mode-btn ${isA ? 'active' : ''}" onclick="window._dashScopeMode='A';renderDashMetrics()">👤 NDD trong ĐV (A)</button>
+            <button class="dash-mode-btn ${!isA ? 'active' : ''}" onclick="window._dashScopeMode='B';renderDashMetrics()">🤝 Hỗ trợ TV/BB (B)</button>
+          </div>
+        </div>
         <div class="dash-mode-toggle">
-          <button class="dash-mode-btn ${isCum ? 'active' : ''}" onclick="window._dashMode='cumulative';renderDashMetrics('cumulative')">📊 Tích luỹ</button>
-          <button class="dash-mode-btn ${!isCum ? 'active' : ''}" onclick="window._dashMode='phase';renderDashMetrics('phase')">📋 Theo giai đoạn</button>
+          <button class="dash-mode-btn ${isCum ? 'active' : ''}" onclick="window._dashMode='cumulative';renderDashMetrics()">📊 Tích luỹ (ALL)</button>
+          <button class="dash-mode-btn ${!isCum ? 'active' : ''}" onclick="window._dashMode='phase';renderDashMetrics()">📋 Giai đoạn (Alive)</button>
         </div>
         <div class="dash-grid-5">
           <div class="dash-center-circle" onclick="showUnitPopup('center')">
-            <div class="num">${centerFruits.length}</div>
+            <div class="num">${isCum ? cumCenter.length : phCenter.length}</div>
             <div class="lbl">🏛️ Center</div>
           </div>
-          <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup(${isCum ? "'hapja'" : "'wait_tv'"})">
-            ${infoBtnLeft(isCum ? 'hapja_cum' : 'wait_tv')}
-            <div class="num">${isCum ? approvedHapjaList.length : waitTVFruits.length}</div>
-            <div class="lbl">${isCum ? '🍎 Trái Hapja' : '⏳ Chờ TV'}</div>
+          <div class="dash-stat accent" style="cursor:pointer;" onclick="showUnitPopup('${isCum ? 'hapja' : 'chakki'}')">
+            ${infoBtnLeft(isCum ? 'hapja_cum' : 'chakki_ph')}
+            <div class="num">${isCum ? cumHapja.length : phChakki.length}</div>
+            <div class="lbl">${isCum ? '🍎 Trái Hapja' : '🟡 Chakki'}</div>
           </div>
-          <div class="dash-stat yellow" style="cursor:pointer;" onclick="showUnitPopup(${isCum ? "'tvv'" : "'tvv_phase'"})">
-            ${infoBtn(isCum ? 'tv_cum' : 'tv_phase')}
-            <div class="num">${isCum ? tvvFruits.length : phaseTVFruits.length}</div>
-            <div class="lbl">💬 Trái TV</div>
+          <div class="dash-stat yellow" style="cursor:pointer;" onclick="showUnitPopup('${isCum ? 'tvhinh' : 'tvhinh_phase'}')">
+            ${infoBtn(isCum ? 'tvh_cum' : 'tvh_ph')}
+            <div class="num">${isCum ? cumTVHinh.length : phTVHinh.length}</div>
+            <div class="lbl">🖼️ TV Hình</div>
           </div>
-          <div class="dash-stat green" style="cursor:pointer;" onclick="showUnitPopup(${isCum ? "'gvbb'" : "'gvbb_phase'"})">
-            ${infoBtnLeft(isCum ? 'bb_cum' : 'bb_phase')}
-            <div class="num">${isCum ? gvbbFruits.length : phaseBBFruits.length}</div>
-            <div class="lbl">🎓 Trái BB</div>
+          <div class="dash-stat" style="cursor:pointer;border-top-color:var(--accent);" onclick="showUnitPopup('${isCum ? 'grouptv' : 'grouptv_phase'}')">
+            ${infoBtnLeft(isCum ? 'grptv_cum' : 'grptv_ph')}
+            <div class="num" style="color:var(--accent);">${isCum ? cumGroupTV.length : phGroupTV.length}</div>
+            <div class="lbl">💬 Group TV</div>
           </div>
-          <div class="dash-stat pink" style="cursor:pointer;" onclick="showUnitPopup(${isCum ? "'bbgroup'" : "'bbgroup_phase'"})">
-            ${infoBtn(isCum ? 'bbg_cum' : 'bbg_phase')}
-            <div class="num">${isCum ? bbGroups.length : phaseBBGroups.length}</div>
-            <div class="lbl">👥 Group BB</div>
+          <div class="dash-stat green" style="cursor:pointer;" onclick="showUnitPopup('${isCum ? 'groupbb' : 'groupbb_phase'}')">
+            ${infoBtn(isCum ? 'grpbb_cum' : 'grpbb_ph')}
+            <div class="num">${isCum ? cumGroupBB.length : phGroupBB.length}</div>
+            <div class="lbl">🎓 Group BB</div>
           </div>
         </div>`;
     }
     window.renderDashMetrics = renderDashMetrics;
-    renderDashMetrics(mode);
+    renderDashMetrics();
+
 
     // Pre-fetch latest records AND sessions per profile — both needed for latestActivityLabel()
     const allPids = [...new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean))];
@@ -286,7 +317,8 @@ async function loadDashboard() {
     const subEl = document.getElementById('dashSubUnits');
     let subHtml = '';
     function countForCodes(codes) {
-      const fr = unitRoles.filter(r => codes.includes(r.staff_code));
+      // Chỉ đếm hồ sơ Alive mà NDD trực thuộc codes (không tính TVV/GVBB từ đơn vị khác)
+      const fr = unitRoles.filter(r => r.role_type === 'ndd' && codes.includes(r.staff_code));
       // Only count Alive fruits (exclude dropout)
       const alivePids = new Set(
         fr.filter(r => r.fruit_groups?.profiles?.fruit_status !== 'dropout')
@@ -386,21 +418,25 @@ async function loadDashboard() {
     }
 
     // ── SECTION 2: CÁ NHÂN ──
-    let myRoles = [], myHapja = 0;
+    let myRoles = [];
     if (myCode) {
       // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
       const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened,fruit_status,birth_year,dropout_reason,gender,avatar_color),fruit_roles(staff_code,role_type))`);
       const allMyRoles = await rRes.json();
-      // Apply semester filter to personal roles
+      // Apply semester filter to personal roles (includes Alive + Dropout)
       myRoles = allMyRoles.filter(r => inSem(r.fruit_groups?.profile_id));
-      const mhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=eq.${myCode}&select=id${semF}`);
-      myHapja = (await mhRes.json()).length;
     }
     const nddRoles = myRoles.filter(r => r.role_type === 'ndd');
     const tvvRoles = myRoles.filter(r => r.role_type === 'tvv');
     const gvbbRoles = myRoles.filter(r => r.role_type === 'gvbb');
-    // Count unique profiles per role
+    // Count unique profiles per role (Alive + Dropout)
     const countUniq = arr => new Set(arr.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
+    // Total profiles I manage (union of NDD + TVV + GVBB, deduplicated)
+    const allManagedPids = new Set([
+      ...nddRoles.map(r => r.fruit_groups?.profile_id),
+      ...tvvRoles.map(r => r.fruit_groups?.profile_id),
+      ...gvbbRoles.map(r => r.fruit_groups?.profile_id),
+    ].filter(Boolean));
     document.getElementById('dashPersonalMetrics').innerHTML = `
       <div class="dash-card-row">
         <div class="dash-stat"><div class="num" style="color:var(--accent);">${countUniq(nddRoles)}</div><div class="lbl">Trái NDD</div></div>
@@ -408,7 +444,7 @@ async function loadDashboard() {
       </div>
       <div class="dash-card-row">
         <div class="dash-stat"><div class="num" style="color:#f59e0b;">${countUniq(gvbbRoles)}</div><div class="lbl">Trái BB</div></div>
-        <div class="dash-stat"><div class="num" style="color:var(--text2);">${myHapja}</div><div class="lbl">Hapja tôi tạo</div></div>
+        <div class="dash-stat"><div class="num" style="color:#8b5cf6;">${allManagedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
       </div>`;
 
     // ── NDD DETAIL LIST ──
@@ -434,11 +470,10 @@ async function loadDashboard() {
       const seenP = new Set();
       listEl.innerHTML = nddRoles.filter(r => {
         const pid = r.fruit_groups?.profile_id;
-        const p = r.fruit_groups?.profiles;
         if (!pid || seenP.has(pid)) return false;
-        if (p?.fruit_status === 'dropout') return false; // Filter out drop-outs from tracking
         seenP.add(pid); return true;
       }).map(r => {
+
         const p = r.fruit_groups?.profiles;
         const name = p?.full_name || 'N/A';
         const pid = r.fruit_groups?.profile_id;
@@ -474,9 +509,7 @@ async function loadDashboard() {
       const seen2 = new Set();
       const otherItems = [...tvvRoles, ...gvbbRoles].filter(r => {
         const pid = r.fruit_groups?.profile_id;
-        const p = r.fruit_groups?.profiles;
         if (!pid || seen2.has(pid)) return false;
-        if (p?.fruit_status === 'dropout') return false; 
         seen2.add(pid); return true;
       }).map(r => {
         const p = r.fruit_groups?.profiles;

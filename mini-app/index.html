@@ -335,6 +335,8 @@
     
     <div class="field-group"><label>9. Số điện thoại</label><input type="tel" id="hj_sdt" placeholder="..." /></div>
     
+    <div class="field-group"><label>10. Hẹn lịch TV</label><input type="datetime-local" id="hj_hen_tv" /></div>
+    
     <button class="save-btn" onclick="submitCreateHapja()" style="margin-top:12px;">📋 Tạo Phiếu</button>
     <button onclick="closeModal('createHapjaModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
   </div>
@@ -376,10 +378,10 @@
 <div class="modal-overlay" id="chotBBModal">
 <div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title">🎓 Chốt BB</div>
-  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Sau khi chốt BB hãy tạo Group BB, thêm bot vào Group, cho bot quyền Admin, sau đó gõ <code>/menu</code> và làm theo hướng dẫn.</div>
+  <div class="modal-title">🎓 Lập Group TV - BB</div>
+  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Sau khi Lập Group hãy tạo Group Telegram, thêm bot vào Group, cho bot quyền Admin, sau đó gõ <code>/menu</code> và làm theo hướng dẫn.</div>
   <div class="field-group"><label>GVBB phụ trách (tuỳ chọn)</label><input type="text" id="cbb_gvbb" data-list="staffSuggest" placeholder="Có thể gắn sau..." /></div>
-  <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Chốt BB</button>
+  <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Lập Group</button>
   <button onclick="closeModal('chotBBModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
 </div>

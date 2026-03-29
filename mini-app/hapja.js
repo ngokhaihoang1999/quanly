@@ -25,6 +25,7 @@ async function submitCreateHapja() {
   const nlLoLang = document.getElementById('hj_noi_lo_lang')?.value?.trim();
   const nlQuanTam = document.getElementById('hj_su_quan_tam')?.value?.trim();
   const sdt = document.getElementById('hj_sdt')?.value?.trim();
+  const henTV = document.getElementById('hj_hen_tv')?.value;
 
   if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
   if (!ngayChakki) { showToast('⚠️ Vui lòng chọn Ngày chakki'); return; }
@@ -66,7 +67,8 @@ async function submitCreateHapja() {
       hoc_ki: hcHocKi,
       noi_lo_lang: nlLoLang,
       su_quan_tam: nlQuanTam,
-      sdt: sdt
+      sdt: sdt,
+      hen_tv: henTV
     },
     status: 'pending',
     created_by: typeof getEffectiveStaffCode === 'function' ? getEffectiveStaffCode() : 'unknown',
@@ -93,7 +95,7 @@ async function submitCreateHapja() {
     
     const idsToClear = ['hj_ngay_chakki','hj_concept','hj_full_name','hj_birth_year',
     'hj_hinh_thuc','hj_noi_o','hj_nghe_nghiep','hj_tinh_cach_cong_cu','hj_than_tinh_chi_tiet',
-    'hj_hoan_canh_hien_tai','hj_hoc_ki','hj_noi_lo_lang','hj_su_quan_tam','hj_sdt'];
+    'hj_hoan_canh_hien_tai','hj_hoc_ki','hj_noi_lo_lang','hj_su_quan_tam','hj_sdt','hj_hen_tv'];
     idsToClear.forEach(id => {
       if(document.getElementById(id)) document.getElementById(id).value = '';
     });
@@ -156,6 +158,7 @@ async function openHapjaDetail(id) {
       ['Nỗi lo', d.noi_lo_lang || d.noi_lo],
       ['Sự quan tâm', d.su_quan_tam],
       ['SĐT', d.sdt],
+      ['Hẹn lịch TV', d.hen_tv ? new Date(d.hen_tv).toLocaleString('vi-VN') : ''],
       ['Trạng thái', h.status === 'pending' ? '⏳ Chờ duyệt' : h.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'],
       ['Ngày tạo', date],
       ['Người tạo', h.created_by],
@@ -228,6 +231,16 @@ async function approveHapja(id) {
         };
         await sbFetch('/rest/v1/form_hanh_chinh', { method:'POST', body: JSON.stringify({ profile_id: newPid, data: infoData }) });
       } catch(e) { console.warn('form_hanh_chinh creation:', e); }
+
+      // Auto-create Chốt TV lần 1 
+      try {
+        await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
+          profile_id: newPid,
+          session_number: 1,
+          scheduled_at: d.hen_tv || null,
+          created_by: getEffectiveStaffCode()
+        })});
+      } catch (e) { console.warn('Chot TV lan 1 fallback:', e); }
     }
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newPid }) });
     

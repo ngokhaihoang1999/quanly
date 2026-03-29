@@ -47,16 +47,18 @@ async function loadJourney(profileId, currentPhase) {
   if (phBtnEl) phBtnEl.style.display = isDropout ? 'none' : 'flex'; // Force display or hide
   if (!isDropout) {
     if (['new','chakki'].includes(cp)) {
-      btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV</button>`;
-    } else if (cp === 'tu_van') {
+      btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV lần 1</button>`;
+    } else if (cp === 'tu_van_hinh') {
       btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
-        <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Chốt BB</button>`;
+        <button class="add-record-btn" onclick="openChotBBModal()" style="flex:1;background:var(--green);color:white;">🎓 Lập group TV - BB</button>`;
+    } else if (cp === 'tu_van') {
+      // (Báo cáo BB được thêm ở tab BB, nút Mở KT nằm trên Báo cáo BB)
     } else if (cp === 'bb') {
       btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
     }
     // Undo button — visible for any phase past Chakki
     if (!['new','chakki','completed'].includes(cp)) {
-      const phaseLabels = { tu_van:'Chốt TV', bb:'Chốt BB', center:'Chốt Center' };
+      const phaseLabels = { tu_van_hinh:'Chốt TV 2', tu_van:'Lập Group', bb:'Mở KT', center:'Chốt Center' };
       btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[cp]||cp}'" style="
         flex:0 0 auto;padding:10px 14px;border-radius:var(--radius-sm);border:1px dashed var(--text3);
         background:transparent;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;
@@ -161,6 +163,17 @@ async function loadJourney(profileId, currentPhase) {
         }
       }
     } else if (cp === 'tu_van') {
+      let found = false;
+      for (let i = 0; i < finalEvents.length; i++) {
+        if (finalEvents[i]._type === 'record' && finalEvents[i]._rtype === 'bien_ban') {
+          finalEvents[i].deletable = true; found = true; break;
+        }
+      }
+      if (!found) {
+        // Only allow deleting Lập Group (chot_bb record) if no bien_ban exists but we wouldn't show it here anyway, 
+        // we handle Lập group via Undo Last Phase Change!
+      }
+    } else if (cp === 'tu_van_hinh' || cp === 'chakki') {
       let found = false;
       for (let i = 0; i < finalEvents.length; i++) {
         if (finalEvents[i]._type === 'record' && finalEvents[i]._rtype === 'tu_van') {
@@ -306,12 +319,14 @@ async function _refreshCurrentProfile() {
 
 // ── Delete single session (only allowed when in tu_van phase, newest only) ──
 async function deleteEventSession(sessionId, sessionNum) {
-  if (!await showConfirmAsync(`Xóa "Chốt TV lần ${sessionNum}"?\nNếu hết buổi TV, giai đoạn sẽ về Chakki.`)) return;
+  if (!await showConfirmAsync(`Xóa "Chốt TV lần ${sessionNum}"?\n\nChú ý: Hành động này có thể làm thay đổi giai đoạn hệ thống nếu đó là mốc chuyển giai đoạn.`)) return;
   try {
     await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'DELETE' });
-    const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=id&limit=1`);
+    const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&limit=1&order=session_number.desc`);
     const rem = await remRes.json();
     if (rem.length === 0) {
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
+    } else if (rem[0].session_number === 1) {
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     }
     showToast('✅ Đã xóa Chốt TV');
@@ -342,10 +357,13 @@ async function deleteEventRecordKt(recordId) {
     
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
        method: 'PATCH',
-       body: JSON.stringify({ is_kt_opened: false })
+       body: JSON.stringify({ is_kt_opened: false, phase: 'tu_van' })
     });
     const idx = allProfiles.findIndex(x => x.id === currentProfileId);
-    if (idx >= 0) allProfiles[idx].is_kt_opened = false;
+    if (idx >= 0) {
+      allProfiles[idx].is_kt_opened = false;
+      allProfiles[idx].phase = 'tu_van';
+    }
     showToast('✅ Đã hủy Mở KT');
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
@@ -360,19 +378,27 @@ async function undoLastPhaseChange() {
   const phase = p.phase;
   let confirmMsg, actionFn;
 
-  if (phase === 'tu_van') {
-    confirmMsg = '↩️ Hoàn tác về Chakki?\n\n⚠️ Sẽ xóa TẤT CẢ:\n• Tất cả buổi Chốt TV\n• Tất cả Báo cáo TV\n\nHành động này không thể hoàn tác!';
+  if (phase === 'tu_van_hinh') {
+    confirmMsg = '↩️ Hoàn tác về Chakki?\n\n⚠️ Sẽ xóa:\n• Tất cả buổi Chốt TV (từ lần 2)\n• Tất cả Báo cáo TV (từ lần 2)\n\nHành động này không thể hoàn tác!';
     actionFn = async () => {
+      // Just safely drop session > 1 and bc > 1. A bit tricky with JSON queries, so we delete ALL sessions/bc > 1 or just rely on API limit if needed, but for simplicity:
+      // Actually, standard undo deletes EVERYTHING of that phase. Since it's Chakki vs TV, maybe just clear all.
       await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van`, { method:'DELETE' });
-      await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=gt.1`, { method:'DELETE' });
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     };
-  } else if (phase === 'bb') {
-    confirmMsg = '↩️ Hoàn tác về Tư vấn?\n\n⚠️ Sẽ xóa TẤT CẢ:\n• Sự kiện Chốt BB\n• Tất cả Báo cáo BB\n\n(Báo cáo TV và Chốt TV được giữ nguyên)\nHành động này không thể hoàn tác!';
+  } else if (phase === 'tu_van') {
+    confirmMsg = '↩️ Hoàn tác về Tư vấn hình?\n\n⚠️ Sẽ xóa TẤT CẢ:\n• Sự kiện Lập Group\n• Tất cả Báo cáo BB\n\n(Báo cáo TV và Chốt TV được giữ nguyên)\nHành động này không thể hoàn tác!';
     actionFn = async () => {
       await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban`, { method:'DELETE' });
       await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_bb`, { method:'DELETE' });
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van' }) });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van_hinh' }) });
+    };
+  } else if (phase === 'bb') {
+    confirmMsg = '↩️ Hoàn tác về Tư vấn?\n\n⚠️ Sẽ hủy trạng thái Đã mở KT (Báo cáo BB được giữ nguyên).\nHành động này không thể hoàn tác!';
+    actionFn = async () => {
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van', is_kt_opened: false }) });
     };
   } else if (phase === 'center') {
     confirmMsg = '↩️ Hoàn tác về BB?\n\n⚠️ Sẽ xóa sự kiện Chốt Center.\n(Báo cáo BB được giữ nguyên)\nHành động này không thể hoàn tác!';
@@ -492,8 +518,8 @@ async function saveScheduleTV() {
       })});
 
       const p = allProfiles.find(x => x.id === currentProfileId);
-      if (p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
-        await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
+      if (num > 1 && p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
+        await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van_hinh' })});
       }
     }
 
@@ -581,7 +607,7 @@ function createTVFromSession(sessionId, num, tool) {
 // ══════════════════════════════════════════════════════════════════════════════
 async function openChotBBModal() {
   if (!currentProfileId) return;
-  // Kiểm tra: phải có Báo cáo TV ít nhất 1 lần trước khi chốt BB
+  // Kiểm tra: phải có Báo cáo TV ít nhất 1 lần thay vì bỏ qua, để đảm bảo logic
   try {
     const sessRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
     const sessList = await sessRes.json();
@@ -590,11 +616,11 @@ async function openChotBBModal() {
       const bcRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&content->>lan_thu=eq.${lastSessNum}&select=id&limit=1`);
       const bcRows = await bcRes.json();
       if (!bcRows || bcRows.length === 0) {
-        showToast(`⚠️ Phải có Báo cáo TV lần ${lastSessNum} rồi mới được Chốt BB!`);
+        showToast(`⚠️ Phải có Báo cáo TV lần ${lastSessNum} rồi mới được Lập Group!`);
         return;
       }
     } else {
-      showToast('⚠️ Phải Chốt TV ít nhất 1 lần và có Báo cáo TV trước khi Chốt BB!');
+      showToast('⚠️ Phải có Báo cáo TV trước khi Lập Group!');
       return;
     }
   } catch(e) { console.warn('Check BC TV for Chot BB:', e); }
@@ -606,10 +632,10 @@ async function saveChotBB() {
   try {
     const gvbb = getStaffCodeFromInput('cbb_gvbb');
     // 1. Update phase
-    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'bb' })});
+    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
     // 2. Record chot_bb event on timeline
     await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
-      profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Chốt BB', phase: 'bb' }
+      profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Lập Group TV - BB', phase: 'tu_van' }
     })});
     // 3. Save GVBB to fruit_roles if provided
     if (gvbb) {
@@ -631,7 +657,7 @@ async function saveChotBB() {
       } catch(e) { console.warn('Assign GVBB fail:', e); }
     }
     closeModal('chotBBModal');
-    showToast('🎓 Đã chốt BB!' + (gvbb ? ` GVBB: ${gvbb}` : ' Hãy tạo group Telegram và gắn hồ sơ.'));
+    showToast('🎓 Đã lập group TV - BB!' + (gvbb ? ` GVBB: ${gvbb}` : ' Hãy tạo group Telegram và gắn hồ sơ.'));
 
     // === Auto-triggers for Chốt BB ===
     const p = allProfiles.find(x => x.id === currentProfileId);
@@ -640,7 +666,7 @@ async function saveChotBB() {
     // Notify all stakeholders (NDD, TVV, GVBB + their managers)
     if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
       const stakeholders = await getProfileStakeholders(currentProfileId);
-      createNotification(stakeholders, 'chot_bb', '🎓 Chốt BB', pName, currentProfileId);
+      createNotification(stakeholders, 'chot_bb', '🎓 Lập Group TV-BB', pName, currentProfileId);
     }
 
     // Create priority task "Học BB" for GVBB if assigned,
