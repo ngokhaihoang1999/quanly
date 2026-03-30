@@ -232,7 +232,7 @@ async function openProfile(p) {
   const tabMM = document.getElementById('tabMindmap');
   const showTabTV = canEditTV && !!tvvCode;
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
-  if (tabBB) tabBB.style.display = (canEditBB && ['bb','center','completed'].includes(ph)) ? '' : 'none';
+  if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
   clearFormFields();
   loadInfoSheet(p.id);

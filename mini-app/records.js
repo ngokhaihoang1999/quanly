@@ -70,6 +70,27 @@ async function loadJourney(profileId, currentPhase) {
   }
   phBtnEl.innerHTML = btnHtml;
 
+  const ktBox = document.getElementById('ktStatusBox');
+  const ktText = document.getElementById('ktStatusText');
+  const btnMoKT = document.getElementById('btnMoKT');
+  const pData = allProfiles.find(x => x.id === profileId);
+  if (ktBox && pData) {
+    if (['tu_van','bb','center','completed'].includes(cp)) {
+      ktBox.style.display = 'flex';
+      if (pData.is_kt_opened) {
+        ktText.textContent = 'Đã mở KT';
+        ktText.style.color = 'var(--green)';
+        btnMoKT.style.display = 'none';
+      } else {
+        ktText.textContent = 'Chưa mở KT';
+        ktText.style.color = 'var(--text3)';
+        btnMoKT.style.display = cp === 'tu_van' ? 'block' : 'none';
+      }
+    } else {
+      ktBox.style.display = 'none';
+    }
+  }
+
   // Group BB info bar removed — now shown in profile header card only
   const groupBarEl = document.getElementById('bbGroupBar');
   if (groupBarEl) groupBarEl.style.display = 'none';
@@ -129,7 +150,7 @@ async function loadJourney(profileId, currentPhase) {
         _buoiThu = r.content?.buoi_thu;
         icon='📋'; text=`Báo cáo BB${_buoiThu?' buổi '+_buoiThu:''}`;
       }
-      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Chốt BB'; isMajor = true; }
+      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Lập Group TV - BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; }
       else if (r.record_type === 'note')        { return; }
@@ -727,6 +748,8 @@ async function saveChotBB() {
     }
 
     await _refreshCurrentProfile();
+    const tbBtn = document.getElementById('tabBB');
+    if (tbBtn && typeof switchFormTab === 'function') switchFormTab(tbBtn, 'bienBan');
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
@@ -1027,4 +1050,35 @@ async function deleteNote(noteId) {
     showToast('🗑️ Đã xoá ghi chú');
     if (currentProfileId) loadNotes(currentProfileId);
   } catch(e) { showToast('❌ Lỗi xoá'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MỞ KT
+// ══════════════════════════════════════════════════════════════════════════════
+async function confirmMoKT() {
+  if (!currentProfileId) return;
+  if (!await showConfirmAsync('Xác nhận đã Mở Kinh Thánh cho hồ sơ này? (Chuyển sang giai đoạn BB)')) return;
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  try {
+    // 1. Update phase to bb and is_kt_opened to true
+    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
+      method:'PATCH', 
+      body: JSON.stringify({ phase: 'bb', is_kt_opened: true })
+    });
+    // 2. Record event on timeline
+    await sbFetch('/rest/v1/records', { 
+      method:'POST', 
+      body: JSON.stringify({
+        profile_id: currentProfileId, 
+        record_type: 'mo_kt', 
+        content: { label: 'Đã mở Kinh Thánh', phase: 'bb' }
+      })
+    });
+    showToast('🚀 Đã chuyển sang giai đoạn BB!');
+    await fetchRecordsAndUpdate(currentProfileId);
+  } catch (e) {
+    showToast('❌ Lỗi cập nhật: ' + e.message);
+  } finally {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
 }

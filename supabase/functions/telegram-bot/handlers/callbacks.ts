@@ -15,28 +15,27 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ============ PRIVATE MENU BUTTON CALLBACKS ============
 
-  // btn_assign_pos — Chỉ định chức vụ (pick staff first)
+  // btn_assign_pos  EChềEđịnh chức vụ (pick staff first)
   if (cbData === 'btn_assign_pos') {
-    if (!canAssignPosition(pos)) return sendText(chatId, `⛔ Không có quyền chỉ định chức vụ.`);
+    if (!canAssignPosition(pos)) return sendText(chatId, `⛁EKhông có quyền chềEđịnh chức vụ.`);
     const { data: staffList } = await supabase.from('staff')
       .select('staff_code, full_name, position')
       .order('staff_code', { ascending: true })
       .limit(30);
-    if (!staffList || staffList.length === 0) return sendText(chatId, `❌ Chưa có TĐ nào.`);
+    if (!staffList || staffList.length === 0) return sendText(chatId, `❁EChưa có TāEnào.`);
     const kb = staffList.map((s: any) => [{
-      text: `${s.full_name} (${s.staff_code}) — ${POSITION_LABELS[s.position] || s.position}`,
+      text: `${s.full_name} (${s.staff_code})  E${POSITION_LABELS[s.position] || s.position}`,
       callback_data: `assign_pos_pick_${s.staff_code}`
     }]);
-    await sendKeyboard(chatId, `Chọn TĐ để chỉ định chức vụ:`, kb);
+    await sendKeyboard(chatId, `Chọn TāEđềEchềEđịnh chức vụ:`, kb);
     return;
   }
 
-  // assign_pos_pick_{code} — Chọn chức vụ mới cho TĐ
-  if (cbData.startsWith('assign_pos_pick_')) {
-    if (!canAssignPosition(pos)) return sendText(chatId, `⛔ Không có quyền.`);
+  // assign_pos_pick_{code}  EChọn chức vụ mới cho TāE  if (cbData.startsWith('assign_pos_pick_')) {
+    if (!canAssignPosition(pos)) return sendText(chatId, `⛁EKhông có quyền.`);
     const targetCode = cbData.replace('assign_pos_pick_', '');
     const { data: target } = await supabase.from('staff').select('*').eq('staff_code', targetCode).single();
-    if (!target) return sendText(chatId, `❌ Không tìm thấy mã *${targetCode}*.`);
+    if (!target) return sendText(chatId, `❁EKhông tìm thấy mã *${targetCode}*.`);
     const assignable = Object.keys(POSITION_LEVELS).filter(p => posLevel(p) < posLevel(pos) && p !== 'admin');
     const kb = assignable.map(p => [{ text: POSITION_LABELS[p] || p, callback_data: `setpos_${targetCode}_${p}` }]);
     await sendKeyboard(chatId,
@@ -44,12 +43,12 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // btn_structure — Xem cơ cấu tổ chức
+  // btn_structure  EXem cơ cấu tềEchức
   if (cbData === 'btn_structure') {
-    if (!canDefineStructure(pos)) return sendText(chatId, `⛔ Chỉ Admin/YJYN được xem cơ cấu.`);
+    if (!canDefineStructure(pos)) return sendText(chatId, `⛁EChềEAdmin/YJYN được xem cơ cấu.`);
     const { data: areas } = await supabase.from('areas').select('*, org_groups(*, teams(*))');
-    if (!areas || areas.length === 0) return sendText(chatId, `📐 *Cơ cấu tổ chức*\n\nChưa có khu vực nào.\nTạo khu vực/nhóm/tổ trong Mini App.`);
-    let msg = `📐 *Cơ cấu tổ chức*\n\n`;
+    if (!areas || areas.length === 0) return sendText(chatId, `📐 *Cơ cấu tềEchức*\n\nChưa có khu vực nào.\nTạo khu vực/nhóm/tềEtrong Mini App.`);
+    let msg = `📐 *Cơ cấu tềEchức*\n\n`;
     for (const area of areas) {
       msg += `🏢 *${area.name}*\n`;
       if (area.org_groups) {
@@ -63,20 +62,20 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // btn_support — Liên hệ Admin (prompt user to type message)
+  // btn_support  ELiên hềEAdmin (prompt user to type message)
   if (cbData === 'btn_support') {
     await sendText(chatId,
-      `💬 *Liên hệ Admin*\n\nĐể gửi tin nhắn đến Admin, hãy gõ:\n\`/support [nội dung]\`\n\nVD: \`/support Tôi không đăng nhập được\``);
+      `💬 *Liên hềEAdmin*\n\nĐềEgửi tin nhắn đến Admin, hãy gõ:\n\`/support [nội dung]\`\n\nVD: \`/support Tôi không đăng nhập được\``);
     return;
   }
 
   // ============ GROUP MENU CALLBACKS ============
 
 
-  // menu_info — Xem thông tin group
+  // menu_info  EXem thông tin group
   if (cbData === 'menu_info') {
     const { data: fg } = await supabase.from('fruit_groups').select('*, profiles(full_name)').eq('telegram_group_id', chatId).single();
-    if (!fg) return sendText(chatId, `❌ Group này chưa được đăng ký.`);
+    if (!fg) return sendText(chatId, `❁EGroup này chưa được đăng ký.`);
     const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
     const { data: roles } = await supabase.from('fruit_roles').select('*, staff!fruit_roles_staff_code_fkey(full_name)').eq('fruit_group_id', fg.id);
     let rolesText = (roles && roles.length > 0) ? roles.map((r: any) => `  • ${ROLE_LABELS[r.role_type]}: ${r.staff_code}`).join('\n') : '  Chưa có vai trò nào.';
@@ -84,10 +83,10 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // menu_view_profile — Xem hồ sơ đầy đủ
+  // menu_view_profile  EXem hềEsơ đầy đủ
   if (cbData === 'menu_view_profile') {
     const { data: fg } = await supabase.from('fruit_groups').select('*, profiles(*)').eq('telegram_group_id', chatId).single();
-    if (!fg || !fg.profiles) return sendText(chatId, `❌ Group này chưa được gắn hồ sơ nào.`);
+    if (!fg || !fg.profiles) return sendText(chatId, `❁EGroup này chưa được gắn hềEsơ nào.`);
     
     const p = fg.profiles;
     const info = p.info_sheet || {};
@@ -110,13 +109,13 @@ export async function handleCallback(update: any, staffData: any) {
     const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : fg.level === 'bb' ? 'BB' : fg.level || 'N/A';
     const isKT = p.is_kt_opened;
     const showKT = ['bb', 'center', 'completed'].includes(p.phase);
-    const ktText = showKT ? (isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT') : '';
+    const ktText = showKT ? (isKT ? '📖 Đã mềEKT' : '📕 Chưa mềEKT') : '';
     
     const { data: tvRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'tu_van');
     const { data: bbRecords } = await supabase.from('records').select('id').eq('profile_id', p.id).eq('record_type', 'bien_ban');
     
     const profileText =
-      `🍎 *Hồ sơ Trái quả*\n` +
+      `🍎 *HềEsơ Trái quả*\n` +
       `───────────────────\n` +
       `*Tên:* ${p.full_name}\n` +
       `*Sinh năm:* ${p.birth_year || 'N/A'}   *Giới tính:* ${genderLabel}\n` +
@@ -131,9 +130,9 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // menu_link_profile — Gắn hồ sơ
+  // menu_link_profile  EGắn hềEsơ
   if (cbData === 'menu_link_profile') {
-    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
+    if (!canLinkProfile(pos)) return sendText(chatId, `⛁EQuyền truy cập bềEtừ chối.`);
     // Lấy danh sách profile BB chưa gắn group (exclude -Date.now() placeholders)
     const { data: linkedGroups } = await supabase.from('fruit_groups')
       .select('profile_id').not('profile_id', 'is', null)
@@ -142,47 +141,47 @@ export async function handleCallback(update: any, staffData: any) {
     const linkedIds = linkedGroups?.map((g: any) => g.profile_id).filter(Boolean) || [];
     let query = supabase.from('profiles')
       .select('id, full_name, phase')
-      .in('phase', ['bb', 'center'])
+      .in('phase', ['tu_van', 'bb', 'center'])
       .order('created_at', { ascending: false })
       .limit(20);
     if (linkedIds.length > 0) {
       query = query.not('id', 'in', `(${linkedIds.join(',')})`);
     }
     const { data: profiles } = await query;
-    if (!profiles || profiles.length === 0) return sendText(chatId, `ℹ️ Chưa có hồ sơ nào ở giai đoạn BB cần gắn group.`);
+    if (!profiles || profiles.length === 0) return sendText(chatId, `ℹ�E�EChưa có hềEsơ nào ềEgiai đoạn BB cần gắn group.`);
     const keyboard = profiles.map((p: any) => [{ text: `🎓 ${p.full_name}`, callback_data: `link_fg_${p.id}` }]);
-    await sendKeyboard(chatId, `Chọn hồ sơ BB để gắn cho group này:`, keyboard);
+    await sendKeyboard(chatId, `Chọn hềEsơ BB đềEgắn cho group này:`, keyboard);
     return;
   }
 
-  // menu_open_kt — Xác nhận mở KT
+  // menu_open_kt  EXác nhận mềEKT
   if (cbData === 'menu_open_kt') {
     // Check if group is registered and attached to a profile
     const { data: fg } = await supabase.from('fruit_groups')
       .select('profile_id, profiles(full_name, phase)').eq('telegram_group_id', chatId).single();
     if (!fg || !fg.profile_id) {
-      return sendText(chatId, `❌ Group chưa gắn hồ sơ nào.`);
+      return sendText(chatId, `❁EGroup chưa gắn hềEsơ nào.`);
     }
     const p = fg.profiles;
     if (!['bb', 'center', 'completed'].includes(p.phase)) {
-      return sendText(chatId, `⚠️ Hồ sơ *${p.full_name}* chưa đến giai đoạn BB. Bấm "Xem thông tin Group" để kiểm tra.`);
+      return sendText(chatId, `⚠�E�EHềEsơ *${p.full_name}* chưa đến giai đoạn BB. Bấm "Xem thông tin Group" đềEkiểm tra.`);
     }
     
     // Check permission logic: similar to what we did in mini-app toggles.
     // For simplicity, any admin/TVV/GVBB/NDD can toggle it if they can reach here.
     const keyboard = [
-      [{ text: '✅ Chắc chắn', callback_data: `action_confirm_kt_${fg.profile_id}` }],
-      [{ text: '❌ Huỷ bỏ', callback_data: 'action_cancel_kt' }]
+      [{ text: '✁EChắc chắn', callback_data: `action_confirm_kt_${fg.profile_id}` }],
+      [{ text: '❁EHuỷ bềE, callback_data: 'action_cancel_kt' }]
     ];
-    await sendKeyboard(chatId, `❓ Bạn có chắc chắn muốn xác nhận đã Mở KT cho hồ sơ *${p.full_name}* không?`, keyboard);
+    await sendKeyboard(chatId, `❁EBạn có chắc chắn muốn xác nhận đã MềEKT cho hềEsơ *${p.full_name}* không?`, keyboard);
     return;
   }
 
-  // menu_assign_role — Xác nhận GVBB
+  // menu_assign_role  EXác nhận GVBB
   if (cbData === 'menu_assign_role') {
-    if (!canAssignRole(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền xác nhận GVBB.`);
+    if (!canAssignRole(pos)) return sendText(chatId, `⛁EQuyền truy cập bềEtừ chối. Chức vụ hiện tại không có quyền xác nhận GVBB.`);
     const admins = await getChatAdmins(chatId);
-    if (!admins || !admins.length) return sendText(chatId, `❌ Không thể lấy danh sách quản trị viên của group.`);
+    if (!admins || !admins.length) return sendText(chatId, `❁EKhông thềElấy danh sách quản trềEviên của group.`);
     
     const adminIds = admins.filter((a: any) => !a.user.is_bot).map((a: any) => a.user.id);
     const { data: staffList } = await supabase.from('staff').select('telegram_id, staff_code, full_name').in('telegram_id', adminIds);
@@ -198,22 +197,22 @@ export async function handleCallback(update: any, staffData: any) {
         kb.push([{ text: staff.staff_code, callback_data: `assign_gvbb_${staff.staff_code}` }]);
       }
     }
-    if (kb.length === 0) return sendText(chatId, `❌ Không tìm thấy TĐ nào đã đăng ký trong group này.`);
-    await sendKeyboard(chatId, `Chọn TĐ đảm nhận vai trò *GVBB*:`, kb);
+    if (kb.length === 0) return sendText(chatId, `❁EKhông tìm thấy TāEnào đã đăng ký trong group này.`);
+    await sendKeyboard(chatId, `Chọn TāEđảm nhận vai trò *GVBB*:`, kb);
     return;
   }
 
   // ============ ACTION CALLBACKS ============
 
-  // link_fg_{profileId} — Gắn hồ sơ cho group
+  // link_fg_{profileId}  EGắn hềEsơ cho group
   if (cbData.startsWith('link_fg_')) {
     const profileId = cbData.replace('link_fg_', '');
     // Validate profile is BB phase
     const { data: profile } = await supabase.from('profiles').select('full_name, phase').eq('id', profileId).single();
-    if (!profile) return sendText(chatId, `❌ Không tìm thấy hồ sơ.`);
+    if (!profile) return sendText(chatId, `❁EKhông tìm thấy hềEsơ.`);
     if (!['bb', 'center', 'completed'].includes(profile.phase)) {
       await editMessageReplyMarkup(chatId, messageId, null);
-      return sendText(chatId, `⚠️ Hồ sơ *${profile.full_name}* chưa ở giai đoạn BB — không thể gắn group BB.`);
+      return sendText(chatId, `⚠�E�EHềEsơ *${profile.full_name}* chưa ềEgiai đoạn BB  Ekhông thềEgắn group BB.`);
     }
     await editMessageReplyMarkup(chatId, messageId, null);
 
@@ -226,7 +225,7 @@ export async function handleCallback(update: any, staffData: any) {
         telegram_group_title: cbQuery.message.chat.title || null,
         level: 'bb'
       }).select().single();
-      if (!newFg) return sendText(chatId, `❌ Không thể đăng ký group. Hãy thử gõ /start trước.`);
+      if (!newFg) return sendText(chatId, `❁EKhông thềEđăng ký group. Hãy thử gõ /start trước.`);
       fg = newFg;
     }
 
@@ -261,9 +260,9 @@ export async function handleCallback(update: any, staffData: any) {
 
     await supabase.from('fruit_groups').update(updatePayload).eq('id', fg.id);
 
-    let msg = `✅ Đã gắn hồ sơ *${profile.full_name}* cho group này.`;
+    let msg = `✁EĐã gắn hềEsơ *${profile.full_name}* cho group này.`;
     if (!finalLink) {
-      msg += `\n\n⚠️ Bot chưa phải là admin (hoặc thiếu quyền Mời người dùng) nên không thể Tự Động lấy Link Group.\n\nHãy dùng lệnh sau để Mini App có thể mở Group:\n\`/setlink [Link_mời_vào_nhóm_này]\``;
+      msg += `\n\n⚠�E�EBot chưa phải là admin (hoặc thiếu quyền Mời người dùng) nên không thềETự Động lấy Link Group.\n\nHãy dùng lệnh sau đềEMini App có thềEmềEGroup:\n\`/setlink [Link_mời_vào_nhóm_này]\``;
     }
     await sendText(chatId, msg);
     return;
@@ -273,7 +272,7 @@ export async function handleCallback(update: any, staffData: any) {
   // action_cancel_kt
   if (cbData === 'action_cancel_kt') {
     await editMessageReplyMarkup(chatId, messageId, null);
-    await sendText(chatId, `❌ Đã huỷ thao tác.`);
+    await sendText(chatId, `❁EĐã huỷ thao tác.`);
     return;
   }
 
@@ -283,26 +282,26 @@ export async function handleCallback(update: any, staffData: any) {
     await editMessageReplyMarkup(chatId, messageId, null);
     
     const { data: p } = await supabase.from('profiles').select('full_name').eq('id', profileId).single();
-    if (!p) return sendText(chatId, '❌ Không tìm thấy hồ sơ.');
+    if (!p) return sendText(chatId, '❁EKhông tìm thấy hềEsơ.');
 
     await supabase.from('profiles')
       .update({ is_kt_opened: true })
       .eq('id', profileId);
       
-    await sendText(chatId, `✅ Đã xác nhận **Mở KT** cho hồ sơ *${p.full_name}*.`);
+    await sendText(chatId, `✁EĐã xác nhận **MềEKT** cho hềEsơ *${p.full_name}*.`);
     return;
   }
 
-  // assign_gvbb_{staffCode} — Assign GVBB role
+  // assign_gvbb_{staffCode}  EAssign GVBB role
   if (cbData.startsWith('assign_gvbb_')) {
     const targetCode = cbData.replace('assign_gvbb_', '');
     await editMessageReplyMarkup(chatId, messageId, null);
     const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
-    if (!fg) return sendText(chatId, `❌ Group chưa đăng ký.`);
+    if (!fg) return sendText(chatId, `❁EGroup chưa đăng ký.`);
     await supabase.from('fruit_roles').upsert({
       fruit_group_id: fg.id, staff_code: targetCode, role_type: 'gvbb', assigned_by: staffData.staff_code
     }, { onConflict: 'fruit_group_id,staff_code,role_type' });
-    await sendText(chatId, `✅ Đã xác nhận *${targetCode}* đảm nhận vai trò *GVBB* trong group này.`);
+    await sendText(chatId, `✁EĐã xác nhận *${targetCode}* đảm nhận vai trò *GVBB* trong group này.`);
     return;
   }
 
@@ -312,10 +311,10 @@ export async function handleCallback(update: any, staffData: any) {
   if (cbData === "list_profiles") {
     const { data: profiles } = await supabase.from('profiles').select('*').limit(10);
     if (!profiles || profiles.length === 0) {
-      await sendText(chatId, "Chưa có hồ sơ nào."); return;
+      await sendText(chatId, "Chưa có hềEsơ nào."); return;
     }
     const kb = profiles.map((p: any) => [{ text: `👤 ${p.full_name}`, callback_data: `view_p_${p.id}` }]);
-    await sendKeyboard(chatId, "📋 Danh sách hồ sơ:", kb);
+    await sendKeyboard(chatId, "📋 Danh sách hềEsơ:", kb);
     return;
   }
 
@@ -323,7 +322,7 @@ export async function handleCallback(update: any, staffData: any) {
   if (cbData.startsWith("view_p_")) {
     const profileId = cbData.replace("view_p_", "");
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', profileId).single();
-    if (!profile) { await sendText(chatId, "❌ Không tìm thấy."); return; }
+    if (!profile) { await sendText(chatId, "❁EKhông tìm thấy."); return; }
     const { count: tvvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', profileId).eq('record_type', 'tu_van');
     const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', profileId).eq('record_type', 'bien_ban');
     let m = `👤 *${profile.full_name}*\n`;
@@ -336,10 +335,10 @@ export async function handleCallback(update: any, staffData: any) {
 
   // approve_hapja_{id}
   if (cbData.startsWith('approve_hapja_')) {
-    if (!canApproveHapja(pos)) { await sendText(chatId, `⛔ Không có quyền duyệt.`); return; }
+    if (!canApproveHapja(pos)) { await sendText(chatId, `⛁EKhông có quyền duyệt.`); return; }
     const hapjaId = cbData.replace('approve_hapja_', '');
     const { data: hapja } = await supabase.from('check_hapja').select('*').eq('id', hapjaId).single();
-    if (!hapja || hapja.status !== 'pending') { await sendText(chatId, `⚠️ Phiếu không tồn tại hoặc đã xử lý.`); return; }
+    if (!hapja || hapja.status !== 'pending') { await sendText(chatId, `⚠�E�EPhiếu không tồn tại hoặc đã xử lý.`); return; }
     const { data: newProfile } = await supabase.from('profiles').insert({
       full_name: hapja.full_name, birth_year: hapja.birth_year, gender: hapja.gender,
       created_by: hapja.created_by, phase: 'chakki'
@@ -348,61 +347,61 @@ export async function handleCallback(update: any, staffData: any) {
       status: 'approved', approved_by: staffData.staff_code,
       approved_at: new Date().toISOString(), profile_id: newProfile?.id
     }).eq('id', hapjaId);
-    await sendText(chatId, `✅ Đã duyệt phiếu Check Hapja cho *${hapja.full_name}*!\nHồ sơ Trái quả đã được tạo tự động.`);
+    await sendText(chatId, `✁EĐã duyệt phiếu Check Hapja cho *${hapja.full_name}*!\nHềEsơ Trái quả đã được tạo tự động.`);
     const { data: creator } = await supabase.from('staff').select('telegram_id').eq('staff_code', hapja.created_by).single();
     if (creator?.telegram_id) {
-      await sendText(creator.telegram_id, `✅ Phiếu Check Hapja cho *${hapja.full_name}* đã được *duyệt*!`);
+      await sendText(creator.telegram_id, `✁EPhiếu Check Hapja cho *${hapja.full_name}* đã được *duyệt*!`);
     }
     return;
   }
 
   // reject_hapja_{id}
   if (cbData.startsWith('reject_hapja_')) {
-    if (!canApproveHapja(pos)) { await sendText(chatId, `⛔ Không có quyền duyệt.`); return; }
+    if (!canApproveHapja(pos)) { await sendText(chatId, `⛁EKhông có quyền duyệt.`); return; }
     const hapjaId = cbData.replace('reject_hapja_', '');
     await supabase.from('check_hapja').update({
       status: 'rejected', approved_by: staffData.staff_code, approved_at: new Date().toISOString()
     }).eq('id', hapjaId);
-    await sendText(chatId, `❌ Đã từ chối phiếu Check Hapja.`);
+    await sendText(chatId, `❁EĐã từ chối phiếu Check Hapja.`);
     return;
   }
 
   // ============ ADMIN CALLBACKS ============
 
-  // approve_{staffCode} — Approve TG change
+  // approve_{staffCode}  EApprove TG change
   if (isAdmin && cbData.startsWith("approve_")) {
     const staffCode = cbData.replace("approve_", "");
     const { data: ps } = await supabase.from('staff').select('*').eq('staff_code', staffCode).single();
-    if (!ps?.pending_telegram_id) { await sendText(chatId, "⚠️ Không có yêu cầu pending."); return; }
+    if (!ps?.pending_telegram_id) { await sendText(chatId, "⚠�E�EKhông có yêu cầu pending."); return; }
     await supabase.from('staff')
       .update({ telegram_id: ps.pending_telegram_id, pending_telegram_id: null, pending_requested_at: null })
       .eq('staff_code', staffCode);
-    await sendText(chatId, `✅ Đã duyệt đổi Telegram cho *${ps.full_name}*.`);
-    await sendText(ps.pending_telegram_id, `✅ Yêu cầu đổi Telegram đã được *duyệt*! Dùng /start.`);
+    await sendText(chatId, `✁EĐã duyệt đổi Telegram cho *${ps.full_name}*.`);
+    await sendText(ps.pending_telegram_id, `✁EYêu cầu đổi Telegram đã được *duyệt*! Dùng /start.`);
     return;
   }
   if (isAdmin && cbData.startsWith("deny_")) {
     const staffCode = cbData.replace("deny_", "");
     const { data: ps } = await supabase.from('staff').select('*').eq('staff_code', staffCode).single();
-    if (!ps?.pending_telegram_id) { await sendText(chatId, "⚠️ Không có yêu cầu pending."); return; }
+    if (!ps?.pending_telegram_id) { await sendText(chatId, "⚠�E�EKhông có yêu cầu pending."); return; }
     const pid = ps.pending_telegram_id;
     await supabase.from('staff').update({ pending_telegram_id: null, pending_requested_at: null }).eq('staff_code', staffCode);
-    await sendText(chatId, `❌ Đã từ chối đổi Telegram cho *${ps.full_name}*.`);
-    await sendText(pid, `❌ Yêu cầu đổi Telegram bị *từ chối*. Nhắn /support nếu cần hỗ trợ.`);
+    await sendText(chatId, `❁EĐã từ chối đổi Telegram cho *${ps.full_name}*.`);
+    await sendText(pid, `❁EYêu cầu đổi Telegram bềE*từ chối*. Nhắn /support nếu cần hềEtrợ.`);
     return;
   }
 
-  // setpos_{code}_{pos} — Assign position
+  // setpos_{code}_{pos}  EAssign position
   if (cbData.startsWith('setpos_')) {
     // Parse: setpos_CODE_position (position may contain '_' like ggn_jondo)
     const payload = cbData.replace('setpos_', '');
     const sepIdx = payload.indexOf('_');
     const targetCode = payload.substring(0, sepIdx);
     const newPos = payload.substring(sepIdx + 1);
-    if (!canAssignPosition(pos)) { await sendText(chatId, `⛔ Không có quyền.`); return; }
-    if (posLevel(newPos) >= posLevel(pos)) { await sendText(chatId, `⛔ Không thể gán chức vụ bằng/cao hơn mình.`); return; }
+    if (!canAssignPosition(pos)) { await sendText(chatId, `⛁EKhông có quyền.`); return; }
+    if (posLevel(newPos) >= posLevel(pos)) { await sendText(chatId, `⛁EKhông thềEgán chức vụ bằng/cao hơn mình.`); return; }
     await supabase.from('staff').update({ position: newPos }).eq('staff_code', targetCode);
-    await sendText(chatId, `✅ Đã chỉ định *${POSITION_LABELS[newPos]}* cho *${targetCode}*.`);
+    await sendText(chatId, `✁EĐã chềEđịnh *${POSITION_LABELS[newPos]}* cho *${targetCode}*.`);
     return;
   }
 }
