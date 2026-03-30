@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026032821" />
+  <link rel="stylesheet" href="styles.css?v=2026033008" />
 </head>
 <body>
 <div class="header">
@@ -181,6 +181,10 @@
     <div class="form-card" id="journeyTab">
       <div class="form-card-header"><div class="form-card-title">📅 HÀNH TRÌNH</div></div>
       <div class="form-card-body">
+        <div id="ktStatusBox" style="display:none;margin-bottom:12px;padding:12px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);align-items:center;justify-content:space-between;">
+          <div style="font-size:13px;color:var(--text2);">Tình trạng: <span id="ktStatusText" style="font-weight:700;">Chưa mở KT</span></div>
+          <button id="btnMoKT" onclick="confirmMoKT()" style="padding:6px 14px;border-radius:20px;background:#8b5cf6;color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;">🚀 Đã Mở KT</button>
+        </div>
         <div id="phaseButtons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
         <div id="timelineList"></div>
       </div>
@@ -197,13 +201,9 @@
 
     <!-- BB TAB -->
     <div class="form-card" id="bienBan">
-      <div class="form-card-header"><div class="form-card-title">📖 BIÊN BẢN</div><div id="bbCount" class="form-card-meta"></div></div>
+      <div class="form-card-header"><div class="form-card-title">📖 BB</div><div id="bbCount" class="form-card-meta"></div></div>
       <div class="form-card-body">
-        <div id="ktStatusBox" style="display:none;margin-bottom:12px;padding:12px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);align-items:center;justify-content:space-between;">
-          <div style="font-size:13px;color:var(--text2);">Tình trạng: <span id="ktStatusText" style="font-weight:700;">Chưa mở KT</span></div>
-          <button id="btnMoKT" onclick="confirmMoKT()" style="padding:6px 14px;border-radius:20px;background:#8b5cf6;color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;">🚀 Đã Mở KT</button>
-        </div>
-        <button class="add-record-btn" onclick="openAddRecordModal('bien_ban')" style="margin-bottom:12px;">📝 Viết Báo cáo Biên Bản</button>
+        <button class="add-record-btn" onclick="openAddRecordModal('bien_ban')" style="margin-bottom:12px;">📝 Viết Báo cáo BB</button>
         <div id="bbList"></div>
       </div>
     </div>
@@ -597,22 +597,22 @@
   <button onclick="closeModal('semesterManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
 </div>
 </div>
-<script src="webhook.js?v=2026033006"></script>
-<script src="core.js?v=2026033006"></script>
-<script src="dashboard.js?v=2026033006"></script>
-<script src="profiles.js?v=2026033006"></script>
-<script src="hapja.js?v=2026033006"></script>
-<script src="records.js?v=2026033006"></script>
-<script src="staff.js?v=2026033006"></script>
-<script src="structure.js?v=2026033006"></script>
-<script src="calendar.js?v=2026033006"></script>
-<script src="notification.js?v=2026033006"></script>
-<script src="priority.js?v=2026033006"></script>
+<script src="webhook.js?v=2026033008"></script>
+<script src="core.js?v=2026033008"></script>
+<script src="dashboard.js?v=2026033008"></script>
+<script src="profiles.js?v=2026033008"></script>
+<script src="hapja.js?v=2026033008"></script>
+<script src="records.js?v=2026033008"></script>
+<script src="staff.js?v=2026033008"></script>
+<script src="structure.js?v=2026033008"></script>
+<script src="calendar.js?v=2026033008"></script>
+<script src="notification.js?v=2026033008"></script>
+<script src="priority.js?v=2026033008"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
-<script src="lacie.js?v=2026033006"></script>
-<script src="mindmap.js?v=2026033006"></script>
+<script src="lacie.js?v=2026033008"></script>
+<script src="mindmap.js?v=2026033008"></script>
 </body>
 </html>
