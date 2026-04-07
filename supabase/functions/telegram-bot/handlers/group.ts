@@ -142,13 +142,6 @@ export async function handleGroupChat(update: any) {
   }
 
 
-  // /group_info — Xem thông tin group
-  if (text === '/group_info' || text.startsWith('/group_info@')) {
-    const { data: fg } = await supabase.from('fruit_groups')
-      .select('*, profiles(full_name)').eq('telegram_group_id', chatId).single();
-    if (!fg) {
-      await sendText(chatId, `❌ Group này chưa được đăng ký.`);
-      return;
     }
     const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
     const profileName = fg.profiles?.full_name || 'Chưa gắn';
@@ -220,7 +213,6 @@ export async function handleGroupChat(update: any) {
     }
 
     const keyboard = [
-      [{ text: '📋 Xem thông tin Group', callback_data: 'menu_info' }],
       [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],

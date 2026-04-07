@@ -73,16 +73,6 @@ export async function handleCallback(update: any, staffData: any) {
   // ============ GROUP MENU CALLBACKS ============
 
 
-  // menu_info — Xem thông tin group
-  if (cbData === 'menu_info') {
-    const { data: fg } = await supabase.from('fruit_groups').select('*, profiles(full_name)').eq('telegram_group_id', chatId).single();
-    if (!fg) return sendText(chatId, `❌ Group này chưa được đăng ký.`);
-    const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
-    const { data: roles } = await supabase.from('fruit_roles').select('*, staff!fruit_roles_staff_code_fkey(full_name)').eq('fruit_group_id', fg.id);
-    let rolesText = (roles && roles.length > 0) ? roles.map((r: any) => `  • ${ROLE_LABELS[r.role_type]}: ${r.staff_code}`).join('\n') : '  Chưa có vai trò nào.';
-    await sendText(chatId, `📋 *Thông tin Group Trái quả*\n\n🍎 Trái: *${fg.profiles?.full_name || 'Chưa gắn'}*\n📊 Giai đoạn: *${levelLabel}*\n\n👥 Vai trò:\n${rolesText}`);
-    return;
-  }
 
   // menu_view_profile — Xem hồ sơ đầy đủ
   if (cbData === 'menu_view_profile') {
@@ -165,7 +155,7 @@ export async function handleCallback(update: any, staffData: any) {
     }
     const p = fg.profiles;
     if (!['bb', 'center', 'completed'].includes(p.phase)) {
-      return sendText(chatId, `⚠️ Hồ sơ *${p.full_name}* chưa đến giai đoạn BB. Bấm "Xem thông tin Group" để kiểm tra.`);
+      return sendText(chatId, `⚠️ Hồ sơ *${p.full_name}* chưa đến giai đoạn BB. Bấm "Xem hồ sơ Trái quả" để kiểm tra.`);
     }
     
     // Check permission logic: similar to what we did in mini-app toggles.
