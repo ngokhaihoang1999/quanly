@@ -77,22 +77,9 @@ async function loadJourney(profileId, currentPhase) {
   if (ktBox && pData) {
     if (['tu_van','bb','center','completed'].includes(cp)) {
       ktBox.style.display = 'flex';
-      // Count BB reports and mo_kt records to determine KT status
-      const bbCount = recs.filter(r => r.record_type === 'bien_ban').length;
-      const ktCount = recs.filter(r => r.record_type === 'mo_kt').length;
-      if (bbCount === 0) {
-        ktText.textContent = 'Chưa có báo cáo BB';
-        ktText.style.color = 'var(--text3)';
-        btnMoKT.style.display = 'none';
-      } else if (ktCount >= bbCount) {
-        ktText.textContent = `Đã mở KT (${ktCount}/${bbCount} buổi)`;
-        ktText.style.color = 'var(--green)';
-        btnMoKT.style.display = 'none';
-      } else {
-        ktText.textContent = ktCount > 0 ? `Đã mở KT ${ktCount}/${bbCount} buổi` : 'Chưa mở KT';
-        ktText.style.color = ktCount > 0 ? '#f59e0b' : 'var(--text3)';
-        btnMoKT.style.display = 'block';
-      }
+      // KT status will be updated after recs are fetched (see updateKTStatus below)
+      ktText.textContent = '...';
+      btnMoKT.style.display = 'none';
     } else {
       ktBox.style.display = 'none';
     }
@@ -158,6 +145,25 @@ async function loadJourney(profileId, currentPhase) {
     const sessions = await sessRes.json();
     const recs = await recRes.json();
     const hapjas = await hjRes.json();
+
+    // ── Update KT status now that recs are available ──
+    if (ktBox && ['tu_van','bb','center','completed'].includes(cp)) {
+      const bbCount = recs.filter(r => r.record_type === 'bien_ban').length;
+      const ktCount = recs.filter(r => r.record_type === 'mo_kt').length;
+      if (bbCount === 0) {
+        ktText.textContent = 'Chưa có báo cáo BB';
+        ktText.style.color = 'var(--text3)';
+        btnMoKT.style.display = 'none';
+      } else if (ktCount >= bbCount) {
+        ktText.textContent = `Đã mở KT (${ktCount}/${bbCount} buổi)`;
+        ktText.style.color = 'var(--green)';
+        btnMoKT.style.display = 'none';
+      } else {
+        ktText.textContent = ktCount > 0 ? `Đã mở KT ${ktCount}/${bbCount} buổi` : 'Chưa mở KT';
+        ktText.style.color = ktCount > 0 ? '#f59e0b' : 'var(--text3)';
+        btnMoKT.style.display = 'block';
+      }
+    }
 
     if (cp === 'tu_van_hinh') {
       const hasBcTv2 = recs.some(r => r.record_type === 'tu_van' && Number(r.content?.lan_thu) >= 2);
