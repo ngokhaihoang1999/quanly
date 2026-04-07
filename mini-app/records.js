@@ -77,14 +77,21 @@ async function loadJourney(profileId, currentPhase) {
   if (ktBox && pData) {
     if (['tu_van','bb','center','completed'].includes(cp)) {
       ktBox.style.display = 'flex';
-      if (pData.is_kt_opened) {
-        ktText.textContent = 'Đã mở KT';
+      // Count BB reports and mo_kt records to determine KT status
+      const bbCount = recs.filter(r => r.record_type === 'bien_ban').length;
+      const ktCount = recs.filter(r => r.record_type === 'mo_kt').length;
+      if (bbCount === 0) {
+        ktText.textContent = 'Chưa có báo cáo BB';
+        ktText.style.color = 'var(--text3)';
+        btnMoKT.style.display = 'none';
+      } else if (ktCount >= bbCount) {
+        ktText.textContent = `Đã mở KT (${ktCount}/${bbCount} buổi)`;
         ktText.style.color = 'var(--green)';
         btnMoKT.style.display = 'none';
       } else {
-        ktText.textContent = 'Chưa mở KT';
-        ktText.style.color = 'var(--text3)';
-        btnMoKT.style.display = cp === 'tu_van' ? 'block' : 'none';
+        ktText.textContent = ktCount > 0 ? `Đã mở KT ${ktCount}/${bbCount} buổi` : 'Chưa mở KT';
+        ktText.style.color = ktCount > 0 ? '#f59e0b' : 'var(--text3)';
+        btnMoKT.style.display = 'block';
       }
     } else {
       ktBox.style.display = 'none';
@@ -1097,32 +1104,125 @@ async function deleteNote(noteId) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MỞ KT
+// MỞ KT — Session Picker
 // ══════════════════════════════════════════════════════════════════════════════
 async function confirmMoKT() {
   if (!currentProfileId) return;
-  if (!await showConfirmAsync('Xác nhận đã Mở Kinh Thánh cho hồ sơ này? (Chuyển sang giai đoạn BB)')) return;
-  document.getElementById('loadingOverlay').style.display = 'flex';
   try {
-    // 1. Update phase to bb and is_kt_opened to true
+    // Fetch BB reports for this profile
+    const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
+    const bbRecords = await bbRes.json();
+    if (!bbRecords || bbRecords.length === 0) {
+      showToast('⚠️ Chưa có báo cáo BB nào để xác nhận mở KT.');
+      return;
+    }
+    // Fetch existing mo_kt records to know which sessions already confirmed
+    const ktRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt&select=id,content`);
+    const ktRecords = await ktRes.json();
+    const confirmedSessions = new Set((ktRecords || []).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
+
+    // Build session list
+    const sessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
+    const unconfirmed = sessions.filter(n => !confirmedSessions.has(n));
+    if (unconfirmed.length === 0) {
+      showToast('✅ Tất cả buổi BB đã được xác nhận mở KT.');
+      return;
+    }
+
+    // Show session picker dialog
+    const picked = await showKTSessionPicker(unconfirmed, confirmedSessions, sessions);
+    if (!picked || picked.length === 0) return;
+
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    // Create mo_kt record for each picked session
+    for (const session of picked) {
+      await sbFetch('/rest/v1/records', {
+        method: 'POST',
+        body: JSON.stringify({
+          profile_id: currentProfileId,
+          record_type: 'mo_kt',
+          content: { label: `Mở KT buổi ${session}`, buoi_thu: session, phase: 'bb' }
+        })
+      });
+    }
+    // Update is_kt_opened flag on profile
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
-      method:'PATCH', 
-      body: JSON.stringify({ phase: 'bb', is_kt_opened: true })
+      method: 'PATCH',
+      body: JSON.stringify({ is_kt_opened: true })
     });
-    // 2. Record event on timeline
-    await sbFetch('/rest/v1/records', { 
-      method:'POST', 
-      body: JSON.stringify({
-        profile_id: currentProfileId, 
-        record_type: 'mo_kt', 
-        content: { label: 'Đã mở Kinh Thánh', phase: 'bb' }
-      })
-    });
-    showToast('🚀 Đã chuyển sang giai đoạn BB!');
+    const idx = allProfiles.findIndex(x => x.id === currentProfileId);
+    if (idx >= 0) allProfiles[idx].is_kt_opened = true;
+
+    showToast(`📖 Đã xác nhận mở KT cho ${picked.length} buổi!`);
     await fetchRecordsAndUpdate(currentProfileId);
   } catch (e) {
-    showToast('❌ Lỗi cập nhật: ' + e.message);
+    showToast('❌ Lỗi: ' + e.message);
   } finally {
     document.getElementById('loadingOverlay').style.display = 'none';
   }
+}
+
+// KT Session Picker Dialog
+function showKTSessionPicker(unconfirmed, confirmedSessions, allSessions) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg1,#fff);border-radius:16px;padding:20px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
+    let html = `<div style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text1,#333);">📖 Xác nhận mở KT</div>`;
+    html += `<div style="font-size:12px;color:var(--text3,#888);margin-bottom:12px;">Chọn buổi BB đã mở Kinh Thánh:</div>`;
+    html += `<div style="display:flex;flex-direction:column;gap:8px;">`;
+    for (const s of allSessions) {
+      const isConfirmed = confirmedSessions.has(s);
+      const isAvailable = unconfirmed.includes(s);
+      if (isConfirmed) {
+        html += `<div style="padding:10px 14px;border-radius:10px;background:var(--green,#22c55e);color:white;font-size:13px;font-weight:600;opacity:0.7;">
+          ✅ Buổi ${s} — Đã xác nhận</div>`;
+      } else {
+        html += `<button class="kt-pick-btn" data-session="${s}" style="padding:10px 14px;border-radius:10px;background:var(--bg2,#f5f5f5);border:2px solid var(--border,#ddd);color:var(--text1,#333);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.2s;">
+          📕 Buổi ${s} — Chưa xác nhận</button>`;
+      }
+    }
+    html += `</div>`;
+    html += `<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">`;
+    html += `<button id="ktPickCancel" style="padding:8px 16px;border-radius:10px;background:var(--bg2,#f5f5f5);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:12px;font-weight:600;cursor:pointer;">Huỷ</button>`;
+    html += `<button id="ktPickConfirm" style="padding:8px 16px;border-radius:10px;background:#8b5cf6;border:none;color:white;font-size:12px;font-weight:700;cursor:pointer;opacity:0.5;" disabled>Xác nhận</button>`;
+    html += `</div>`;
+    box.innerHTML = html;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const selected = new Set();
+    const confirmBtn = box.querySelector('#ktPickConfirm');
+    box.querySelectorAll('.kt-pick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = Number(btn.dataset.session);
+        if (selected.has(s)) {
+          selected.delete(s);
+          btn.style.border = '2px solid var(--border,#ddd)';
+          btn.style.background = 'var(--bg2,#f5f5f5)';
+          btn.innerHTML = `📕 Buổi ${s} — Chưa xác nhận`;
+        } else {
+          selected.add(s);
+          btn.style.border = '2px solid #8b5cf6';
+          btn.style.background = 'rgba(139,92,246,0.1)';
+          btn.innerHTML = `📖 Buổi ${s} — Đã chọn ✓`;
+        }
+        confirmBtn.disabled = selected.size === 0;
+        confirmBtn.style.opacity = selected.size > 0 ? '1' : '0.5';
+      });
+    });
+
+    box.querySelector('#ktPickCancel').addEventListener('click', () => {
+      overlay.remove();
+      resolve([]);
+    });
+    confirmBtn.addEventListener('click', () => {
+      overlay.remove();
+      resolve([...selected].sort((a,b) => a-b));
+    });
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) { overlay.remove(); resolve([]); }
+    });
+  });
 }

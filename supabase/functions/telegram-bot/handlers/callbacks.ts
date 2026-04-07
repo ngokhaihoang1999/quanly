@@ -145,26 +145,39 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // menu_open_kt — Xác nhận mở KT
+  // menu_open_kt — Xác nhận mở KT (session picker)
   if (cbData === 'menu_open_kt') {
-    // Check if group is registered and attached to a profile
     const { data: fg } = await supabase.from('fruit_groups')
       .select('profile_id, profiles(full_name, phase)').eq('telegram_group_id', chatId).single();
     if (!fg || !fg.profile_id) {
       return sendText(chatId, `❌ Group chưa gắn hồ sơ nào.`);
     }
     const p = fg.profiles;
-    if (!['bb', 'center', 'completed'].includes(p.phase)) {
-      return sendText(chatId, `⚠️ Hồ sơ *${p.full_name}* chưa đến giai đoạn BB. Bấm "Xem hồ sơ Trái quả" để kiểm tra.`);
+    // Fetch BB reports
+    const { data: bbRecs } = await supabase.from('records')
+      .select('id, content').eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban')
+      .order('created_at', { ascending: true });
+    if (!bbRecs || bbRecs.length === 0) {
+      return sendText(chatId, `⚠️ Hồ sơ *${p.full_name}* chưa có báo cáo BB nào để xác nhận mở KT.`);
     }
-    
-    // Check permission logic: similar to what we did in mini-app toggles.
-    // For simplicity, any admin/TVV/GVBB/NDD can toggle it if they can reach here.
-    const keyboard = [
-      [{ text: '✅ Chắc chắn', callback_data: `action_confirm_kt_${fg.profile_id}` }],
-      [{ text: '❌ Huỷ bỏ', callback_data: 'action_cancel_kt' }]
-    ];
-    await sendKeyboard(chatId, `❓ Bạn có chắc chắn muốn xác nhận đã Mở KT cho hồ sơ *${p.full_name}* không?`, keyboard);
+    // Fetch existing mo_kt records
+    const { data: ktRecs } = await supabase.from('records')
+      .select('content').eq('profile_id', fg.profile_id).eq('record_type', 'mo_kt');
+    const confirmedSessions = new Set((ktRecs || []).map((r: any) => Number(r.content?.buoi_thu)).filter(Boolean));
+    const sessions = bbRecs.map((r: any) => Number(r.content?.buoi_thu || 0)).filter((n: number) => n > 0);
+    const unconfirmed = sessions.filter((n: number) => !confirmedSessions.has(n));
+    if (unconfirmed.length === 0) {
+      return sendText(chatId, `✅ Tất cả ${sessions.length} buổi BB của *${p.full_name}* đã được xác nhận mở KT.`);
+    }
+    // Build session keyboard
+    const keyboard: any[] = sessions.map((s: number) => {
+      if (confirmedSessions.has(s)) {
+        return [{ text: `✅ Buổi ${s} — Đã xác nhận`, callback_data: 'action_cancel_kt' }];
+      }
+      return [{ text: `📕 Buổi ${s} — Xác nhận mở KT`, callback_data: `action_confirm_kt_${fg.profile_id}_${s}` }];
+    });
+    keyboard.push([{ text: '❌ Huỷ', callback_data: 'action_cancel_kt' }]);
+    await sendKeyboard(chatId, `📖 *Xác nhận mở KT — ${p.full_name}*\n\nChọn buổi BB đã mở Kinh Thánh:`, keyboard);
     return;
   }
 
@@ -267,19 +280,29 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // action_confirm_kt_{profileId}
+  // action_confirm_kt_{profileId}_{session}
   if (cbData.startsWith('action_confirm_kt_')) {
-    const profileId = cbData.replace('action_confirm_kt_', '');
+    const payload = cbData.replace('action_confirm_kt_', '');
+    const lastUnderscore = payload.lastIndexOf('_');
+    const profileId = payload.substring(0, lastUnderscore);
+    const session = Number(payload.substring(lastUnderscore + 1));
     await editMessageReplyMarkup(chatId, messageId, null);
     
     const { data: p } = await supabase.from('profiles').select('full_name').eq('id', profileId).single();
     if (!p) return sendText(chatId, '❌ Không tìm thấy hồ sơ.');
 
+    // Create mo_kt record for this session
+    await supabase.from('records').insert({
+      profile_id: profileId,
+      record_type: 'mo_kt',
+      content: { label: `Mở KT buổi ${session}`, buoi_thu: session, phase: 'bb' }
+    });
+    // Update is_kt_opened flag
     await supabase.from('profiles')
       .update({ is_kt_opened: true })
       .eq('id', profileId);
       
-    await sendText(chatId, `✅ Đã xác nhận **Mở KT** cho hồ sơ *${p.full_name}*.`);
+    await sendText(chatId, `✅ Đã xác nhận *Mở KT buổi ${session}* cho hồ sơ *${p.full_name}*.`);
     return;
   }
 
