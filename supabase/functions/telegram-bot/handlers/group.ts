@@ -195,17 +195,11 @@ export async function handleGroupChat(update: any) {
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
     ];
-    // Check if KT button should be shown
+    // Check if KT button should be shown (hide when already opened)
     const fgForMenu = existingFg || (await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single()).data;
     if (fgForMenu?.profile_id) {
-      const { data: bbRecs } = await supabase.from('records')
-        .select('content').eq('profile_id', fgForMenu.profile_id).eq('record_type', 'bien_ban');
-      const { data: ktRecs } = await supabase.from('records')
-        .select('content').eq('profile_id', fgForMenu.profile_id).eq('record_type', 'mo_kt');
-      const bbSessions = (bbRecs || []).map((r: any) => Number(r.content?.buoi_thu || 0)).filter((n: number) => n > 0);
-      const ktSessions = new Set((ktRecs || []).map((r: any) => Number(r.content?.buoi_thu)).filter(Boolean));
-      const hasUnconfirmed = bbSessions.some((s: number) => !ktSessions.has(s));
-      if (bbSessions.length === 0 || hasUnconfirmed) {
+      const { data: profile } = await supabase.from('profiles').select('is_kt_opened').eq('id', fgForMenu.profile_id).single();
+      if (!profile?.is_kt_opened) {
         keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
       }
     } else {
