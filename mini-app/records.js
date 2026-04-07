@@ -31,11 +31,11 @@ async function loadJourney(profileId, currentPhase) {
   const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
   const isDropout = allProfiles.find(x => x.id === profileId)?.fruit_status === 'dropout';
 
-  // Fetch group BB info (for BB/center phase)
+  // Fetch group info (for tu_van/BB/center phase — after Lập Group)
   let bbGroupInfo = null;
-  if (['bb','center','completed'].includes(cp)) {
+  if (['tu_van','bb','center','completed'].includes(cp)) {
     try {
-      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title`);
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title,invite_link`);
       const fgs = await fgRes.json();
       // Find real group (not null, not -Date.now() placeholder)
       bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id && g.telegram_group_id > -1000000000000) || null;
@@ -91,10 +91,54 @@ async function loadJourney(profileId, currentPhase) {
     }
   }
 
-  // Group BB info bar removed — now shown in profile header card only
-  const groupBarEl = document.getElementById('bbGroupBar');
-  if (groupBarEl) groupBarEl.style.display = 'none';
-
+  // ── Group Status Box (connection status + instructions) ──────────────────
+  const groupBox = document.getElementById('groupStatusBox');
+  if (groupBox) {
+    if (['tu_van','bb','center','completed'].includes(cp) && !isDropout) {
+      groupBox.style.display = 'block';
+      if (bbGroupInfo) {
+        // ✅ Connected
+        const gTitle = bbGroupInfo.telegram_group_title || 'Group Trái quả';
+        const gid = bbGroupInfo.telegram_group_id;
+        const invLink = (bbGroupInfo.invite_link || '').replace(/"/g, '&quot;');
+        groupBox.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">💬</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${gTitle}</div>
+              <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:2px;">✅ Đã kết nối Group Telegram</div>
+            </div>
+            <button onclick="openBBGroup(this)" data-gid="${gid}" data-link="${invLink}"
+              style="padding:6px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;"
+            >Mở Group →</button>
+          </div>`;
+        groupBox.style.border = '1px solid rgba(34,197,94,0.35)';
+        groupBox.style.background = 'rgba(34,197,94,0.06)';
+      } else {
+        // 🔴 Not connected
+        groupBox.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span style="font-size:22px;">💬</span>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--text1);">Group Telegram</div>
+              <div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px;">🔴 Chưa kết nối</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.8;padding:10px 12px;background:var(--surface2);border-radius:8px;">
+            <div style="font-weight:700;margin-bottom:6px;font-size:12px;color:var(--text1);">📋 Hướng dẫn kết nối:</div>
+            <div>1️⃣ Tạo Group mới trên Telegram</div>
+            <div>2️⃣ Thêm bot <b style="color:var(--accent);">@quanlyhcm_bot</b> vào Group</div>
+            <div>3️⃣ Cho bot quyền <b>Admin</b></div>
+            <div>4️⃣ Gõ <code style="background:var(--bg2);padding:1px 6px;border-radius:4px;font-weight:600;">/start</code> trong Group</div>
+            <div>5️⃣ Bấm <b>"Gắn hồ sơ"</b> → chọn trái quả này</div>
+          </div>`;
+        groupBox.style.border = '1px solid rgba(248,113,113,0.35)';
+        groupBox.style.background = 'rgba(248,113,113,0.06)';
+      }
+    } else {
+      groupBox.style.display = 'none';
+    }
+  }
 
 
 
@@ -703,7 +747,7 @@ async function saveChotBB() {
         let fgId = fgs[0]?.id;
         if (!fgId) {
           const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-            telegram_group_id: null, profile_id: currentProfileId, level: 'bb'
+            telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
           })});
           fgId = (await newFgRes.json())[0]?.id;
         }

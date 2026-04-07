@@ -135,10 +135,10 @@ async function openProfile(p) {
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
   window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };
 
-  // Warning: BB phase but no real Telegram group
-  const bbNoGroupWarning = ['bb','center'].includes(ph) && !hasRealBBGroup
+  // Warning: phase tu_van/BB/center but no real Telegram group
+  const bbNoGroupWarning = ['tu_van','bb','center'].includes(ph) && !hasRealBBGroup
     ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;">
-        ⚠️ Chưa tạo Group BB
+        ⚠️ Chưa kết nối Group Telegram
        </div>` : '';
 
   // Latest activity
@@ -212,7 +212,7 @@ async function openProfile(p) {
         <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>` : `<b>${gvbbDisplay||'---'}</b>`}</div>
         ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
       </div>
-      ${hasRealBBGroup && ['bb','center','completed'].includes(ph) ? `
+      ${hasRealBBGroup && ['tu_van','bb','center','completed'].includes(ph) ? `
       <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:10px;">
         <span style="font-size:15px;">💬</span>
         <div style="flex:1;min-width:0;">

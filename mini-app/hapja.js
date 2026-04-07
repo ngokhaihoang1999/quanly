@@ -202,7 +202,7 @@ async function approveHapja(id) {
     if (newPid && nddCode) {
       try {
         const fgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-          telegram_group_id: -Date.now(), profile_id: newPid, level: 'tu_van'
+          telegram_group_id: null, profile_id: newPid, level: 'tu_van'
         })});
         const fgs = await fgRes.json();
         if (fgs[0]?.id) {
