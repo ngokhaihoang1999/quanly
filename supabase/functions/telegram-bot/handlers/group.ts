@@ -140,29 +140,6 @@ export async function handleGroupChat(update: any) {
     );
     return;
   }
-
-
-    }
-    const levelLabel = fg.level === 'tu_van' ? 'Tư vấn' : 'BB';
-    const profileName = fg.profiles?.full_name || 'Chưa gắn';
-    const { data: roles } = await supabase.from('fruit_roles')
-      .select('*, staff!fruit_roles_staff_code_fkey(full_name)').eq('fruit_group_id', fg.id);
-    let rolesText = '';
-    if (roles && roles.length > 0) {
-      rolesText = roles.map((r: any) => `  • ${ROLE_LABELS[r.role_type]}: ${r.staff_code}`).join('\n');
-    } else {
-      rolesText = '  Chưa có vai trò nào.';
-    }
-    await sendText(chatId,
-      `📋 *Thông tin Group Trái quả*\n\n` +
-      `🍎 Trái: *${profileName}*\n` +
-      `📊 Giai đoạn: *${levelLabel}*\n\n` +
-      `👥 Vai trò:\n${rolesText}` +
-      (fg.invite_link ? `\n\n🔗 Link: ${fg.invite_link}` : '\n\n⚠️ Chưa có link mời. Gõ `/setlink [link]` để thêm.')
-    );
-    return;
-  }
-
   // /setlink [url] — Cập nhật invite link thủ công (creator hoặc admin)
   if (text.startsWith('/setlink') || text.startsWith('/setlink@')) {
     const admins = await getChatAdmins(chatId);
