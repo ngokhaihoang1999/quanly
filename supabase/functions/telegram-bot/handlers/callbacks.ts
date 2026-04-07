@@ -171,7 +171,7 @@ export async function handleCallback(update: any, staffData: any) {
     // For simplicity, any admin/TVV/GVBB/NDD can toggle it if they can reach here.
     const keyboard = [
       [{ text: '✁EChắc chắn', callback_data: `action_confirm_kt_${fg.profile_id}` }],
-      [{ text: '❁EHuỷ bềE, callback_data: 'action_cancel_kt' }]
+      [{ text: '❌ Huỷ bỏ', callback_data: 'action_cancel_kt' }]
     ];
     await sendKeyboard(chatId, `❁EBạn có chắc chắn muốn xác nhận đã MềEKT cho hềEsơ *${p.full_name}* không?`, keyboard);
     return;
