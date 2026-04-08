@@ -117,29 +117,37 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ── Mindmap: Thông tin cơ bản ──
   if (cbData === 'menu_mindmap_info') {
-    const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
-    if (!fgI?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
-    const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
-    const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
-    const d: any = sheet || {};
-    let txt = `👤 *Thông tin cơ bản: ${prof?.full_name || 'N/A'}*\n`;
-    txt += `Giai đoạn: ${prof?.phase || 'chakki'}`;
-    if (prof?.is_kt_opened) txt += ' | 📖 Đã mở KT';
-    txt += '\n';
-    if (d.gioi_tinh) txt += `Giới tính: ${d.gioi_tinh}\n`;
-    if (d.nam_sinh) txt += `Năm sinh: ${d.nam_sinh}\n`;
-    if (d.nghe_nghiep) txt += `Nghề: ${d.nghe_nghiep}\n`;
-    if (d.tinh_cach) txt += `Tính cách: ${d.tinh_cach}\n`;
-    if (d.so_thich) txt += `Sở thích: ${d.so_thich}\n`;
-    if (d.ton_giao) txt += `Tôn giáo: ${Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : d.ton_giao}\n`;
-    if (d.hon_nhan) txt += `Hôn nhân: ${Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : d.hon_nhan}\n`;
-    if (d.quan_diem) txt += `Quan điểm: ${d.quan_diem}\n`;
-    if (d.du_dinh) txt += `Dự định: ${d.du_dinh}\n`;
-    if (d.luu_y) txt += `⚠️ Lưu ý: ${d.luu_y}\n`;
-    if (!d.gioi_tinh && !d.nam_sinh && !d.nghe_nghiep) txt += '\n_Chưa có dữ liệu phiếu thông tin._';
-    await editMessageText(chatId, messageId, txt, [
-      [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
-    ]);
+    try {
+      const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+      if (!fgI?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
+      const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
+      const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
+      const d: any = sheet || {};
+      const esc = (s: string) => s.replace(/[_*\[\]()~`>#+\-=|{}.!]/g, '\\$&');
+      const name = esc(prof?.full_name || 'N/A');
+      let lines: string[] = [];
+      lines.push(`👤 *Thông tin cơ bản: ${name}*`);
+      lines.push(`Giai đoạn: ${prof?.phase || 'chakki'}${prof?.is_kt_opened ? ' | 📖 Đã mở KT' : ''}`);
+      if (d.gioi_tinh) lines.push(`Giới tính: ${esc(String(d.gioi_tinh))}`);
+      if (d.nam_sinh) lines.push(`Năm sinh: ${esc(String(d.nam_sinh))}`);
+      if (d.nghe_nghiep) lines.push(`Nghề: ${esc(String(d.nghe_nghiep))}`);
+      if (d.tinh_cach) lines.push(`Tính cách: ${esc(String(d.tinh_cach))}`);
+      if (d.so_thich) lines.push(`Sở thích: ${esc(String(d.so_thich))}`);
+      if (d.ton_giao) lines.push(`Tôn giáo: ${esc(String(Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : d.ton_giao))}`);
+      if (d.hon_nhan) lines.push(`Hôn nhân: ${esc(String(Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : d.hon_nhan))}`);
+      if (d.quan_diem) lines.push(`Quan điểm: ${esc(String(d.quan_diem))}`);
+      if (d.du_dinh) lines.push(`Dự định: ${esc(String(d.du_dinh))}`);
+      if (d.luu_y) lines.push(`⚠️ Lưu ý: ${esc(String(d.luu_y))}`);
+      if (!d.gioi_tinh && !d.nam_sinh && !d.nghe_nghiep) lines.push('\n_Chưa có dữ liệu phiếu thông tin._');
+      await editMessageText(chatId, messageId, lines.join('\n'), [
+        [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
+      ]);
+    } catch (e) {
+      console.error('menu_mindmap_info error:', e);
+      await editMessageText(chatId, messageId, '❌ Lỗi tải thông tin.', [
+        [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
+      ]);
+    }
     return;
   }
 
