@@ -93,7 +93,7 @@ export async function handleCallback(update: any, staffData: any) {
         keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
       }
       // Xem mindmap
-      keyboard.push([{ text: '🧠 Xem mindmap', callback_data: 'menu_mindmap' }]);
+      keyboard.push([{ text: '🗺️ Xem Mindmap', callback_data: 'menu_mindmap' }]);
       if (!prof?.is_kt_opened) {
         keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
       }
@@ -107,8 +107,8 @@ export async function handleCallback(update: any, staffData: any) {
   if (cbData === 'menu_mindmap') {
     const { data: fgMM } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
     if (!fgMM?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
-    await editMessageText(chatId, messageId, '🧠 *Xem Mindmap*\nChọn loại:', [
-      [{ text: '👤 Thông tin cơ bản', callback_data: 'menu_mindmap_info' }],
+    await editMessageText(chatId, messageId, '🗺️ *Xem Mindmap*\nChọn loại:', [
+      [{ text: '📋 Thông tin cơ bản', callback_data: 'menu_mindmap_info' }],
       [{ text: '📚 Hỗ trợ BB', callback_data: 'menu_mindmap_bb' }],
       [{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]
     ]);
@@ -122,44 +122,58 @@ export async function handleCallback(update: any, staffData: any) {
       if (!fgI?.profile_id) {
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: 'Chua gan ho so.', reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
+          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: '❌ Chưa gắn hồ sơ.', reply_markup: { inline_keyboard: [[{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] } })
         });
         return;
       }
-      // Get profile info for text summary
       const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
       const { data: sheetRows } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgI.profile_id);
       const d: any = (sheetRows && sheetRows.length > 0 && sheetRows[0].data) ? sheetRows[0].data : {};
-      const lines: string[] = [];
       const name = prof?.full_name || 'N/A';
-      const phase = (prof?.phase || 'N/A').replace(/_/g, ' ');
-      lines.push('THONG TIN CO BAN: ' + name);
-      lines.push('Giai doan: ' + phase + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
-      if (d.t2_gioi_tinh) lines.push('Gioi tinh: ' + String(d.t2_gioi_tinh));
-      if (d.t2_nam_sinh) lines.push('Nam sinh: ' + String(d.t2_nam_sinh));
-      if (d.t2_nghe_nghiep) lines.push('Nghe: ' + String(d.t2_nghe_nghiep));
-      if (d.t2_dia_chi) lines.push('Noi o: ' + String(d.t2_dia_chi));
-      if (d.t2_tinh_cach) lines.push('Tinh cach: ' + String(d.t2_tinh_cach));
-      if (d.t2_so_thich) lines.push('So thich: ' + String(d.t2_so_thich));
-      if (d.t2_luu_y) lines.push('Luu y: ' + String(d.t2_luu_y));
-      if (lines.length <= 2) lines.push('Chua co du lieu phieu.');
-      // Generate time-limited signed URL (30 min expiry)
+      const phaseMap: Record<string,string> = { 'tu_van': 'Tư vấn', 'bb': 'BB', 'center': 'Center', 'chapel': 'Chapel', 'chakki': 'Chưa xác định' };
+      const phaseVi = phaseMap[prof?.phase || ''] || (prof?.phase || 'N/A');
+      
+      const lines: string[] = [];
+      lines.push(`📋 <b>${name}</b>`);
+      lines.push(`📍 ${phaseVi}${prof?.is_kt_opened ? ' · Đã mở KT' : ''}`);
+      lines.push('');
+      const fields: [string,string,string][] = [
+        ['👤', 'Giới tính', d.t2_gioi_tinh],
+        ['🎂', 'Năm sinh', d.t2_nam_sinh],
+        ['💼', 'Nghề', d.t2_nghe_nghiep],
+        ['📍', 'Nơi ở', d.t2_dia_chi],
+        ['🏡', 'Quê', d.t2_que_quan],
+        ['💍', 'Hôn nhân', Array.isArray(d.t2_hon_nhan) ? d.t2_hon_nhan.join(', ') : d.t2_hon_nhan],
+        ['🧩', 'Tính cách', d.t2_tinh_cach],
+        ['🎨', 'Sở thích', d.t2_so_thich],
+        ['⚠️', 'Lưu ý', d.t2_luu_y],
+      ];
+      for (const [ico, label, val] of fields) {
+        if (val) lines.push(`${ico} <b>${label}:</b> ${String(val).substring(0,60)}`);
+      }
+      if (lines.length <= 3) lines.push('📭 Chưa có dữ liệu phiếu thông tin.');
+      
+      // Generate signed URL
       const ts = Date.now();
-      const raw = `${chatId}:${ts}:${BOT_TOKEN}`;
+      const raw = `${chatId}:${ts}:info:${BOT_TOKEN}`;
       const encoder = new TextEncoder();
       const hashBuf = await crypto.subtle.digest('SHA-256', encoder.encode(raw));
       const sig = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
-      const mmUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=${chatId}&ts=${ts}&sig=${sig}`;
-      // Send new message with text info + link to visual mindmap
+      const mmUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=${chatId}&type=info&ts=${ts}&sig=${sig}`;
+      
+      lines.push('');
+      lines.push('🔗 <i>Bấm bên dưới để xem mindmap visual (30 phút)</i>');
+      
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: lines.join('\n') + '\n\nBam link ben duoi de xem Mindmap (het han sau 30 phut):',
+          text: lines.join('\n'),
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '\ud83e\udde0 Xem Mindmap Visual', url: mmUrl }],
-              [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
+              [{ text: '🗺️ Xem Mindmap', url: mmUrl }],
+              [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
             ]
           }
         })
@@ -176,25 +190,57 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ── Mindmap: Hỗ trợ BB ──
   if (cbData === 'menu_mindmap_bb') {
-    const { data: fgBB } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
-    if (!fgBB?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
-    const { data: mmRows } = await supabase.from('records').select('content').eq('profile_id', fgBB.profile_id).eq('record_type', 'ai_mindmap').order('created_at', { ascending: false }).limit(1);
-    const mmRec = mmRows?.[0];
-    let txt = '';
-    if (mmRec?.content?.markdown) {
-      let md = mmRec.content.markdown;
-      // Strip markdown headings and truncate for Telegram
-      md = md.replace(/^#{1,4}\s+/gm, '*').replace(/\n{3,}/g, '\n\n');
-      if (md.length > 3800) md = md.substring(0, 3800) + '\n\n..._(xem đầy đủ trên Mini App)_';
-      txt = `📚 *Hỗ trợ BB (AI Mindmap)*\n\n` + md;
-    } else {
-      txt = '📚 *Hỗ trợ BB*\n\n_Chưa có phân tích AI._\nMở Mini App → tab Tư Duy → Hỗ trợ BB để tạo.';
+    try {
+      const { data: fgBB } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+      if (!fgBB?.profile_id) {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: '❌ Chưa gắn hồ sơ.', reply_markup: { inline_keyboard: [[{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] } })
+        });
+        return;
+      }
+      // Check if AI mindmap exists
+      const { data: mmRec } = await supabase.from('records').select('content').eq('profile_id', fgBB.profile_id).eq('record_type', 'ai_mindmap').order('created_at', { ascending: false }).limit(1);
+      const hasMM = mmRec && mmRec.length > 0 && mmRec[0]?.content?.markdown;
+      
+      // Generate signed URL
+      const ts = Date.now();
+      const raw = `${chatId}:${ts}:bb:${BOT_TOKEN}`;
+      const encoder = new TextEncoder();
+      const hashBuf = await crypto.subtle.digest('SHA-256', encoder.encode(raw));
+      const sig = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
+      const mmUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=${chatId}&type=bb&ts=${ts}&sig=${sig}`;
+      
+      const lines: string[] = [];
+      lines.push('📚 <b>Hỗ trợ BB</b>');
+      if (hasMM) {
+        lines.push('✅ Đã có mindmap phân tích AI');
+        lines.push('');
+        lines.push('🔗 <i>Bấm bên dưới để xem (30 phút)</i>');
+      } else {
+        lines.push('📭 Chưa có phân tích AI.');
+        lines.push('Mở Mini App > Tư duy > Hỗ trợ BB > Phân tích ngay');
+      }
+      
+      const keyboard = hasMM
+        ? [[{ text: '🗺️ Xem Mindmap BB', url: mmUrl }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]]
+        : [[{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]];
+      
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: lines.join('\n'), parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } })
+      });
+    } catch (e) {
+      console.error('menu_mindmap_bb error:', e);
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: 'Loi: ' + String(e).substring(0, 200) })
+      });
     }
-    await editMessageText(chatId, messageId, txt, [
-      [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
-    ]);
     return;
   }
+
+
 
   // ── Quay lại menu chính ──
   if (cbData === 'menu_back') {

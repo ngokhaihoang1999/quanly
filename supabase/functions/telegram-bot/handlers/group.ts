@@ -374,7 +374,7 @@ export async function handleGroupChat(update: any) {
       }
 
       // Xem mindmap - available when profile is linked
-      keyboard.push([{ text: '🧠 Xem mindmap', callback_data: 'menu_mindmap' }]);
+      keyboard.push([{ text: '🗺️ Xem Mindmap', callback_data: 'menu_mindmap' }]);
 
       // Mở KT
       if (!profile?.is_kt_opened) {

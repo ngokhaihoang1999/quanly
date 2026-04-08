@@ -13,21 +13,23 @@ body { background:#f8f9fa; font-family:'Segoe UI',system-ui,sans-serif; }
 #mmWrap { width:100%; min-height:100vh; background:#fff; }
 .markmap { width:100%; height:100vh; }
 .markmap svg { width:100%; height:100%; }
-.error { color:#c33; text-align:center; padding:40px 20px; font-size:16px; }
-.error .icon { font-size:48px; margin-bottom:12px; }
+.error-page { display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column; gap:8px; text-align:center; padding:20px; }
+.error-page .icon { font-size:56px; }
+.error-page .msg { color:#666; font-size:15px; max-width:320px; line-height:1.5; }
+.error-page .hint { color:#999; font-size:12px; margin-top:8px; }
 </style>
 </head>
 <body>
 <div id="loading" class="loading"><div class="spinner"></div><div>Đang xác thực...</div></div>
 <div id="mmWrap" style="display:none"></div>
-<div id="error" class="error" style="display:none"></div>
+<div id="error" class="error-page" style="display:none"></div>
 
 <script>
 window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
 <script>
-const SB_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+var SB_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 
 function fmt(t, w) { if(!t) return ''; t=String(t).replace(/\n+/g,' ').trim(); return t.length<=w?t:t.substring(0,w-1)+'\u2026'; }
 function mdS(t, lim) {
@@ -38,11 +40,44 @@ function mdS(t, lim) {
   return ss.map(function(s){return '- '+fmt(s.trim(),lim||55)+'\n';}).join('');
 }
 
-function showError(msg) {
+function showError(msg, hint) {
   document.getElementById('loading').style.display = 'none';
   var el = document.getElementById('error');
-  el.style.display = 'block';
-  el.innerHTML = '<div class="icon">🔒</div><div>' + msg + '</div>';
+  el.style.display = 'flex';
+  el.innerHTML = '<div class="icon">🔒</div><div class="msg">' + msg + '</div>' + (hint ? '<div class="hint">' + hint + '</div>' : '');
+}
+
+function buildInfoMD(p, d) {
+  var name = p.full_name || 'Hồ sơ';
+  var md = '# ' + name + '\n';
+  var dm = [
+    d.t2_nam_sinh ? 'Sinh: '+d.t2_nam_sinh : null,
+    d.t2_gioi_tinh ? 'Giới tính: '+d.t2_gioi_tinh : null,
+    d.t2_nghe_nghiep ? 'Nghề: '+d.t2_nghe_nghiep : null,
+    d.t2_hon_nhan ? 'Hôn nhân: '+(Array.isArray(d.t2_hon_nhan)?d.t2_hon_nhan.join(', '):d.t2_hon_nhan) : null,
+    d.t2_quan_he_ndd ? 'Quan hệ với NĐD: '+(Array.isArray(d.t2_quan_he_ndd)?d.t2_quan_he_ndd.join(', '):d.t2_quan_he_ndd) : null,
+    d.t2_khong_gian_song ? 'Ở chung: '+(Array.isArray(d.t2_khong_gian_song)?d.t2_khong_gian_song.join(', '):d.t2_khong_gian_song) : null,
+    d.t2_dia_chi ? 'Nơi ở hiện tại: '+d.t2_dia_chi : null,
+    d.t2_que_quan ? 'Nhà ba mẹ (Quê): '+d.t2_que_quan : null
+  ].filter(Boolean);
+  if (dm.length) { md += '## 🏛️ Nhân thân & Nền tảng\n'; dm.forEach(function(v){md+='- '+fmt(v,45)+'\n';}); }
+  if (d.t2_nguoi_than) md += '## 🏡 Gia đình & Hoàn cảnh\n### 👨‍👩‍👧‍👦 Hoàn cảnh gia đình\n' + mdS(d.t2_nguoi_than,55);
+  var tt='';
+  if (d.t2_ton_giao) tt+='- **Tôn giáo:** '+(Array.isArray(d.t2_ton_giao)?d.t2_ton_giao.join(', '):d.t2_ton_giao)+'\n';
+  if (d.t2_quan_diem) tt+=mdS(d.t2_quan_diem,55);
+  if (tt) md += '## ⚖️ Hệ tư tưởng & Niềm tin\n' + tt;
+  var tl='';
+  if (d.t2_tinh_cach) tl+='### 🧩 Tính cách\n'+mdS(d.t2_tinh_cach,50);
+  if (d.t2_so_thich) tl+='### 🎨 Đam mê / Sở thích\n'+mdS(d.t2_so_thich,50);
+  if (d.t2_du_dinh) tl+='### 🚀 Khát vọng / Dự định\n'+mdS(d.t2_du_dinh,50);
+  if (tl) md += '## 🌊 Chiều sâu nội tâm\n' + tl;
+  var qk='';
+  if (d.t2_nguoi_quan_trong) qk+='### 👥 Người quan trọng nhất\n'+mdS(d.t2_nguoi_quan_trong,50);
+  if (d.t2_chuyen_cu) qk+='### 📖 Câu chuyện dấu ấn\n'+mdS(d.t2_chuyen_cu,50);
+  if (qk) md += '## ⛓️ Góc khuất & Ràng buộc\n' + qk;
+  if (d.t2_luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdS(d.t2_luu_y,55);
+  if (md.trim() === '# '+name) md += '## 📋 Chưa có dữ liệu\n';
+  return md;
 }
 
 async function init() {
@@ -51,52 +86,31 @@ async function init() {
     var gid = params.get('gid');
     var ts = params.get('ts');
     var sig = params.get('sig');
-    if (!gid || !ts || !sig) { showError('Link khong hop le.'); return; }
+    var type = params.get('type') || 'info';
+    if (!gid || !ts || !sig) { showError('Link không hợp lệ.', 'Thiếu tham số xác thực.'); return; }
 
     // Validate via Edge Function
     var res = await fetch(SB_URL + '/functions/v1/validate-mindmap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gid: gid, ts: ts, sig: sig })
+      body: JSON.stringify({ gid: gid, ts: ts, sig: sig, type: type })
     });
     var data = await res.json();
-    if (!res.ok) { showError(data.error || 'Loi xac thuc.'); return; }
+    if (!res.ok) { showError(data.error || 'Lỗi xác thực.', 'Bấm lại nút trong Telegram bot để tạo link mới.'); return; }
 
-    var p = data.profile || {};
-    var d = data.sheet || {};
-    var name = p.full_name || 'Ho so';
+    var md = '';
+    if (data.type === 'bb') {
+      if (data.markdown) {
+        md = data.markdown;
+      } else {
+        showError('Chưa có phân tích AI.', 'Mở Mini App > Tư duy > Hỗ trợ BB > Phân tích ngay');
+        return;
+      }
+    } else {
+      md = buildInfoMD(data.profile || {}, data.sheet || {});
+    }
 
-    // Build markmap markdown
-    var md = '# ' + name + '\n';
-    var dm = [
-      d.t2_nam_sinh ? 'Sinh: '+d.t2_nam_sinh : null,
-      d.t2_gioi_tinh ? 'Giới tính: '+d.t2_gioi_tinh : null,
-      d.t2_nghe_nghiep ? 'Nghề: '+d.t2_nghe_nghiep : null,
-      d.t2_hon_nhan ? 'Hôn nhân: '+(Array.isArray(d.t2_hon_nhan)?d.t2_hon_nhan.join(', '):d.t2_hon_nhan) : null,
-      d.t2_quan_he_ndd ? 'Quan hệ với NĐD: '+(Array.isArray(d.t2_quan_he_ndd)?d.t2_quan_he_ndd.join(', '):d.t2_quan_he_ndd) : null,
-      d.t2_khong_gian_song ? 'Ở chung: '+(Array.isArray(d.t2_khong_gian_song)?d.t2_khong_gian_song.join(', '):d.t2_khong_gian_song) : null,
-      d.t2_dia_chi ? 'Nơi ở hiện tại: '+d.t2_dia_chi : null,
-      d.t2_que_quan ? 'Nhà ba mẹ (Quê): '+d.t2_que_quan : null
-    ].filter(Boolean);
-    if (dm.length) { md += '## 🏛️ Nhân thân & Nền tảng\n'; dm.forEach(function(v){md+='- '+fmt(v,45)+'\n';}); }
-    if (d.t2_nguoi_than) md += '## 🏡 Gia đình & Hoàn cảnh\n### 👨‍👩‍👧‍👦 Hoàn cảnh gia đình\n' + mdS(d.t2_nguoi_than,55);
-    var tt='';
-    if (d.t2_ton_giao) tt+='- **Tôn giáo:** '+(Array.isArray(d.t2_ton_giao)?d.t2_ton_giao.join(', '):d.t2_ton_giao)+'\n';
-    if (d.t2_quan_diem) tt+=mdS(d.t2_quan_diem,55);
-    if (tt) md += '## ⚖️ Hệ tư tưởng & Niềm tin\n' + tt;
-    var tl='';
-    if (d.t2_tinh_cach) tl+='### 🧩 Tính cách\n'+mdS(d.t2_tinh_cach,50);
-    if (d.t2_so_thich) tl+='### 🎨 Đam mê / Sở thích\n'+mdS(d.t2_so_thich,50);
-    if (d.t2_du_dinh) tl+='### 🚀 Khát vọng / Dự định\n'+mdS(d.t2_du_dinh,50);
-    if (tl) md += '## 🌊 Chiều sâu nội tâm\n' + tl;
-    var qk='';
-    if (d.t2_nguoi_quan_trong) qk+='### 👥 Người quan trọng nhất\n'+mdS(d.t2_nguoi_quan_trong,50);
-    if (d.t2_chuyen_cu) qk+='### 📖 Câu chuyện dấu ấn\n'+mdS(d.t2_chuyen_cu,50);
-    if (qk) md += '## ⛓️ Góc khuất & Ràng buộc\n' + qk;
-    if (d.t2_luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdS(d.t2_luu_y,55);
-    if (md.trim() === '# '+name) md += '## 📋 Chưa có dữ liệu\n';
-
-    // Render
+    // Render markmap
     document.getElementById('loading').style.display = 'none';
     var wrap = document.getElementById('mmWrap');
     wrap.style.display = 'block';
@@ -105,7 +119,7 @@ async function init() {
       window.markmap.autoLoader.renderAll();
     }
   } catch(e) {
-    showError('Loi: ' + e.message);
+    showError('Có lỗi xảy ra.', e.message);
   }
 }
 init();
