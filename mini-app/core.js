@@ -503,10 +503,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { await loadStructure(); } catch(e) { console.warn('loadStructure init error:', e); }
     // Run remaining loads independently so one failure doesn't block others
     await Promise.allSettled([loadProfiles(), loadDashboard(), loadStaff()]);
+    // Deep link: auto-open profile after data is ready
+    _handleDeepLink();
   } catch(e) {
     console.error('Init error:', e);
     _clearLoadingStates();
   }
+});
+
+// ============ DEEP LINK HANDLER ============
+function _getDeepLinkProfileId() {
+  // 1. URL query param ?profile=UUID
+  try { var p = new URLSearchParams(location.search).get('profile'); if (p) return p; } catch(e) {}
+  // 2. Telegram hash: #tgWebAppStartParam=UUID&...
+  try {
+    var h = location.hash.substring(1);
+    if (h) { var sp = new URLSearchParams(h).get('tgWebAppStartParam'); if (sp) return sp; }
+  } catch(e) {}
+  // 3. Telegram SDK parsed
+  try {
+    var s = window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param;
+    if (s) return s;
+  } catch(e) {}
+  return null;
+}
+
+let _deepLinkHandled = false;
+function _handleDeepLink() {
+  var pid = _getDeepLinkProfileId();
+  if (!pid || _deepLinkHandled) return;
+  _deepLinkHandled = true;
+  console.log('[DeepLink] Opening profile:', pid);
+  if (typeof openProfileById === 'function' && allProfiles && allProfiles.length > 0) {
+    openProfileById(pid);
+  }
+}
+
+// Case 2: App already open — Telegram may update hash when user clicks deep link again
+window.addEventListener('hashchange', function() {
+  _deepLinkHandled = false; // reset so new deep link can fire
+  if (allProfiles && allProfiles.length > 0) _handleDeepLink();
 });
 
 async function loadStaffInfo() {

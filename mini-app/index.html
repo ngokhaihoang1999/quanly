@@ -599,7 +599,7 @@
 </div>
 </div>
 <script src="webhook.js?v=2026040801"></script>
-<script src="core.js?v=2026040801"></script>
+<script src="core.js?v=2026040902"></script>
 <script src="dashboard.js?v=2026040801"></script>
 <script src="profiles.js?v=2026040801"></script>
 <script src="hapja.js?v=2026040801"></script>
@@ -615,50 +615,6 @@
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
 <script src="lacie.js?v=2026040801"></script>
 <script src="mindmap.js?v=2026040808"></script>
-<script>
-// Deep link: ?profile=<uuid> OR Telegram startapp=<uuid> → auto-open profile
-(function() {
-  function getDeepLinkProfileId() {
-    // 1. URL query param ?profile=
-    var params = new URLSearchParams(location.search);
-    var pid = params.get('profile');
-    if (pid) return pid;
-    // 2. Telegram passes data via URL hash: #tgWebAppStartParam=UUID&...
-    try {
-      var hash = location.hash.substring(1);
-      if (hash) {
-        var hp = new URLSearchParams(hash);
-        var sp = hp.get('tgWebAppStartParam');
-        if (sp) return sp;
-      }
-    } catch(e) {}
-    // 3. Telegram WebApp SDK parsed start_param
-    try {
-      var sp2 = window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param;
-      if (sp2) return sp2;
-    } catch(e) {}
-    return null;
-  }
-  // Try immediately, then retry after 1s and 3s for SDK init
-  function tryOpen() {
-    var pid = getDeepLinkProfileId();
-    if (!pid) return false;
-    console.log('[DeepLink] Opening profile:', pid);
-    var attempts = 0;
-    var interval = setInterval(function() {
-      attempts++;
-      if (attempts > 60) { clearInterval(interval); return; }
-      if (typeof openProfileById === 'function' && window.allProfiles && window.allProfiles.length > 0) {
-        clearInterval(interval);
-        openProfileById(pid);
-      }
-    }, 500);
-    return true;
-  }
-  if (!tryOpen()) {
-    setTimeout(function() { if (!tryOpen()) { setTimeout(tryOpen, 2000); } }, 1000);
-  }
-})();
-</script>
+<!-- Deep link logic moved to core.js -->
 </body>
 </html>
