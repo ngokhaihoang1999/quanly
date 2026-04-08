@@ -1,4 +1,21 @@
+# Docs & secrets
 README.md
 docs/
 .openai_key
+
+# Personal/sensitive files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.zip
+*.docx
+*.doc
+*.txt
+!mini-app/jondo_process.doc.txt
+logs_extracted/
+split.py
+write_docs.py
+
+# Mini-app internal docs
 mini-app/jondo_process.doc.txt
