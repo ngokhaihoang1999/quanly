@@ -615,5 +615,23 @@
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
 <script src="lacie.js?v=2026040801"></script>
 <script src="mindmap.js?v=2026040808"></script>
+<script>
+// Deep link: ?profile=<uuid> → auto-open profile after app loads
+(function() {
+  var params = new URLSearchParams(location.search);
+  var profileId = params.get('profile');
+  if (!profileId) return;
+  // Poll until openProfileById is available and profiles are loaded
+  var attempts = 0;
+  var interval = setInterval(function() {
+    attempts++;
+    if (attempts > 60) { clearInterval(interval); return; } // give up after 30s
+    if (typeof openProfileById === 'function' && window.allProfiles && window.allProfiles.length > 0) {
+      clearInterval(interval);
+      openProfileById(profileId);
+    }
+  }, 500);
+})();
+</script>
 </body>
 </html>

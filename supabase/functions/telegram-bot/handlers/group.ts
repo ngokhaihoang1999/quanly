@@ -350,13 +350,22 @@ export async function handleGroupChat(update: any) {
     }
 
     // Build dynamic menu
+    const miniAppBase = 'https://ngokhaihoang1999.github.io/quanly/mini-app/index.html';
+    // Check if profile already linked to determine view profile button type
+    const fgEarly = existingFg || (await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single()).data;
+    let viewProfileBtn: any;
+    if (fgEarly?.profile_id) {
+      viewProfileBtn = { text: '👤 Xem hồ sơ Trái quả', web_app: { url: `${miniAppBase}?profile=${fgEarly.profile_id}` } };
+    } else {
+      viewProfileBtn = { text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' };
+    }
     const keyboard: any[] = [
-      [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
+      [viewProfileBtn],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
     ];
 
-    const fgForMenu = existingFg || (await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single()).data;
+    const fgForMenu = fgEarly;
     if (fgForMenu?.profile_id) {
       const { data: profile } = await supabase.from('profiles').select('phase, is_kt_opened').eq('id', fgForMenu.profile_id).single();
       const phase = profile?.phase || 'chakki';
@@ -383,7 +392,7 @@ export async function handleGroupChat(update: any) {
     } else {
       keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
     }
-    await sendKeyboard(chatId, `🛠 *Menu Quản lý Group*`, keyboard);
+    await sendKeyboard(chatId, `📋 *Menu Quản lý Group*`, keyboard);
     return;
   }
 }
