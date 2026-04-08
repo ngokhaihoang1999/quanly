@@ -355,9 +355,9 @@ export async function handleGroupChat(update: any) {
     // If new group was just created, profile_id won't be set yet anyway
     const keyboard: any[] = [];
 
-    // Nút Xem hồ sơ: dùng web_app nếu đã gắn, callback nếu chưa
+    // Nút Xem hồ sơ: dùng url nếu đã gắn (web_app chỉ hoạt động trong private chat)
     if (linkedProfileId) {
-      keyboard.push([{ text: '👤 Xem hồ sơ Trái quả', web_app: { url: `${miniAppBase}?profile=${linkedProfileId}` } }]);
+      keyboard.push([{ text: '👤 Xem hồ sơ Trái quả', url: `${miniAppBase}?profile=${linkedProfileId}` }]);
     } else {
       keyboard.push([{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }]);
     }
