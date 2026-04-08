@@ -618,23 +618,40 @@
 <script>
 // Deep link: ?profile=<uuid> OR Telegram startapp=<uuid> → auto-open profile
 (function() {
-  var params = new URLSearchParams(location.search);
-  var profileId = params.get('profile');
-  // Also check Telegram WebApp start_param (from t.me/bot/app?startapp=UUID)
-  if (!profileId && window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
-    profileId = Telegram.WebApp.initDataUnsafe.start_param || null;
+  function getDeepLinkProfileId() {
+    // 1. URL query param ?profile=
+    var params = new URLSearchParams(location.search);
+    var pid = params.get('profile');
+    if (pid) return pid;
+    // 2. Telegram WebApp start_param (from t.me/bot/app?startapp=UUID)
+    try {
+      var sp = window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param;
+      if (sp) return sp;
+    } catch(e) {}
+    return null;
   }
-  if (!profileId) return;
-  // Poll until openProfileById is available and profiles are loaded
-  var attempts = 0;
-  var interval = setInterval(function() {
-    attempts++;
-    if (attempts > 60) { clearInterval(interval); return; }
-    if (typeof openProfileById === 'function' && window.allProfiles && window.allProfiles.length > 0) {
-      clearInterval(interval);
-      openProfileById(profileId);
-    }
-  }, 500);
+  var profileId = getDeepLinkProfileId();
+  if (!profileId) {
+    // Retry after Telegram SDK initializes
+    setTimeout(function() {
+      profileId = getDeepLinkProfileId();
+      if (profileId) startPolling(profileId);
+    }, 1000);
+    return;
+  }
+  startPolling(profileId);
+  function startPolling(pid) {
+    console.log('[DeepLink] Opening profile:', pid);
+    var attempts = 0;
+    var interval = setInterval(function() {
+      attempts++;
+      if (attempts > 60) { clearInterval(interval); return; }
+      if (typeof openProfileById === 'function' && window.allProfiles && window.allProfiles.length > 0) {
+        clearInterval(interval);
+        openProfileById(pid);
+      }
+    }, 500);
+  }
 })();
 </script>
 </body>
