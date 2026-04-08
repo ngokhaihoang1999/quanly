@@ -120,7 +120,7 @@ export async function handleCallback(update: any, staffData: any) {
     const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
     if (!fgI?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
     const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened, birth_year, fruit_status, dropout_reason, ndd_staff_code').eq('id', fgI.profile_id).single();
-    const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).single();
+    const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
     const d: any = sheet || {};
     let txt = `👤 *Thông tin cơ bản: ${prof?.full_name || 'N/A'}*\n`;
     txt += `Giai đoạn: ${prof?.phase || 'chakki'}`;
