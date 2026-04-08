@@ -120,7 +120,10 @@ export async function handleCallback(update: any, staffData: any) {
     try {
       const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
       if (!fgI?.profile_id) {
-        await editMessageText(chatId, messageId, 'Chua gan ho so.', [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]]);
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: 'Chua gan ho so.', reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
+        });
         return;
       }
       const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
@@ -128,7 +131,8 @@ export async function handleCallback(update: any, staffData: any) {
       const d: any = sheet || {};
       const lines: string[] = [];
       lines.push('THONG TIN CO BAN: ' + (prof?.full_name || 'N/A'));
-      lines.push('Giai doan: ' + (prof?.phase || 'N/A') + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
+      const phaseLabel = (prof?.phase || 'N/A').replace(/_/g, ' ');
+      lines.push('Giai doan: ' + phaseLabel + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
       if (d.gioi_tinh) lines.push('Gioi tinh: ' + String(d.gioi_tinh));
       if (d.nam_sinh) lines.push('Nam sinh: ' + String(d.nam_sinh));
       if (d.nghe_nghiep) lines.push('Nghe: ' + String(d.nghe_nghiep));
@@ -136,20 +140,20 @@ export async function handleCallback(update: any, staffData: any) {
       if (d.so_thich) lines.push('So thich: ' + String(d.so_thich));
       if (d.luu_y) lines.push('Luu y: ' + String(d.luu_y));
       if (lines.length <= 2) lines.push('Chua co du lieu phieu thong tin.');
-      // Check for mindmap image
-      const { data: imgRec } = await supabase.from('records').select('content').eq('profile_id', fgI.profile_id).eq('record_type', 'mindmap_image').order('created_at', { ascending: false }).limit(1);
-      if (imgRec && imgRec.length > 0 && imgRec[0]?.content?.url) {
-        lines.push('');
-        lines.push('Anh mindmap: ' + imgRec[0].content.url);
-      }
-      await editMessageText(chatId, messageId, lines.join('\n'), [
-        [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
-      ]);
+      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: lines.join('\n'), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
+      });
+      const resJson = await res.json();
+      if (!resJson.ok) console.error('editMessageText failed:', JSON.stringify(resJson));
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
-      await editMessageText(chatId, messageId, 'Loi tai thong tin: ' + String(e).substring(0, 200), [
-        [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
-      ]);
+      try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: 'Loi: ' + String(e).substring(0, 200), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
+        });
+      } catch (e2) { console.error('fallback error:', e2); }
     }
     return;
   }
