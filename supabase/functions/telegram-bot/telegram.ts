@@ -30,6 +30,15 @@ export async function editMessageReplyMarkup(chatId: number, messageId: number, 
   });
 }
 
+export async function editMessageText(chatId: number, messageId: number, text: string, keyboard: any[] | null = null) {
+  const payload: any = { chat_id: chatId, message_id: messageId, text, parse_mode: "Markdown" };
+  if (keyboard) payload.reply_markup = { inline_keyboard: keyboard };
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function getChatAdmins(chatId: number) {
   const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatAdministrators?chat_id=${chatId}`).then(r => r.json());
   return res.ok ? res.result : [];

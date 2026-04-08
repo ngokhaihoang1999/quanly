@@ -1,6 +1,6 @@
 import { supabase, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
-import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
+import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
 
 // ============ CALLBACK QUERY HANDLER ============
 
@@ -72,6 +72,40 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ============ GROUP MENU CALLBACKS ============
 
+  // ── Helper: rebuild main menu inline ──
+  async function editToMainMenu() {
+    const { data: fgm } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+    const keyboard: any[] = [
+      [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
+      [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
+      [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
+    ];
+    if (fgm?.profile_id) {
+      const { data: prof } = await supabase.from('profiles').select('phase, is_kt_opened').eq('id', fgm.profile_id).single();
+      const ph = prof?.phase || 'chakki';
+      const { count: tvC } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgm.profile_id).eq('record_type', 'tu_van');
+      const { count: bbC } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgm.profile_id).eq('record_type', 'bien_ban');
+      if ((tvC || 0) > 0 || (bbC || 0) > 0) {
+        keyboard.push([{ text: `📋 Xem báo cáo (${tvC || 0} TV · ${bbC || 0} BB)`, callback_data: 'menu_view_report' }]);
+      }
+      if (['tu_van_hinh', 'tu_van', 'bb', 'center'].includes(ph)) {
+        keyboard.push([{ text: '✏️ Thêm báo cáo', callback_data: 'menu_add_report' }]);
+      }
+      if (!prof?.is_kt_opened) {
+        keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
+      }
+    } else {
+      keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
+    }
+    await editMessageText(chatId, messageId, `🛠 *Menu Quản lý Group*`, keyboard);
+  }
+
+  // ── Quay lại menu chính ──
+  if (cbData === 'menu_back') {
+    await editToMainMenu();
+    return;
+  }
+
   // ── Xem báo cáo: show sub-menu with TV/BB counts ──
   if (cbData === 'menu_view_report') {
     const { data: fg } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
@@ -81,8 +115,8 @@ export async function handleCallback(update: any, staffData: any) {
     const kb: any[] = [];
     if ((tvCount || 0) > 0) kb.push([{ text: `📝 Báo cáo TV (${tvCount} phiếu)`, callback_data: 'view_report_list_tv' }]);
     if ((bbCount || 0) > 0) kb.push([{ text: `📖 Báo cáo BB (${bbCount} phiếu)`, callback_data: 'view_report_list_bb' }]);
-    if (kb.length === 0) return sendText(chatId, `ℹ️ Chưa có báo cáo nào.`);
-    await sendKeyboard(chatId, `📋 *Chọn loại báo cáo:*`, kb);
+    kb.push([{ text: '← Quay lại', callback_data: 'menu_back' }]);
+    await editMessageText(chatId, messageId, `📋 *Chọn loại báo cáo:*`, kb);
     return;
   }
 
@@ -97,7 +131,8 @@ export async function handleCallback(update: any, staffData: any) {
       const title = c.lan_thu ? `Lần ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` : `Phiếu #${i + 1}`;
       return [{ text: `📝 ${title}`, callback_data: `view_report_tv_${r.id}` }];
     });
-    await sendKeyboard(chatId, `📝 *Báo cáo Tư vấn — ${fg.profiles?.full_name || ''}*\nChọn để xem chi tiết:`, kb);
+    kb.push([{ text: '← Quay lại', callback_data: 'menu_view_report' }]);
+    await editMessageText(chatId, messageId, `📝 *Báo cáo Tư vấn — ${fg.profiles?.full_name || ''}*\nChọn để xem chi tiết:`, kb);
     return;
   }
 
@@ -112,7 +147,8 @@ export async function handleCallback(update: any, staffData: any) {
       const title = c.buoi_thu ? `Buổi ${c.buoi_thu}` : `Phiếu #${i + 1}`;
       return [{ text: `📖 ${title}`, callback_data: `view_report_bb_${r.id}` }];
     });
-    await sendKeyboard(chatId, `📖 *Báo cáo BB — ${fg.profiles?.full_name || ''}*\nChọn để xem chi tiết:`, kb);
+    kb.push([{ text: '← Quay lại', callback_data: 'menu_view_report' }]);
+    await editMessageText(chatId, messageId, `📖 *Báo cáo BB — ${fg.profiles?.full_name || ''}*\nChọn để xem chi tiết:`, kb);
     return;
   }
 
@@ -135,7 +171,8 @@ export async function handleCallback(update: any, staffData: any) {
     if (c.phan_hoi) msg += `💭 *Phản hồi của trái:*\n${c.phan_hoi}\n\n`;
     if (c.diem_hai) msg += `🎯 *Điểm hái trái:*\n${c.diem_hai}\n\n`;
     if (c.de_xuat) msg += `📋 *Đề xuất TVV:*\n${c.de_xuat}\n`;
-    await sendText(chatId, msg.trim());
+    const backKb = [[{ text: '← Quay lại danh sách', callback_data: 'view_report_list_tv' }]];
+    await editMessageText(chatId, messageId, msg.trim(), backKb);
     return;
   }
 
@@ -147,7 +184,6 @@ export async function handleCallback(update: any, staffData: any) {
     const { data: p } = await supabase.from('profiles').select('full_name').eq('id', rec.profile_id).single();
     const c = rec.content || {};
     const date = new Date(rec.created_at).toLocaleDateString('vi-VN');
-    // Parse buoi_tiep display
     let buoiTiepDisplay = '';
     if (c.buoi_tiep) {
       const isoMatch = String(c.buoi_tiep).match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
@@ -168,7 +204,8 @@ export async function handleCallback(update: any, staffData: any) {
     if (c.de_xuat_cs) msg += `📋 *Đề xuất chăm sóc:*\n${c.de_xuat_cs}\n\n`;
     if (buoiTiepDisplay) msg += `📅 *Buổi tiếp:* ${buoiTiepDisplay}\n`;
     if (c.noi_dung_tiep) msg += `📝 *Nội dung tiếp:* ${c.noi_dung_tiep}\n`;
-    await sendText(chatId, msg.trim());
+    const backKb = [[{ text: '← Quay lại danh sách', callback_data: 'view_report_list_bb' }]];
+    await editMessageText(chatId, messageId, msg.trim(), backKb);
     return;
   }
 
@@ -180,34 +217,34 @@ export async function handleCallback(update: any, staffData: any) {
     const phase = p?.phase || 'chakki';
     const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html`;
 
-    // Determine available report types based on phase
     let canTV = false, canBB = false;
     if (['chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center'].includes(phase)) canTV = true;
     if (['tu_van', 'bb', 'center'].includes(phase)) canBB = true;
 
-    // Build message for the group
     let typeList = '';
     if (canTV) typeList += `📝 Báo cáo TV\n`;
     if (canBB) typeList += `📖 Báo cáo BB\n`;
 
-    // Send a private message with Mini-App button to the user who clicked
+    // Send private message with Mini-App button
     try {
-      const privateChatId = telegramId;
       const pkb: any[] = [
         [{ text: `🖥️ Mở Mini App để viết báo cáo`, web_app: { url: miniAppUrl } }]
       ];
-      await sendKeyboard(privateChatId,
+      await sendKeyboard(telegramId,
         `✏️ *Viết báo cáo cho ${p?.full_name || 'hồ sơ'}*\n\n` +
         `Loại báo cáo có thể viết:\n${typeList}\n` +
-        `Bấm nút bên dưới để mở Mini App, vào hồ sơ *${p?.full_name || ''}* và viết báo cáo.`,
+        `Bấm nút bên dưới để mở Mini App và viết báo cáo.`,
         pkb
       );
-      await sendText(chatId, `📨 Đã gửi link viết báo cáo vào tin nhắn riêng cho bạn.\n💡 _Kiểm tra chat riêng với bot để mở Mini App._`);
+      // Update same message to confirm + back button
+      await editMessageText(chatId, messageId,
+        `📨 Đã gửi link viết báo cáo vào *tin nhắn riêng* cho bạn.\n💡 _Kiểm tra chat riêng với bot để mở Mini App._`,
+        [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]
+      );
     } catch (e) {
-      // User hasn't started private chat with bot
-      await sendText(chatId,
-        `⚠️ Không thể gửi tin nhắn riêng.\n\n` +
-        `Hãy nhắn */start* cho bot trong chat riêng trước, rồi quay lại đây bấm lại nút *✏️ Thêm báo cáo*.`
+      await editMessageText(chatId, messageId,
+        `⚠️ Không thể gửi tin nhắn riêng.\n\nHãy nhắn */start* cho bot trong chat riêng trước, rồi quay lại bấm lại.`,
+        [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]
       );
     }
     return;
