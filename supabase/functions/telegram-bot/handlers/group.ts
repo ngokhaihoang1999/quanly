@@ -189,16 +189,33 @@ export async function handleGroupChat(update: any) {
       }).catch(() => {});
     }
 
-    // Build dynamic menu — hide KT button if all sessions confirmed
+    // Build dynamic menu — hide buttons based on profile state
     const keyboard: any[] = [
       [{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }],
       [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
       [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
     ];
-    // Check if KT button should be shown (hide when already opened)
+
+    // Check linked profile for dynamic buttons
     const fgForMenu = existingFg || (await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single()).data;
     if (fgForMenu?.profile_id) {
-      const { data: profile } = await supabase.from('profiles').select('is_kt_opened').eq('id', fgForMenu.profile_id).single();
+      const { data: profile } = await supabase.from('profiles').select('phase, is_kt_opened').eq('id', fgForMenu.profile_id).single();
+      const phase = profile?.phase || 'chakki';
+
+      // 📋 Xem báo cáo — show with report counts
+      const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgForMenu.profile_id).eq('record_type', 'tu_van');
+      const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgForMenu.profile_id).eq('record_type', 'bien_ban');
+      if ((tvCount || 0) > 0 || (bbCount || 0) > 0) {
+        const countLabel = `${tvCount || 0} TV · ${bbCount || 0} BB`;
+        keyboard.push([{ text: `📋 Xem báo cáo (${countLabel})`, callback_data: 'menu_view_report' }]);
+      }
+
+      // ✏️ Thêm báo cáo — available if profile is past chakki
+      if (['tu_van_hinh', 'tu_van', 'bb', 'center'].includes(phase)) {
+        keyboard.push([{ text: '✏️ Thêm báo cáo', callback_data: 'menu_add_report' }]);
+      }
+
+      // 📖 Mở KT — hide when already opened
       if (!profile?.is_kt_opened) {
         keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
       }

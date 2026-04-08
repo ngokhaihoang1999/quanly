@@ -306,7 +306,8 @@ async function createNotification(recipients, eventType, title, bodyText, profil
         staff_codes: unique,
         event_type: eventType,
         title,
-        body: bodyText || null
+        body: bodyText || null,
+        profile_id: profileId || null
       })
     }).then(r => {
       if (!r.ok) r.text().then(t => console.warn('send-notification edge fn error:', t));

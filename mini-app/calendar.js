@@ -487,10 +487,17 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
       timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
     
+    // Reminder: 1 hour before the event
+    const reminderAt = new Date(`${dateStr}T${timeStr}:00`);
+    reminderAt.setHours(reminderAt.getHours() - 1);
+    const reminderAtStr = reminderAt.toISOString();
+
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'chot_tv',
       title: titleStr,
       event_date: dateStr, event_time: timeStr,
+      reminder_at: reminderAtStr,
+      reminder_channels: ['app', 'chat'],
       is_auto: true, is_system: true
     })});
   } catch(e) { console.warn('createCalEventFromChotTV:', e); }
@@ -521,10 +528,17 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
     // Delete old matching upcoming BB event to avoid dupes if they edit the report
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=eq.${encodeURIComponent(eventTitle)}`, { method: 'DELETE' });
 
+    // Reminder: 1 hour before the BB session
+    const reminderAt = new Date(`${dateStr}T${timeStr}:00`);
+    reminderAt.setHours(reminderAt.getHours() - 1);
+    const reminderAtStr = reminderAt.toISOString();
+
     await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
       staff_code: myCode, profile_id: profileId, event_type: 'hoc_bb',
       title: eventTitle,
       event_date: dateStr, event_time: timeStr,
+      reminder_at: reminderAtStr,
+      reminder_channels: ['app', 'chat'],
       is_auto: true, is_system: true
     })});
   } catch(e) { console.warn('createCalEventFromBBReport:', e); }

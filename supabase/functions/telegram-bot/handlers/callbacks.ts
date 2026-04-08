@@ -72,7 +72,146 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ============ GROUP MENU CALLBACKS ============
 
+  // ── Xem báo cáo: show sub-menu with TV/BB counts ──
+  if (cbData === 'menu_view_report') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+    if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'tu_van');
+    const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban');
+    const kb: any[] = [];
+    if ((tvCount || 0) > 0) kb.push([{ text: `📝 Báo cáo TV (${tvCount} phiếu)`, callback_data: 'view_report_list_tv' }]);
+    if ((bbCount || 0) > 0) kb.push([{ text: `📖 Báo cáo BB (${bbCount} phiếu)`, callback_data: 'view_report_list_bb' }]);
+    if (kb.length === 0) return sendText(chatId, `ℹ️ Chưa có báo cáo nào.`);
+    await sendKeyboard(chatId, `📋 *Chọn loại báo cáo:*`, kb);
+    return;
+  }
 
+  // ── List TV reports ──
+  if (cbData === 'view_report_list_tv') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const { data: records } = await supabase.from('records').select('id, content, created_at').eq('profile_id', fg.profile_id).eq('record_type', 'tu_van').order('created_at', { ascending: true });
+    if (!records || records.length === 0) return sendText(chatId, `ℹ️ Chưa có báo cáo TV nào.`);
+    const kb = records.map((r: any, i: number) => {
+      const c = r.content || {};
+      const title = c.lan_thu ? `Lần ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` : `Phiếu #${i + 1}`;
+      return [{ text: `📝 ${title}`, callback_data: `view_report_tv_${r.id}` }];
+    });
+    await sendKeyboard(chatId, `📝 *Báo cáo Tư vấn — ${fg.profiles?.full_name || ''}*\nChọn để xem chi tiết:`, kb);
+    return;
+  }
+
+  // ── List BB reports ──
+  if (cbData === 'view_report_list_bb') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const { data: records } = await supabase.from('records').select('id, content, created_at').eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban').order('created_at', { ascending: true });
+    if (!records || records.length === 0) return sendText(chatId, `ℹ️ Chưa có báo cáo BB nào.`);
+    const kb = records.map((r: any, i: number) => {
+      const c = r.content || {};
+      const title = c.buoi_thu ? `Buổi ${c.buoi_thu}` : `Phiếu #${i + 1}`;
+      return [{ text: `📖 ${title}`, callback_data: `view_report_bb_${r.id}` }];
+    });
+    await sendKeyboard(chatId, `📖 *Báo cáo BB — ${fg.profiles?.full_name || ''}*\nChọn để xem chi tiết:`, kb);
+    return;
+  }
+
+  // ── View a specific TV report detail ──
+  if (cbData.startsWith('view_report_tv_')) {
+    const recordId = cbData.replace('view_report_tv_', '');
+    const { data: rec } = await supabase.from('records').select('content, created_at, profile_id').eq('id', recordId).single();
+    if (!rec) return sendText(chatId, `❌ Không tìm thấy báo cáo.`);
+    const { data: p } = await supabase.from('profiles').select('full_name').eq('id', rec.profile_id).single();
+    const c = rec.content || {};
+    const date = new Date(rec.created_at).toLocaleDateString('vi-VN');
+    let msg = `📝 *BÁO CÁO TƯ VẤN — Lần ${c.lan_thu || '?'}*\n`;
+    msg += `🍎 _${p?.full_name || ''}_\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📅 *Ngày:* ${date}\n`;
+    if (c.ten_cong_cu) msg += `🔧 *Công cụ:* ${c.ten_cong_cu}\n`;
+    msg += `\n`;
+    if (c.ket_qua_test) msg += `📌 *Kết quả test:*\n${c.ket_qua_test}\n\n`;
+    if (c.van_de) msg += `💬 *Vấn đề / Nhu cầu khai thác:*\n${c.van_de}\n\n`;
+    if (c.phan_hoi) msg += `💭 *Phản hồi của trái:*\n${c.phan_hoi}\n\n`;
+    if (c.diem_hai) msg += `🎯 *Điểm hái trái:*\n${c.diem_hai}\n\n`;
+    if (c.de_xuat) msg += `📋 *Đề xuất TVV:*\n${c.de_xuat}\n`;
+    await sendText(chatId, msg.trim());
+    return;
+  }
+
+  // ── View a specific BB report detail ──
+  if (cbData.startsWith('view_report_bb_')) {
+    const recordId = cbData.replace('view_report_bb_', '');
+    const { data: rec } = await supabase.from('records').select('content, created_at, profile_id').eq('id', recordId).single();
+    if (!rec) return sendText(chatId, `❌ Không tìm thấy báo cáo.`);
+    const { data: p } = await supabase.from('profiles').select('full_name').eq('id', rec.profile_id).single();
+    const c = rec.content || {};
+    const date = new Date(rec.created_at).toLocaleDateString('vi-VN');
+    // Parse buoi_tiep display
+    let buoiTiepDisplay = '';
+    if (c.buoi_tiep) {
+      const isoMatch = String(c.buoi_tiep).match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (isoMatch) buoiTiepDisplay = `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]} ${isoMatch[4]}:${isoMatch[5]}`;
+      else {
+        const oldMatch = String(c.buoi_tiep).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
+        if (oldMatch) buoiTiepDisplay = c.buoi_tiep;
+      }
+    }
+    let msg = `📖 *BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}*\n`;
+    msg += `🍎 _${p?.full_name || ''}_\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📅 *Ngày:* ${date}\n\n`;
+    if (c.noi_dung) msg += `📚 *Nội dung buổi học:*\n${c.noi_dung}\n\n`;
+    if (c.phan_ung) msg += `😊 *Phản ứng HS:*\n${c.phan_ung}\n\n`;
+    if (c.khai_thac) msg += `🔍 *Khai thác mới:*\n${c.khai_thac}\n\n`;
+    if (c.tuong_tac) msg += `💡 *Tương tác đáng chú ý:*\n${c.tuong_tac}\n\n`;
+    if (c.de_xuat_cs) msg += `📋 *Đề xuất chăm sóc:*\n${c.de_xuat_cs}\n\n`;
+    if (buoiTiepDisplay) msg += `📅 *Buổi tiếp:* ${buoiTiepDisplay}\n`;
+    if (c.noi_dung_tiep) msg += `📝 *Nội dung tiếp:* ${c.noi_dung_tiep}\n`;
+    await sendText(chatId, msg.trim());
+    return;
+  }
+
+  // ── Thêm báo cáo: check phase → send private Mini-App link ──
+  if (cbData === 'menu_add_report') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name, phase)').eq('telegram_group_id', chatId).single();
+    if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const p = fg.profiles;
+    const phase = p?.phase || 'chakki';
+    const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html`;
+
+    // Determine available report types based on phase
+    let canTV = false, canBB = false;
+    if (['chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center'].includes(phase)) canTV = true;
+    if (['tu_van', 'bb', 'center'].includes(phase)) canBB = true;
+
+    // Build message for the group
+    let typeList = '';
+    if (canTV) typeList += `📝 Báo cáo TV\n`;
+    if (canBB) typeList += `📖 Báo cáo BB\n`;
+
+    // Send a private message with Mini-App button to the user who clicked
+    try {
+      const privateChatId = telegramId;
+      const pkb: any[] = [
+        [{ text: `🖥️ Mở Mini App để viết báo cáo`, web_app: { url: miniAppUrl } }]
+      ];
+      await sendKeyboard(privateChatId,
+        `✏️ *Viết báo cáo cho ${p?.full_name || 'hồ sơ'}*\n\n` +
+        `Loại báo cáo có thể viết:\n${typeList}\n` +
+        `Bấm nút bên dưới để mở Mini App, vào hồ sơ *${p?.full_name || ''}* và viết báo cáo.`,
+        pkb
+      );
+      await sendText(chatId, `📨 Đã gửi link viết báo cáo vào tin nhắn riêng cho bạn.\n💡 _Kiểm tra chat riêng với bot để mở Mini App._`);
+    } catch (e) {
+      // User hasn't started private chat with bot
+      await sendText(chatId,
+        `⚠️ Không thể gửi tin nhắn riêng.\n\n` +
+        `Hãy nhắn */start* cho bot trong chat riêng trước, rồi quay lại đây bấm lại nút *✏️ Thêm báo cáo*.`
+      );
+    }
+    return;
+  }
 
   // menu_view_profile — Xem hồ sơ đầy đủ
   if (cbData === 'menu_view_profile') {
