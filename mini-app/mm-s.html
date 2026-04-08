@@ -13,9 +13,10 @@ svg.markmap{width:100%;height:100vh}
 </head>
 <body>
 <script>
-// Decode URL hash → markdown → inject into DOM BEFORE autoloader processes
+// Read data from query param ?d= (not hash - screenshot services strip hash)
 try {
-  var h = location.hash.substring(1);
+  var params = new URLSearchParams(location.search);
+  var h = params.get('d') || location.hash.substring(1);
   if(!h) throw new Error('No data');
   // Restore URL-safe base64
   h = h.replace(/-/g,'+').replace(/_/g,'/');
@@ -26,7 +27,7 @@ try {
   for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
   var md = new TextDecoder().decode(bytes);
   
-  // Build DOM properly (innerHTML doesn't parse <script> tags)
+  // Build DOM properly (createElement, not innerHTML)
   var wrap = document.createElement('div');
   wrap.className = 'markmap';
   var tmpl = document.createElement('script');

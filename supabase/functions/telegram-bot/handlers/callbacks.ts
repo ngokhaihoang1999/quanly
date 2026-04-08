@@ -154,7 +154,7 @@ export async function handleCallback(update: any, staffData: any) {
       // Encode markdown to URL-safe base64 for mm-s.html
       const mdBytes = new TextEncoder().encode(md);
       const b64 = btoa(String.fromCharCode(...mdBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-      const staticUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html#' + b64;
+      const staticUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64;
       const screenshotUrl = 'https://image.thum.io/get/width/1200/crop/900/wait/5/noanimate/png/' + staticUrl;
       
       // Fetch screenshot ourselves, then upload as blob
@@ -246,7 +246,7 @@ export async function handleCallback(update: any, staffData: any) {
       const bbMd = mmRec[0].content.markdown as string;
       const bbBytes = new TextEncoder().encode(bbMd);
       const b64bb = btoa(String.fromCharCode(...bbBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-      const staticUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html#' + b64bb;
+      const staticUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64bb;
       const screenshotUrlBB = 'https://image.thum.io/get/width/1200/crop/900/wait/5/noanimate/png/' + staticUrlBB;
       
       // Fetch screenshot ourselves, then upload as blob
