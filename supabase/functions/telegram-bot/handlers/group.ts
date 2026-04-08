@@ -351,38 +351,36 @@ export async function handleGroupChat(update: any) {
 
     // Build dynamic menu
     const miniAppBase = 'https://ngokhaihoang1999.github.io/quanly/mini-app/index.html';
-    // Check if profile already linked to determine view profile button type
-    const fgEarly = existingFg || (await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single()).data;
-    let viewProfileBtn: any;
-    if (fgEarly?.profile_id) {
-      viewProfileBtn = { text: '👤 Xem hồ sơ Trái quả', web_app: { url: `${miniAppBase}?profile=${fgEarly.profile_id}` } };
-    } else {
-      viewProfileBtn = { text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' };
-    }
-    const keyboard: any[] = [
-      [viewProfileBtn],
-      [{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }],
-      [{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }],
-    ];
+    let linkedProfileId: string | null = existingFg?.profile_id || null;
+    // If new group was just created, profile_id won't be set yet anyway
+    const keyboard: any[] = [];
 
-    const fgForMenu = fgEarly;
-    if (fgForMenu?.profile_id) {
-      const { data: profile } = await supabase.from('profiles').select('phase, is_kt_opened').eq('id', fgForMenu.profile_id).single();
+    // Nút Xem hồ sơ: dùng web_app nếu đã gắn, callback nếu chưa
+    if (linkedProfileId) {
+      keyboard.push([{ text: '👤 Xem hồ sơ Trái quả', web_app: { url: `${miniAppBase}?profile=${linkedProfileId}` } }]);
+    } else {
+      keyboard.push([{ text: '👤 Xem hồ sơ Trái quả', callback_data: 'menu_view_profile' }]);
+    }
+    keyboard.push([{ text: '🍎 Gắn hồ sơ', callback_data: 'menu_link_profile' }]);
+    keyboard.push([{ text: '👥 Xác nhận GVBB', callback_data: 'menu_assign_role' }]);
+
+    if (linkedProfileId) {
+      const { data: profile } = await supabase.from('profiles').select('phase, is_kt_opened').eq('id', linkedProfileId).single();
       const phase = profile?.phase || 'chakki';
 
       // Xem báo cáo
-      const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgForMenu.profile_id).eq('record_type', 'tu_van');
-      const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgForMenu.profile_id).eq('record_type', 'bien_ban');
+      const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'tu_van');
+      const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'bien_ban');
       if ((tvCount || 0) > 0 || (bbCount || 0) > 0) {
         keyboard.push([{ text: `📋 Xem báo cáo (${tvCount || 0} TV · ${bbCount || 0} BB)`, callback_data: 'menu_view_report' }]);
       }
 
-      // Thêm báo cáo BB — hiện từ khi lập group (phase tu_van trở đi)
+      // Thêm báo cáo BB
       if (['tu_van', 'bb', 'center'].includes(phase)) {
         keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
       }
 
-      // Xem mindmap - available when profile is linked
+      // Xem mindmap
       keyboard.push([{ text: '🗺️ Xem Mindmap', callback_data: 'menu_mindmap' }]);
 
       // Mở KT
