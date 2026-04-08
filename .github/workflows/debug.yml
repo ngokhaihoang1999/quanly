@@ -17,6 +17,6 @@ jobs:
           supabase db push > db_push_log.txt 2>&1 || true
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add db_push_log.txt
+          git add -f db_push_log.txt
           git commit -m "log db push error" || true
           git push || true
