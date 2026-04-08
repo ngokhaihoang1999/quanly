@@ -7,43 +7,36 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif}
-#markmap{width:100vw;height:100vh}
+svg.markmap{width:100%;height:100vh}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18"></script>
 </head>
 <body>
-<svg id="markmap"></svg>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/markmap-view@0.17.2/dist/browser/index.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.17.2/dist/browser/index.js"></script>
 <script>
-(function(){
-  try {
-    var h = location.hash.substring(1);
-    if(!h) { document.body.innerHTML='<p>No data</p>'; return; }
-    // Restore URL-safe base64
-    h = h.replace(/-/g,'+').replace(/_/g,'/');
-    while(h.length%4) h+='=';
-    // Decode base64 to UTF-8 bytes
-    var bin = atob(h);
-    var bytes = new Uint8Array(bin.length);
-    for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-    var md = new TextDecoder().decode(bytes);
-    
-    // Use markmap-lib to transform markdown
-    var transformer = new markmap.Transformer();
-    var result = transformer.transform(md);
-    
-    // Render using markmap-view
-    var svg = document.getElementById('markmap');
-    markmap.Markmap.create(svg, {
-      colorFreezeLevel: 2,
-      initialExpandLevel: -1,
-      paddingX: 16
-    }, result.root);
-  } catch(e) {
-    document.body.innerHTML = '<p style="padding:20px;color:red">Error: ' + e.message + '</p>';
-  }
-})();
+// Decode URL hash → markdown → inject into DOM BEFORE autoloader processes
+try {
+  var h = location.hash.substring(1);
+  if(!h) throw new Error('No data');
+  // Restore URL-safe base64
+  h = h.replace(/-/g,'+').replace(/_/g,'/');
+  while(h.length%4) h+='=';
+  // Decode base64 → UTF-8 bytes
+  var bin = atob(h);
+  var bytes = new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  var md = new TextDecoder().decode(bytes);
+  
+  // Build DOM properly (innerHTML doesn't parse <script> tags)
+  var wrap = document.createElement('div');
+  wrap.className = 'markmap';
+  var tmpl = document.createElement('script');
+  tmpl.type = 'text/template';
+  tmpl.textContent = md;
+  wrap.appendChild(tmpl);
+  document.body.appendChild(wrap);
+} catch(e) {
+  document.write('<p style="padding:20px;color:red">Error: '+e.message+'</p>');
+}
 </script>
 </body>
 </html>
