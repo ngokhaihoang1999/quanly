@@ -1,6 +1,7 @@
 import { supabase, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
 import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
+import { sendTVFormTemplate, sendBBFormTemplate } from "./group.ts";
 
 // ============ CALLBACK QUERY HANDLER ============
 
@@ -209,44 +210,49 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // ── Thêm báo cáo: check phase → send private Mini-App link ──
+  // ── Thêm báo cáo: send form template in group ──
   if (cbData === 'menu_add_report') {
     const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name, phase)').eq('telegram_group_id', chatId).single();
     if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
-    const p = fg.profiles;
-    const phase = p?.phase || 'chakki';
-    const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html`;
+    const phase = fg.profiles?.phase || 'chakki';
 
     let canTV = false, canBB = false;
-    if (['chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center'].includes(phase)) canTV = true;
-    if (['tu_van', 'bb', 'center'].includes(phase)) canBB = true;
+    if (['tu_van_hinh', 'tu_van', 'bb', 'center'].includes(phase)) canTV = true;
+    if (['bb', 'center'].includes(phase)) canBB = true;
 
-    let typeList = '';
-    if (canTV) typeList += `📝 Báo cáo TV\n`;
-    if (canBB) typeList += `📖 Báo cáo BB\n`;
-
-    // Send private message with Mini-App button
-    try {
-      const pkb: any[] = [
-        [{ text: `🖥️ Mở Mini App để viết báo cáo`, web_app: { url: miniAppUrl } }]
+    // If both available, show sub-menu to choose type
+    if (canTV && canBB) {
+      const kb = [
+        [{ text: '📝 Viết báo cáo TV', callback_data: 'add_report_form_tv' }],
+        [{ text: '📖 Viết báo cáo BB', callback_data: 'add_report_form_bb' }],
+        [{ text: '← Quay lại', callback_data: 'menu_back' }],
       ];
-      await sendKeyboard(telegramId,
-        `✏️ *Viết báo cáo cho ${p?.full_name || 'hồ sơ'}*\n\n` +
-        `Loại báo cáo có thể viết:\n${typeList}\n` +
-        `Bấm nút bên dưới để mở Mini App và viết báo cáo.`,
-        pkb
-      );
-      // Update same message to confirm + back button
-      await editMessageText(chatId, messageId,
-        `📨 Đã gửi link viết báo cáo vào *tin nhắn riêng* cho bạn.\n💡 _Kiểm tra chat riêng với bot để mở Mini App._`,
-        [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]
-      );
-    } catch (e) {
-      await editMessageText(chatId, messageId,
-        `⚠️ Không thể gửi tin nhắn riêng.\n\nHãy nhắn */start* cho bot trong chat riêng trước, rồi quay lại bấm lại.`,
-        [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]
-      );
+      await editMessageText(chatId, messageId, `✏️ *Chọn loại báo cáo muốn viết:*`, kb);
+    } else if (canBB) {
+      // Only BB — go directly to BB form
+      await sendBBFormTemplate(chatId, fg.profiles?.full_name || '');
+      await editMessageText(chatId, messageId, `✏️ Đã gửi form *Báo cáo BB* bên dưới ⬇️`, [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]);
+    } else {
+      // Only TV — go directly to TV form
+      await sendTVFormTemplate(chatId, fg.profiles?.full_name || '');
+      await editMessageText(chatId, messageId, `✏️ Đã gửi form *Báo cáo TV* bên dưới ⬇️`, [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]);
     }
+    return;
+  }
+
+  // ── Sub-menu: send TV form template ──
+  if (cbData === 'add_report_form_tv') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    await sendTVFormTemplate(chatId, fg?.profiles?.full_name || '');
+    await editMessageText(chatId, messageId, `✏️ Đã gửi form *Báo cáo TV* bên dưới ⬇️`, [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]);
+    return;
+  }
+
+  // ── Sub-menu: send BB form template ──
+  if (cbData === 'add_report_form_bb') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    await sendBBFormTemplate(chatId, fg?.profiles?.full_name || '');
+    await editMessageText(chatId, messageId, `✏️ Đã gửi form *Báo cáo BB* bên dưới ⬇️`, [[{ text: '← Quay lại Menu', callback_data: 'menu_back' }]]);
     return;
   }
 

@@ -3,6 +3,115 @@ import { ROLE_LABELS } from "../config.ts";
 import { canLinkProfile, canAssignRole, canChangeLevel } from "../permissions.ts";
 import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getBotId, exportChatInviteLink } from "../telegram.ts";
 
+// ============ FORM TEMPLATE HELPERS (used by callbacks.ts) ============
+
+const TV_TAG = '#TAG_BC_TV';
+const BB_TAG = '#TAG_BC_BB';
+
+export async function sendTVFormTemplate(chatId: number, profileName: string) {
+  const template =
+`📝 *FORM BÁO CÁO TƯ VẤN*
+🍎 _${profileName}_
+━━━━━━━━━━━━━━━━━━━━━
+
+📌 Lần thứ: 
+🔧 Công cụ: 
+📊 Kết quả test: 
+💬 Vấn đề/Nhu cầu: 
+💭 Phản hồi trái: 
+🎯 Điểm hái: 
+📋 Đề xuất: 
+
+━━━━━━━━━━━━━━━━━━━━━
+📎 *Hướng dẫn:*
+1️⃣ *Copy* toàn bộ mẫu bên trên
+2️⃣ *Điền* thông tin sau mỗi dấu ":"
+3️⃣ *Reply* (trả lời) tin nhắn này rồi *gửi*
+🏷 ${TV_TAG}`;
+  await sendText(chatId, template);
+}
+
+export async function sendBBFormTemplate(chatId: number, profileName: string) {
+  const template =
+`📖 *FORM BÁO CÁO BB*
+🍎 _${profileName}_
+━━━━━━━━━━━━━━━━━━━━━
+
+📌 Buổi thứ: 
+📚 Nội dung buổi học: 
+😊 Phản ứng HS: 
+🔍 Khai thác mới: 
+💡 Tương tác đáng chú ý: 
+📋 Đề xuất chăm sóc: 
+📅 Buổi tiếp (ngày giờ): 
+📝 Nội dung buổi tiếp: 
+
+━━━━━━━━━━━━━━━━━━━━━
+📎 *Hướng dẫn:*
+1️⃣ *Copy* toàn bộ mẫu bên trên
+2️⃣ *Điền* thông tin sau mỗi dấu ":"
+3️⃣ *Reply* (trả lời) tin nhắn này rồi *gửi*
+🏷 ${BB_TAG}`;
+  await sendText(chatId, template);
+}
+
+// ── Parse filled TV form from reply text ──
+function parseTVForm(text: string): Record<string, string> | null {
+  const get = (emoji: string) => {
+    const re = new RegExp(emoji + '\\s*[^:]*:\\s*(.+)', 'i');
+    const m = text.match(re);
+    return m ? m[1].trim() : '';
+  };
+  const lan_thu = get('📌');
+  if (!lan_thu) return null; // at least this field is required
+  return {
+    lan_thu: lan_thu,
+    ten_cong_cu: get('🔧'),
+    ket_qua_test: get('📊'),
+    van_de: get('💬'),
+    phan_hoi: get('💭'),
+    diem_hai: get('🎯'),
+    de_xuat: get('📋'),
+  };
+}
+
+// ── Parse filled BB form from reply text ──
+function parseBBForm(text: string): Record<string, string> | null {
+  const get = (emoji: string) => {
+    const re = new RegExp(emoji + '\\s*[^:]*:\\s*(.+)', 'i');
+    const m = text.match(re);
+    return m ? m[1].trim() : '';
+  };
+  const buoi_thu = get('📌');
+  if (!buoi_thu) return null;
+
+  // Parse buoi_tiep date/time: accept DD/MM/YYYY HH:mm or YYYY-MM-DD HH:mm
+  let buoi_tiep: string | null = null;
+  const rawBuoiTiep = get('📅');
+  if (rawBuoiTiep) {
+    const isoMatch = rawBuoiTiep.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s*(\d{1,2}):(\d{2})/);
+    if (isoMatch) {
+      buoi_tiep = `${isoMatch[1]}-${isoMatch[2].padStart(2,'0')}-${isoMatch[3].padStart(2,'0')}T${isoMatch[4].padStart(2,'0')}:${isoMatch[5]}:00`;
+    } else {
+      const vnMatch = rawBuoiTiep.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
+      if (vnMatch) {
+        buoi_tiep = `${vnMatch[3]}-${vnMatch[2].padStart(2,'0')}-${vnMatch[1].padStart(2,'0')}T${vnMatch[4].padStart(2,'0')}:${vnMatch[5]}:00`;
+      }
+    }
+  }
+
+  return {
+    buoi_thu: buoi_thu,
+    noi_dung: get('📚'),
+    phan_ung: get('😊'),
+    khai_thac: get('🔍'),
+    tuong_tac: get('💡'),
+    de_xuat_cs: get('📋'),
+    buoi_tiep: buoi_tiep || '',
+    noi_dung_tiep: get('📝'),
+  };
+}
+
 // ============ GROUP CHAT HANDLER ============
 
 export async function handleGroupChat(update: any) {
@@ -13,6 +122,71 @@ export async function handleGroupChat(update: any) {
   const chatTitle = msg.chat.title || '';
   const telegramId = msg.from.id;
   const text = msg.text || '';
+
+  // ── Reply to form template → parse and create record ──
+  if (msg.reply_to_message && msg.reply_to_message.from?.is_bot && text) {
+    const originalText = msg.reply_to_message.text || '';
+    const isTV = originalText.includes(TV_TAG);
+    const isBB = originalText.includes(BB_TAG);
+
+    if (isTV || isBB) {
+      // Get linked profile
+      const { data: fg } = await supabase.from('fruit_groups')
+        .select('profile_id, profiles(full_name)')
+        .eq('telegram_group_id', chatId).single();
+      if (!fg?.profile_id) {
+        await sendText(chatId, `❌ Group chưa gắn hồ sơ. Không thể tạo báo cáo.`);
+        return;
+      }
+
+      if (isTV) {
+        const parsed = parseTVForm(text);
+        if (!parsed) {
+          await sendText(chatId, `⚠️ Không thể đọc form báo cáo TV.\n\nHãy đảm bảo giữ nguyên emoji 📌 và điền thông tin sau dấu ":"\nVí dụ: 📌 Lần thứ: 2`);
+          return;
+        }
+        try {
+          await supabase.from('records').insert({
+            profile_id: fg.profile_id,
+            record_type: 'tu_van',
+            content: parsed,
+          });
+          const pName = fg.profiles?.full_name || '';
+          await sendText(chatId,
+            `✅ *Đã tạo Báo cáo TV — Lần ${parsed.lan_thu}* thành công!\n` +
+            `🍎 ${pName}\n` +
+            (parsed.ten_cong_cu ? `🔧 Công cụ: ${parsed.ten_cong_cu}\n` : '') +
+            `\n💡 _Báo cáo đã được lưu vào hệ thống._`
+          );
+        } catch (e: any) {
+          await sendText(chatId, `❌ Lỗi khi tạo báo cáo: ${e.message || 'Unknown'}`);
+        }
+      } else {
+        const parsed = parseBBForm(text);
+        if (!parsed) {
+          await sendText(chatId, `⚠️ Không thể đọc form báo cáo BB.\n\nHãy đảm bảo giữ nguyên emoji 📌 và điền thông tin sau dấu ":"\nVí dụ: 📌 Buổi thứ: 1`);
+          return;
+        }
+        try {
+          await supabase.from('records').insert({
+            profile_id: fg.profile_id,
+            record_type: 'bien_ban',
+            content: parsed,
+          });
+          const pName = fg.profiles?.full_name || '';
+          await sendText(chatId,
+            `✅ *Đã tạo Báo cáo BB — Buổi ${parsed.buoi_thu}* thành công!\n` +
+            `🍎 ${pName}\n` +
+            (parsed.buoi_tiep ? `📅 Buổi tiếp: ${parsed.buoi_tiep}\n` : '') +
+            `\n💡 _Báo cáo đã được lưu vào hệ thống._`
+          );
+        } catch (e: any) {
+          await sendText(chatId, `❌ Lỗi khi tạo báo cáo: ${e.message || 'Unknown'}`);
+        }
+      }
+      return;
+    }
+  }
 
   // Bot added to group → register group
   if (msg.new_chat_members) {
