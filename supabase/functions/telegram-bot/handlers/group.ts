@@ -368,8 +368,10 @@ export async function handleGroupChat(update: any) {
         keyboard.push([{ text: `📋 Xem báo cáo (${tvCount || 0} TV · ${bbCount || 0} BB)`, callback_data: 'menu_view_report' }]);
       }
 
-      // Thêm báo cáo BB — luôn hiện khi group đã gắn hồ sơ
-      keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
+      // Thêm báo cáo BB — hiện từ khi lập group (phase tu_van trở đi)
+      if (['tu_van', 'bb', 'center'].includes(phase)) {
+        keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
+      }
 
       // Mở KT
       if (!profile?.is_kt_opened) {

@@ -89,7 +89,9 @@ export async function handleCallback(update: any, staffData: any) {
       if ((tvC || 0) > 0 || (bbC || 0) > 0) {
         keyboard.push([{ text: `📋 Xem báo cáo (${tvC || 0} TV · ${bbC || 0} BB)`, callback_data: 'menu_view_report' }]);
       }
-      keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
+      if (['tu_van', 'bb', 'center'].includes(ph)) {
+        keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
+      }
       if (!prof?.is_kt_opened) {
         keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
       }
