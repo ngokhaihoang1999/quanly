@@ -169,7 +169,7 @@ export async function handleGroupChat(update: any) {
   if (text === '/start' || text.startsWith('/start@')) {
     // Auto-register group if not yet registered
     const { data: existingFg } = await supabase.from('fruit_groups')
-      .select('id').eq('telegram_group_id', chatId).single();
+      .select('id, profile_id').eq('telegram_group_id', chatId).single();
     if (!existingFg) {
       const inviteLink = await exportChatInviteLink(chatId);
       await supabase.from('fruit_groups').insert({
