@@ -7,31 +7,43 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif}
-.markmap{width:100%;height:100vh}
-.markmap svg{width:100%;height:100%}
+#markmap{width:100vw;height:100vh}
 </style>
 </head>
 <body>
-<div id="mm" class="markmap"></div>
+<svg id="markmap"></svg>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-view@0.17.2/dist/browser/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.17.2/dist/browser/index.js"></script>
 <script>
-window.markmap={autoLoader:{manual:true,toolbar:false}};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
-<script>
-try {
-  var h = location.hash.substring(1);
-  // Restore URL-safe base64: - → +, _ → /, add padding
-  h = h.replace(/-/g,'+').replace(/_/g,'/');
-  while(h.length%4) h+='=';
-  // Decode base64 to UTF-8 bytes
-  var bin = atob(h);
-  var bytes = new Uint8Array(bin.length);
-  for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-  var md = new TextDecoder().decode(bytes);
-  var el = document.getElementById('mm');
-  el.innerHTML = '<script type="text/template">' + md + '<\/script>';
-  if(window.markmap && window.markmap.autoLoader) window.markmap.autoLoader.renderAll();
-} catch(e) { document.body.innerHTML = 'Error: ' + e.message; }
+(function(){
+  try {
+    var h = location.hash.substring(1);
+    if(!h) { document.body.innerHTML='<p>No data</p>'; return; }
+    // Restore URL-safe base64
+    h = h.replace(/-/g,'+').replace(/_/g,'/');
+    while(h.length%4) h+='=';
+    // Decode base64 to UTF-8 bytes
+    var bin = atob(h);
+    var bytes = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    var md = new TextDecoder().decode(bytes);
+    
+    // Use markmap-lib to transform markdown
+    var transformer = new markmap.Transformer();
+    var result = transformer.transform(md);
+    
+    // Render using markmap-view
+    var svg = document.getElementById('markmap');
+    markmap.Markmap.create(svg, {
+      colorFreezeLevel: 2,
+      initialExpandLevel: -1,
+      paddingX: 16
+    }, result.root);
+  } catch(e) {
+    document.body.innerHTML = '<p style="padding:20px;color:red">Error: ' + e.message + '</p>';
+  }
+})();
 </script>
 </body>
 </html>
