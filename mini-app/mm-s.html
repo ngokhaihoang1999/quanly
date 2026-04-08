@@ -20,7 +20,14 @@ window.markmap={autoLoader:{manual:true,toolbar:false}};
 <script>
 try {
   var h = location.hash.substring(1);
-  var md = decodeURIComponent(atob(h));
+  // Restore URL-safe base64: - → +, _ → /, add padding
+  h = h.replace(/-/g,'+').replace(/_/g,'/');
+  while(h.length%4) h+='=';
+  // Decode base64 to UTF-8 bytes
+  var bin = atob(h);
+  var bytes = new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  var md = new TextDecoder().decode(bytes);
   var el = document.getElementById('mm');
   el.innerHTML = '<script type="text/template">' + md + '<\/script>';
   if(window.markmap && window.markmap.autoLoader) window.markmap.autoLoader.renderAll();
