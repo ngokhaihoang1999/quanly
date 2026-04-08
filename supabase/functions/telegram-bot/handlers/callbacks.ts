@@ -127,25 +127,32 @@ export async function handleCallback(update: any, staffData: any) {
         return;
       }
       const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
-      const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
-      const d: any = sheet || {};
+      // form_hanh_chinh stores data in a JSONB 'data' column with t2_ prefix
+      const { data: sheetRows } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgI.profile_id);
+      const d: any = (sheetRows && sheetRows.length > 0 && sheetRows[0].data) ? sheetRows[0].data : {};
       const lines: string[] = [];
-      lines.push('THONG TIN CO BAN: ' + (prof?.full_name || 'N/A'));
-      const phaseLabel = (prof?.phase || 'N/A').replace(/_/g, ' ');
-      lines.push('Giai doan: ' + phaseLabel + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
-      if (d.gioi_tinh) lines.push('Gioi tinh: ' + String(d.gioi_tinh));
-      if (d.nam_sinh) lines.push('Nam sinh: ' + String(d.nam_sinh));
-      if (d.nghe_nghiep) lines.push('Nghe: ' + String(d.nghe_nghiep));
-      if (d.tinh_cach) lines.push('Tinh cach: ' + String(d.tinh_cach));
-      if (d.so_thich) lines.push('So thich: ' + String(d.so_thich));
-      if (d.luu_y) lines.push('Luu y: ' + String(d.luu_y));
-      if (lines.length <= 2) lines.push('Chua co du lieu phieu thong tin.');
-      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+      const name = prof?.full_name || 'N/A';
+      const phase = (prof?.phase || 'N/A').replace(/_/g, ' ');
+      lines.push('THONG TIN CO BAN: ' + name);
+      lines.push('Giai doan: ' + phase + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
+      lines.push('');
+      if (d.t2_gioi_tinh) lines.push('Gioi tinh: ' + String(d.t2_gioi_tinh));
+      if (d.t2_nam_sinh) lines.push('Nam sinh: ' + String(d.t2_nam_sinh));
+      if (d.t2_nghe_nghiep) lines.push('Nghe: ' + String(d.t2_nghe_nghiep));
+      if (d.t2_dia_chi) lines.push('Noi o: ' + String(d.t2_dia_chi));
+      if (d.t2_que_quan) lines.push('Que: ' + String(d.t2_que_quan));
+      if (d.t2_tinh_cach) lines.push('Tinh cach: ' + String(d.t2_tinh_cach));
+      if (d.t2_so_thich) lines.push('So thich: ' + String(d.t2_so_thich));
+      if (d.t2_du_dinh) lines.push('Du dinh: ' + String(d.t2_du_dinh));
+      if (d.t2_ton_giao) lines.push('Ton giao: ' + String(Array.isArray(d.t2_ton_giao) ? d.t2_ton_giao.join(', ') : d.t2_ton_giao));
+      if (d.t2_hon_nhan) lines.push('Hon nhan: ' + String(Array.isArray(d.t2_hon_nhan) ? d.t2_hon_nhan.join(', ') : d.t2_hon_nhan));
+      if (d.t2_nguoi_quan_trong) lines.push('Nguoi quan trong: ' + String(d.t2_nguoi_quan_trong));
+      if (d.t2_luu_y) lines.push('Luu y: ' + String(d.t2_luu_y));
+      if (lines.length <= 3) lines.push('Chua co du lieu phieu thong tin.');
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: lines.join('\n'), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
       });
-      const resJson = await res.json();
-      if (!resJson.ok) console.error('editMessageText failed:', JSON.stringify(resJson));
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
       try {
