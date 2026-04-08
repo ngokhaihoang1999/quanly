@@ -22,6 +22,7 @@ jobs:
           SUPABASE_PROJECT_ID: smzoomekyvllsgppgvxw
         run: |
           supabase functions deploy telegram-bot --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
+          supabase functions deploy validate-mindmap --project-ref $SUPABASE_PROJECT_ID --no-verify-jwt
 
       - name: Re-register Telegram Webhook (enable my_chat_member)
         env:
