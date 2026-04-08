@@ -21,86 +21,15 @@ function renderMindmap() {
   else renderCollectMM(container, p);
 }
 
-function renderMarkmap(container, md, autoSaveType) {
+function renderMarkmap(container, md) {
   container.style.height = '420px';
   container.style.overflow = 'hidden';
   container.innerHTML = '<div class="markmap" style="width:100%;height:100%;"><script type="text/template">' + md + '<\/script></div>';
   if (window.markmap && window.markmap.autoLoader) {
     window.markmap.autoLoader.renderAll();
   }
-  // Auto-save PNG for Telegram bot
-  if (autoSaveType === 'info' && currentProfileId) {
-    setTimeout(function() { saveMindmapPNG(container); }, 2000);
-  }
 }
 
-async function saveMindmapPNG(container) {
-  try {
-    var svg = container.querySelector('svg');
-    if (!svg) return;
-    // Clone SVG and set white background
-    var clone = svg.cloneNode(true);
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    var w = svg.getBoundingClientRect().width || 800;
-    var h = svg.getBoundingClientRect().height || 400;
-    clone.setAttribute('width', w);
-    clone.setAttribute('height', h);
-    // Add white background
-    var bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('width', '100%');
-    bg.setAttribute('height', '100%');
-    bg.setAttribute('fill', 'white');
-    clone.insertBefore(bg, clone.firstChild);
-    // Serialize to blob
-    var svgData = new XMLSerializer().serializeToString(clone);
-    var svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
-    var url = URL.createObjectURL(svgBlob);
-    // Draw to canvas
-    var img = new Image();
-    img.onload = async function() {
-      var canvas = document.createElement('canvas');
-      canvas.width = w * 2; // 2x for quality
-      canvas.height = h * 2;
-      var ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      // Convert to blob
-      canvas.toBlob(async function(blob) {
-        if (!blob) return;
-        // Upload to Supabase Storage (direct fetch, not sbFetch which forces JSON content-type)
-        var fileName = 'mindmap_' + currentProfileId + '_info.png';
-        var uploadRes = await fetch(SUPABASE_URL + '/storage/v1/object/mindmaps/' + fileName, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'image/png', 'x-upsert': 'true' },
-          body: blob
-        });
-        if (uploadRes.ok) {
-          // Save public URL to records
-          var publicUrl = SUPABASE_URL + '/storage/v1/object/public/mindmaps/' + fileName;
-          // Upsert record
-          await sbFetch('/rest/v1/records?profile_id=eq.' + currentProfileId + '&record_type=eq.mindmap_image', { method: 'DELETE' });
-          await sbFetch('/rest/v1/records', {
-            method: 'POST',
-            headers: { 'Prefer': 'return=representation' },
-            body: JSON.stringify({
-              profile_id: currentProfileId,
-              record_type: 'mindmap_image',
-              content: { url: publicUrl, updated_at: new Date().toISOString() }
-            })
-          });
-          console.log('Mindmap PNG saved:', publicUrl);
-        } else {
-          console.warn('Mindmap upload failed:', uploadRes.status);
-        }
-      }, 'image/png', 0.95);
-    };
-    img.src = url;
-  } catch(e) {
-    console.warn('saveMindmapPNG error:', e);
-  }
-}
 
 // ═══════════════════════════════════════════════════
 // UTILITIES (SMART FORMATTERS FOR MINDMAP)
@@ -227,7 +156,7 @@ function renderInfoMM(container, p) {
   if (d.luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdSentences(d.luu_y, 55);
 
   if (md.trim() === '# '+name) md += '## 📋 Trái quả này chưa có dữ liệu\n';
-  renderMarkmap(container, md, 'info');
+  renderMarkmap(container, md);
 }
 
 // ═══════════════════════════════════════════════════

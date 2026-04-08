@@ -118,49 +118,27 @@ export async function handleCallback(update: any, staffData: any) {
   // ── Mindmap: Thông tin cơ bản ──
   if (cbData === 'menu_mindmap_info') {
     try {
-      const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
-      if (!fgI?.profile_id) {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: 'Chua gan ho so.', reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
-        });
-        return;
-      }
-      const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
-      // form_hanh_chinh stores data in a JSONB 'data' column with t2_ prefix
-      const { data: sheetRows } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgI.profile_id);
-      const d: any = (sheetRows && sheetRows.length > 0 && sheetRows[0].data) ? sheetRows[0].data : {};
-      const lines: string[] = [];
-      const name = prof?.full_name || 'N/A';
-      const phase = (prof?.phase || 'N/A').replace(/_/g, ' ');
-      lines.push('THONG TIN CO BAN: ' + name);
-      lines.push('Giai doan: ' + phase + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
-      lines.push('');
-      if (d.t2_gioi_tinh) lines.push('Gioi tinh: ' + String(d.t2_gioi_tinh));
-      if (d.t2_nam_sinh) lines.push('Nam sinh: ' + String(d.t2_nam_sinh));
-      if (d.t2_nghe_nghiep) lines.push('Nghe: ' + String(d.t2_nghe_nghiep));
-      if (d.t2_dia_chi) lines.push('Noi o: ' + String(d.t2_dia_chi));
-      if (d.t2_que_quan) lines.push('Que: ' + String(d.t2_que_quan));
-      if (d.t2_tinh_cach) lines.push('Tinh cach: ' + String(d.t2_tinh_cach));
-      if (d.t2_so_thich) lines.push('So thich: ' + String(d.t2_so_thich));
-      if (d.t2_du_dinh) lines.push('Du dinh: ' + String(d.t2_du_dinh));
-      if (d.t2_ton_giao) lines.push('Ton giao: ' + String(Array.isArray(d.t2_ton_giao) ? d.t2_ton_giao.join(', ') : d.t2_ton_giao));
-      if (d.t2_hon_nhan) lines.push('Hon nhan: ' + String(Array.isArray(d.t2_hon_nhan) ? d.t2_hon_nhan.join(', ') : d.t2_hon_nhan));
-      if (d.t2_nguoi_quan_trong) lines.push('Nguoi quan trong: ' + String(d.t2_nguoi_quan_trong));
-      if (d.t2_luu_y) lines.push('Luu y: ' + String(d.t2_luu_y));
-      if (lines.length <= 3) lines.push('Chua co du lieu phieu thong tin.');
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+      const mmUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=' + chatId;
+      // Send new message with webapp button (editMessageText can't have web_app buttons, so we send a new message)
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: lines.join('\n'), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: '🧠 Bấm nút bên dưới để xem Mindmap:',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🧠 Mở Mindmap', web_app: { url: mmUrl } }],
+              [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
+            ]
+          }
+        })
       });
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
-      try {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: 'Loi: ' + String(e).substring(0, 200), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
-        });
-      } catch (e2) { console.error('fallback error:', e2); }
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: 'Loi: ' + String(e).substring(0, 200) })
+      });
     }
     return;
   }
