@@ -127,33 +127,9 @@ export async function handleCallback(update: any, staffData: any) {
         return;
       }
       const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
-      const { data: sheetRows } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgI.profile_id);
-      const d: any = (sheetRows && sheetRows.length > 0 && sheetRows[0].data) ? sheetRows[0].data : {};
       const name = prof?.full_name || 'N/A';
-      const phaseMap: Record<string,string> = { 'tu_van': 'Tư vấn', 'bb': 'BB', 'center': 'Center', 'chapel': 'Chapel', 'chakki': 'Chưa xác định' };
-      const phaseVi = phaseMap[prof?.phase || ''] || (prof?.phase || 'N/A');
       
-      const lines: string[] = [];
-      lines.push(`📋 <b>${name}</b>`);
-      lines.push(`📍 ${phaseVi}${prof?.is_kt_opened ? ' · Đã mở KT' : ''}`);
-      lines.push('');
-      const fields: [string,string,string][] = [
-        ['👤', 'Giới tính', d.t2_gioi_tinh],
-        ['🎂', 'Năm sinh', d.t2_nam_sinh],
-        ['💼', 'Nghề', d.t2_nghe_nghiep],
-        ['📍', 'Nơi ở', d.t2_dia_chi],
-        ['🏡', 'Quê', d.t2_que_quan],
-        ['💍', 'Hôn nhân', Array.isArray(d.t2_hon_nhan) ? d.t2_hon_nhan.join(', ') : d.t2_hon_nhan],
-        ['🧩', 'Tính cách', d.t2_tinh_cach],
-        ['🎨', 'Sở thích', d.t2_so_thich],
-        ['⚠️', 'Lưu ý', d.t2_luu_y],
-      ];
-      for (const [ico, label, val] of fields) {
-        if (val) lines.push(`${ico} <b>${label}:</b> ${String(val).substring(0,60)}`);
-      }
-      if (lines.length <= 3) lines.push('📭 Chưa có dữ liệu phiếu thông tin.');
-      
-      // Generate signed URL
+      // Generate signed URL for the mindmap page
       const ts = Date.now();
       const raw = `${chatId}:${ts}:info:${BOT_TOKEN}`;
       const encoder = new TextEncoder();
@@ -161,23 +137,47 @@ export async function handleCallback(update: any, staffData: any) {
       const sig = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
       const mmUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=${chatId}&type=info&ts=${ts}&sig=${sig}`;
       
-      lines.push('');
-      lines.push('🔗 <i>Bấm bên dưới để xem mindmap visual (30 phút)</i>');
+      // Use screenshot service to capture mindmap as image
+      const screenshotUrl = `https://image.thum.io/get/width/1200/wait/5/noanimate/png/${encodeURIComponent(mmUrl)}`;
       
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      // Try sending as photo first
+      const photoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: lines.join('\n'),
-          parse_mode: 'HTML',
+          photo: screenshotUrl,
+          caption: `📋 ${name} — Thông tin cơ bản`,
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🗺️ Xem Mindmap', url: mmUrl }],
+              [{ text: '🔄 Tải lại', callback_data: 'menu_mindmap_info' }],
               [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
             ]
           }
         })
       });
+      const photoJson = await photoRes.json();
+      
+      // If photo fails, fallback to link
+      if (!photoJson.ok) {
+        console.error('sendPhoto failed:', JSON.stringify(photoJson));
+        const { data: sheetRows } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgI.profile_id);
+        const d: any = (sheetRows && sheetRows.length > 0 && sheetRows[0].data) ? sheetRows[0].data : {};
+        const phaseMap: Record<string,string> = { 'tu_van': 'Tư vấn', 'bb': 'BB', 'center': 'Center', 'chapel': 'Chapel', 'chakki': 'Chưa xác định' };
+        const phaseVi = phaseMap[prof?.phase || ''] || (prof?.phase || 'N/A');
+        const lines: string[] = [];
+        lines.push(`📋 <b>${name}</b>`);
+        lines.push(`📍 ${phaseVi}${prof?.is_kt_opened ? ' · Đã mở KT' : ''}`);
+        lines.push('');
+        const fields: [string,string,string][] = [['👤','Giới tính',d.t2_gioi_tinh],['🎂','Năm sinh',d.t2_nam_sinh],['💼','Nghề',d.t2_nghe_nghiep],['📍','Nơi ở',d.t2_dia_chi],['🧩','Tính cách',d.t2_tinh_cach],['🎨','Sở thích',d.t2_so_thich],['⚠️','Lưu ý',d.t2_luu_y]];
+        for (const [ico, label, val] of fields) { if (val) lines.push(`${ico} <b>${label}:</b> ${String(val).substring(0,60)}`); }
+        if (lines.length <= 3) lines.push('📭 Chưa có dữ liệu.');
+        lines.push('');
+        lines.push('🔗 <i>Bấm link bên dưới để xem mindmap (30 phút)</i>');
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: lines.join('\n'), parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🗺️ Xem Mindmap', url: mmUrl }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] } })
+        });
+      }
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -199,9 +199,18 @@ export async function handleCallback(update: any, staffData: any) {
         });
         return;
       }
-      // Check if AI mindmap exists
+      const { data: profBB } = await supabase.from('profiles').select('full_name').eq('id', fgBB.profile_id).single();
+      const nameBB = profBB?.full_name || 'N/A';
       const { data: mmRec } = await supabase.from('records').select('content').eq('profile_id', fgBB.profile_id).eq('record_type', 'ai_mindmap').order('created_at', { ascending: false }).limit(1);
       const hasMM = mmRec && mmRec.length > 0 && mmRec[0]?.content?.markdown;
+      
+      if (!hasMM) {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: '📚 <b>Hỗ trợ BB</b>\n📭 Chưa có phân tích AI.\n\nMở Mini App > Tư duy > Hỗ trợ BB > Phân tích ngay', parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] } })
+        });
+        return;
+      }
       
       // Generate signed URL
       const ts = Date.now();
@@ -211,25 +220,25 @@ export async function handleCallback(update: any, staffData: any) {
       const sig = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
       const mmUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=${chatId}&type=bb&ts=${ts}&sig=${sig}`;
       
-      const lines: string[] = [];
-      lines.push('📚 <b>Hỗ trợ BB</b>');
-      if (hasMM) {
-        lines.push('✅ Đã có mindmap phân tích AI');
-        lines.push('');
-        lines.push('🔗 <i>Bấm bên dưới để xem (30 phút)</i>');
-      } else {
-        lines.push('📭 Chưa có phân tích AI.');
-        lines.push('Mở Mini App > Tư duy > Hỗ trợ BB > Phân tích ngay');
-      }
+      // Try screenshot service
+      const screenshotUrl = `https://image.thum.io/get/width/1200/wait/5/noanimate/png/${encodeURIComponent(mmUrl)}`;
       
-      const keyboard = hasMM
-        ? [[{ text: '🗺️ Xem Mindmap BB', url: mmUrl }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]]
-        : [[{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]];
-      
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      const photoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: lines.join('\n'), parse_mode: 'HTML', reply_markup: { inline_keyboard: keyboard } })
+        body: JSON.stringify({
+          chat_id: chatId, photo: screenshotUrl,
+          caption: `📚 ${nameBB} — Hỗ trợ BB`,
+          reply_markup: { inline_keyboard: [[{ text: '🔄 Tải lại', callback_data: 'menu_mindmap_bb' }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] }
+        })
       });
+      const pj = await photoRes.json();
+      if (!pj.ok) {
+        // Fallback to link
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: '📚 <b>Hỗ trợ BB — ' + nameBB + '</b>\n✅ Đã có mindmap AI\n\n🔗 <i>Bấm bên dưới (30 phút)</i>', parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: '🗺️ Xem Mindmap BB', url: mmUrl }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] } })
+        });
+      }
     } catch (e) {
       console.error('menu_mindmap_bb error:', e);
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -239,7 +248,6 @@ export async function handleCallback(update: any, staffData: any) {
     }
     return;
   }
-
 
 
   // ── Quay lại menu chính ──
