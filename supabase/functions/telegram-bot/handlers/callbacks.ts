@@ -92,6 +92,8 @@ export async function handleCallback(update: any, staffData: any) {
       if (['tu_van', 'bb', 'center'].includes(ph)) {
         keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
       }
+      // Xem mindmap
+      keyboard.push([{ text: '🧠 Xem mindmap', callback_data: 'menu_mindmap' }]);
       if (!prof?.is_kt_opened) {
         keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
       }
@@ -99,6 +101,68 @@ export async function handleCallback(update: any, staffData: any) {
       keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);
     }
     await editMessageText(chatId, messageId, `🛠 *Menu Quản lý Group*`, keyboard);
+  }
+
+  // ── Xem mindmap: sub-menu ──
+  if (cbData === 'menu_mindmap') {
+    const { data: fgMM } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+    if (!fgMM?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
+    await editMessageText(chatId, messageId, '🧠 *Xem Mindmap*\nChọn loại:', [
+      [{ text: '👤 Thông tin cơ bản', callback_data: 'menu_mindmap_info' }],
+      [{ text: '📚 Hỗ trợ BB', callback_data: 'menu_mindmap_bb' }],
+      [{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]
+    ]);
+    return;
+  }
+
+  // ── Mindmap: Thông tin cơ bản ──
+  if (cbData === 'menu_mindmap_info') {
+    const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+    if (!fgI?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
+    const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened, birth_year, fruit_status, dropout_reason, ndd_staff_code').eq('id', fgI.profile_id).single();
+    const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).single();
+    const d: any = sheet || {};
+    let txt = `👤 *Thông tin cơ bản: ${prof?.full_name || 'N/A'}*\n`;
+    txt += `Giai đoạn: ${prof?.phase || 'chakki'}`;
+    if (prof?.is_kt_opened) txt += ' | 📖 Đã mở KT';
+    txt += '\n';
+    if (d.gioi_tinh) txt += `Giới tính: ${d.gioi_tinh}\n`;
+    if (d.nam_sinh) txt += `Năm sinh: ${d.nam_sinh}\n`;
+    if (d.nghe_nghiep) txt += `Nghề: ${d.nghe_nghiep}\n`;
+    if (d.tinh_cach) txt += `Tính cách: ${d.tinh_cach}\n`;
+    if (d.so_thich) txt += `Sở thích: ${d.so_thich}\n`;
+    if (d.ton_giao) txt += `Tôn giáo: ${Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : d.ton_giao}\n`;
+    if (d.hon_nhan) txt += `Hôn nhân: ${Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : d.hon_nhan}\n`;
+    if (d.quan_diem) txt += `Quan điểm: ${d.quan_diem}\n`;
+    if (d.du_dinh) txt += `Dự định: ${d.du_dinh}\n`;
+    if (d.luu_y) txt += `⚠️ Lưu ý: ${d.luu_y}\n`;
+    if (!d.gioi_tinh && !d.nam_sinh && !d.nghe_nghiep) txt += '\n_Chưa có dữ liệu phiếu thông tin._';
+    await editMessageText(chatId, messageId, txt, [
+      [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
+    ]);
+    return;
+  }
+
+  // ── Mindmap: Hỗ trợ BB ──
+  if (cbData === 'menu_mindmap_bb') {
+    const { data: fgBB } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+    if (!fgBB?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
+    const { data: mmRows } = await supabase.from('records').select('content').eq('profile_id', fgBB.profile_id).eq('record_type', 'ai_mindmap').order('created_at', { ascending: false }).limit(1);
+    const mmRec = mmRows?.[0];
+    let txt = '';
+    if (mmRec?.content?.markdown) {
+      let md = mmRec.content.markdown;
+      // Strip markdown headings and truncate for Telegram
+      md = md.replace(/^#{1,4}\s+/gm, '*').replace(/\n{3,}/g, '\n\n');
+      if (md.length > 3800) md = md.substring(0, 3800) + '\n\n..._(xem đầy đủ trên Mini App)_';
+      txt = `📚 *Hỗ trợ BB (AI Mindmap)*\n\n` + md;
+    } else {
+      txt = '📚 *Hỗ trợ BB*\n\n_Chưa có phân tích AI._\nMở Mini App → tab Tư Duy → Hỗ trợ BB để tạo.';
+    }
+    await editMessageText(chatId, messageId, txt, [
+      [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
+    ]);
+    return;
   }
 
   // ── Quay lại menu chính ──

@@ -373,6 +373,9 @@ export async function handleGroupChat(update: any) {
         keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
       }
 
+      // Xem mindmap - available when profile is linked
+      keyboard.push([{ text: '🧠 Xem mindmap', callback_data: 'menu_mindmap' }]);
+
       // Mở KT
       if (!profile?.is_kt_opened) {
         keyboard.push([{ text: '📖 Xác nhận mở KT', callback_data: 'menu_open_kt' }]);

@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// MINDMAP v13 — Persistent Lacie Insight + Shared AI Chat
+// MINDMAP v13 — Persistent BB Support + Shared AI Chat
 // ══════════════════════════════════════════════════════════════════════════════
 
 var _mmCurrentType = 'info';
@@ -159,7 +159,7 @@ function renderInfoMM(container, p) {
 }
 
 // ═══════════════════════════════════════════════════
-// TAB 2: Lacie Insight — with Supabase persistence
+// TAB 2: Hỗ trợ BB — with Supabase persistence
 // ═══════════════════════════════════════════════════
 
 async function renderCollectMM(container, p) {
@@ -183,7 +183,7 @@ async function renderCollectMM(container, p) {
   // 3. No saved result — show button
   container.innerHTML = '<div style="text-align:center;padding:40px;">' +
     '<div style="font-size:36px;margin-bottom:8px;">\ud83d\udc7c</div>' +
-    '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">Lacie Insight</div>' +
+    '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">Hỗ trợ BB</div>' +
     '<div style="font-size:11px;color:var(--text3);margin-bottom:16px;">Ph\u00e2n t\u00edch to\u00e0n b\u1ed9 h\u1ed3 s\u01a1 v\u1edbi Lacie</div>' +
     '<button onclick="runAIAnalysis()" style="padding:12px 28px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.3);">\ud83d\udd0d Ph\u00e2n t\u00edch ngay</button>' +
     '</div>';
