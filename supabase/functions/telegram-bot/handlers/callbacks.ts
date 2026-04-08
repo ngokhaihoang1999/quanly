@@ -1,4 +1,4 @@
-import { supabase, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
+import { supabase, BOT_TOKEN, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
 import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
 import { sendBBFormTemplate } from "./group.ts";
@@ -119,41 +119,35 @@ export async function handleCallback(update: any, staffData: any) {
   if (cbData === 'menu_mindmap_info') {
     try {
       const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
-      if (!fgI?.profile_id) return editMessageText(chatId, messageId, 'Chua gan ho so.', [[{ text: 'Quay lai', callback_data: 'menu_back' }]]);
-
-      // Try to get saved mindmap image from storage
-      const { data: imgRec } = await supabase.from('records').select('content').eq('profile_id', fgI.profile_id).eq('record_type', 'mindmap_image').order('created_at', { ascending: false }).limit(1);
-      
-      if (imgRec && imgRec.length > 0 && imgRec[0]?.content?.url) {
-        // Send photo
-        const photoUrl = imgRec[0].content.url;
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, photo: photoUrl, caption: 'Thong tin co ban (Mindmap)', reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } })
-        });
-      } else {
-        // Fallback: show profile info as text
-        const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
-        const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
-        const d: any = sheet || {};
-        const lines: string[] = [];
-        lines.push('THONG TIN CO BAN: ' + (prof?.full_name || 'N/A'));
-        lines.push('Giai doan: ' + (prof?.phase || 'chakki') + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
-        if (d.gioi_tinh) lines.push('Gioi tinh: ' + String(d.gioi_tinh));
-        if (d.nam_sinh) lines.push('Nam sinh: ' + String(d.nam_sinh));
-        if (d.nghe_nghiep) lines.push('Nghe: ' + String(d.nghe_nghiep));
-        if (d.tinh_cach) lines.push('Tinh cach: ' + String(d.tinh_cach));
-        if (d.so_thich) lines.push('So thich: ' + String(d.so_thich));
-        if (d.luu_y) lines.push('Luu y: ' + String(d.luu_y));
-        if (lines.length <= 2) lines.push('');
-        lines.push('Chua co anh mindmap. Mo Mini App > tab Tu Duy > Thong tin co ban de tao.');
-        await editMessageText(chatId, messageId, lines.join('\n'), [
-          [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
-        ]);
+      if (!fgI?.profile_id) {
+        await editMessageText(chatId, messageId, 'Chua gan ho so.', [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]]);
+        return;
       }
+      const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
+      const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
+      const d: any = sheet || {};
+      const lines: string[] = [];
+      lines.push('THONG TIN CO BAN: ' + (prof?.full_name || 'N/A'));
+      lines.push('Giai doan: ' + (prof?.phase || 'N/A') + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
+      if (d.gioi_tinh) lines.push('Gioi tinh: ' + String(d.gioi_tinh));
+      if (d.nam_sinh) lines.push('Nam sinh: ' + String(d.nam_sinh));
+      if (d.nghe_nghiep) lines.push('Nghe: ' + String(d.nghe_nghiep));
+      if (d.tinh_cach) lines.push('Tinh cach: ' + String(d.tinh_cach));
+      if (d.so_thich) lines.push('So thich: ' + String(d.so_thich));
+      if (d.luu_y) lines.push('Luu y: ' + String(d.luu_y));
+      if (lines.length <= 2) lines.push('Chua co du lieu phieu thong tin.');
+      // Check for mindmap image
+      const { data: imgRec } = await supabase.from('records').select('content').eq('profile_id', fgI.profile_id).eq('record_type', 'mindmap_image').order('created_at', { ascending: false }).limit(1);
+      if (imgRec && imgRec.length > 0 && imgRec[0]?.content?.url) {
+        lines.push('');
+        lines.push('Anh mindmap: ' + imgRec[0].content.url);
+      }
+      await editMessageText(chatId, messageId, lines.join('\n'), [
+        [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
+      ]);
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
-      await editMessageText(chatId, messageId, 'Loi: ' + String(e), [
+      await editMessageText(chatId, messageId, 'Loi tai thong tin: ' + String(e).substring(0, 200), [
         [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
       ]);
     }
