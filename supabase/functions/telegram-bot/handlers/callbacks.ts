@@ -119,34 +119,37 @@ export async function handleCallback(update: any, staffData: any) {
   if (cbData === 'menu_mindmap_info') {
     try {
       const { data: fgI } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
-      if (!fgI?.profile_id) return editMessageText(chatId, messageId, '❌ Chưa gắn hồ sơ.', [[{ text: '⬅️ Quay lại', callback_data: 'menu_back' }]]);
+      if (!fgI?.profile_id) {
+        await editMessageText(chatId, messageId, 'Chua gan ho so.', [[{ text: 'Quay lai', callback_data: 'menu_back' }]]);
+        return;
+      }
       const { data: prof } = await supabase.from('profiles').select('full_name, phase, is_kt_opened').eq('id', fgI.profile_id).single();
       const { data: sheet } = await supabase.from('form_hanh_chinh').select('*').eq('profile_id', fgI.profile_id).maybeSingle();
       const d: any = sheet || {};
-      const esc = (s: string) => s.replace(/[_*\[\]()~`>#+\-=|{}.!]/g, '\\$&');
-      const name = esc(prof?.full_name || 'N/A');
-      let lines: string[] = [];
-      lines.push(`👤 *Thông tin cơ bản: ${name}*`);
-      lines.push(`Giai đoạn: ${prof?.phase || 'chakki'}${prof?.is_kt_opened ? ' | 📖 Đã mở KT' : ''}`);
-      if (d.gioi_tinh) lines.push(`Giới tính: ${esc(String(d.gioi_tinh))}`);
-      if (d.nam_sinh) lines.push(`Năm sinh: ${esc(String(d.nam_sinh))}`);
-      if (d.nghe_nghiep) lines.push(`Nghề: ${esc(String(d.nghe_nghiep))}`);
-      if (d.tinh_cach) lines.push(`Tính cách: ${esc(String(d.tinh_cach))}`);
-      if (d.so_thich) lines.push(`Sở thích: ${esc(String(d.so_thich))}`);
-      if (d.ton_giao) lines.push(`Tôn giáo: ${esc(String(Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : d.ton_giao))}`);
-      if (d.hon_nhan) lines.push(`Hôn nhân: ${esc(String(Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : d.hon_nhan))}`);
-      if (d.quan_diem) lines.push(`Quan điểm: ${esc(String(d.quan_diem))}`);
-      if (d.du_dinh) lines.push(`Dự định: ${esc(String(d.du_dinh))}`);
-      if (d.luu_y) lines.push(`⚠️ Lưu ý: ${esc(String(d.luu_y))}`);
-      if (!d.gioi_tinh && !d.nam_sinh && !d.nghe_nghiep) lines.push('\n_Chưa có dữ liệu phiếu thông tin._');
-      await editMessageText(chatId, messageId, lines.join('\n'), [
-        [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
-      ]);
+      const lines: string[] = [];
+      lines.push('THONG TIN CO BAN: ' + (prof?.full_name || 'N/A'));
+      lines.push('Giai doan: ' + (prof?.phase || 'chakki') + (prof?.is_kt_opened ? ' | Da mo KT' : ''));
+      if (d.gioi_tinh) lines.push('Gioi tinh: ' + String(d.gioi_tinh));
+      if (d.nam_sinh) lines.push('Nam sinh: ' + String(d.nam_sinh));
+      if (d.nghe_nghiep) lines.push('Nghe: ' + String(d.nghe_nghiep));
+      if (d.tinh_cach) lines.push('Tinh cach: ' + String(d.tinh_cach));
+      if (d.so_thich) lines.push('So thich: ' + String(d.so_thich));
+      if (d.ton_giao) lines.push('Ton giao: ' + String(Array.isArray(d.ton_giao) ? d.ton_giao.join(', ') : (d.ton_giao || '')));
+      if (d.hon_nhan) lines.push('Hon nhan: ' + String(Array.isArray(d.hon_nhan) ? d.hon_nhan.join(', ') : (d.hon_nhan || '')));
+      if (d.luu_y) lines.push('Luu y: ' + String(d.luu_y));
+      if (lines.length <= 2) lines.push('Chua co du lieu phieu thong tin.');
+      const payload: any = { chat_id: chatId, message_id: messageId, text: lines.join('\n'), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } };
+      await fetch(`https://api.telegram.org/bot${(await import('../config.ts')).BOT_TOKEN}/editMessageText`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
-      await editMessageText(chatId, messageId, '❌ Lỗi tải thông tin.', [
-        [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
-      ]);
+      const payload2: any = { chat_id: chatId, message_id: messageId, text: 'Loi tai thong tin: ' + String(e), reply_markup: { inline_keyboard: [[{ text: 'Quay lai', callback_data: 'menu_mindmap' }]] } };
+      await fetch(`https://api.telegram.org/bot${(await import('../config.ts')).BOT_TOKEN}/editMessageText`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload2)
+      });
     }
     return;
   }
