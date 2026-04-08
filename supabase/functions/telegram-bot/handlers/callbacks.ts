@@ -143,16 +143,22 @@ export async function handleCallback(update: any, staffData: any) {
       if (d.t2_so_thich) lines.push('So thich: ' + String(d.t2_so_thich));
       if (d.t2_luu_y) lines.push('Luu y: ' + String(d.t2_luu_y));
       if (lines.length <= 2) lines.push('Chua co du lieu phieu.');
-      const mmUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=' + chatId;
+      // Generate time-limited signed URL (30 min expiry)
+      const ts = Date.now();
+      const raw = `${chatId}:${ts}:${BOT_TOKEN}`;
+      const encoder = new TextEncoder();
+      const hashBuf = await crypto.subtle.digest('SHA-256', encoder.encode(raw));
+      const sig = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('').substring(0,16);
+      const mmUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/mm.html?gid=${chatId}&ts=${ts}&sig=${sig}`;
       // Send new message with text info + link to visual mindmap
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: lines.join('\n') + '\n\nBam link ben duoi de xem Mindmap visual:',
+          text: lines.join('\n') + '\n\nBam link ben duoi de xem Mindmap (het han sau 30 phut):',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '🧠 Xem Mindmap Visual', url: mmUrl }],
+              [{ text: '\ud83e\udde0 Xem Mindmap Visual', url: mmUrl }],
               [{ text: 'Quay lai', callback_data: 'menu_mindmap' }]
             ]
           }

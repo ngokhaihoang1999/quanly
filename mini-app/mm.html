@@ -13,11 +13,12 @@ body { background:#f8f9fa; font-family:'Segoe UI',system-ui,sans-serif; }
 #mmWrap { width:100%; min-height:100vh; background:#fff; }
 .markmap { width:100%; height:100vh; }
 .markmap svg { width:100%; height:100%; }
-.error { color:#c33; text-align:center; padding:40px 20px; }
+.error { color:#c33; text-align:center; padding:40px 20px; font-size:16px; }
+.error .icon { font-size:48px; margin-bottom:12px; }
 </style>
 </head>
 <body>
-<div id="loading" class="loading"><div class="spinner"></div><div>Đang tải mindmap...</div></div>
+<div id="loading" class="loading"><div class="spinner"></div><div>Đang xác thực...</div></div>
 <div id="mmWrap" style="display:none"></div>
 <div id="error" class="error" style="display:none"></div>
 
@@ -27,12 +28,6 @@ window.markmap = { autoLoader: { manual: true, toolbar: true } };
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
 <script>
 const SB_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
-
-async function sbGet(path) {
-  const r = await fetch(SB_URL + path, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
-  return r.json();
-}
 
 function fmt(t, w) { if(!t) return ''; t=String(t).replace(/\n+/g,' ').trim(); return t.length<=w?t:t.substring(0,w-1)+'\u2026'; }
 function mdS(t, lim) {
@@ -43,34 +38,36 @@ function mdS(t, lim) {
   return ss.map(function(s){return '- '+fmt(s.trim(),lim||55)+'\n';}).join('');
 }
 
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  var el = document.getElementById('error');
+  el.style.display = 'block';
+  el.innerHTML = '<div class="icon">🔒</div><div>' + msg + '</div>';
+}
+
 async function init() {
   try {
-    const params = new URLSearchParams(location.search);
-    const pid = params.get('id');
-    const gid = params.get('gid');
-    let profileId = pid;
+    var params = new URLSearchParams(location.search);
+    var gid = params.get('gid');
+    var ts = params.get('ts');
+    var sig = params.get('sig');
+    if (!gid || !ts || !sig) { showError('Link khong hop le.'); return; }
 
-    // If group_id provided, look up profile
-    if (!profileId && gid) {
-      const fg = await sbGet('/rest/v1/fruit_groups?telegram_group_id=eq.' + gid + '&select=profile_id');
-      if (fg && fg.length > 0) profileId = fg[0].profile_id;
-    }
-    if (!profileId) throw new Error('No profile');
+    // Validate via Edge Function
+    var res = await fetch(SB_URL + '/functions/v1/validate-mindmap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gid: gid, ts: ts, sig: sig })
+    });
+    var data = await res.json();
+    if (!res.ok) { showError(data.error || 'Loi xac thuc.'); return; }
 
-    // Fetch profile + form data
-    const [profiles, sheets] = await Promise.all([
-      sbGet('/rest/v1/profiles?id=eq.' + profileId + '&select=full_name,phase,is_kt_opened'),
-      sbGet('/rest/v1/form_hanh_chinh?profile_id=eq.' + profileId + '&select=data')
-    ]);
+    var p = data.profile || {};
+    var d = data.sheet || {};
+    var name = p.full_name || 'Ho so';
 
-    const p = profiles[0] || {};
-    const d = (sheets && sheets.length > 0 && sheets[0].data) ? sheets[0].data : {};
-    const name = p.full_name || 'Hồ sơ';
-
-    // Build markmap markdown (same logic as mindmap.js renderInfoMM)
+    // Build markmap markdown
     var md = '# ' + name + '\n';
-
-    // 1. Nhân thân & Nền tảng
     var dm = [
       d.t2_nam_sinh ? 'Sinh: '+d.t2_nam_sinh : null,
       d.t2_gioi_tinh ? 'Giới tính: '+d.t2_gioi_tinh : null,
@@ -82,32 +79,21 @@ async function init() {
       d.t2_que_quan ? 'Nhà ba mẹ (Quê): '+d.t2_que_quan : null
     ].filter(Boolean);
     if (dm.length) { md += '## 🏛️ Nhân thân & Nền tảng\n'; dm.forEach(function(v){md+='- '+fmt(v,45)+'\n';}); }
-
-    // 2. Gia đình
     if (d.t2_nguoi_than) md += '## 🏡 Gia đình & Hoàn cảnh\n### 👨‍👩‍👧‍👦 Hoàn cảnh gia đình\n' + mdS(d.t2_nguoi_than,55);
-
-    // 3. Hệ tư tưởng
     var tt='';
     if (d.t2_ton_giao) tt+='- **Tôn giáo:** '+(Array.isArray(d.t2_ton_giao)?d.t2_ton_giao.join(', '):d.t2_ton_giao)+'\n';
     if (d.t2_quan_diem) tt+=mdS(d.t2_quan_diem,55);
     if (tt) md += '## ⚖️ Hệ tư tưởng & Niềm tin\n' + tt;
-
-    // 4. Chiều sâu nội tâm
     var tl='';
     if (d.t2_tinh_cach) tl+='### 🧩 Tính cách\n'+mdS(d.t2_tinh_cach,50);
     if (d.t2_so_thich) tl+='### 🎨 Đam mê / Sở thích\n'+mdS(d.t2_so_thich,50);
     if (d.t2_du_dinh) tl+='### 🚀 Khát vọng / Dự định\n'+mdS(d.t2_du_dinh,50);
     if (tl) md += '## 🌊 Chiều sâu nội tâm\n' + tl;
-
-    // 5. Góc khuất
     var qk='';
     if (d.t2_nguoi_quan_trong) qk+='### 👥 Người quan trọng nhất\n'+mdS(d.t2_nguoi_quan_trong,50);
     if (d.t2_chuyen_cu) qk+='### 📖 Câu chuyện dấu ấn\n'+mdS(d.t2_chuyen_cu,50);
     if (qk) md += '## ⛓️ Góc khuất & Ràng buộc\n' + qk;
-
-    // 6. Lưu ý
     if (d.t2_luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdS(d.t2_luu_y,55);
-
     if (md.trim() === '# '+name) md += '## 📋 Chưa có dữ liệu\n';
 
     // Render
@@ -119,9 +105,7 @@ async function init() {
       window.markmap.autoLoader.renderAll();
     }
   } catch(e) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
-    document.getElementById('error').textContent = 'Lỗi: ' + e.message;
+    showError('Loi: ' + e.message);
   }
 }
 init();
