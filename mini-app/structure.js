@@ -59,6 +59,7 @@ async function loadStructure() {
           if (members.length) {
             members.forEach(m => {
               let ep = m.position || 'td';
+              if (['yjyn','tjn','gyjn','bgyjn'].includes(ep)) ep = 'td';
               if (m.staff_code === a.yjyn_staff_code) ep = 'yjyn';
               if (m.staff_code === g.tjn_staff_code) ep = 'tjn';
               if (m.staff_code === t.gyjn_staff_code) ep = 'gyjn';
@@ -271,6 +272,7 @@ function renderTeamMembers(teamItem) {
     });
     listEl.innerHTML = members.map(m => {
       let effectivePos = m.position || 'td';
+      if (['yjyn','tjn','gyjn','bgyjn'].includes(effectivePos)) effectivePos = 'td';
       if (parentArea && m.staff_code === parentArea.yjyn_staff_code) effectivePos = 'yjyn';
       if (parentGroup && m.staff_code === parentGroup.tjn_staff_code) effectivePos = 'tjn';
       if (m.staff_code === teamItem.gyjn_staff_code) effectivePos = 'gyjn';
