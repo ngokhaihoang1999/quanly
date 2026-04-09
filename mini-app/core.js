@@ -2012,7 +2012,10 @@ function showStaffCard(code) {
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:700;font-size:16px;">' + (s.nickname || s.full_name) + '</div>' +
           (s.nickname ? '<div style="font-size:12px;color:var(--text3);">' + s.full_name + ' (' + s.staff_code + ')</div>' : '<div style="font-size:12px;color:var(--text3);">' + s.staff_code + '</div>') +
-          '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + getPositionName(s.position) + (s.specialist_position ? ' + ' + getPositionName(s.specialist_position) : '') + '</div>' +
+          '<div style="margin-top:4px;">' +
+            '<span class="staff-role-badge ' + getBadgeClass(s.position) + '" style="font-size:10px;padding:3px 10px;">' + getPositionName(s.position) + '</span>' +
+            (s.specialist_position ? ' <span class="staff-role-badge" style="font-size:10px;padding:3px 10px;background:rgba(139,92,246,0.15);color:#7c3aed;border:1px solid rgba(139,92,246,0.3);">' + getPositionName(s.specialist_position) + '</span>' : '') +
+          '</div>' +
         '</div>' +
       '</div>' +
       (unit ? '<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:10px;">&\#127962; ' + unit + '</div>' : '') +
