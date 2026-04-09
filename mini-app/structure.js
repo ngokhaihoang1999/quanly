@@ -94,9 +94,7 @@ function openAddAreaModal() {
   document.getElementById('struct_name').value = '';
   document.getElementById('struct_type').value = 'area';
   document.getElementById('struct_parent_wrap').style.display = 'none';
-  document.getElementById('struct_manager_wrap').style.display = 'block';
-  document.getElementById('struct_manager_label').textContent = 'Ch\u1ec9 \u0111\u1ecbnh YJYN';
-  populateStaffSelect('struct_manager','Ch\u1ecdn YJYN...');
+  document.getElementById('struct_manager_wrap').style.display = 'none';
   document.getElementById('struct_manager2_wrap').style.display = 'none';
   document.getElementById('structureModal').classList.add('open');
 }
@@ -108,9 +106,7 @@ function openAddGroupModal(areaId) {
   document.getElementById('struct_parent_label').textContent = 'Thu\u1ed9c Khu v\u1ef1c';
   const sel = document.getElementById('struct_parent');
   sel.innerHTML = structureData.map(a => `<option value="${a.id}" ${a.id===areaId?'selected':''}>${a.name}</option>`).join('');
-  document.getElementById('struct_manager_wrap').style.display = 'block';
-  document.getElementById('struct_manager_label').textContent = 'Ch\u1ec9 \u0111\u1ecbnh TJN';
-  populateStaffSelect('struct_manager','Ch\u1ecdn TJN...');
+  document.getElementById('struct_manager_wrap').style.display = 'none';
   document.getElementById('struct_manager2_wrap').style.display = 'none';
   document.getElementById('structureModal').classList.add('open');
 }
@@ -156,9 +152,9 @@ async function saveStructure() {
   }
 
   let endpoint, body;
-  if (type==='area') { endpoint='/rest/v1/areas'; body={name, yjyn_staff_code:mgr||null}; }
-  else if (type==='group') { endpoint='/rest/v1/org_groups'; body={name, area_id:parentId, tjn_staff_code:mgr||null}; }
-  else { endpoint='/rest/v1/teams'; body={name, group_id:parentId, gyjn_staff_code:mgr||null, bgyjn_staff_code:mgr2||null}; }
+  if (type==='area') { endpoint='/rest/v1/areas'; body={name}; }
+  else if (type==='group') { endpoint='/rest/v1/org_groups'; body={name, area_id:parentId}; }
+  else { endpoint='/rest/v1/teams'; body={name, group_id:parentId}; }
   
   const saveBtn = document.querySelector('#structureModal .save-btn');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '\u23f3 \u0110ang t\u1ea1o...'; }
@@ -488,28 +484,72 @@ async function assignMemberPos(staffCode, newPos, posType) {
     if (posType === 'management') {
       const TEAM_POS_FIELDS = { gyjn: 'gyjn_staff_code', bgyjn: 'bgyjn_staff_code' };
       const teamItem = findStructItem('team', teamId);
+      // Find parent area/group for YJYN/TJN enforcement
+      let parentArea = null, parentGroup = null;
+      for (const a of (structureData||[])) {
+        for (const g of (a.org_groups||[])) {
+          for (const t of (g.teams||[])) {
+            if (t.id === teamId) { parentArea = a; parentGroup = g; }
+          }
+        }
+      }
+
+      // Enforce uniqueness: 1 YJYN per area, 1 TJN per group, 1 GYJN + 1 BGYJN per team
+      if (newPos === 'yjyn' && parentArea) {
+        const currentHolder = parentArea.yjyn_staff_code;
+        if (currentHolder && currentHolder !== staffCode) {
+          const hn = allStaff.find(s => s.staff_code === currentHolder)?.full_name || currentHolder;
+          if (!await showConfirmAsync(`\u26a0\ufe0f M\u1ed7i Khu v\u1ef1c ch\u1ec9 c\u00f3 1 YJYN.\n\nHi\u1ec7n t\u1ea1i: ${hn} (${currentHolder})\n\u0110\u1ed5i sang ${staffCode}?`)) return;
+          const fallback = getHighestStructuralPosition(currentHolder, 'area', parentArea.id);
+          await sbFetch(`/rest/v1/staff?staff_code=eq.${currentHolder}`, { method:'PATCH', body: JSON.stringify({ position: fallback }) });
+        }
+        await sbFetch(`/rest/v1/areas?id=eq.${parentArea.id}`, { method:'PATCH', body: JSON.stringify({ yjyn_staff_code: staffCode }) });
+        // Clear old area YJYN from this staff if they were YJYN elsewhere
+        for (const a of (structureData||[])) {
+          if (a.id !== parentArea.id && a.yjyn_staff_code === staffCode) {
+            await sbFetch(`/rest/v1/areas?id=eq.${a.id}`, { method:'PATCH', body: JSON.stringify({ yjyn_staff_code: null }) });
+          }
+        }
+      }
+      if (newPos === 'tjn' && parentGroup) {
+        const currentHolder = parentGroup.tjn_staff_code;
+        if (currentHolder && currentHolder !== staffCode) {
+          const hn = allStaff.find(s => s.staff_code === currentHolder)?.full_name || currentHolder;
+          if (!await showConfirmAsync(`\u26a0\ufe0f M\u1ed7i Nh\u00f3m ch\u1ec9 c\u00f3 1 TJN.\n\nHi\u1ec7n t\u1ea1i: ${hn} (${currentHolder})\n\u0110\u1ed5i sang ${staffCode}?`)) return;
+          const fallback = getHighestStructuralPosition(currentHolder, 'group', parentGroup.id);
+          await sbFetch(`/rest/v1/staff?staff_code=eq.${currentHolder}`, { method:'PATCH', body: JSON.stringify({ position: fallback }) });
+        }
+        await sbFetch(`/rest/v1/org_groups?id=eq.${parentGroup.id}`, { method:'PATCH', body: JSON.stringify({ tjn_staff_code: staffCode }) });
+        // Clear old group TJN from this staff if they were TJN elsewhere
+        for (const a of (structureData||[])) {
+          for (const g of (a.org_groups||[])) {
+            if (g.id !== parentGroup.id && g.tjn_staff_code === staffCode) {
+              await sbFetch(`/rest/v1/org_groups?id=eq.${g.id}`, { method:'PATCH', body: JSON.stringify({ tjn_staff_code: null }) });
+            }
+          }
+        }
+      }
 
       if (teamItem) {
         const teamUpdates = {};
-        // 1. Assigning TO a structural position → enforce uniqueness
+        // GYJN/BGYJN enforcement (already existed)
         if (TEAM_POS_FIELDS[newPos]) {
           const field = TEAM_POS_FIELDS[newPos];
           const currentHolder = teamItem[field];
           if (currentHolder && currentHolder !== staffCode) {
             const hn = allStaff.find(s => s.staff_code === currentHolder)?.full_name || currentHolder;
-            if (!await showConfirmAsync(`\u26a0\ufe0f Mỗi Tổ chỉ có 1 ${getPositionName(newPos)}.\n\nHiện tại: ${hn} (${currentHolder})\nĐổi sang ${staffCode}?`)) return;
+            if (!await showConfirmAsync(`\u26a0\ufe0f M\u1ed7i T\u1ed5 ch\u1ec9 c\u00f3 1 ${getPositionName(newPos)}.\n\nHi\u1ec7n t\u1ea1i: ${hn} (${currentHolder})\n\u0110\u1ed5i sang ${staffCode}?`)) return;
             const fallback = getHighestStructuralPosition(currentHolder, 'team', teamId);
             await sbFetch(`/rest/v1/staff?staff_code=eq.${currentHolder}`, { method:'PATCH', body: JSON.stringify({ position: fallback }) });
           }
           teamUpdates[field] = staffCode;
         }
-        // 2. Moving AWAY from a structural position → clear structural column
+        // Moving AWAY from a structural position → clear structural column
         for (const [pc, fld] of Object.entries(TEAM_POS_FIELDS)) {
           if (pc !== newPos && teamItem[fld] === staffCode) {
             teamUpdates[fld] = null;
           }
         }
-        // 3. Perform patch on teams
         if (Object.keys(teamUpdates).length > 0) {
           await sbFetch(`/rest/v1/teams?id=eq.${teamId}`, { method:'PATCH', body: JSON.stringify(teamUpdates) });
         }
