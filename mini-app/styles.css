@@ -877,3 +877,139 @@
   width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
   flex-shrink: 0; align-self: center; margin-left: auto;
 }
+
+/* ═══════════════ PIN LOCK SYSTEM ═══════════════ */
+#pinLockOverlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: linear-gradient(160deg, #0f0f1a 0%, #1a1035 40%, #0d1b2a 100%);
+  display: flex; align-items: center; justify-content: center;
+  animation: pinFadeIn 0.3s ease-out;
+}
+[data-theme="light"] #pinLockOverlay {
+  background: linear-gradient(160deg, #e8eaf6 0%, #c5cae9 40%, #bbdefb 100%);
+}
+.pin-lock-container {
+  text-align: center; padding: 24px 20px; width: 100%; max-width: 340px;
+}
+.pin-lock-icon {
+  font-size: 48px; margin-bottom: 12px;
+  animation: pinBounce 1.5s ease-in-out infinite;
+}
+.pin-lock-title {
+  font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+[data-theme="light"] .pin-lock-title { color: #1a237e; }
+.pin-lock-subtitle {
+  font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 28px;
+}
+[data-theme="light"] .pin-lock-subtitle { color: rgba(26,35,126,0.5); }
+
+/* PIN Dots */
+.pin-dots {
+  display: flex; justify-content: center; gap: 14px; margin-bottom: 12px;
+}
+.pin-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="light"] .pin-dot { border-color: rgba(26,35,126,0.3); }
+.pin-dot.filled {
+  background: var(--accent); border-color: var(--accent);
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(124,106,247,0.5);
+}
+
+/* PIN Error */
+.pin-error {
+  font-size: 13px; color: #ef4444; min-height: 20px; margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* PIN Keypad */
+.pin-keypad {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  max-width: 280px; margin: 0 auto;
+}
+.pin-key {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff; font-size: 26px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+  user-select: none; -webkit-user-select: none;
+  margin: 0 auto;
+  backdrop-filter: blur(4px);
+}
+[data-theme="light"] .pin-key {
+  background: rgba(26,35,126,0.06);
+  border-color: rgba(26,35,126,0.15);
+  color: #1a237e;
+}
+.pin-key:active {
+  background: rgba(124,106,247,0.35);
+  transform: scale(0.92);
+  border-color: var(--accent);
+}
+.pin-key.del {
+  font-size: 22px;
+  background: rgba(248,113,113,0.1);
+  border-color: rgba(248,113,113,0.2);
+}
+.pin-key.del:active {
+  background: rgba(248,113,113,0.3);
+}
+.pin-key.empty {
+  background: transparent; border: none; cursor: default;
+}
+
+/* PIN Animations */
+@keyframes pinFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pinUnlock {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-12px); }
+  30% { transform: translateX(10px); }
+  45% { transform: translateX(-8px); }
+  60% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+}
+@keyframes pinBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* PIN Toggle Switch (iOS-style) */
+.pin-switch {
+  position: relative; display: inline-block; width: 48px; height: 26px;
+  flex-shrink: 0;
+}
+.pin-switch input { opacity: 0; width: 0; height: 0; }
+.pin-slider {
+  position: absolute; inset: 0; border-radius: 26px;
+  background: var(--border); transition: background 0.3s;
+  cursor: pointer;
+}
+.pin-slider::before {
+  content: ''; position: absolute;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: white; left: 3px; top: 3px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.pin-switch input:checked + .pin-slider {
+  background: var(--green);
+}
+.pin-switch input:checked + .pin-slider::before {
+  transform: translateX(22px);
+}
