@@ -434,6 +434,9 @@ function getPosLevel(p) {
   return obj ? obj.level : 0;
 }
 function getBadgeClass(p) {
+  // Structural positions get their own vivid badge
+  const structBadges = { yjyn: 'role-yjyn', tjn: 'role-tjn', gyjn: 'role-gyjn', bgyjn: 'role-bgyjn' };
+  if (structBadges[p]) return structBadges[p];
   const obj = getPositionObj(p);
   if (!obj) return 'role-default';
   if (obj.level >= 80) return 'role-admin';

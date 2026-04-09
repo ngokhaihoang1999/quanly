@@ -129,10 +129,14 @@
     .staff-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
     .staff-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #34d399, #059669); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; flex-shrink: 0; color: white; }
     .staff-role-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .role-admin { background: rgba(124,106,247,0.2); color: var(--accent2); border: 1px solid rgba(124,106,247,0.4); }
-    .role-ndd { background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+    .role-admin { background: linear-gradient(135deg, rgba(124,106,247,0.25), rgba(167,139,250,0.2)); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.5); box-shadow: 0 0 6px rgba(139,92,246,0.15); }
+    .role-ndd { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(52,211,153,0.15)); color: #059669; border: 1px solid rgba(16,185,129,0.45); box-shadow: 0 0 6px rgba(16,185,129,0.12); }
     .role-tvv { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
     .role-default { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+    .role-yjyn { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; border: 1px solid #d97706; box-shadow: 0 1px 4px rgba(245,158,11,0.35); text-shadow: 0 1px 1px rgba(0,0,0,0.15); }
+    .role-tjn { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: 1px solid #047857; box-shadow: 0 1px 4px rgba(16,185,129,0.35); text-shadow: 0 1px 1px rgba(0,0,0,0.15); }
+    .role-gyjn { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: 1px solid #1d4ed8; box-shadow: 0 1px 4px rgba(59,130,246,0.35); text-shadow: 0 1px 1px rgba(0,0,0,0.15); }
+    .role-bgyjn { background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff; border: 1px solid #0f766e; box-shadow: 0 1px 4px rgba(20,184,166,0.3); text-shadow: 0 1px 1px rgba(0,0,0,0.15); }
     .level-badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 1px 6px; border-radius: 8px; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); margin-left: 6px; }
     /* Dashboard cards */
     .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
