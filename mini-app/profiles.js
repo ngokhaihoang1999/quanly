@@ -674,10 +674,6 @@ function _copyProfileDeepLink(profileId) {
   _fallbackCopy(plainContent);
 }
 
-function _richCopyFallback(html, plain, displayName) {
-  // no longer needed but keep for safety
-  _fallbackCopy(plain);
-}
 
 function _fallbackCopy(text) {
   const ta = document.createElement('textarea');
