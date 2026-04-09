@@ -200,11 +200,11 @@ async function openProfile(p) {
           ${reasonHtml}
           ${bbNoGroupWarning}
         </div>
-        <button onclick="shareProfile('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}')" title="Chia sẻ hồ sơ" style="
+        <button data-share-id="${p.id}" data-share-name="${(p.full_name||'').replace(/"/g,'&quot;')}" onclick="shareProfile(this.dataset.shareId, this.dataset.shareName)" title="Chia sẻ hồ sơ" style="
           flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
-          background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
-          ">📤</button>
+          background:var(--accent);color:white;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;padding:0;
+          "><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
         <button id="profileRefreshBtn" onclick="refreshProfileInPlace()" title="Đồng bộ dữ liệu mới nhất" style="
           flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
           background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
