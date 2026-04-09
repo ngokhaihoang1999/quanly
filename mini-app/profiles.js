@@ -627,23 +627,8 @@ async function _sendShareToStaff(profileId, profileName) {
 }
 
 function _copyProfileDeepLink(profileId) {
-  // Build the Telegram Mini App deep link
-  // Format: https://t.me/BOT_USERNAME/APP_NAME?startapp=PROFILE_ID
-  // Fallback: direct URL with ?profile= param
-  const botInfo = tg?.initDataUnsafe?.user ? tg.initDataUnsafe : null;
-  // Use the current webapp URL with profile param as a universal link
-  const baseUrl = window.location.origin + window.location.pathname;
-  const directLink = baseUrl + '?profile=' + profileId;
-  
-  // Try to construct Telegram deep link if possible
-  let link = directLink;
-  try {
-    // The Telegram Mini App can be opened via t.me/botname/appname?startapp=param
-    // We need the bot username - extract from the webapp URL or use known format
-    const botUsername = tg?.initDataUnsafe?.user?.username ? null : null; // user's username, not bot's
-    // Best approach: use the direct URL which works both in Telegram and browser
-    link = directLink;
-  } catch(e) {}
+  // Telegram Mini App deep link — opens directly in the app, never exposes source code URL
+  const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
 
   // Copy to clipboard
   if (navigator.clipboard && navigator.clipboard.writeText) {
