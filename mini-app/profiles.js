@@ -544,8 +544,10 @@ function shareProfile(profileId, profileName) {
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🔗 Lấy link mở hồ sơ</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Link mở Mini App đến thẳng hồ sơ này</div>
+        <input id="shareDeepLinkInput" type="text" readonly value="https://t.me/quanlyhcm_bot/app?startapp=${profileId}"
+          onclick="this.select()" style="width:100%;padding:9px 12px;border-radius:8px 8px 0 0;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:11px;box-sizing:border-box;font-family:monospace;" />
         <button onclick="_copyProfileDeepLink('${profileId}')"
-          style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
+          style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:0 0 10px 10px;font-size:13px;font-weight:600;cursor:pointer;">
           📋 Sao chép link
         </button>
       </div>
@@ -630,30 +632,29 @@ async function _sendShareToStaff(profileId, profileName) {
 function _copyProfileDeepLink(profileId) {
   const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
   const displayName = (window._shareProfileName || 'Hồ sơ trái quả').trim();
-  const richText = `<a href="${link}">🍎 ${displayName}</a>`;
-  const plainText = `🍎 ${displayName}\n${link}`;
 
-  // Try rich text copy (HTML hyperlink) so paste shows name, not URL
-  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+  // Method 1: Use the visible input field (most reliable in Telegram WebApp)
+  const inp = document.getElementById('shareDeepLinkInput');
+  if (inp) {
+    inp.select();
+    inp.setSelectionRange(0, 99999);
     try {
-      const htmlBlob = new Blob([richText], { type: 'text/html' });
-      const textBlob = new Blob([plainText], { type: 'text/plain' });
-      navigator.clipboard.write([
-        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
-      ]).then(() => {
-        showToast('📋 Đã sao chép: ' + displayName);
-      }).catch(() => _fallbackCopy(plainText));
-      return;
-    } catch(e) {}
-  }
-  // Fallback: plain text
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(plainText).then(() => {
+      document.execCommand('copy');
       showToast('📋 Đã sao chép link!');
-    }).catch(() => _fallbackCopy(plainText));
-  } else {
-    _fallbackCopy(plainText);
+      return;
+    } catch(e) { console.warn('execCommand copy failed:', e); }
   }
+
+  // Method 2: Clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => {
+      showToast('📋 Đã sao chép link!');
+    }).catch(() => _fallbackCopy(link));
+    return;
+  }
+
+  // Method 3: textarea fallback
+  _fallbackCopy(link);
 }
 
 function _fallbackCopy(text) {
