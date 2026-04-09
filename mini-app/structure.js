@@ -66,7 +66,7 @@ async function loadStructure() {
               if (m.staff_code === t.bgyjn_staff_code) ep = 'bgyjn';
               const posBadge = ep && ep !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(ep)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(ep)}</span>` : '';
               const cmBadge = m.specialist_position
-                ? `<span class="staff-role-badge" style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(139,92,246,0.12);color:#7c3aed;border:1px solid rgba(139,92,246,0.25);">CM: ${getPositionName(m.specialist_position)}</span>`
+                ? `<span class="staff-role-badge" style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(139,92,246,0.12);color:#7c3aed;border:1px solid rgba(139,92,246,0.25);">${getPositionName(m.specialist_position)}</span>`
                 : '';
               html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}${cmBadge}</div>`;
             });
@@ -279,7 +279,7 @@ function renderTeamMembers(teamItem) {
       if (m.staff_code === teamItem.bgyjn_staff_code) effectivePos = 'bgyjn';
       const posBadge = `<span class="staff-role-badge ${getBadgeClass(effectivePos)}" style="font-size:9px;padding:1px 6px;">${getPositionName(effectivePos)}</span>`;
       const cmBadge = m.specialist_position
-        ? `<span class="staff-role-badge" style="font-size:9px;padding:1px 6px;margin-left:3px;background:rgba(139,92,246,0.15);color:#7c3aed;border:1px solid rgba(139,92,246,0.3);">CM: ${getPositionName(m.specialist_position)}</span>`
+        ? `<span class="staff-role-badge" style="font-size:9px;padding:1px 6px;margin-left:3px;background:rgba(139,92,246,0.15);color:#7c3aed;border:1px solid rgba(139,92,246,0.3);">${getPositionName(m.specialist_position)}</span>`
         : '';
       const assignHtml = canAssignPos ? `
         <div style="display:flex;gap:4px;margin-top:4px;">
@@ -287,7 +287,7 @@ function renderTeamMembers(teamItem) {
             ${getManagementPositions().map(p => `<option value="${p.code}" ${effectivePos===p.code?'selected':''}>${p.name}</option>`).join('')}
           </select>
           <select onchange="assignMemberPos('${m.staff_code}',this.value,'specialist')" style="padding:2px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;flex:1;">
-            <option value="">CM: Không</option>
+            <option value="">Không</option>
             ${getSpecialistPositions().map(p => `<option value="${p.code}" ${m.specialist_position===p.code?'selected':''}>${p.name}</option>`).join('')}
           </select>
         </div>` : '';
