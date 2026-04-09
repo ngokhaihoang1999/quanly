@@ -6,6 +6,13 @@ let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
 let allPositions = [];
 let _pendingPrefs = {}; // live personalization edits not yet saved
 
+// ============ DATA CACHE (prevents redundant re-fetches on tab switch) ============
+const _dataCache = { profiles: 0, dashboard: 0, staff: 0, structure: 0, calendar: 0, priority: 0 };
+const CACHE_TTL = 30000; // 30s — data won't re-fetch if younger than this
+function isFresh(key) { return Date.now() - (_dataCache[key] || 0) < CACHE_TTL; }
+function markFresh(key) { _dataCache[key] = Date.now(); }
+function invalidateCache(key) { if (key) _dataCache[key] = 0; else Object.keys(_dataCache).forEach(k => _dataCache[k] = 0); }
+
 // ============ SEMESTER (KHAI GIẢNG) ============
 let allSemesters = [];
 let currentSemesterId = null; // null = show all (legacy compat)
@@ -619,12 +626,13 @@ function switchMainTab(el, tab) {
   document.getElementById('tab-'+tab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
-  if (tab==='unit') { loadDashboard(); loadProfiles(); }
-  if (tab==='personal') loadDashboard();
-  if (tab==='staff') loadStaff();
-  if (tab==='structure') loadStructure();
-  if (tab==='calendar' && typeof loadCalendar === 'function') loadCalendar();
-  if (tab==='priority' && typeof loadPriority === 'function') loadPriority();
+  // Only re-fetch if data is stale (>30s old). Writes invalidate cache automatically.
+  if (tab==='unit') { if (!isFresh('dashboard')) loadDashboard(); if (!isFresh('profiles')) loadProfiles(); }
+  if (tab==='personal') { if (!isFresh('dashboard')) loadDashboard(); }
+  if (tab==='staff') { if (!isFresh('staff')) loadStaff(); }
+  if (tab==='structure') { if (!isFresh('structure')) loadStructure(); }
+  if (tab==='calendar' && typeof loadCalendar === 'function') { if (!isFresh('calendar')) loadCalendar(); }
+  if (tab==='priority' && typeof loadPriority === 'function') { if (!isFresh('priority')) loadPriority(); }
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============

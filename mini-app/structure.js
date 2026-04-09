@@ -78,6 +78,7 @@ async function loadStructure() {
     html += '</div>';
     el.innerHTML = html;
     populateViewAsDropdown();
+    markFresh('structure');
   } catch(e) { console.error(e); document.getElementById('structureTree').innerHTML = '<div class="empty-state">L\u1ed7i t\u1ea3i</div>'; }
 }
 function populateStaffSelect(selId, ph) {

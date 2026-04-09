@@ -19,6 +19,7 @@ async function loadProfiles() {
       return p;
     });
     renderProfiles(allProfiles);
+    markFresh('profiles');
   } catch { document.getElementById('profileList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải dữ liệu</div></div>'; }
 }
 function renderProfiles(profiles) {

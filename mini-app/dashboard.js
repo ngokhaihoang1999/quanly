@@ -545,6 +545,7 @@ async function loadDashboard() {
     if (metricsEl && !metricsEl.innerHTML.trim()) metricsEl.innerHTML = '';
     if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">⚠️ Không tải được dữ liệu</div>';
   } finally {
+    markFresh('dashboard');
     // GUARANTEE: After loadDashboard completes (success or error), any element still
     // showing "Đang tải..." means it was never updated — replace with empty/error state
     const LOADING_MARKER = 'Đang tải';

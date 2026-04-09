@@ -4,6 +4,7 @@ async function loadStaff() {
     const res = await sbFetch('/rest/v1/staff?select=*&order=created_at.desc');
     allStaff = await res.json();
     renderStaff(allStaff);
+    markFresh('staff');
   } catch { document.getElementById('staffList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Lỗi tải</div></div>'; }
 }
 function renderStaff(list) {
