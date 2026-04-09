@@ -155,7 +155,7 @@ export async function handleCallback(update: any, staffData: any) {
       const mdBytes = new TextEncoder().encode(md);
       const b64 = btoa(String.fromCharCode(...mdBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
       const staticUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64;
-      const screenshotUrl = 'https://image.thum.io/get/width/1200/crop/900/wait/5/noanimate/png/' + staticUrl;
+      const screenshotUrl = 'https://image.thum.io/get/width/1600/crop/1200/wait/8/noanimate/png/' + staticUrl;
       
       // Fetch screenshot ourselves, then upload as blob
       let photoSent = false;
@@ -247,7 +247,7 @@ export async function handleCallback(update: any, staffData: any) {
       const bbBytes = new TextEncoder().encode(bbMd);
       const b64bb = btoa(String.fromCharCode(...bbBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
       const staticUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64bb;
-      const screenshotUrlBB = 'https://image.thum.io/get/width/1200/crop/900/wait/5/noanimate/png/' + staticUrlBB;
+      const screenshotUrlBB = 'https://image.thum.io/get/width/1600/crop/1200/wait/8/noanimate/png/' + staticUrlBB;
       
       // Fetch screenshot ourselves, then upload as blob
       let bbPhotoSent = false;

@@ -6,12 +6,15 @@
 <title>Mindmap</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif}
-svg.markmap{width:100%;height:100vh}
+html,body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+/* Container that will be resized to fit content */
+#mm-container{width:1600px;min-height:200px;position:relative}
+svg.markmap{width:100%;height:100%}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18"></script>
 </head>
 <body>
+<div id="mm-container"></div>
 <script>
 // Read data from query param ?d= (not hash - screenshot services strip hash)
 try {
@@ -34,7 +37,34 @@ try {
   tmpl.type = 'text/template';
   tmpl.textContent = md;
   wrap.appendChild(tmpl);
-  document.body.appendChild(wrap);
+  document.getElementById('mm-container').appendChild(wrap);
+  
+  // After markmap renders, auto-fit SVG to content
+  setTimeout(function autoFit() {
+    var svg = document.querySelector('svg.markmap');
+    if (!svg) { setTimeout(autoFit, 200); return; }
+    // Wait for markmap to finish rendering nodes
+    setTimeout(function() {
+      var g = svg.querySelector('g');
+      if (!g) return;
+      var bbox = g.getBBox();
+      // Add padding
+      var pad = 30;
+      var w = Math.ceil(bbox.width + pad * 2);
+      var h = Math.ceil(bbox.height + pad * 2);
+      // Set viewBox to tightly fit content
+      svg.setAttribute('viewBox', 
+        (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' + w + ' ' + h);
+      // Set explicit dimensions
+      var container = document.getElementById('mm-container');
+      container.style.width = Math.max(w, 800) + 'px';
+      container.style.height = h + 'px';
+      svg.style.width = '100%';
+      svg.style.height = h + 'px';
+      document.body.style.width = Math.max(w, 800) + 'px';
+      document.body.style.height = h + 'px';
+    }, 1500); // Give markmap time to animate/render
+  }, 500);
 } catch(e) {
   document.write('<p style="padding:20px;color:red">Error: '+e.message+'</p>');
 }
