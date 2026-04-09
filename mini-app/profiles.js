@@ -543,7 +543,7 @@ function shareProfile(profileId, profileName) {
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🔗 Lấy link mở hồ sơ</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Link mở Mini App đến thẳng hồ sơ này</div>
-        <button onclick="_copyProfileDeepLink('${profileId}')"
+        <button onclick="_copyProfileDeepLink('${profileId}', this.closest('#shareProfileModal').querySelector('[style*=\"margin-bottom:16px\"]').textContent)"
           style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
           📋 Sao chép link
         </button>
@@ -626,19 +626,32 @@ async function _sendShareToStaff(profileId, profileName) {
   }
 }
 
-function _copyProfileDeepLink(profileId) {
-  // Telegram Mini App deep link — opens directly in the app, never exposes source code URL
+function _copyProfileDeepLink(profileId, profileName) {
   const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
+  const displayName = (profileName || 'Hồ sơ trái quả').trim();
+  const richText = `<a href="${link}">🍎 ${displayName}</a>`;
+  const plainText = `🍎 ${displayName}\n${link}`;
 
-  // Copy to clipboard
+  // Try rich text copy (HTML hyperlink) so paste shows name, not URL
+  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+    try {
+      const htmlBlob = new Blob([richText], { type: 'text/html' });
+      const textBlob = new Blob([plainText], { type: 'text/plain' });
+      navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+      ]).then(() => {
+        showToast('📋 Đã sao chép: ' + displayName);
+      }).catch(() => _fallbackCopy(plainText));
+      return;
+    } catch(e) {}
+  }
+  // Fallback: plain text
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(link).then(() => {
+    navigator.clipboard.writeText(plainText).then(() => {
       showToast('📋 Đã sao chép link!');
-    }).catch(() => {
-      _fallbackCopy(link);
-    });
+    }).catch(() => _fallbackCopy(plainText));
   } else {
-    _fallbackCopy(link);
+    _fallbackCopy(plainText);
   }
 }
 
