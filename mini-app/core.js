@@ -56,6 +56,8 @@ async function _pinKeyPress(key) {
     if (_pinInput.length >= 6) return;
     _pinInput += String(key);
   }
+  // Telegram haptic feedback for native feel
+  try { tg?.HapticFeedback?.impactOccurred('light'); } catch(e) {}
   // Update dots
   const dots = document.querySelectorAll('#pinDots .pin-dot');
   dots.forEach((d, i) => {
@@ -68,6 +70,7 @@ async function _pinKeyPress(key) {
     const stored = localStorage.getItem(PIN_HASH_KEY);
     if (hash === stored) {
       _pinUnlocked = true;
+      try { tg?.HapticFeedback?.notificationOccurred('success'); } catch(e) {}
       const overlay = document.getElementById('pinLockOverlay');
       if (overlay) {
         overlay.style.animation = 'pinUnlock 0.35s ease-out forwards';
@@ -81,6 +84,7 @@ async function _pinKeyPress(key) {
         setTimeout(() => container.style.animation = '', 400);
       }
       if (errEl) errEl.textContent = 'Mã PIN không đúng';
+      try { tg?.HapticFeedback?.notificationOccurred('error'); } catch(e) {}
       _pinInput = '';
       setTimeout(() => dots.forEach(d => d.classList.remove('filled')), 300);
     }
@@ -113,10 +117,10 @@ async function _openPinSetup(mode) {
           `<div class="pin-key" onclick="_setupPinKey(${k})">${k}</div>`
         ).join('')}
       </div>
-      <button onclick="document.getElementById('pinSetupModal')?.remove()" style="margin-top:12px;padding:8px 24px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:13px;cursor:pointer;">Huỷ</button>
+      <button onclick="document.getElementById('pinSetupModal')?.remove();_refreshPinToggle()" style="margin-top:12px;padding:8px 24px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:13px;cursor:pointer;">Huỷ</button>
     </div>`;
   document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  modal.addEventListener('click', e => { if (e.target === modal) { modal.remove(); _refreshPinToggle(); } });
   window._pinSetupMode = mode;
   window._pinSetupStep = (mode === 'new') ? 'enter' : 'verify';
   window._pinSetupInput = '';
@@ -131,6 +135,7 @@ async function _setupPinKey(key) {
     if (window._pinSetupInput.length >= 6) return;
     window._pinSetupInput += String(key);
   }
+  try { tg?.HapticFeedback?.impactOccurred('light'); } catch(e) {}
   const dots = document.querySelectorAll('#setupPinDots .pin-dot');
   dots.forEach((d, i) => d.classList.toggle('filled', i < window._pinSetupInput.length));
   if (errEl) errEl.textContent = '';
