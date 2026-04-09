@@ -1658,7 +1658,7 @@ function openPersonalizationPanel() {
             <div>
               <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Avatar</label>
               <div id="prof_emoji_display" onclick="toggleEmojiPicker()" title="Chọn emoji"
-                style="width:46px;height:46px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px dashed var(--border);position:relative;">
+                style="width:46px;height:46px;border-radius:14px;background:${myStaff?.staff_avatar_color || 'var(--accent)'};display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px dashed var(--border);position:relative;">
                 ${myStaff?.avatar_emoji || (myStaff?.nickname||myStaff?.full_name||'?')[0]}
               </div>
               <input type="hidden" id="prof_avatar_emoji" value="${myStaff?.avatar_emoji||''}" />
@@ -1678,13 +1678,42 @@ function openPersonalizationPanel() {
                 style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
             </div>
           </div>
-          <!-- Emoji picker popup -->
-          <div id="emojiPickerBox" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,0.2);flex-wrap:wrap;gap:6px;">
-            ${['😎','🔥','⚡','🌟','🎯','💎','🦁','🐯','🦊','🐺','🌈','🌙','☀️','❄️','🎸','🎮','⚽','🏆','🎩','✨','🙏','💪','🧠','❤️','🤝','🕊️','🌸','🍀','🦋','🎵'].map(e=>`<span onclick="selectEmoji('${e}')" style="font-size:24px;cursor:pointer;padding:4px;border-radius:8px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${e}</span>`).join('')}
+          <!-- Emoji picker popup (full categories) -->
+          <div id="emojiPickerBox" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+            <input type="text" id="emojiSearch" placeholder="🔍 Tìm emoji..." oninput="_filterEmoji(this.value)"
+              style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;margin-bottom:8px;box-sizing:border-box;" />
+            <div style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;" id="emojiCatBar"></div>
+            <div id="emojiGrid" style="display:flex;flex-wrap:wrap;gap:2px;max-height:180px;overflow-y:auto;"></div>
+          </div>
+          <!-- Màu nền Avatar -->
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">🎨 Màu nền Avatar</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="staffAvatarColorPicker">
+              ${[
+                'linear-gradient(135deg,#7c6af7,#ec4899)',
+                'linear-gradient(135deg,#34d399,#059669)',
+                'linear-gradient(135deg,#f59e0b,#ef4444)',
+                'linear-gradient(135deg,#3b82f6,#8b5cf6)',
+                'linear-gradient(135deg,#ec4899,#f97316)',
+                'linear-gradient(135deg,#06b6d4,#3b82f6)',
+                'linear-gradient(135deg,#8b5cf6,#06b6d4)',
+                'linear-gradient(135deg,#10b981,#fbbf24)',
+                'linear-gradient(135deg,#f472b6,#a78bfa)',
+                'linear-gradient(135deg,#6366f1,#ec4899)',
+                'linear-gradient(135deg,#14b8a6,#a855f7)',
+                'linear-gradient(135deg,#f43f5e,#fb923c)'
+              ].map(g => `<div onclick="_pickStaffAvatarColor('${g}')" style="width:30px;height:30px;border-radius:8px;background:${g};cursor:pointer;border:2px solid ${g === (myStaff?.staff_avatar_color||'') ? 'var(--accent)' : 'transparent'};transition:border 0.2s;" title="Chọn màu"></div>`).join('')}
+            </div>
+            <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+              <input type="color" id="staffAvatarC1" value="#7c6af7" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0;" onchange="_customStaffAvatarColor()" />
+              <input type="color" id="staffAvatarC2" value="#ec4899" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0;" onchange="_customStaffAvatarColor()" />
+              <span style="font-size:10px;color:var(--text3);">Tuỳ chọn 2 màu</span>
+            </div>
+            <input type="hidden" id="prof_staff_avatar_color" value="${myStaff?.staff_avatar_color||''}" />
           </div>
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">💬 Motto</label>
-            <input type="text" id="prof_motto" value="${(myStaff?.motto||'').replace(/"/g,'&quot;')}" placeholder="Câu khẩu hiệu cá nhân..." maxlength="80"
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">💪 Sở trường Jondo</label>
+            <input type="text" id="prof_motto" value="${(myStaff?.motto||'').replace(/"/g,'&quot;')}" placeholder="VD: Khai 1:1, Tư vấn, Giáo viên BB..." maxlength="80"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
           <div>
@@ -1723,10 +1752,52 @@ function openPersonalizationPanel() {
   _refreshPinToggle();
 }
 
+// ============ EMOJI PICKER (full categories) ============
+const _EMOJI_CATS = {
+  '😀': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
+  '👋': ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵'],
+  '🐶': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'],
+  '🍎': ['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🫘','🥜','🌰','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🍶','🍾','🍷','🍸','🍹','🍺','🍻','🥂','🥃','🫗','🥤','🧋','🧃','🧉','🧊'],
+  '⚽': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤺','🤸','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎪','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️','🧩','🪩'],
+  '🚗': ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','🛞','⛽','🛞','🚨','🚥','🚦','🛑','🚧','⚓','🛟','⛵','🛶','🚤','🛳️','⛴️','🛥️','🚢','✈️','🛩️','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡','🛰️','🚀','🛸'],
+  '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚻','🚼','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','🟰','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢'],
+  '🌍': ['🌍','🌎','🌏','🌐','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏕️','🏖️','🏜️','🏝️','🏞️','🏟️','🏛️','🏗️','🧱','🪨','🪵','🛖','🏘️','🏚️','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🌁','🌃','🏙️','🌄','🌅','🌆','🌇','🌉','♨️','🎠','🛝','🎡','🎢','💈','🎪','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋','🚌','🚍','🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘','🌙','🌚','🌛','🌜','🌡️','☀️','🌝','🌞','🪐','⭐','🌟','🌠','🌌','☁️','⛅','⛈️','🌤️','🌥️','🌦️','🌧️','🌨️','🌩️','🌪️','🌫️','🌬️','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','☃️','⛄','☄️','🔥','💧','🌊','🎄','🎋','🎍','🎎','🎏','🎐','🎑','🧧','🎀','🎁','🎆','🎇','🧨','✨','🎈','🎉','🎊','🎃','👑','💍','💎','🔮','🧿','🪬','📿','⚗️','🔭','🔬','🕳️','🩹','🩺','🩻','🩼','💊','💉','🩸','🧬','🦠','🧫','🧪','🌡️','🧹','🪠','🧺','🧻','🪣','🧼','🫧','🪥','🧽','🧯','🛒','🚬','⚰️','🪦','⚱️','🗿','🪧','🪪']
+};
+const _EMOJI_CAT_ICONS = ['😀','👋','🐶','🍎','⚽','🚗','❤️','🌍'];
+let _allEmojiFlat = [];
+Object.values(_EMOJI_CATS).forEach(arr => _allEmojiFlat.push(...arr));
+
 function toggleEmojiPicker() {
   const box = document.getElementById('emojiPickerBox');
   if (!box) return;
-  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+  const show = box.style.display === 'none';
+  box.style.display = show ? 'block' : 'none';
+  if (show) _renderEmojiCats();
+}
+
+function _renderEmojiCats(catKey) {
+  const bar = document.getElementById('emojiCatBar');
+  const grid = document.getElementById('emojiGrid');
+  if (!bar || !grid) return;
+  const activeKey = catKey || _EMOJI_CAT_ICONS[0];
+  bar.innerHTML = _EMOJI_CAT_ICONS.map(k => 
+    `<span onclick="_renderEmojiCats('${k}')" style="font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px;${k===activeKey?'background:var(--accent);':''}">${k}</span>`
+  ).join('');
+  const emojis = _EMOJI_CATS[activeKey] || [];
+  grid.innerHTML = emojis.map(e => 
+    `<span onclick="selectEmoji('${e}')" style="font-size:22px;cursor:pointer;padding:3px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${e}</span>`
+  ).join('');
+}
+
+function _filterEmoji(q) {
+  const grid = document.getElementById('emojiGrid');
+  if (!grid) return;
+  if (!q.trim()) { _renderEmojiCats(); return; }
+  // Show all matching
+  const emojis = _allEmojiFlat.filter(e => e.includes(q));
+  grid.innerHTML = (emojis.length ? emojis : _allEmojiFlat.slice(0, 60)).map(e => 
+    `<span onclick="selectEmoji('${e}')" style="font-size:22px;cursor:pointer;padding:3px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${e}</span>`
+  ).join('');
 }
 
 function selectEmoji(emoji) {
@@ -1736,6 +1807,23 @@ function selectEmoji(emoji) {
   if (input)   input.value = emoji;
   const box = document.getElementById('emojiPickerBox');
   if (box) box.style.display = 'none';
+}
+
+function _pickStaffAvatarColor(gradient) {
+  const display = document.getElementById('prof_emoji_display');
+  const input = document.getElementById('prof_staff_avatar_color');
+  if (display) display.style.background = gradient;
+  if (input) input.value = gradient;
+  // Update preset borders
+  document.querySelectorAll('#staffAvatarColorPicker > div').forEach(d => {
+    d.style.borderColor = d.style.background === gradient ? 'var(--accent)' : 'transparent';
+  });
+}
+
+function _customStaffAvatarColor() {
+  const c1 = document.getElementById('staffAvatarC1')?.value || '#7c6af7';
+  const c2 = document.getElementById('staffAvatarC2')?.value || '#ec4899';
+  _pickStaffAvatarColor(`linear-gradient(135deg,${c1},${c2})`);
 }
 
 let _prefTabOrder = null;
@@ -1874,12 +1962,13 @@ async function saveMyStaffProfile() {
   const btn = document.querySelector('#personalizationModal button[onclick="saveMyStaffProfile()"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang lưu...'; }
   try {
+    const staff_avatar_color = document.getElementById('prof_staff_avatar_color')?.value || null;
     await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
       method: 'PATCH',
-      body: JSON.stringify({ nickname, gender, birth_year, bio, avatar_emoji, motto })
+      body: JSON.stringify({ nickname, gender, birth_year, bio, avatar_emoji, motto, staff_avatar_color })
     });
     // Update local cache
-    Object.assign(myStaff, { nickname, gender, birth_year, bio, avatar_emoji, motto });
+    Object.assign(myStaff, { nickname, gender, birth_year, bio, avatar_emoji, motto, staff_avatar_color });
     // Update header badge if nickname set
     const badge = document.getElementById('myStaffBadge');
     if (badge && nickname) {
