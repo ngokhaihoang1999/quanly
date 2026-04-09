@@ -49,6 +49,18 @@ async function syncToGoogleSheet(pid) {
   } catch(e) { console.warn('Sync Sheet Fail:', e); }
 }
 
+// Delete a profile row from Google Sheet
+async function deleteFromSheet(pid) {
+  if (!window.HAPJA_SHEET_WEBHOOK || !pid) return;
+  try {
+    fetch(window.HAPJA_SHEET_WEBHOOK, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', profile_id: pid })
+    });
+  } catch(e) { console.warn('Delete Sheet Fail:', e); }
+}
+
 async function bulkSyncDatabaseToSheet() {
   if (!window.HAPJA_SHEET_WEBHOOK) {
     alert('Chưa cấu hình HAPJA_SHEET_WEBHOOK');

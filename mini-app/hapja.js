@@ -362,6 +362,8 @@ async function deleteProfile() {
     await del(`/rest/v1/fruit_groups?profile_id=eq.${pid}`);
     // 6. Profile
     await del(`/rest/v1/profiles?id=eq.${pid}`);
+    // Sync: remove from Google Sheet
+    if (typeof deleteFromSheet === 'function') deleteFromSheet(pid);
     showToast('✅ Đã xoá!'); backToList(); await loadProfiles();
   } catch(e) { showToast('❌ Lỗi: ' + (e.message||'').slice(0,80)); console.error('deleteProfile:', e); }
 }

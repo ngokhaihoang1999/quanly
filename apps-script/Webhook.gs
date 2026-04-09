@@ -59,6 +59,27 @@ function doPost(e) {
       ];
     };
 
+    // ── DELETE: Remove profile row and re-number ──
+    if (action === "delete") {
+      if (pid !== "") {
+        var values = sheet.getDataRange().getValues();
+        for (var i = values.length - 1; i >= 1; i--) {
+          if (values[i][21] == pid) {
+            sheet.deleteRow(i + 1);
+            break;
+          }
+        }
+        // Re-number "No." column (column B) sequentially
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          for (var r = 2; r <= lastRow; r++) {
+            sheet.getRange(r, 2).setValue(r - 1);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "deleted"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === "bulk_sync") {
       var profiles = data.profiles || [];
       if (profiles.length > 0) {

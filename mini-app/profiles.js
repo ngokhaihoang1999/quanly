@@ -498,6 +498,8 @@ async function deleteProfile(profileId, name) {
       await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}`, { method: 'DELETE' });
     }
     await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, { method: 'DELETE' });
+    // Sync: remove from Google Sheet
+    if (typeof deleteFromSheet === 'function') deleteFromSheet(profileId);
     // Remove from local cache and go back
     allProfiles = allProfiles.filter(x => x.id !== profileId);
     renderProfiles(allProfiles);
