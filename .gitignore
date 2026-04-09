@@ -19,3 +19,6 @@ write_docs.py
 
 # Mini-app internal docs
 mini-app/jondo_process.doc.txt
+
+# Supabase CLI local state
+supabase/.temp/
