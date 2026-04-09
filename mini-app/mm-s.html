@@ -7,43 +7,93 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:#f8fafc;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;width:100%;height:100%;overflow:hidden}
-#mindmap{width:100%;height:100vh;display:block;background:#fff;border-radius:0}
-/* Toolbar overlay */
+#mindmap{width:100%;height:100vh;display:block;background:#fff}
 .mm-toolbar{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:100}
 .mm-btn{background:rgba(255,255,255,0.95);border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s;color:#334155;font-weight:500}
 .mm-btn:hover{background:#f1f5f9;box-shadow:0 4px 12px rgba(0,0,0,0.12)}
 .mm-btn:active{transform:scale(0.96)}
+.loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;color:#64748b}
+.loading-screen .spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-screen{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:8px;text-align:center;padding:20px;color:#64748b}
+.error-screen .icon{font-size:48px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18"></script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18"></script>
 </head>
 <body>
-<div class="mm-toolbar">
+<div id="loading" class="loading-screen"><div class="spinner"></div><div>Đang tải...</div></div>
+<div class="mm-toolbar" style="display:none" id="toolbar">
   <button class="mm-btn" onclick="mmInstance&&mmInstance.fit()" title="Fit to view">🔄 Fit</button>
 </div>
-<svg id="mindmap"></svg>
+<svg id="mindmap" style="display:none"></svg>
+
 <script>
+var SB_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
 var mmInstance = null;
-try {
-  var params = new URLSearchParams(location.search);
-  var h = params.get('d') || location.hash.substring(1);
-  if(!h) throw new Error('No data');
-  h = h.replace(/-/g,'+').replace(/_/g,'/');
-  while(h.length%4) h+='=';
-  var bin = atob(h);
-  var bytes = new Uint8Array(bin.length);
-  for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-  var md = new TextDecoder().decode(bytes);
+
+function fmt(t, w) { if(!t) return ''; t=String(t).replace(/\n+/g,' ').trim(); return t.length<=w?t:t.substring(0,w-1)+'\u2026'; }
+function mdS(t, lim) {
+  if(!t) return '';
+  if(Array.isArray(t)) t=t.join(', ');
+  var ss=t.match(/[^.!?\n]+[.!?\n]*/g);
+  if(!ss) return '- '+fmt(t,lim||55)+'\n';
+  return ss.map(function(s){return '- '+fmt(s.trim(),lim||55)+'\n';}).join('');
+}
+
+function buildInfoMD(p, d) {
+  var name = p.full_name || 'Hồ sơ';
+  var md = '# ' + name + '\n';
+  var dm = [
+    d.t2_nam_sinh ? 'Sinh: '+d.t2_nam_sinh : null,
+    d.t2_gioi_tinh ? 'Giới tính: '+d.t2_gioi_tinh : null,
+    d.t2_nghe_nghiep ? 'Nghề: '+d.t2_nghe_nghiep : null,
+    d.t2_hon_nhan ? 'Hôn nhân: '+(Array.isArray(d.t2_hon_nhan)?d.t2_hon_nhan.join(', '):d.t2_hon_nhan) : null,
+    d.t2_quan_he_ndd ? 'Quan hệ với NĐD: '+(Array.isArray(d.t2_quan_he_ndd)?d.t2_quan_he_ndd.join(', '):d.t2_quan_he_ndd) : null,
+    d.t2_khong_gian_song ? 'Ở chung: '+(Array.isArray(d.t2_khong_gian_song)?d.t2_khong_gian_song.join(', '):d.t2_khong_gian_song) : null,
+    d.t2_dia_chi ? 'Nơi ở: '+d.t2_dia_chi : null,
+    d.t2_que_quan ? 'Quê: '+d.t2_que_quan : null
+  ].filter(Boolean);
+  if (dm.length) { md += '## 🏛️ Nhân thân & Nền tảng\n'; dm.forEach(function(v){md+='- '+fmt(v,45)+'\n';}); }
+  if (d.t2_nguoi_than) md += '## 🏡 Gia đình & Hoàn cảnh\n### 👨‍👩‍👧‍👦 Hoàn cảnh gia đình\n' + mdS(d.t2_nguoi_than,55);
+  var tt='';
+  if (d.t2_ton_giao) tt+='- **Tôn giáo:** '+(Array.isArray(d.t2_ton_giao)?d.t2_ton_giao.join(', '):d.t2_ton_giao)+'\n';
+  if (d.t2_quan_diem) tt+=mdS(d.t2_quan_diem,55);
+  if (tt) md += '## ⚖️ Hệ tư tưởng & Niềm tin\n' + tt;
+  var tl='';
+  if (d.t2_tinh_cach) tl+='### 🧩 Tính cách\n'+mdS(d.t2_tinh_cach,50);
+  if (d.t2_so_thich) tl+='### 🎨 Đam mê / Sở thích\n'+mdS(d.t2_so_thich,50);
+  if (d.t2_du_dinh) tl+='### 🚀 Khát vọng / Dự định\n'+mdS(d.t2_du_dinh,50);
+  if (tl) md += '## 🌊 Chiều sâu nội tâm\n' + tl;
+  var qk='';
+  if (d.t2_nguoi_quan_trong) qk+='### 👥 Người quan trọng nhất\n'+mdS(d.t2_nguoi_quan_trong,50);
+  if (d.t2_chuyen_cu) qk+='### 📖 Câu chuyện dấu ấn\n'+mdS(d.t2_chuyen_cu,50);
+  if (qk) md += '## ⛓️ Góc khuất & Ràng buộc\n' + qk;
+  if (d.t2_luu_y) md += '## ⚠️ Lưu ý đặc biệt\n' + mdS(d.t2_luu_y,55);
+  var phaseMap = { 'tu_van': 'Tư vấn', 'bb': 'BB', 'center': 'Center', 'chapel': 'Chapel' };
+  md += '## 📍 Giai đoạn\n- ' + (phaseMap[p.phase] || p.phase || 'N/A') + (p.is_kt_opened ? ' · Đã mở KT' : '') + '\n';
+  if (md.trim() === '# '+name) md += '## 📋 Chưa có dữ liệu\n';
+  return md;
+}
+
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.body.innerHTML = '<div class="error-screen"><div class="icon">⚠️</div><div>'+msg+'</div></div>';
+}
+
+function renderMindmap(md) {
+  document.getElementById('loading').style.display = 'none';
+  var svg = document.getElementById('mindmap');
+  svg.style.display = 'block';
+  document.getElementById('toolbar').style.display = 'flex';
   
-  // Set title from first heading
   var titleMatch = md.match(/^#\s+(.+)/m);
   if (titleMatch) document.title = titleMatch[1] + ' — Mindmap';
   
-  var svg = document.getElementById('mindmap');
   var transformer = new markmap.Transformer();
   var result = transformer.transform(md);
-  
   mmInstance = markmap.Markmap.create(svg, {
     initialExpandLevel: -1,
     duration: 300,
@@ -53,12 +103,64 @@ try {
     zoom: true,
     pan: true
   }, result.root);
-  
-  // Fit after render
   setTimeout(function() { mmInstance.fit(); }, 500);
-} catch(e) {
-  document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:18px;color:#ef4444;padding:20px;text-align:center;background:#fff">⚠️ '+e.message+'</div>';
 }
+
+async function sbFetch(path) {
+  return fetch(SB_URL + path, { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } });
+}
+
+async function init() {
+  var params = new URLSearchParams(location.search);
+  
+  // Mode 1: ?pid=UUID&type=info|bb — fetch from Supabase
+  var pid = params.get('pid');
+  var type = params.get('type') || 'info';
+  
+  if (pid) {
+    try {
+      if (type === 'bb') {
+        // Fetch AI mindmap markdown
+        var res = await sbFetch('/rest/v1/records?profile_id=eq.' + pid + '&record_type=eq.ai_mindmap&order=created_at.desc&limit=1&select=content');
+        if (!res.ok) throw new Error('Lỗi tải dữ liệu');
+        var data = await res.json();
+        if (!data.length || !data[0].content?.markdown) { showError('Chưa có phân tích AI.'); return; }
+        renderMindmap(data[0].content.markdown);
+      } else {
+        // Fetch profile + form_hanh_chinh
+        var [profRes, sheetRes] = await Promise.all([
+          sbFetch('/rest/v1/profiles?id=eq.' + pid + '&select=full_name,phase,is_kt_opened&limit=1'),
+          sbFetch('/rest/v1/form_hanh_chinh?profile_id=eq.' + pid + '&select=data&limit=1')
+        ]);
+        if (!profRes.ok) throw new Error('Lỗi tải hồ sơ');
+        var profs = await profRes.json();
+        var sheets = await sheetRes.json();
+        if (!profs.length) { showError('Không tìm thấy hồ sơ.'); return; }
+        var d = (sheets.length && sheets[0].data) ? sheets[0].data : {};
+        renderMindmap(buildInfoMD(profs[0], d));
+      }
+    } catch(e) { showError(e.message); }
+    return;
+  }
+  
+  // Mode 2: ?d=base64 — legacy inline data
+  var h = params.get('d') || location.hash.substring(1);
+  if (h) {
+    try {
+      h = h.replace(/-/g,'+').replace(/_/g,'/');
+      while(h.length%4) h+='=';
+      var bin = atob(h);
+      var bytes = new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      renderMindmap(new TextDecoder().decode(bytes));
+    } catch(e) { showError('Dữ liệu không hợp lệ.'); }
+    return;
+  }
+  
+  showError('Thiếu tham số.');
+}
+
+init();
 </script>
 </body>
 </html>

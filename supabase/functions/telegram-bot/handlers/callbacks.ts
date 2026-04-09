@@ -144,26 +144,8 @@ export async function handleCallback(update: any, staffData: any) {
       }
       if (lines.length <= 3) lines.push('📭 Chưa có dữ liệu.');
       
-      // Build markmap web link
-      const fmt = (t: string, w: number) => { if(!t) return ''; t=String(t).replace(/\n+/g,' ').trim(); return t.length<=w?t:t.substring(0,w-1)+'…'; };
-      let md = '# ' + name + '\n';
-      const dm: string[] = [];
-      if (d.t2_nam_sinh) dm.push('Sinh: '+d.t2_nam_sinh);
-      if (d.t2_gioi_tinh) dm.push('Giới tính: '+d.t2_gioi_tinh);
-      if (d.t2_nghe_nghiep) dm.push('Nghề: '+fmt(String(d.t2_nghe_nghiep),30));
-      if (d.t2_dia_chi) dm.push('Nơi ở: '+fmt(String(d.t2_dia_chi),30));
-      if (d.t2_que_quan) dm.push('Quê: '+fmt(String(d.t2_que_quan),30));
-      if (d.t2_hon_nhan) dm.push('Hôn nhân: '+(Array.isArray(d.t2_hon_nhan)?d.t2_hon_nhan.join(', '):d.t2_hon_nhan));
-      if (dm.length) { md += '## 🏛️ Nhân thân\n'; dm.forEach(v => md += '- '+v+'\n'); }
-      if (d.t2_tinh_cach) md += '## 🧩 Tính cách\n- '+fmt(String(d.t2_tinh_cach),50)+'\n';
-      if (d.t2_so_thich) md += '## 🎨 Sở thích\n- '+fmt(String(d.t2_so_thich),50)+'\n';
-      if (d.t2_ton_giao) md += '## ⚖️ Tôn giáo\n- '+(Array.isArray(d.t2_ton_giao)?d.t2_ton_giao.join(', '):d.t2_ton_giao)+'\n';
-      if (d.t2_luu_y) md += '## ⚠️ Lưu ý\n- '+fmt(String(d.t2_luu_y),50)+'\n';
-      md += '## 📍 Giai đoạn\n- '+phaseVi+(prof?.is_kt_opened?' · Đã mở KT':'')+'\n';
-      
-      const mdBytes = new TextEncoder().encode(md);
-      const b64 = btoa(String.fromCharCode(...mdBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-      const webUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64;
+      // Short URL: profile_id + type=info
+      const webUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?pid=' + fgI.profile_id + '&type=info';
       
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -209,11 +191,8 @@ export async function handleCallback(update: any, staffData: any) {
         return;
       }
       
-      // Build web link from saved AI markdown
-      const bbMd = mmRec[0].content.markdown as string;
-      const bbBytes = new TextEncoder().encode(bbMd);
-      const b64bb = btoa(String.fromCharCode(...bbBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-      const webUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64bb;
+      // Short URL: profile_id + type=bb
+      const webUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?pid=' + fgBB.profile_id + '&type=bb';
       
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
