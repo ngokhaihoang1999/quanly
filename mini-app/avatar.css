@@ -1,0 +1,170 @@
+/* ============ ANIMATED AVATAR SYSTEM – CSS ============ */
+/* All animations are hardware-accelerated (transform/opacity) for mobile performance */
+
+/* ── SHARED ──────────────────────────────────────────────── */
+@keyframes av-bob { 0% { transform: translateY(3px); } 100% { transform: translateY(-3px); } }
+@keyframes av-wobble { 0% { transform: rotate(-8deg); } 100% { transform: rotate(8deg); } }
+
+.av-bob { animation: av-bob 1s ease-in-out infinite alternate; }
+.av-dove { animation: av-wobble 0.5s infinite alternate; }
+
+/* ── 1. ORBITAL ──────────────────────────────────────────── */
+.av-orbital { transform-style: preserve-3d; perspective: 400px; }
+.av-orb-ring {
+  position: absolute; inset: 0;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 50%;
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.av-orb-r1 { transform: rotateX(65deg) rotateY(0deg); animation: av-orb-spin 5s linear infinite; --ry: 0deg; }
+.av-orb-r2 { transform: rotateX(65deg) rotateY(60deg); animation: av-orb-spin 7s linear infinite; --ry: 60deg; }
+.av-orb-r3 { transform: rotateX(65deg) rotateY(120deg); animation: av-orb-spin 9s linear infinite; --ry: 120deg; }
+.av-orb-e { margin-top: -7px; transform: rotateX(-65deg); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
+.av-core-dark { color: #e2e8f0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+@keyframes av-orb-spin { 100% { transform: rotateX(65deg) rotateY(var(--ry)) rotateZ(360deg); } }
+
+/* ── 2. ERUPTION ─────────────────────────────────────────── */
+.av-erupt {
+  position: absolute; opacity: 0;
+  animation: av-erupt-pop 2s infinite ease-out;
+}
+.av-er1 { animation-delay: 0s; --etx: -30px; --ety: -40px; }
+.av-er2 { animation-delay: 0.4s; --etx: 35px; --ety: -30px; }
+.av-er3 { animation-delay: 0.8s; --etx: -20px; --ety: 40px; }
+.av-er4 { animation-delay: 1.2s; --etx: 40px; --ety: 20px; }
+.av-core-fire { color: #f43f5e; text-shadow: 0 0 15px #e11d48; animation: av-pulse 1s infinite alternate; }
+@keyframes av-erupt-pop { 0% { transform: scale(0.5) translate(0,0); opacity:1;} 100% { transform: scale(1.5) translate(var(--etx), var(--ety)); opacity:0;} }
+@keyframes av-pulse { 100% { transform: scale(1.1); filter: brightness(1.2); } }
+
+/* ── 3. CONSTELLATION ────────────────────────────────────── */
+.av-star {
+  position: absolute;
+  filter: drop-shadow(0 0 5px #fff);
+  animation: av-float-star 3s infinite alternate ease-in-out;
+}
+.av-st1 { top: -10px; left: 0px; animation-delay: 0s; }
+.av-st2 { top: 10px; right: 0px; animation-delay: 1s; }
+.av-st3 { bottom: 0; left: -10px; animation-delay: 2s; }
+.av-st4 { bottom: -10px; right: 10px; animation-delay: 0.5s; }
+.av-core-star { color: #e0e7ff; text-shadow: 0 0 15px #818cf8; }
+@keyframes av-float-star { 0% { transform: translate(0,0) scale(0.8); opacity:0.6;} 100% { transform: translate(5px,-5px) scale(1.2); opacity:1;} }
+
+/* ── 4. WINDBELL ─────────────────────────────────────────── */
+.av-wb-roof {
+  position: absolute; top: -5px; width: 70%; height: 10px;
+  border-top: 3px solid var(--text3, #475569); border-radius: 5px;
+  transform-origin: top center;
+  animation: av-swing 3s infinite alternate ease-in-out;
+}
+.av-wb-str {
+  position: absolute; top: 0; width: 2px;
+  background: var(--text3, #334155);
+  transform-origin: top center;
+  animation: av-swing-s 2s infinite alternate ease-in-out;
+}
+.av-wb-s1 { left: 15%; height: 60%; animation-duration: 2.1s; }
+.av-wb-s2 { left: 50%; height: 80%; animation-duration: 1.8s; }
+.av-wb-s3 { left: 85%; height: 45%; animation-duration: 2.3s; }
+.av-wb-str span { position: absolute; bottom: -12px; left: -8px; }
+.av-core-bell { color: var(--text2, #cbd5e1); }
+@keyframes av-swing { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
+@keyframes av-swing-s { 0% { transform: rotate(-15deg); } 100% { transform: rotate(15deg); } }
+
+/* ── 5. CAROUSEL ─────────────────────────────────────────── */
+.av-carousel { transform-style: preserve-3d; perspective: 500px; }
+.av-cyl {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  transform-style: preserve-3d;
+  animation: av-cyl-spin 8s linear infinite;
+}
+.av-ci { position: absolute; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)); }
+.av-ci1 { transform: rotateY(0deg) translateZ(35px); }
+.av-ci2 { transform: rotateY(120deg) translateZ(35px); }
+.av-ci3 { transform: rotateY(240deg) translateZ(35px); }
+.av-core-cyl { color: #38bdf8; text-shadow: 0 0 15px #0284c7; }
+@keyframes av-cyl-spin { 100% { transform: rotateY(360deg); } }
+
+/* ── 6. RAINBOW ──────────────────────────────────────────── */
+/* (uses inline styles + .av-bob and .av-dove classes above) */
+
+/* ── 7. MANNA ────────────────────────────────────────────── */
+.av-food {
+  position: absolute; top: -20px;
+  animation: av-fall 3s linear infinite;
+}
+.av-f1 { left: 10%; animation-duration: 2.5s; }
+.av-f2 { left: 55%; animation-delay: 1s; }
+@keyframes av-fall { 0% { transform: translateY(0) rotate(0deg); opacity:0;} 20%,80% { opacity:1;} 100% { transform: translateY(80px) rotate(360deg); opacity:0;} }
+
+/* ── 8. WHALE ────────────────────────────────────────────── */
+.av-wh-belly {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle, #38bdf8, #0284c7);
+  border-radius: 45% 55% 45% 55%;
+  box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2);
+  overflow: hidden; z-index: 1;
+  animation: av-belly 4s ease-in-out infinite alternate;
+}
+.av-wh-fish {
+  position: absolute; font-size: 24px; z-index: 2;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+  animation: av-swim 6s linear infinite;
+}
+@keyframes av-belly {
+  0% { transform: translateY(-3px) scale(0.95); border-radius: 45% 55% 45% 55%; }
+  100% { transform: translateY(3px) scale(1.05); border-radius: 55% 45% 55% 45%; }
+}
+@keyframes av-swim {
+  0%   { transform: translate(75px, 20px) scaleX(1); }
+  25%  { transform: translate(25px, 45px) scaleX(1) rotate(15deg); }
+  45%  { transform: translate(-25px, 30px) scaleX(1) rotate(-10deg); }
+  46%  { transform: translate(-25px, 30px) scaleX(-1) rotate(0deg); }
+  70%  { transform: translate(25px, 5px) scaleX(-1) rotate(-15deg); }
+  95%  { transform: translate(75px, 20px) scaleX(-1) rotate(10deg); }
+  100% { transform: translate(75px, 20px) scaleX(1); }
+}
+
+/* ── 9. ANGEL ────────────────────────────────────────────── */
+.av-halo {
+  position: absolute; width: 52%; height: 18%;
+  border: 3px solid #fde047; border-radius: 50%;
+  top: -15px; left: 50%; transform: translateX(-50%);
+  box-shadow: 0 0 8px #fef08a; z-index: 15;
+}
+.av-wing-wrap-l, .av-wing-wrap-r {
+  position: absolute; top: 20%; z-index: 1;
+  display: flex; align-items: center;
+}
+.av-wing-wrap-l { left: -20px; transform: scaleX(-1); }
+.av-wing-wrap-r { right: -20px; }
+.av-wflap {
+  font-size: 32px;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+  transform-origin: left center;
+  animation: av-flap 0.4s ease-in-out infinite alternate;
+}
+@keyframes av-flap { 0% { transform: rotate(-5deg); } 100% { transform: rotate(35deg); } }
+
+/* ── 10. ARK ─────────────────────────────────────────────── */
+.av-ark-w1, .av-ark-w2 {
+  position: absolute; height: 40%; border-radius: 50% 50% 0 0;
+}
+.av-ark-w1 { bottom: -12%; width: 140%; background: #0ea5e9; animation: av-wobble 2s ease-in-out infinite alternate; }
+.av-ark-w2 { bottom: -24%; width: 150%; background: #0369a1; animation: av-wobble 2.5s ease-in-out infinite alternate-reverse; }
+.av-ark-ship {
+  position: absolute; bottom: 10%; z-index: 5;
+  animation: av-rock 3s ease-in-out infinite alternate;
+  filter: drop-shadow(0 4px 2px rgba(0,0,0,0.2));
+}
+.av-ark-rock-r { animation: av-rock 3s ease-in-out infinite alternate-reverse; }
+@keyframes av-rock { 0% { transform: translateY(0) rotate(-5deg); } 100% { transform: translateY(2px) rotate(5deg); } }
+
+/* ── 11. FRUIT ───────────────────────────────────────────── */
+.av-fruitbob {
+  position: absolute;
+  animation: av-bob 1s infinite alternate;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+}
+.av-fb1 { top: -5px; left: 18%; animation-duration: 0.8s; }
+.av-fb2 { bottom: -2px; left: -3%; animation-duration: 1.2s; animation-delay: 0.5s; }
+.av-fb3 { bottom: 6%; right: -6%; animation-duration: 0.9s; animation-delay: 1s; }

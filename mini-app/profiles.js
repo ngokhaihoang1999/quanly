@@ -167,11 +167,14 @@ async function openProfile(p) {
     ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
-  // Avatar color & Gradient picker
-  const avatarBg = p.avatar_color ? p.avatar_color : 'linear-gradient(135deg,var(--accent),#ec4899)';
+  // Avatar: animated style system
+  const avatarRaw = p.avatar_color || '';
   const canEditColor = hasFullEdit || isProfileNDD;
-  const avatarClick = canEditColor ? `onclick="openAvatarGradientPicker('${p.id}','${encodeURIComponent(avatarBg)}')"` : '';
-  const editHint = canEditColor ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.45);text-align:center;font-size:8px;color:white;padding:2px 0;">🎨</div>` : '';
+  const avatarLetter = (p.full_name||'?')[0];
+  const avatarHtml = typeof renderAnimatedAvatar === 'function'
+    ? renderAnimatedAvatar(avatarLetter, avatarRaw, 'md')
+    : `<div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#ec4899);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">${avatarLetter}</div>`;
+  const avatarClick = canEditColor ? `onclick="openAvatarStylePicker('${p.id}','${encodeURIComponent(avatarRaw)}')"` : '';
 
   // Khoá/Mở Khai Giảng - Tag Semester
   const semName = p.semester_id ? (allSemesters.find(s => s.id === p.semester_id)?.name || 'Kỳ ẩn') : 'Chưa có kỳ (Kỳ cũ)';
@@ -183,9 +186,8 @@ async function openProfile(p) {
     <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;">
       <!-- Top: avatar + name + badges + refresh -->
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-        <div style="position:relative;width:56px;height:56px;border-radius:16px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0;box-shadow:0 4px 16px rgba(124,106,247,0.3);overflow:hidden;cursor:${canEditColor?'pointer':'default'};" ${avatarClick}>
-          ${(p.full_name||'?')[0]}
-          ${editHint}
+        <div style="cursor:${canEditColor?'pointer':'default'};flex-shrink:0;" ${avatarClick}>
+          ${avatarHtml}
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:18px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.full_name}</div>
