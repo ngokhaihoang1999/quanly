@@ -6,65 +6,46 @@
 <title>Mindmap</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
-/* Container that will be resized to fit content */
-#mm-container{width:1600px;min-height:200px;position:relative}
-svg.markmap{width:100%;height:100%}
+html,body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif;width:100%;height:100%;overflow:hidden}
+#mindmap{width:100%;height:100vh;display:block}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18"></script>
 </head>
 <body>
-<div id="mm-container"></div>
+<svg id="mindmap"></svg>
 <script>
-// Read data from query param ?d= (not hash - screenshot services strip hash)
 try {
   var params = new URLSearchParams(location.search);
   var h = params.get('d') || location.hash.substring(1);
   if(!h) throw new Error('No data');
-  // Restore URL-safe base64
   h = h.replace(/-/g,'+').replace(/_/g,'/');
   while(h.length%4) h+='=';
-  // Decode base64 → UTF-8 bytes
   var bin = atob(h);
   var bytes = new Uint8Array(bin.length);
   for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
   var md = new TextDecoder().decode(bytes);
   
-  // Build DOM properly (createElement, not innerHTML)
-  var wrap = document.createElement('div');
-  wrap.className = 'markmap';
-  var tmpl = document.createElement('script');
-  tmpl.type = 'text/template';
-  tmpl.textContent = md;
-  wrap.appendChild(tmpl);
-  document.getElementById('mm-container').appendChild(wrap);
+  // Use markmap programmatic API for full control
+  var transformer = new markmap.Transformer();
+  var result = transformer.transform(md);
+  var root = result.root;
   
-  // After markmap renders, auto-fit SVG to content
-  setTimeout(function autoFit() {
-    var svg = document.querySelector('svg.markmap');
-    if (!svg) { setTimeout(autoFit, 200); return; }
-    // Wait for markmap to finish rendering nodes
-    setTimeout(function() {
-      var g = svg.querySelector('g');
-      if (!g) return;
-      var bbox = g.getBBox();
-      // Add padding
-      var pad = 30;
-      var w = Math.ceil(bbox.width + pad * 2);
-      var h = Math.ceil(bbox.height + pad * 2);
-      // Set viewBox to tightly fit content
-      svg.setAttribute('viewBox', 
-        (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' + w + ' ' + h);
-      // Set explicit dimensions
-      var container = document.getElementById('mm-container');
-      container.style.width = Math.max(w, 800) + 'px';
-      container.style.height = h + 'px';
-      svg.style.width = '100%';
-      svg.style.height = h + 'px';
-      document.body.style.width = Math.max(w, 800) + 'px';
-      document.body.style.height = h + 'px';
-    }, 1500); // Give markmap time to animate/render
-  }, 500);
+  var svg = document.getElementById('mindmap');
+  var mm = markmap.Markmap.create(svg, {
+    initialExpandLevel: -1,  // expand ALL nodes
+    duration: 0,             // no animation (instant render for screenshot)
+    maxWidth: 400,           // max node text width
+    paddingX: 16,
+    autoFit: true,
+    zoom: true,
+    pan: true
+  }, root);
+  
+  // Force fit after render
+  setTimeout(function() { mm.fit(); }, 300);
+  setTimeout(function() { mm.fit(); }, 1000);
 } catch(e) {
   document.write('<p style="padding:20px;color:red">Error: '+e.message+'</p>');
 }
