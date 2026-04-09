@@ -511,6 +511,7 @@ async function deleteProfile(profileId, name) {
 
 // ============ SHARE PROFILE ============
 function shareProfile(profileId, profileName) {
+  window._shareProfileName = profileName || '';
   let existing = document.getElementById('shareProfileModal');
   if (existing) existing.remove();
 
@@ -543,7 +544,7 @@ function shareProfile(profileId, profileName) {
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🔗 Lấy link mở hồ sơ</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Link mở Mini App đến thẳng hồ sơ này</div>
-        <button onclick="_copyProfileDeepLink('${profileId}', this.closest('#shareProfileModal').querySelector('[style*=\"margin-bottom:16px\"]').textContent)"
+        <button onclick="_copyProfileDeepLink('${profileId}')"
           style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
           📋 Sao chép link
         </button>
@@ -626,9 +627,9 @@ async function _sendShareToStaff(profileId, profileName) {
   }
 }
 
-function _copyProfileDeepLink(profileId, profileName) {
+function _copyProfileDeepLink(profileId) {
   const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
-  const displayName = (profileName || 'Hồ sơ trái quả').trim();
+  const displayName = (window._shareProfileName || 'Hồ sơ trái quả').trim();
   const richText = `<a href="${link}">🍎 ${displayName}</a>`;
   const plainText = `🍎 ${displayName}\n${link}`;
 
