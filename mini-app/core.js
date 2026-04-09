@@ -748,8 +748,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSemesters();
     // Load structure FIRST so structureData is available for dashboard unit-scope calculation
     try { await loadStructure(); } catch(e) { console.warn('loadStructure init error:', e); }
-    // Run remaining loads independently so one failure doesn't block others
-    await Promise.allSettled([loadProfiles(), loadDashboard(), loadStaff()]);
+    // Load profiles FIRST — dashboard depends on allProfiles for counting metrics
+    try { await loadProfiles(); } catch(e) { console.warn('loadProfiles init error:', e); }
+    // Now load dashboard + staff in parallel (both can use allProfiles safely)
+    await Promise.allSettled([loadDashboard(), loadStaff()]);
     // Deep link: auto-open profile after data is ready
     _handleDeepLink();
   } catch(e) {
