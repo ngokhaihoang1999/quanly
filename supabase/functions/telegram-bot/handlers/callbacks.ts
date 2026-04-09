@@ -133,7 +133,18 @@ export async function handleCallback(update: any, staffData: any) {
       const phaseMap: Record<string,string> = { 'tu_van': 'Tư vấn', 'bb': 'BB', 'center': 'Center', 'chapel': 'Chapel', 'chakki': 'N/A' };
       const phaseVi = phaseMap[prof?.phase || ''] || (prof?.phase || 'N/A');
       
-      // Build markmap markdown (same structure as mini-app)
+      // Build summary text
+      const lines: string[] = [`📋 <b>${name}</b>`, `📍 ${phaseVi}${prof?.is_kt_opened ? ' · Đã mở KT' : ''}`, ''];
+      const fields: [string,string,any][] = [['👤','Giới tính',d.t2_gioi_tinh],['🎂','Năm sinh',d.t2_nam_sinh],['💼','Nghề',d.t2_nghe_nghiep],['📍','Nơi ở',d.t2_dia_chi],['🧩','Tính cách',d.t2_tinh_cach],['🎨','Sở thích',d.t2_so_thich],['⚖️','Tôn giáo',d.t2_ton_giao],['⚠️','Lưu ý',d.t2_luu_y]];
+      for (const [icon, label, val] of fields) {
+        if (val) {
+          const v = Array.isArray(val) ? val.join(', ') : String(val).substring(0, 60);
+          lines.push(`${icon} <b>${label}:</b> ${v}`);
+        }
+      }
+      if (lines.length <= 3) lines.push('📭 Chưa có dữ liệu.');
+      
+      // Build markmap web link
       const fmt = (t: string, w: number) => { if(!t) return ''; t=String(t).replace(/\n+/g,' ').trim(); return t.length<=w?t:t.substring(0,w-1)+'…'; };
       let md = '# ' + name + '\n';
       const dm: string[] = [];
@@ -149,65 +160,21 @@ export async function handleCallback(update: any, staffData: any) {
       if (d.t2_ton_giao) md += '## ⚖️ Tôn giáo\n- '+(Array.isArray(d.t2_ton_giao)?d.t2_ton_giao.join(', '):d.t2_ton_giao)+'\n';
       if (d.t2_luu_y) md += '## ⚠️ Lưu ý\n- '+fmt(String(d.t2_luu_y),50)+'\n';
       md += '## 📍 Giai đoạn\n- '+phaseVi+(prof?.is_kt_opened?' · Đã mở KT':'')+'\n';
-      if (md.split('\n').length <= 3) md += '## 📋 Chưa có dữ liệu\n';
       
-      // Encode markdown to URL-safe base64 for mm-s.html
       const mdBytes = new TextEncoder().encode(md);
       const b64 = btoa(String.fromCharCode(...mdBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-      const staticUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64;
-      const screenshotUrl = 'https://image.thum.io/get/width/1400/crop/800/wait/6/noanimate/maxAge/0/png/' + staticUrl;
+      const webUrl = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64;
       
-      // Fetch screenshot ourselves, then upload as blob
-      let photoSent = false;
-      try {
-        const ssRes = await fetch(screenshotUrl);
-        if (ssRes.ok) {
-          const pngBlob = await ssRes.blob();
-          if (pngBlob.size > 1000) { // valid image should be > 1KB
-            const fd = new FormData();
-            fd.append('chat_id', String(chatId));
-            fd.append('caption', `📋 ${name} — Thông tin cơ bản\n📍 ${phaseVi}${prof?.is_kt_opened ? ' · Đã mở KT' : ''}`);
-            fd.append('photo', pngBlob, 'mindmap.png');
-            fd.append('reply_markup', JSON.stringify({ inline_keyboard: [[{ text: '🔄 Tải lại', callback_data: 'menu_mindmap_info' }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] }));
-            const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
-            const tgJ = await tgRes.json();
-            photoSent = tgJ.ok === true;
-          }
-        }
-      } catch (ssErr) { console.error('thum.io fetch error:', ssErr); }
-      
-      if (!photoSent) {
-        // Fallback: Kroki Mermaid PNG
-        const mmLines = ['mindmap', `  root(${name})`];
-        if (d.t2_gioi_tinh) { mmLines.push('    Nhan than'); if(d.t2_gioi_tinh) mmLines.push('      '+d.t2_gioi_tinh); if(d.t2_nam_sinh) mmLines.push('      Sinh '+d.t2_nam_sinh); if(d.t2_nghe_nghiep) mmLines.push('      Nghe: '+String(d.t2_nghe_nghiep).substring(0,25)); if(d.t2_dia_chi) mmLines.push('      O: '+String(d.t2_dia_chi).substring(0,25)); }
-        if (d.t2_tinh_cach) { mmLines.push('    Tinh cach'); mmLines.push('      '+String(d.t2_tinh_cach).substring(0,30)); }
-        if (d.t2_so_thich) { mmLines.push('    So thich'); mmLines.push('      '+String(d.t2_so_thich).substring(0,30)); }
-        if (d.t2_luu_y) { mmLines.push('    Luu y'); mmLines.push('      '+String(d.t2_luu_y).substring(0,30)); }
-        mmLines.push('    Giai doan'); mmLines.push('      '+phaseVi);
-        try {
-          const kRes = await fetch('https://kroki.io/mermaid/png', { method: 'POST', headers: {'Content-Type':'text/plain'}, body: mmLines.join('\n') });
-          if (kRes.ok) {
-            const blob = await kRes.blob();
-            const fd = new FormData();
-            fd.append('chat_id', String(chatId));
-            fd.append('caption', `📋 ${name} — Thông tin cơ bản\n📍 ${phaseVi}${prof?.is_kt_opened?' · Đã mở KT':''}`);
-            fd.append('photo', blob, 'mm.png');
-            fd.append('reply_markup', JSON.stringify({inline_keyboard:[[{text:'🔄 Tải lại',callback_data:'menu_mindmap_info'}],[{text:'⬅️ Quay lại',callback_data:'menu_mindmap'}]]}));
-            const kr = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd });
-            const krJ = await kr.json();
-            photoSent = krJ.ok === true;
-          }
-        } catch(kErr) { console.error('kroki error:', kErr); }
-      }
-      
-      if (!photoSent) {
-        // Final fallback: text
-        const tl: string[] = [`📋 <b>${name}</b>`, `📍 ${phaseVi}${prof?.is_kt_opened?' · Đã mở KT':''}`, ''];
-        const ff: [string,string,string][] = [['👤','Giới tính',d.t2_gioi_tinh],['🎂','Năm sinh',d.t2_nam_sinh],['💼','Nghề',d.t2_nghe_nghiep],['📍','Nơi ở',d.t2_dia_chi],['🧩','Tính cách',d.t2_tinh_cach],['⚠️','Lưu ý',d.t2_luu_y]];
-        for (const [i,l,v] of ff) { if(v) tl.push(`${i} <b>${l}:</b> ${String(v).substring(0,60)}`); }
-        if (tl.length<=3) tl.push('📭 Chưa có dữ liệu.');
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({chat_id:chatId,text:tl.join('\n'),parse_mode:'HTML',reply_markup:{inline_keyboard:[[{text:'⬅️ Quay lại',callback_data:'menu_mindmap'}]]}}) });
-      }
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId, text: lines.join('\n'), parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [
+            [{ text: '🔗 Xem Mindmap đầy đủ', url: webUrl }],
+            [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
+          ]}
+        })
+      });
     } catch (e) {
       console.error('menu_mindmap_info error:', e);
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -242,64 +209,24 @@ export async function handleCallback(update: any, staffData: any) {
         return;
       }
       
-      // Use the saved AI markmap markdown directly
+      // Build web link from saved AI markdown
       const bbMd = mmRec[0].content.markdown as string;
       const bbBytes = new TextEncoder().encode(bbMd);
       const b64bb = btoa(String.fromCharCode(...bbBytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-      const staticUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64bb;
-      const screenshotUrlBB = 'https://image.thum.io/get/width/1400/crop/800/wait/6/noanimate/maxAge/0/png/' + staticUrlBB;
+      const webUrlBB = 'https://ngokhaihoang1999.github.io/quanly/mini-app/mm-s.html?d=' + b64bb;
       
-      // Fetch screenshot ourselves, then upload as blob
-      let bbPhotoSent = false;
-      try {
-        const ssResBB = await fetch(screenshotUrlBB);
-        if (ssResBB.ok) {
-          const pngBlobBB = await ssResBB.blob();
-          if (pngBlobBB.size > 1000) {
-            const fdBB = new FormData();
-            fdBB.append('chat_id', String(chatId));
-            fdBB.append('caption', `📚 ${nameBB} — Hỗ trợ BB`);
-            fdBB.append('photo', pngBlobBB, 'mindmap_bb.png');
-            fdBB.append('reply_markup', JSON.stringify({ inline_keyboard: [[{ text: '🔄 Tải lại', callback_data: 'menu_mindmap_bb' }], [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]] }));
-            const tgResBB = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fdBB });
-            const tgJBB = await tgResBB.json();
-            bbPhotoSent = tgJBB.ok === true;
-          }
-        }
-      } catch (ssErrBB) { console.error('thum.io BB fetch error:', ssErrBB); }
-      
-      if (!bbPhotoSent) {
-        // Fallback: Kroki Mermaid
-        const mmL: string[] = ['mindmap'];
-        for (const line of bbMd.split('\n')) {
-          const t = line.trim(); if(!t) continue;
-          if (t.startsWith('# ')) mmL.push('  root('+t.substring(2).replace(/[()[\]{}]/g,' ').substring(0,30)+')');
-          else if (t.startsWith('## ')) mmL.push('    '+t.substring(3).replace(/[()[\]{}]/g,' ').substring(0,35));
-          else if (t.startsWith('### ')) mmL.push('      '+t.substring(4).replace(/[()[\]{}]/g,' ').substring(0,35));
-          else if (t.startsWith('- ')) mmL.push('        '+t.substring(2).replace(/[()[\]{}]/g,' ').substring(0,40));
-        }
-        try {
-          const kResBB = await fetch('https://kroki.io/mermaid/png', { method:'POST', headers:{'Content-Type':'text/plain'}, body: mmL.join('\n') });
-          if (kResBB.ok) {
-            const blobBB = await kResBB.blob();
-            const fdBB2 = new FormData();
-            fdBB2.append('chat_id', String(chatId));
-            fdBB2.append('caption', `📚 ${nameBB} — Hỗ trợ BB`);
-            fdBB2.append('photo', blobBB, 'mm_bb.png');
-            fdBB2.append('reply_markup', JSON.stringify({inline_keyboard:[[{text:'🔄 Tải lại',callback_data:'menu_mindmap_bb'}],[{text:'⬅️ Quay lại',callback_data:'menu_mindmap'}]]}));
-            const krBB = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method:'POST', body: fdBB2 });
-            const krJBB = await krBB.json();
-            bbPhotoSent = krJBB.ok === true;
-          }
-        } catch(kErrBB) { console.error('kroki BB error:', kErrBB); }
-      }
-      
-      if (!bbPhotoSent) {
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, text: '📚 <b>Hỗ trợ BB — '+nameBB+'</b>\n✅ Đã có mindmap AI nhưng không thể render ảnh.\nVui lòng xem trên Mini App > Tư duy.', parse_mode:'HTML', reply_markup:{inline_keyboard:[[{text:'⬅️ Quay lại',callback_data:'menu_mindmap'}]]} })
-        });
-      }
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `📚 <b>Hỗ trợ BB — ${nameBB}</b>\n✅ Đã có phân tích AI.\n\nBấm nút bên dưới để xem mindmap đầy đủ.`,
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [
+            [{ text: '🔗 Xem Mindmap đầy đủ', url: webUrlBB }],
+            [{ text: '⬅️ Quay lại', callback_data: 'menu_mindmap' }]
+          ]}
+        })
+      });
     } catch (e) {
       console.error('menu_mindmap_bb error:', e);
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {

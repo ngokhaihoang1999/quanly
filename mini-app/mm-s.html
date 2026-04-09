@@ -6,16 +6,25 @@
 <title>Mindmap</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:#fff;font-family:'Segoe UI',system-ui,sans-serif;width:100%;height:100%;overflow:hidden}
-#mindmap{width:100%;height:100vh;display:block}
+html,body{background:#f8fafc;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;width:100%;height:100%;overflow:hidden}
+#mindmap{width:100%;height:100vh;display:block;background:#fff;border-radius:0}
+/* Toolbar overlay */
+.mm-toolbar{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:100}
+.mm-btn{background:rgba(255,255,255,0.95);border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s;color:#334155;font-weight:500}
+.mm-btn:hover{background:#f1f5f9;box-shadow:0 4px 12px rgba(0,0,0,0.12)}
+.mm-btn:active{transform:scale(0.96)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18"></script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18"></script>
 </head>
 <body>
+<div class="mm-toolbar">
+  <button class="mm-btn" onclick="mmInstance&&mmInstance.fit()" title="Fit to view">🔄 Fit</button>
+</div>
 <svg id="mindmap"></svg>
 <script>
+var mmInstance = null;
 try {
   var params = new URLSearchParams(location.search);
   var h = params.get('d') || location.hash.substring(1);
@@ -27,27 +36,28 @@ try {
   for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
   var md = new TextDecoder().decode(bytes);
   
-  // Use markmap programmatic API for full control
-  var transformer = new markmap.Transformer();
-  var result = transformer.transform(md);
-  var root = result.root;
+  // Set title from first heading
+  var titleMatch = md.match(/^#\s+(.+)/m);
+  if (titleMatch) document.title = titleMatch[1] + ' — Mindmap';
   
   var svg = document.getElementById('mindmap');
-  var mm = markmap.Markmap.create(svg, {
-    initialExpandLevel: -1,  // expand ALL nodes
-    duration: 0,             // no animation (instant render for screenshot)
-    maxWidth: 400,           // max node text width
+  var transformer = new markmap.Transformer();
+  var result = transformer.transform(md);
+  
+  mmInstance = markmap.Markmap.create(svg, {
+    initialExpandLevel: -1,
+    duration: 300,
+    maxWidth: 350,
     paddingX: 16,
     autoFit: true,
     zoom: true,
     pan: true
-  }, root);
+  }, result.root);
   
-  // Force fit after render
-  setTimeout(function() { mm.fit(); }, 300);
-  setTimeout(function() { mm.fit(); }, 1000);
+  // Fit after render
+  setTimeout(function() { mmInstance.fit(); }, 500);
 } catch(e) {
-  document.write('<p style="padding:20px;color:red">Error: '+e.message+'</p>');
+  document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:18px;color:#ef4444;padding:20px;text-align:center;background:#fff">⚠️ '+e.message+'</div>';
 }
 </script>
 </body>
