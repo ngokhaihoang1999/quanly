@@ -645,22 +645,18 @@ function _copyProfileDeepLink(profileId) {
       ]).then(() => {
         showToast('📋 Đã sao chép: ' + displayName);
       }).catch(() => {
-        // ClipboardItem failed (Telegram WebApp restriction) → try execCommand
-        _richCopyFallback(htmlContent, plainContent, displayName);
+        // ClipboardItem bị chặn → copy plain text qua textarea
+        _fallbackCopy(plainContent);
       });
       return;
     } catch(e) {}
   }
 
-  // Method 2: execCommand with contentEditable (mobile fallback)
-  _richCopyFallback(htmlContent, plainContent, displayName);
-}
-
-function _richCopyFallback(html, plain, displayName) {
+  // Method 2: execCommand with contentEditable (mobile — rich text)
   try {
     const el = document.createElement('div');
     el.contentEditable = 'true';
-    el.innerHTML = html;
+    el.innerHTML = htmlContent;
     el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
     document.body.appendChild(el);
     const range = document.createRange();
@@ -673,6 +669,13 @@ function _richCopyFallback(html, plain, displayName) {
     el.remove();
     if (ok) { showToast('📋 Đã sao chép: ' + displayName); return; }
   } catch(e) {}
+
+  // Method 3: plain text textarea fallback
+  _fallbackCopy(plainContent);
+}
+
+function _richCopyFallback(html, plain, displayName) {
+  // no longer needed but keep for safety
   _fallbackCopy(plain);
 }
 
