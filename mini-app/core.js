@@ -1713,7 +1713,7 @@ function openPersonalizationPanel() {
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">💪 Sở trường Jondo</label>
-            <input type="text" id="prof_motto" value="${(myStaff?.motto||'').replace(/"/g,'&quot;')}" placeholder="VD: Khai 1:1, Tư vấn, Giáo viên BB..." maxlength="80"
+            <input type="text" id="prof_motto" value="${(myStaff?.motto||'').replace(/"/g,'&quot;')}" placeholder="VD: Tư vấn, Giáo viên BB, Kết nối..." maxlength="80"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
           <div>
@@ -2005,7 +2005,7 @@ function showStaffCard(code) {
     '<div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px;box-shadow:0 -8px 40px rgba(0,0,0,0.3);">' +
       '<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>' +
       '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">' +
-        '<div style="width:56px;height:56px;border-radius:16px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:' + (isEmoji?'28px':'22px') + ';font-weight:700;color:white;flex-shrink:0;">' + avatar + '</div>' +
+        '<div style="width:56px;height:56px;border-radius:16px;background:' + (s.staff_avatar_color || 'var(--accent)') + ';display:flex;align-items:center;justify-content:center;font-size:' + (isEmoji?'28px':'22px') + ';font-weight:700;color:white;flex-shrink:0;">' + avatar + '</div>' +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:700;font-size:16px;">' + (s.nickname || s.full_name) + '</div>' +
           (s.nickname ? '<div style="font-size:12px;color:var(--text3);">' + s.full_name + ' (' + s.staff_code + ')</div>' : '<div style="font-size:12px;color:var(--text3);">' + s.staff_code + '</div>') +
@@ -2014,7 +2014,7 @@ function showStaffCard(code) {
       '</div>' +
       (unit ? '<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:10px;">&\#127962; ' + unit + '</div>' : '') +
       ((s.gender||s.birth_year) ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">' + (s.gender||'') + bStr + '</div>' : '') +
-      (s.motto ? '<div style="font-size:13px;font-style:italic;color:var(--accent);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:10px;">&ldquo;' + s.motto + '&rdquo;</div>' : '') +
+      (s.motto ? '<div style="font-size:13px;font-style:italic;color:var(--accent);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:10px;">💪 ' + s.motto + '</div>' : '') +
       (s.bio ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;">' + s.bio + '</div>' : '') +
       '<button onclick="document.getElementById(\'staffCardModal\').remove()" style="width:100%;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;">Đóng</button>' +
     '</div>';

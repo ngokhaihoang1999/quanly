@@ -200,6 +200,11 @@ async function openProfile(p) {
           ${reasonHtml}
           ${bbNoGroupWarning}
         </div>
+        <button onclick="shareProfile('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}')" title="Chia sẻ hồ sơ" style="
+          flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
+          background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
+          ">📤</button>
         <button id="profileRefreshBtn" onclick="refreshProfileInPlace()" title="Đồng bộ dữ liệu mới nhất" style="
           flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
           background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
@@ -502,4 +507,163 @@ async function deleteProfile(profileId, name) {
     console.error('deleteProfile:', e);
     showToast('❌ Lỗi khi xoá hồ sơ');
   }
+}
+
+// ============ SHARE PROFILE ============
+function shareProfile(profileId, profileName) {
+  let existing = document.getElementById('shareProfileModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'shareProfileModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.5);';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px;box-shadow:0 -8px 40px rgba(0,0,0,0.3);">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">📤 Chia sẻ hồ sơ</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">${profileName}</div>
+
+      <!-- Option 1: Send to staff -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🔔 Gửi tới TĐ trong hệ thống</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">TĐ sẽ nhận hồ sơ trong phần Thông báo 🔔</div>
+        <div style="position:relative;">
+          <input type="text" id="shareStaffSearch" placeholder="Tìm mã TĐ hoặc tên..." oninput="_searchShareStaff(this.value)"
+            style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;" />
+          <div id="shareStaffResults" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+        </div>
+        <div id="shareStaffSelected" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+        <button id="shareSendBtn" onclick="_sendShareToStaff('${profileId}','${profileName.replace(/'/g,"\\'")}')" disabled
+          style="margin-top:10px;width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;opacity:0.5;">
+          📨 Gửi thông báo
+        </button>
+      </div>
+
+      <!-- Option 2: Copy deep link -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🔗 Lấy link mở hồ sơ</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Link mở Mini App đến thẳng hồ sơ này</div>
+        <button onclick="_copyProfileDeepLink('${profileId}')"
+          style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
+          📋 Sao chép link
+        </button>
+      </div>
+
+      <button onclick="document.getElementById('shareProfileModal').remove()"
+        style="width:100%;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;">Đóng</button>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+let _shareSelectedStaff = [];
+
+function _searchShareStaff(q) {
+  const box = document.getElementById('shareStaffResults');
+  if (!box) return;
+  if (!q.trim() || q.length < 1) { box.style.display = 'none'; return; }
+  const ql = q.toLowerCase();
+  const matches = (allStaff || []).filter(s =>
+    (s.staff_code||'').toLowerCase().includes(ql) ||
+    (s.full_name||'').toLowerCase().includes(ql) ||
+    (s.nickname||'').toLowerCase().includes(ql)
+  ).slice(0, 8);
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = matches.map(s => {
+    const alreadySelected = _shareSelectedStaff.includes(s.staff_code);
+    return `<div onclick="_addShareStaff('${s.staff_code}','${(s.nickname||s.full_name||'').replace(/'/g,"\\'")}')"
+      style="padding:8px 12px;cursor:${alreadySelected?'default':'pointer'};font-size:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;${alreadySelected?'opacity:0.4;':''}">
+      <span><b>${s.staff_code}</b> · ${s.nickname||s.full_name}</span>
+      ${alreadySelected ? '<span style="color:var(--accent);font-size:10px;">✓ đã chọn</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function _addShareStaff(code, name) {
+  if (_shareSelectedStaff.includes(code)) return;
+  _shareSelectedStaff.push(code);
+  const selBox = document.getElementById('shareStaffSelected');
+  if (selBox) {
+    selBox.innerHTML += `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--accent);color:white;border-radius:16px;font-size:11px;font-weight:600;">
+      ${code} <span onclick="_removeShareStaff('${code}')" style="cursor:pointer;opacity:0.7;font-size:14px;">✕</span>
+    </span>`;
+  }
+  document.getElementById('shareStaffSearch').value = '';
+  document.getElementById('shareStaffResults').style.display = 'none';
+  const btn = document.getElementById('shareSendBtn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+function _removeShareStaff(code) {
+  _shareSelectedStaff = _shareSelectedStaff.filter(c => c !== code);
+  const selBox = document.getElementById('shareStaffSelected');
+  if (selBox) selBox.innerHTML = _shareSelectedStaff.map(c =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--accent);color:white;border-radius:16px;font-size:11px;font-weight:600;">
+      ${c} <span onclick="_removeShareStaff('${c}')" style="cursor:pointer;opacity:0.7;font-size:14px;">✕</span>
+    </span>`
+  ).join('');
+  const btn = document.getElementById('shareSendBtn');
+  if (btn && !_shareSelectedStaff.length) { btn.disabled = true; btn.style.opacity = '0.5'; }
+}
+
+async function _sendShareToStaff(profileId, profileName) {
+  if (!_shareSelectedStaff.length) return;
+  const btn = document.getElementById('shareSendBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
+  try {
+    const myName = myStaff?.nickname || myStaff?.full_name || myStaff?.staff_code || '';
+    const title = `📤 ${myName} chia sẻ hồ sơ: ${profileName}`;
+    const body = `Nhấn để xem hồ sơ trái quả "${profileName}"`;
+    await createNotification(_shareSelectedStaff, 'chot_tv', title, body, profileId);
+    showToast(`✅ Đã gửi tới ${_shareSelectedStaff.length} TĐ!`);
+    _shareSelectedStaff = [];
+    document.getElementById('shareProfileModal')?.remove();
+  } catch(e) {
+    showToast('❌ Lỗi gửi thông báo');
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Gửi thông báo'; }
+  }
+}
+
+function _copyProfileDeepLink(profileId) {
+  // Build the Telegram Mini App deep link
+  // Format: https://t.me/BOT_USERNAME/APP_NAME?startapp=PROFILE_ID
+  // Fallback: direct URL with ?profile= param
+  const botInfo = tg?.initDataUnsafe?.user ? tg.initDataUnsafe : null;
+  // Use the current webapp URL with profile param as a universal link
+  const baseUrl = window.location.origin + window.location.pathname;
+  const directLink = baseUrl + '?profile=' + profileId;
+  
+  // Try to construct Telegram deep link if possible
+  let link = directLink;
+  try {
+    // The Telegram Mini App can be opened via t.me/botname/appname?startapp=param
+    // We need the bot username - extract from the webapp URL or use known format
+    const botUsername = tg?.initDataUnsafe?.user?.username ? null : null; // user's username, not bot's
+    // Best approach: use the direct URL which works both in Telegram and browser
+    link = directLink;
+  } catch(e) {}
+
+  // Copy to clipboard
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => {
+      showToast('📋 Đã sao chép link!');
+    }).catch(() => {
+      _fallbackCopy(link);
+    });
+  } else {
+    _fallbackCopy(link);
+  }
+}
+
+function _fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('📋 Đã sao chép link!'); }
+  catch(e) { showToast('⚠️ Không thể copy, hãy copy thủ công: ' + text); }
+  ta.remove();
 }
