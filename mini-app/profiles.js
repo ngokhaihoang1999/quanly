@@ -632,29 +632,36 @@ async function _sendShareToStaff(profileId, profileName) {
 function _copyProfileDeepLink(profileId) {
   const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
   const displayName = (window._shareProfileName || 'Hồ sơ trái quả').trim();
+  const copyText = `🍎 ${displayName}\n${link}`;
 
-  // Method 1: Use the visible input field (most reliable in Telegram WebApp)
+  // Update the input to show the full text
   const inp = document.getElementById('shareDeepLinkInput');
-  if (inp) {
-    inp.select();
-    inp.setSelectionRange(0, 99999);
-    try {
-      document.execCommand('copy');
-      showToast('📋 Đã sao chép link!');
-      return;
-    } catch(e) { console.warn('execCommand copy failed:', e); }
-  }
+
+  // Method 1: execCommand via hidden textarea (most reliable in Telegram WebApp)
+  const ta = document.createElement('textarea');
+  ta.value = copyText;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    showToast('📋 Đã sao chép: ' + displayName);
+    ta.remove();
+    return;
+  } catch(e) { console.warn('execCommand copy failed:', e); }
+  ta.remove();
 
   // Method 2: Clipboard API
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(link).then(() => {
-      showToast('📋 Đã sao chép link!');
-    }).catch(() => _fallbackCopy(link));
+    navigator.clipboard.writeText(copyText).then(() => {
+      showToast('📋 Đã sao chép: ' + displayName);
+    }).catch(() => showToast('⚠️ Copy thất bại, hãy chọn link bên trên và copy thủ công'));
     return;
   }
 
-  // Method 3: textarea fallback
-  _fallbackCopy(link);
+  showToast('⚠️ Hãy nhấn vào ô link bên trên, giữ và chọn "Copy"');
 }
 
 function _fallbackCopy(text) {
