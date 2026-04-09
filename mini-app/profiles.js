@@ -632,48 +632,48 @@ async function _sendShareToStaff(profileId, profileName) {
 function _copyProfileDeepLink(profileId) {
   const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
   const displayName = (window._shareProfileName || 'Hồ sơ trái quả').trim();
+  const htmlContent = `<a href="${link}">🍎 ${displayName}</a>`;
+  const plainContent = `🍎 ${displayName}\n${link}`;
 
-  // Copy as rich text hyperlink (blue clickable text in Telegram)
+  // Method 1: ClipboardItem API (desktop — preserves HTML hyperlink)
+  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+    try {
+      const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+      const textBlob = new Blob([plainContent], { type: 'text/plain' });
+      navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+      ]).then(() => {
+        showToast('📋 Đã sao chép: ' + displayName);
+      }).catch(() => {
+        // ClipboardItem failed (Telegram WebApp restriction) → try execCommand
+        _richCopyFallback(htmlContent, plainContent, displayName);
+      });
+      return;
+    } catch(e) {}
+  }
+
+  // Method 2: execCommand with contentEditable (mobile fallback)
+  _richCopyFallback(htmlContent, plainContent, displayName);
+}
+
+function _richCopyFallback(html, plain, displayName) {
   try {
     const el = document.createElement('div');
     el.contentEditable = 'true';
-    el.innerHTML = `<a href="${link}">🍎 ${displayName}</a>`;
+    el.innerHTML = html;
     el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
     document.body.appendChild(el);
-    
-    // Select the content
     const range = document.createRange();
     range.selectNodeContents(el);
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-
     const ok = document.execCommand('copy');
     sel.removeAllRanges();
     el.remove();
-    
-    if (ok) {
-      showToast('📋 Đã sao chép: ' + displayName);
-      return;
-    }
-  } catch(e) { console.warn('Rich copy failed:', e); }
-
-  // Fallback: ClipboardItem API
-  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-    try {
-      const html = `<a href="${link}">🍎 ${displayName}</a>`;
-      const htmlBlob = new Blob([html], { type: 'text/html' });
-      const textBlob = new Blob([`🍎 ${displayName}\n${link}`], { type: 'text/plain' });
-      navigator.clipboard.write([
-        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
-      ]).then(() => showToast('📋 Đã sao chép: ' + displayName))
-        .catch(() => _fallbackCopy(`🍎 ${displayName}\n${link}`));
-      return;
-    } catch(e) {}
-  }
-
-  // Final fallback: plain text
-  _fallbackCopy(`🍎 ${displayName}\n${link}`);
+    if (ok) { showToast('📋 Đã sao chép: ' + displayName); return; }
+  } catch(e) {}
+  _fallbackCopy(plain);
 }
 
 function _fallbackCopy(text) {
