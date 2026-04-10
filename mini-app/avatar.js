@@ -16,7 +16,6 @@ const AVATAR_STYLES = [
   { id: 'whale',     label: 'Cá Voi Jonah 🐋',      cat: 'cute', hasEmoji: false, desc: 'Cá lớn bơi lội tung tăng' },
   { id: 'angel',     label: 'Bé Thiên Thần 👼',     cat: 'cute', hasEmoji: false, desc: 'Đôi cánh thiên thần vỗ bay' },
   { id: 'ark',       label: 'Tàu Nô-ê ⛵',         cat: 'cute', hasEmoji: false, desc: 'Đại tàu gỗ rẽ sóng bình an' },
-  { id: 'partsea',   label: 'Rẽ Biển 🌊',           cat: 'cute', hasEmoji: false, desc: 'Môi-se rẽ Biển Đỏ' },
   { id: 'fishing',   label: 'Câu Cá 🎣',            cat: 'cute', hasEmoji: false, desc: 'Buông câu theo Chúa' },
   { id: 'fruit',     label: 'Trái Thánh Linh 🍇',   cat: 'cute', hasEmoji: true, defaultEmojis: ['🍇','🍉','🍎'], desc: 'Trái cây nhảy múa vui vẻ' },
 ];
@@ -136,9 +135,9 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
       // 7 rainbow bands as stacked semicircles (outer→inner)
       const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#8b5cf6'];
       const bandW = Math.round(sz * 0.9);   // outermost width
-      const bandH = Math.round(sz * 0.55);  // outermost height
-      const step = Math.max(3, Math.round(sz * 0.04)); // shrink per band
-      const topBase = Math.round(sz * 0.05);
+      const bandH = Math.round(bandW / 2);  // exact semicircle height!
+      const step = Math.max(2, Math.round(sz * 0.035)); // shrink per band
+      const topBase = Math.round(sz * 0.1); // Move it down a bit to balance the new height
       
       const bands = colors.map((c, i) => {
         const w = bandW - i * step * 2;
@@ -154,14 +153,13 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
       const innerFill = `<div class="av-rainbow-band" style="width:${innerW}px;height:${innerH}px;top:${innerT}px;background:${bgFill};"></div>`;
 
       // Offset-path follows precisely the center of the arc using an SVG Arc command
-      const bandWidth = bandW - colors.length * step * 2; // actual width of the colored section
       const outerR = bandW / 2;
       const innerR = innerW / 2;
       const midR = innerR + (outerR - innerR) / 2; // Radius to center of the rainbow bands
       const cx = Math.round(sz / 2);
       const px1 = cx - midR;
       const px2 = cx + midR;
-      const yPos = topBase + midR + 2; // center vertically on the arc
+      const yPos = topBase + bandH; // exactly the bottom edge of the bands
       
       return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:hidden;">
         ${bands}${innerFill}
@@ -200,27 +198,20 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
           <div class="av-ark-cabin"></div>
           <div class="av-ark-hull"></div>
         </div>
-        <span style="${core};color:#fff;z-index:10;text-shadow:0 2px 2px #000;" class="av-ark-rock-r">${L}</span>
-      </div>`;
-
-    case 'partsea':
-      return `<div class="av-partsea" style="${wrap};background:linear-gradient(180deg,#bae6fd 50%,#7dd3fc 100%);border-radius:50%;overflow:hidden;">
-        <div class="av-sea-wall av-sea-l"></div>
-        <div class="av-sea-wall av-sea-r"></div>
-        <div class="av-sea-path"></div>
-        <div class="av-sea-staff"></div>
-        <span style="${core};color:#2563eb;z-index:10;text-shadow:0 1px 2px rgba(255,255,255,0.7);">${L}</span>
+        <span style="${core};top:auto;bottom:48%;color:#fff;z-index:20;text-shadow:0 2px 2px #000;" class="av-ark-rock-r">${L}</span>
       </div>`;
 
     case 'fishing': {
-      return `<div class="av-fishing" style="${wrap};background:linear-gradient(180deg,#fef3c7 40%,#38bdf8 40%,#0284c7);border-radius:50%;overflow:hidden;">
+      return `<div class="av-fishing" style="${wrap};border-radius:50%;position:relative;">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,#fef3c7 40%,#38bdf8 40%,#0284c7);border-radius:50%;overflow:hidden;">
+          <span class="av-fish-sw av-fs1">🐟</span>
+          <span class="av-fish-sw av-fs2">🐠</span>
+          <span class="av-fish-sw av-fs3">🐡</span>
+        </div>
         <div class="av-fish-rod"></div>
         <div class="av-fish-line"></div>
-        <span class="av-fish-sw av-fs1">🐟</span>
-        <span class="av-fish-sw av-fs2">🐠</span>
-        <span class="av-fish-sw av-fs3">🐡</span>
         <span class="av-fish-hook">🎣</span>
-        <span style="${core};color:#78350f;z-index:10;">${L}</span>
+        <span style="${core};color:#78350f;z-index:10;pointer-events:none;">${L}</span>
       </div>`;
     }
 
