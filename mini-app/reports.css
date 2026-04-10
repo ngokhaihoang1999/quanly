@@ -84,16 +84,54 @@
   text-overflow: ellipsis;
 }
 .rpt-funnel-bar-wrap {
-  height: 20px;
+  height: 22px;
   background: var(--surface2);
   border-radius: 6px;
   overflow: hidden;
 }
-.rpt-funnel-bar {
+.rpt-funnel-split {
+  display: flex;
   height: 100%;
   border-radius: 6px;
+  overflow: hidden;
   transition: width 0.6s ease;
   min-width: 0;
+}
+.rpt-funnel-alive {
+  background: #22c55e;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 6px 0 0 6px;
+}
+.rpt-funnel-alive span {
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+  padding: 0 4px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.rpt-funnel-drop {
+  background: #ef4444;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0 6px 6px 0;
+}
+.rpt-funnel-drop span {
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+  padding: 0 4px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 .rpt-funnel-num {
   font-size: 13px;
@@ -106,13 +144,6 @@
   font-weight: 700;
   color: var(--text3);
   text-align: center;
-}
-.rpt-funnel-dropout {
-  font-size: 10px;
-  color: #ef4444;
-  padding: 2px 0 6px 108px;
-  font-weight: 600;
-  opacity: 0.85;
 }
 
 /* ── TREND CARD ── */

@@ -238,24 +238,32 @@ async function loadReports() {
     } else {
       funnelData.forEach((d, i) => {
         const convRate = i > 0 && funnelData[i-1].count > 0 ? Math.round(d.count / funnelData[i-1].count * 100) : 100;
-        // Dropout at this phase
+        // Alive vs Dropout at this phase level
         const phaseKey = PHASES_ORDER[i];
-        const doAtPhase = dropouts.filter(p => p.phase === phaseKey || (phaseKey === 'chakki' && (p.phase === 'new' || p.phase === 'chakki'))).length;
-        const doPct = funnelData[i].count > 0 ? Math.round(doAtPhase / (funnelData[i].count + doAtPhase) * 100) : 0;
+        const aliveAtPhase = alive.filter(p => phaseReached(p.phase) >= i).length;
+        const dropAtPhase = dropouts.filter(p => p.phase === phaseKey || (phaseKey === 'chakki' && (p.phase === 'new' || p.phase === 'chakki'))).length;
+        const phaseTotal = aliveAtPhase + dropAtPhase;
+        const alivePct = phaseTotal > 0 ? Math.round(aliveAtPhase / phaseTotal * 100) : 100;
+        const dropPct = phaseTotal > 0 ? Math.round(dropAtPhase / phaseTotal * 100) : 0;
+        // Bar width relative to total
+        const barWidthPct = total > 0 ? Math.round(phaseTotal / total * 100) : 0;
+
         html += `<div class="rpt-funnel-row">
           <div class="rpt-funnel-label">${funnelLabels[i]}</div>
           <div class="rpt-funnel-bar-wrap">
-            <div class="rpt-funnel-bar" style="width:${d.pct}%;background:${funnelColors[i]};"></div>
+            <div class="rpt-funnel-split" style="width:${barWidthPct}%;">
+              <div class="rpt-funnel-alive" style="width:${alivePct}%;">${aliveAtPhase > 0 ? `<span>${aliveAtPhase} (${alivePct}%)</span>` : ''}</div>${dropAtPhase > 0 ? `<div class="rpt-funnel-drop" style="width:${dropPct}%;">${dropAtPhase > 0 ? `<span>${dropAtPhase} (${dropPct}%)</span>` : ''}</div>` : ''}
+            </div>
           </div>
-          <div class="rpt-funnel-num">${d.count} <span style="color:var(--text3);font-size:10px;">(${d.pct}%)</span></div>
+          <div class="rpt-funnel-num">${phaseTotal}</div>
           <div class="rpt-funnel-conv">${i > 0 ? `↓${convRate}%` : ''}</div>
-        </div>
-        ${doAtPhase > 0 ? `<div class="rpt-funnel-dropout">💔 Drop-out tại giai đoạn này: ${doAtPhase} (${doPct}%)</div>` : ''}`;
+        </div>`;
       });
-      // Total dropout
+      // Total summary
       const dropoutRate = total > 0 ? Math.round(dropouts.length / total * 100) : 0;
-      html += `<div style="margin-top:10px;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:8px;font-size:12px;color:#ef4444;font-weight:600;">
-        📉 Tổng rơi rụng: ${dropouts.length}/${total} (${dropoutRate}%)
+      html += `<div style="margin-top:10px;display:flex;gap:8px;font-size:11px;font-weight:600;">
+        <span style="color:var(--green);">🟢 Alive: ${alive.length}</span>
+        <span style="color:#ef4444;">🔴 Drop-out: ${dropouts.length} (${dropoutRate}%)</span>
       </div>`;
     }
     html += '</div></div>';
