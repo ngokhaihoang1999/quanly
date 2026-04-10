@@ -280,7 +280,10 @@ function openAvatarStylePicker(profileId, encodedRaw) {
 
       <!-- EMOJI PICKER (shown only for emoji styles) -->
       <div id="avEmojiSection" style="display:none;">
-        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">🎨 Chọn Emoji (nhấn để thêm/bỏ)</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
+          <span>🎨 Chọn Emoji (nhấn để thêm)</span>
+          <input type="text" placeholder="➕ Nhập từ phím..." style="width:110px;background:none;border:none;border-bottom:1px dashed var(--accent);color:var(--text);font-size:12px;font-weight:600;text-align:right;outline:none;" oninput="if(this.value.trim()){_addCustomEmoji(this.value.trim()); this.value='';}" title="Gõ emoji bất kỳ từ bàn phím điện thoại của bạn" />
+        </div>
         <div id="avSelectedEmojis" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:32px;padding:8px 10px;background:var(--surface2);border-radius:10px;border:1px dashed var(--border);"></div>
         <div id="avEmojiGrid" style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow-y:auto;margin-bottom:16px;padding:4px;"></div>
       </div>
@@ -449,6 +452,23 @@ function _toggleEmojiSelection(emoji) {
   const letter = (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
   _updateAvatarPreview(letter);
 }
+
+window._addCustomEmoji = function(val) {
+  if (!val) return;
+  const em = val; // Users can paste any emoji
+  if (_avatarPickerState.emojis.length >= 6) {
+    showToast('⚠️ Tối đa 6 emoji');
+    return;
+  }
+  if (!_avatarPickerState.emojis.includes(em)) {
+    _avatarPickerState.emojis.push(em);
+  }
+  _renderSelectedEmojis();
+  const letter = _avatarPickerState.profileId === '__staff__'
+    ? (myStaff?.nickname || myStaff?.full_name || '?')[0]
+    : (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
+  _updateAvatarPreview(letter);
+};
 
 function _renderSelectedEmojis() {
   const box = document.getElementById('avSelectedEmojis');
