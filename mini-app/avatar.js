@@ -131,13 +131,38 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
 
     // ── CUTE BIBLE ──
     case 'rainbow': {
-      const arcR = Math.round(sz * 0.38); // arc radius
-      return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:visible;">
-        <div class="av-rainbow-arc" style="width:${sz}px;height:${Math.round(sz*0.5)}px;"></div>
-        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};">
+      // 7 rainbow bands as stacked semicircles (outer→inner)
+      const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#8b5cf6'];
+      const bandW = Math.round(sz * 0.9);   // outermost width
+      const bandH = Math.round(sz * 0.55);  // outermost height
+      const step = Math.max(3, Math.round(sz * 0.04)); // shrink per band
+      const topBase = Math.round(sz * 0.05);
+      
+      const bands = colors.map((c, i) => {
+        const w = bandW - i * step * 2;
+        const h = bandH - i * step;
+        const t = topBase + i * step;
+        return `<div class="av-rainbow-band" style="width:${w}px;height:${h}px;top:${t}px;background:${c};"></div>`;
+      }).join('');
+      // Inner fill (same as bg) to hollow out the center
+      const innerW = bandW - colors.length * step * 2;
+      const innerH = bandH - colors.length * step;
+      const innerT = topBase + colors.length * step;
+      const bgFill = customBg || '#f0fdf4';
+      const innerFill = `<div class="av-rainbow-band" style="width:${innerW}px;height:${innerH}px;top:${innerT}px;background:${bgFill};"></div>`;
+
+      // Offset-path follows the middle arc
+      const px1 = Math.round(sz * 0.08);
+      const py = Math.round(sz * 0.58);
+      const cpY = Math.round(sz * -0.02);
+      const px2 = Math.round(sz * 0.92);
+      
+      return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:hidden;">
+        ${bands}${innerFill}
+        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};offset-path:path('M ${px1},${py} C ${px1},${cpY} ${px2},${cpY} ${px2},${py}');">
           ${L}
         </span>
-        <span class="av-dove" style="position:absolute;font-size:${efo}px;top:${Math.round(sz*0.12)}px;right:${sz<50?-3:-6}px;z-index:15;">🕊️</span>
+        <span class="av-dove" style="position:absolute;font-size:${efo}px;bottom:${Math.round(sz*0.1)}px;right:${sz<50?2:4}px;z-index:15;">🕊️</span>
       </div>`;
     }
 
