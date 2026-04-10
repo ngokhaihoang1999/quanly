@@ -237,33 +237,43 @@ async function loadReports() {
       html += '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
     } else {
       funnelData.forEach((d, i) => {
-        const convRate = i > 0 && funnelData[i-1].count > 0 ? Math.round(d.count / funnelData[i-1].count * 100) : 100;
-        // Alive vs Dropout at this phase level
         const phaseKey = PHASES_ORDER[i];
-        const aliveAtPhase = alive.filter(p => phaseReached(p.phase) >= i).length;
-        const dropAtPhase = dropouts.filter(p => p.phase === phaseKey || (phaseKey === 'chakki' && (p.phase === 'new' || p.phase === 'chakki'))).length;
-        const phaseTotal = aliveAtPhase + dropAtPhase;
-        const alivePct = phaseTotal > 0 ? Math.round(aliveAtPhase / phaseTotal * 100) : 100;
-        const dropPct = phaseTotal > 0 ? Math.round(dropAtPhase / phaseTotal * 100) : 0;
-        // Bar width relative to total
+        const isLast = i === PHASES_ORDER.length - 1;
+
+        // 3 states:
+        // 🟢 Passed: alive profiles that moved BEYOND this phase
+        const passed = isLast ? 0 : alive.filter(p => phaseReached(p.phase) > i).length;
+        // 🟡 Current: alive profiles EXACTLY at this phase
+        const current = alive.filter(p => {
+          const idx = phaseReached(p.phase);
+          return idx === i || (phaseKey === 'chakki' && p.phase === 'new');
+        }).length;
+        // 🔴 Dropped: dropout profiles whose phase = this phase
+        const dropped = dropouts.filter(p => p.phase === phaseKey || (phaseKey === 'chakki' && (p.phase === 'new' || p.phase === 'chakki'))).length;
+
+        const phaseTotal = passed + current + dropped;
+        const passedPct = phaseTotal > 0 ? Math.round(passed / phaseTotal * 100) : 0;
+        const currentPct = phaseTotal > 0 ? Math.round(current / phaseTotal * 100) : 0;
+        const droppedPct = phaseTotal > 0 ? Math.round(dropped / phaseTotal * 100) : 0;
         const barWidthPct = total > 0 ? Math.round(phaseTotal / total * 100) : 0;
 
         html += `<div class="rpt-funnel-row">
           <div class="rpt-funnel-label">${funnelLabels[i]}</div>
           <div class="rpt-funnel-bar-wrap">
             <div class="rpt-funnel-split" style="width:${barWidthPct}%;">
-              <div class="rpt-funnel-alive" style="width:${alivePct}%;">${aliveAtPhase > 0 ? `<span>${aliveAtPhase} (${alivePct}%)</span>` : ''}</div>${dropAtPhase > 0 ? `<div class="rpt-funnel-drop" style="width:${dropPct}%;">${dropAtPhase > 0 ? `<span>${dropAtPhase} (${dropPct}%)</span>` : ''}</div>` : ''}
+              ${passed > 0 ? `<div class="rpt-funnel-passed" style="width:${passedPct}%;"><span>${passed}</span></div>` : ''}
+              ${current > 0 ? `<div class="rpt-funnel-current" style="width:${currentPct}%;"><span>${current}</span></div>` : ''}
+              ${dropped > 0 ? `<div class="rpt-funnel-drop" style="width:${droppedPct}%;"><span>${dropped}</span></div>` : ''}
             </div>
           </div>
           <div class="rpt-funnel-num">${phaseTotal}</div>
-          <div class="rpt-funnel-conv">${i > 0 ? `↓${convRate}%` : ''}</div>
         </div>`;
       });
-      // Total summary
-      const dropoutRate = total > 0 ? Math.round(dropouts.length / total * 100) : 0;
-      html += `<div style="margin-top:10px;display:flex;gap:8px;font-size:11px;font-weight:600;">
-        <span style="color:var(--green);">🟢 Alive: ${alive.length}</span>
-        <span style="color:#ef4444;">🔴 Drop-out: ${dropouts.length} (${dropoutRate}%)</span>
+      // Legend
+      html += `<div style="margin-top:10px;display:flex;gap:10px;font-size:10px;font-weight:600;flex-wrap:wrap;">
+        <span style="display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span> Đã chuyển tiếp</span>
+        <span style="display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span> Đang ở GĐ này</span>
+        <span style="display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></span> Drop-out</span>
       </div>`;
     }
     html += '</div></div>';
