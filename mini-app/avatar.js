@@ -130,14 +130,13 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-core-cyl" style="${core}">${L}</span>
       </div>`;
 
-    // ── CUTE BIBLE ──
     case 'rainbow': {
       // 7 rainbow bands as stacked semicircles (outer→inner)
       const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#8b5cf6'];
       const bandW = Math.round(sz * 0.9);   // outermost width
-      const bandH = Math.round(bandW / 2);  // exact semicircle height!
+      const bandH = Math.round(bandW / 2);  // exact semicircle height
       const step = Math.max(2, Math.round(sz * 0.035)); // shrink per band
-      const topBase = Math.round(sz * 0.1); // Move it down a bit to balance the new height
+      const topBase = Math.round(sz * 0.12);
       
       const bands = colors.map((c, i) => {
         const w = bandW - i * step * 2;
@@ -145,25 +144,29 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         const t = topBase + i * step;
         return `<div class="av-rainbow-band" style="width:${w}px;height:${h}px;top:${t}px;background:${c};"></div>`;
       }).join('');
-      // Inner fill (same as bg) to hollow out the center
+      // Inner fill to hollow out center
       const innerW = bandW - colors.length * step * 2;
       const innerH = bandH - colors.length * step;
       const innerT = topBase + colors.length * step;
       const bgFill = customBg || '#f0fdf4';
       const innerFill = `<div class="av-rainbow-band" style="width:${innerW}px;height:${innerH}px;top:${innerT}px;background:${bgFill};"></div>`;
 
-      // Offset-path follows precisely the center of the arc using an SVG Arc command
-      const outerR = bandW / 2;
-      const innerR = innerW / 2;
-      const midR = innerR + (outerR - innerR) / 2; // Radius to center of the rainbow bands
+      // Letter traces the green band (index 3) TOP edge
+      // Green band: w = bandW - 3*step*2, h = bandH - 3*step, top = topBase + 3*step
+      const greenW = bandW - 3 * step * 2;
+      const greenH = bandH - 3 * step;
+      const greenT = topBase + 3 * step;
+      // The green band is a semicircle: center at (sz/2, greenT+greenH), radius = greenW/2
+      // Arc path along the TOP of this semicircle:
+      const arcR = Math.round(greenW / 2);
       const cx = Math.round(sz / 2);
-      const px1 = cx - midR;
-      const px2 = cx + midR;
-      const yPos = topBase + bandH; // exactly the bottom edge of the bands
+      const arcY = greenT + greenH; // baseline of the semicircle
+      const startX = cx - arcR;
+      const endX = cx + arcR;
       
       return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:hidden;">
         ${bands}${innerFill}
-        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};offset-path:path('M ${px1},${yPos} A ${midR},${midR} 0 0,1 ${px2},${yPos}');">
+        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};offset-path:path('M ${startX},${arcY} A ${arcR},${arcR} 0 0,1 ${endX},${arcY}');">
           ${L}
         </span>
         <span class="av-dove" style="position:absolute;font-size:${efo}px;bottom:${Math.round(sz*0.1)}px;right:${sz<50?2:4}px;z-index:15;">🕊️</span>
@@ -191,27 +194,23 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span style="${core};color:#f59e0b;z-index:10;">${L}</span>
       </div>`;
 
-    case 'ark':
-      return `<div class="av-ark" style="${wrap};background:#e0f2fe;overflow:hidden;border-radius:50%;">
+    case 'ark': {
+      const shipSz = Math.round(sz * 0.4);
+      return `<div class="av-ark" style="${wrap};background:linear-gradient(180deg,#bae6fd 55%,#0ea5e9 55%,#0369a1);overflow:hidden;border-radius:50%;">
         <div class="av-ark-w2"></div><div class="av-ark-w1"></div>
-        <div class="av-ark-ship">
-          <div class="av-ark-cabin"></div>
-          <div class="av-ark-hull"></div>
-        </div>
-        <span style="${core};top:auto;bottom:48%;color:#fff;z-index:20;text-shadow:0 2px 2px #000;" class="av-ark-rock-r">${L}</span>
+        <span class="av-ark-ship" style="font-size:${shipSz}px;left:50%;transform:translateX(-50%);">🚢</span>
+        <span style="position:absolute;top:10%;left:50%;transform:translateX(-50%);font-size:${fz}px;font-weight:900;color:#1e3a5f;z-index:20;text-shadow:0 1px 3px rgba(255,255,255,0.6);">${L}</span>
       </div>`;
+    }
 
     case 'fishing': {
-      return `<div class="av-fishing" style="${wrap};border-radius:50%;position:relative;">
-        <div style="position:absolute;inset:0;background:linear-gradient(180deg,#fef3c7 40%,#38bdf8 40%,#0284c7);border-radius:50%;overflow:hidden;">
-          <span class="av-fish-sw av-fs1">🐟</span>
-          <span class="av-fish-sw av-fs2">🐠</span>
-          <span class="av-fish-sw av-fs3">🐡</span>
-        </div>
-        <div class="av-fish-rod"></div>
-        <div class="av-fish-line"></div>
-        <span class="av-fish-hook">🎣</span>
-        <span style="${core};color:#78350f;z-index:10;pointer-events:none;">${L}</span>
+      const rodSz = Math.round(sz * 0.35);
+      return `<div class="av-fishing" style="${wrap};background:linear-gradient(180deg,#fef3c7 40%,#38bdf8 40%,#0284c7);border-radius:50%;overflow:hidden;">
+        <span style="position:absolute;top:${Math.round(sz*0.02)}px;right:${Math.round(sz*0.08)}px;font-size:${rodSz}px;z-index:5;animation:av-rock 2.5s ease-in-out infinite alternate;filter:drop-shadow(0 2px 3px rgba(0,0,0,0.15));">🎣</span>
+        <span class="av-fish-sw av-fs1">🐟</span>
+        <span class="av-fish-sw av-fs2">🐠</span>
+        <span class="av-fish-sw av-fs3">🐡</span>
+        <span style="${core};color:#78350f;z-index:10;">${L}</span>
       </div>`;
     }
 
