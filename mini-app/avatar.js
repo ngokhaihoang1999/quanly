@@ -15,7 +15,9 @@ const AVATAR_STYLES = [
   { id: 'manna',     label: 'Bánh Manna 🍞',        cat: 'cute', hasEmoji: true, defaultEmojis: ['🍞','🥨'], desc: 'Mưa lương thực từ trời' },
   { id: 'whale',     label: 'Cá Voi Jonah 🐋',      cat: 'cute', hasEmoji: false, desc: 'Cá lớn bơi lội tung tăng' },
   { id: 'angel',     label: 'Bé Thiên Thần 👼',     cat: 'cute', hasEmoji: false, desc: 'Đôi cánh thiên thần vỗ bay' },
-  { id: 'ark',       label: 'Tàu Nô-ê 🚢',         cat: 'cute', hasEmoji: false, desc: 'Đại tàu rẽ sóng bình an' },
+  { id: 'ark',       label: 'Tàu Nô-ê ⛵',         cat: 'cute', hasEmoji: false, desc: 'Đại tàu gỗ rẽ sóng bình an' },
+  { id: 'partsea',   label: 'Rẽ Biển 🌊',           cat: 'cute', hasEmoji: false, desc: 'Môi-se rẽ Biển Đỏ' },
+  { id: 'fishing',   label: 'Câu Cá 🎣',            cat: 'cute', hasEmoji: false, desc: 'Buông câu theo Chúa' },
   { id: 'fruit',     label: 'Trái Thánh Linh 🍇',   cat: 'cute', hasEmoji: true, defaultEmojis: ['🍇','🍉','🍎'], desc: 'Trái cây nhảy múa vui vẻ' },
 ];
 
@@ -151,15 +153,17 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
       const bgFill = customBg || '#f0fdf4';
       const innerFill = `<div class="av-rainbow-band" style="width:${innerW}px;height:${innerH}px;top:${innerT}px;background:${bgFill};"></div>`;
 
-      // Offset-path follows the middle arc
-      const px1 = Math.round(sz * 0.08);
-      const py = Math.round(sz * 0.58);
-      const cpY = Math.round(sz * -0.02);
-      const px2 = Math.round(sz * 0.92);
+      // Offset-path follows the rainbow's middle band
+      const px1 = Math.round(sz * 0.05);
+      const py = Math.round(sz * 0.52);
+      const cpX1 = Math.round(sz * 0.05);
+      const cpY = Math.round(sz * 0.0);
+      const cpX2 = Math.round(sz * 0.95);
+      const px2 = Math.round(sz * 0.95);
       
       return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:hidden;">
         ${bands}${innerFill}
-        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};offset-path:path('M ${px1},${py} C ${px1},${cpY} ${px2},${cpY} ${px2},${py}');">
+        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};offset-path:path('M ${px1},${py} C ${cpX1},${cpY} ${cpX2},${cpY} ${px2},${py}');">
           ${L}
         </span>
         <span class="av-dove" style="position:absolute;font-size:${efo}px;bottom:${Math.round(sz*0.1)}px;right:${sz<50?2:4}px;z-index:15;">🕊️</span>
@@ -190,9 +194,28 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
     case 'ark':
       return `<div class="av-ark" style="${wrap};background:#e0f2fe;overflow:hidden;border-radius:50%;">
         <div class="av-ark-w2"></div><div class="av-ark-w1"></div>
-        <span class="av-ark-ship" style="font-size:${Math.round(sz*0.35)}px">🚢</span>
+        <span class="av-ark-ship" style="font-size:${Math.round(sz*0.35)}px">⛵</span>
         <span style="${core};color:#fff;z-index:10;text-shadow:0 2px 2px #000;" class="av-ark-rock-r">${L}</span>
       </div>`;
+
+    case 'partsea':
+      return `<div class="av-partsea" style="${wrap};background:linear-gradient(180deg,#bae6fd 50%,#7dd3fc 100%);border-radius:50%;overflow:hidden;">
+        <div class="av-sea-wall av-sea-l"></div>
+        <div class="av-sea-wall av-sea-r"></div>
+        <div class="av-sea-path"></div>
+        <span class="av-sea-staff">🪄</span>
+        <span style="${core};color:#1e3a5f;z-index:10;text-shadow:0 1px 2px rgba(255,255,255,0.7);">${L}</span>
+      </div>`;
+
+    case 'fishing': {
+      const rodH = Math.round(sz * 0.55);
+      return `<div class="av-fishing" style="${wrap};background:linear-gradient(180deg,#fef3c7 40%,#38bdf8 40%,#0284c7);border-radius:50%;overflow:hidden;">
+        <div class="av-fish-rod" style="height:${rodH}px;"></div>
+        <span class="av-fish-float">🐟</span>
+        <span class="av-fish-hook">🎣</span>
+        <span style="${core};color:#78350f;z-index:10;">${L}</span>
+      </div>`;
+    }
 
     case 'fruit':
       return `<div class="av-fruit" style="${wrap};background:#fff1f2;border-radius:50%;box-shadow:inset -4px -4px 0 #ffe4e6;">
