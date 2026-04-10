@@ -824,12 +824,17 @@ async function loadStaffInfo() {
         const displayName = myStaff.nickname || myStaff.full_name || '?';
         const letter = displayName[0];
         const avatarHtml = typeof renderAnimatedAvatar === 'function'
-          ? renderAnimatedAvatar(letter, myStaff.staff_avatar_color || '', 'sm')
-          : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:white;">${letter}</div>`;
+          ? renderAnimatedAvatar(letter, myStaff.staff_avatar_color || '', 'md')
+          : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${letter}</div>`;
         headerAv.innerHTML = `
-          <div style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá">
-            ${avatarHtml}
-            <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.95);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.2);">${displayName}</span>
+          <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá">
+            <div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">
+              ${avatarHtml}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${displayName}</span>
+              <span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span>
+            </div>
           </div>`;
         headerAv.style.display = 'block';
       }
@@ -1977,9 +1982,9 @@ async function saveMyStaffProfile() {
       const dn = myStaff.nickname || myStaff.full_name || '?';
       const lt = dn[0];
       const avH = typeof renderAnimatedAvatar === 'function'
-        ? renderAnimatedAvatar(lt, myStaff.staff_avatar_color || '', 'sm')
-        : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:white;">${lt}</div>`;
-      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá">${avH}<span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.95);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.2);">${dn}</span></div>`;
+        ? renderAnimatedAvatar(lt, myStaff.staff_avatar_color || '', 'md')
+        : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${lt}</div>`;
+      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
       headerAv.style.display = 'block';
     }
     if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu hồ sơ TĐ'; }
