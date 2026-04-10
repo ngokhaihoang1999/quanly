@@ -413,3 +413,101 @@ async function _saveAvatarStyle() {
     showToast('❌ Lỗi lưu avatar');
   }
 }
+
+// ── STAFF AVATAR PICKER (Cá nhân hoá TĐ) ───────────────────────
+// Opens the same style picker modal but saves to staff table instead
+function _openStaffAvatarPicker() {
+  const currentRaw = document.getElementById('prof_staff_avatar_color')?.value || '';
+  const cfg = parseAvatarConfig(currentRaw) || {};
+  const letter = myStaff?.avatar_emoji || (myStaff?.nickname || myStaff?.full_name || '?')[0];
+
+  _avatarPickerState = {
+    profileId: '__staff__',  // special marker
+    style: cfg.style || null,
+    emojis: cfg.emojis ? [...cfg.emojis] : [],
+    gradient: cfg.gradient || 'linear-gradient(135deg,var(--accent),#ec4899)',
+  };
+
+  let existing = document.getElementById('avatarStyleModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'avatarStyleModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.55);';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:520px;max-height:90vh;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:20px 16px 36px;box-shadow:0 -8px 50px rgba(0,0,0,0.35);">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
+      
+      <!-- PREVIEW -->
+      <div style="display:flex;justify-content:center;margin-bottom:20px;">
+        <div id="avPickerPreview" style="transform:scale(1.2);"></div>
+      </div>
+      <div id="avPickerStyleName" style="text-align:center;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:20px;min-height:18px;"></div>
+
+      <!-- STYLE GRID -->
+      <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">✨ Phong cách Epic</div>
+      <div id="avPickerEpicGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px;"></div>
+      
+      <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">🧸 Kinh Thánh Dễ Thương</div>
+      <div id="avPickerCuteGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;"></div>
+
+      <!-- EMOJI PICKER -->
+      <div id="avEmojiSection" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">🎨 Chọn Emoji (nhấn để thêm/bỏ)</div>
+        <div id="avSelectedEmojis" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:32px;padding:8px 10px;background:var(--surface2);border-radius:10px;border:1px dashed var(--border);"></div>
+        <div id="avEmojiGrid" style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow-y:auto;margin-bottom:16px;padding:4px;"></div>
+      </div>
+
+      <!-- GRADIENT -->
+      <div id="avGradientSection" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">🖌 Hoặc chỉ chọn màu nền</div>
+        <div id="avGradientGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('avatarStyleModal').remove()" style="flex:1;padding:13px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Huỷ</button>
+        <button onclick="_saveStaffAvatarStyle()" style="flex:2;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">✅ Lưu Avatar TĐ</button>
+      </div>
+    </div>`;
+  
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  _renderStyleGrid(letter);
+  _renderGradientGrid();
+  _renderEmojiGrid();
+  _updateAvatarPreview(letter);
+
+  if (_avatarPickerState.style) {
+    _selectAvatarStyle(_avatarPickerState.style, letter);
+  } else {
+    document.getElementById('avGradientSection').style.display = 'block';
+  }
+}
+
+function _saveStaffAvatarStyle() {
+  const { style, emojis, gradient } = _avatarPickerState;
+  let value;
+  if (style) {
+    value = serializeAvatarConfig({ style, emojis: emojis.length ? emojis : undefined, gradient });
+  } else if (gradient) {
+    value = gradient;
+  } else {
+    return;
+  }
+
+  // Update hidden inputs in the settings panel (will be saved when user clicks "Lưu hồ sơ TĐ")
+  const input = document.getElementById('prof_staff_avatar_color');
+  if (input) input.value = value;
+
+  // Update the preview box
+  const previewBox = document.getElementById('staffAvatarPreviewBox');
+  const letter = myStaff?.avatar_emoji || (myStaff?.nickname || myStaff?.full_name || '?')[0];
+  if (previewBox) {
+    previewBox.innerHTML = renderAnimatedAvatar(letter, value, 'md');
+  }
+
+  showToast('✅ Đã chọn phong cách! Nhấn "Lưu hồ sơ TĐ" để áp dụng.');
+  document.getElementById('avatarStyleModal')?.remove();
+}

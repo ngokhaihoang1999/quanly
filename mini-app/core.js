@@ -1657,15 +1657,22 @@ function openPersonalizationPanel() {
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
             <div style="font-size:10px;color:var(--text3);margin-top:3px;">Tên viết tắt: <b>${myStaff?.staff_code?.split('-')[1] || myStaff?.staff_code||''}</b> &nbsp;·&nbsp; Nickname: <b id="nickname_preview">${myStaff?.nickname||'(chưa đặt)'}</b></div>
           </div>
-          <div style="display:grid;grid-template-columns:52px 1fr 1fr;gap:8px;align-items:end;">
-            <div>
-              <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Avatar</label>
-              <div id="prof_emoji_display" onclick="toggleEmojiPicker()" title="Chọn emoji"
-                style="width:46px;height:46px;border-radius:14px;background:${myStaff?.staff_avatar_color || 'var(--accent)'};display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px dashed var(--border);position:relative;">
-                ${myStaff?.avatar_emoji || (myStaff?.nickname||myStaff?.full_name||'?')[0]}
+          <!-- AVATAR ANIMATED STYLE -->
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">🎨 Avatar (nhấn để chọn phong cách)</label>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div id="staffAvatarPreviewBox" onclick="_openStaffAvatarPicker()" style="cursor:pointer;">
+                ${typeof renderAnimatedAvatar==='function' ? renderAnimatedAvatar((myStaff?.avatar_emoji || (myStaff?.nickname||myStaff?.full_name||'?')[0]), myStaff?.staff_avatar_color||'', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">'+((myStaff?.full_name||'?')[0])+'</div>'}
               </div>
-              <input type="hidden" id="prof_avatar_emoji" value="${myStaff?.avatar_emoji||''}" />
+              <div style="flex:1;">
+                <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhấn avatar để chọn 11 phong cách animated + emoji tuỳ chỉnh</div>
+                <button onclick="_openStaffAvatarPicker()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--accent);background:rgba(99,102,241,0.08);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;">🎨 Đổi phong cách Avatar</button>
+              </div>
             </div>
+            <input type="hidden" id="prof_staff_avatar_color" value="${myStaff?.staff_avatar_color||''}" />
+            <input type="hidden" id="prof_avatar_emoji" value="${myStaff?.avatar_emoji||''}" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;">
             <div>
               <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Giới tính</label>
               <select id="prof_gender" data-val="${myStaff?.gender||''}"
@@ -1680,39 +1687,6 @@ function openPersonalizationPanel() {
               <input type="text" id="prof_birth_year" value="${myStaff?.birth_year||''}" placeholder="YYYY" maxlength="4"
                 style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
             </div>
-          </div>
-          <!-- Emoji picker popup (full categories) -->
-          <div id="emojiPickerBox" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-            <input type="text" id="emojiSearch" placeholder="🔍 Tìm emoji..." oninput="_filterEmoji(this.value)"
-              style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;margin-bottom:8px;box-sizing:border-box;" />
-            <div style="display:flex;gap:4px;margin-bottom:8px;overflow-x:auto;" id="emojiCatBar"></div>
-            <div id="emojiGrid" style="display:flex;flex-wrap:wrap;gap:2px;max-height:180px;overflow-y:auto;"></div>
-          </div>
-          <!-- Màu nền Avatar -->
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">🎨 Màu nền Avatar</label>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="staffAvatarColorPicker">
-              ${[
-                'linear-gradient(135deg,#7c6af7,#ec4899)',
-                'linear-gradient(135deg,#34d399,#059669)',
-                'linear-gradient(135deg,#f59e0b,#ef4444)',
-                'linear-gradient(135deg,#3b82f6,#8b5cf6)',
-                'linear-gradient(135deg,#ec4899,#f97316)',
-                'linear-gradient(135deg,#06b6d4,#3b82f6)',
-                'linear-gradient(135deg,#8b5cf6,#06b6d4)',
-                'linear-gradient(135deg,#10b981,#fbbf24)',
-                'linear-gradient(135deg,#f472b6,#a78bfa)',
-                'linear-gradient(135deg,#6366f1,#ec4899)',
-                'linear-gradient(135deg,#14b8a6,#a855f7)',
-                'linear-gradient(135deg,#f43f5e,#fb923c)'
-              ].map(g => `<div onclick="_pickStaffAvatarColor('${g}')" style="width:30px;height:30px;border-radius:8px;background:${g};cursor:pointer;border:2px solid ${g === (myStaff?.staff_avatar_color||'') ? 'var(--accent)' : 'transparent'};transition:border 0.2s;" title="Chọn màu"></div>`).join('')}
-            </div>
-            <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-              <input type="color" id="staffAvatarC1" value="#7c6af7" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0;" onchange="_customStaffAvatarColor()" />
-              <input type="color" id="staffAvatarC2" value="#ec4899" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0;" onchange="_customStaffAvatarColor()" />
-              <span style="font-size:10px;color:var(--text3);">Tuỳ chọn 2 màu</span>
-            </div>
-            <input type="hidden" id="prof_staff_avatar_color" value="${myStaff?.staff_avatar_color||''}" />
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">💪 Sở trường Jondo</label>
@@ -2008,7 +1982,7 @@ function showStaffCard(code) {
     '<div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px;box-shadow:0 -8px 40px rgba(0,0,0,0.3);">' +
       '<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>' +
       '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">' +
-        '<div style="width:56px;height:56px;border-radius:16px;background:' + (s.staff_avatar_color || 'var(--accent)') + ';display:flex;align-items:center;justify-content:center;font-size:' + (isEmoji?'28px':'22px') + ';font-weight:700;color:white;flex-shrink:0;">' + avatar + '</div>' +
+        (typeof renderAnimatedAvatar === 'function' ? renderAnimatedAvatar(avatar, s.staff_avatar_color || '', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:' + (s.staff_avatar_color || 'var(--accent)') + ';display:flex;align-items:center;justify-content:center;font-size:' + (isEmoji?'28px':'22px') + ';font-weight:700;color:white;flex-shrink:0;">' + avatar + '</div>') +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:700;font-size:16px;">' + (s.nickname || s.full_name) + '</div>' +
           (s.nickname ? '<div style="font-size:12px;color:var(--text3);">' + s.full_name + ' (' + s.staff_code + ')</div>' : '<div style="font-size:12px;color:var(--text3);">' + s.staff_code + '</div>') +
