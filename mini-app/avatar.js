@@ -11,7 +11,7 @@ const AVATAR_STYLES = [
   { id: 'windbell',  label: 'Phong Linh 🎐',        cat: 'epic', hasEmoji: true, defaultEmojis: ['🎐','🌸','🍃'], desc: 'Chuông gió đong đưa' },
   { id: 'carousel',  label: '3D Carousel 🎠',       cat: 'epic', hasEmoji: true, defaultEmojis: ['👾','💠','🌀'], desc: 'Vòng quay băng chuyền' },
   // CUTE BIBLE
-  { id: 'rainbow',   label: 'Cầu Vồng 🌈',         cat: 'cute', hasEmoji: false, desc: 'Cầu vồng lời hứa' },
+  { id: 'growth',    label: 'Bertumbuh 🌱',         cat: 'cute', hasEmoji: false, desc: 'Hạt giống → Cây mầm → Cây lớn' },
   { id: 'manna',     label: 'Bánh Manna 🍞',        cat: 'cute', hasEmoji: true, defaultEmojis: ['🍞','🥨'], desc: 'Mưa lương thực từ trời' },
   { id: 'whale',     label: 'Cá Voi Jonah 🐋',      cat: 'cute', hasEmoji: false, desc: 'Cá lớn bơi lội tung tăng' },
   { id: 'angel',     label: 'Bé Thiên Thần 👼',     cat: 'cute', hasEmoji: false, desc: 'Đôi cánh thiên thần vỗ bay' },
@@ -45,7 +45,12 @@ function parseAvatarConfig(rawValue) {
   if (!rawValue) return null;
   // New JSON format: { style, emojis, gradient }
   if (rawValue.startsWith('{')) {
-    try { return JSON.parse(rawValue); } catch(e) { return null; }
+    try {
+      const parsed = JSON.parse(rawValue);
+      // Migrate deprecated styles
+      if (parsed.style === 'rainbow') parsed.style = 'growth';
+      return parsed;
+    } catch(e) { return null; }
   }
   // Legacy: plain gradient string → treat as gradient-only (no animated style)
   return { style: null, gradient: rawValue, emojis: null };
@@ -130,46 +135,15 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-core-cyl" style="${core}">${L}</span>
       </div>`;
 
-    case 'rainbow': {
-      // 7 rainbow bands as stacked semicircles (outer→inner)
-      const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#8b5cf6'];
-      const bandW = Math.round(sz * 0.9);   // outermost width
-      const bandH = Math.round(bandW / 2);  // exact semicircle height
-      const step = Math.max(2, Math.round(sz * 0.035)); // shrink per band
-      const topBase = Math.round(sz * 0.12);
-      
-      const bands = colors.map((c, i) => {
-        const w = bandW - i * step * 2;
-        const h = bandH - i * step;
-        const t = topBase + i * step;
-        return `<div class="av-rainbow-band" style="width:${w}px;height:${h}px;top:${t}px;background:${c};"></div>`;
-      }).join('');
-      // Inner fill to hollow out center
-      const innerW = bandW - colors.length * step * 2;
-      const innerH = bandH - colors.length * step;
-      const innerT = topBase + colors.length * step;
-      const bgFill = customBg || '#f0fdf4';
-      const innerFill = `<div class="av-rainbow-band" style="width:${innerW}px;height:${innerH}px;top:${innerT}px;background:${bgFill};"></div>`;
-
-      // Letter traces the green band (index 3) TOP edge
-      // Green band: w = bandW - 3*step*2, h = bandH - 3*step, top = topBase + 3*step
-      const greenW = bandW - 3 * step * 2;
-      const greenH = bandH - 3 * step;
-      const greenT = topBase + 3 * step;
-      // The green band is a semicircle: center at (sz/2, greenT+greenH), radius = greenW/2
-      // Arc path along the TOP of this semicircle:
-      const arcR = Math.round(greenW / 2);
-      const cx = Math.round(sz / 2);
-      const arcY = greenT + greenH; // baseline of the semicircle
-      const startX = cx - arcR;
-      const endX = cx + arcR;
-      
-      return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:hidden;">
-        ${bands}${innerFill}
-        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};offset-path:path('M ${startX},${arcY} A ${arcR},${arcR} 0 0,1 ${endX},${arcY}');">
-          ${L}
-        </span>
-        <span class="av-dove" style="position:absolute;font-size:${efo}px;bottom:${Math.round(sz*0.1)}px;right:${sz<50?2:4}px;z-index:15;">🕊️</span>
+    case 'growth': {
+      const eSz = Math.round(sz * 0.35);
+      const plantBot = Math.round(sz * 0.18);
+      return `<div class="av-growth" style="${wrap};${bgStyle}background:${customBg||'linear-gradient(180deg,#ecfdf5 0%,#d1fae5 60%,#a7f3d0 100%)'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:hidden;">
+        <div class="av-growth-soil"></div>
+        <span class="av-growth-stage av-growth-seed" style="font-size:${eSz}px;bottom:${plantBot}px;left:50%;transform:translateX(-50%);">🌰</span>
+        <span class="av-growth-stage av-growth-sprout" style="font-size:${eSz}px;bottom:${plantBot}px;left:50%;transform:translateX(-50%);">🌱</span>
+        <span class="av-growth-stage av-growth-tree" style="font-size:${Math.round(sz*0.45)}px;bottom:${plantBot - 4}px;left:50%;transform:translateX(-50%);">🌳</span>
+        <span style="${core};${txtStyle}color:${customTxt||'#166534'};z-index:10;text-shadow:0 1px 3px rgba(255,255,255,0.7);">${L}</span>
       </div>`;
     }
 
