@@ -237,19 +237,14 @@ async function loadReports() {
       html += '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
     } else {
       funnelData.forEach((d, i) => {
-        const phaseKey = PHASES_ORDER[i];
         const isLast = i === PHASES_ORDER.length - 1;
 
-        // 3 states:
         // 🟢 Passed: alive profiles that moved BEYOND this phase
         const passed = isLast ? 0 : alive.filter(p => phaseReached(p.phase) > i).length;
         // 🟡 Current: alive profiles EXACTLY at this phase
-        const current = alive.filter(p => {
-          const idx = phaseReached(p.phase);
-          return idx === i || (phaseKey === 'chakki' && p.phase === 'new');
-        }).length;
-        // 🔴 Dropped: dropout profiles whose phase = this phase
-        const dropped = dropouts.filter(p => p.phase === phaseKey || (phaseKey === 'chakki' && (p.phase === 'new' || p.phase === 'chakki'))).length;
+        const current = alive.filter(p => phaseReached(p.phase) === i).length;
+        // 🔴 Dropped: dropout profiles that REACHED at least this phase (phase >= i)
+        const dropped = dropouts.filter(p => phaseReached(p.phase) >= i).length;
 
         const phaseTotal = passed + current + dropped;
         const passedPct = phaseTotal > 0 ? Math.round(passed / phaseTotal * 100) : 0;
