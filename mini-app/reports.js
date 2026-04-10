@@ -188,6 +188,10 @@ function _renderReports(el, subUnitIdx) {
   let html = '';
 
   // ── HEADER + DROPDOWN ──
+  console.log('[RPT v11] Rendering:', activeLabel, 'profiles:', total, 'alive:', alive.length, 'drop:', dropouts.length);
+  // Debug: log each dropout phase
+  dropouts.forEach(d => console.log('[RPT] dropout:', d.full_name, 'phase:', d.phase, 'idx:', phaseIdx(d.phase)));
+
   html += `<div style="margin-bottom:16px;">
     <div style="font-size:15px;font-weight:700;margin-bottom:4px;">📊 Báo cáo · ${activeLabel || 'Đơn vị'}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Kỳ: ${semName} · ${total} hồ sơ · ${alive.length} alive · ${dropouts.length} dropout</div>`;
@@ -387,17 +391,38 @@ function _renderReports(el, subUnitIdx) {
     semLabels.forEach((lbl, i) => {
       svg += `<text x="${getX(i)}" y="${H - 4}" text-anchor="middle" fill="var(--text2)" font-size="8" font-weight="700">${lbl}</text>`;
     });
+    // Build collision map to offset overlapping dots
+    const dotPositions = {}; // key = `semIdx_value` => count
+    trendLines.forEach((line, li) => {
+      line.data.forEach((v, si) => {
+        const key = `${si}_${v}`;
+        if (!dotPositions[key]) dotPositions[key] = [];
+        dotPositions[key].push(li);
+      });
+    });
+
     // Lines + dots
-    trendLines.forEach(line => {
+    trendLines.forEach((line, li) => {
       if (n === 1) {
-        svg += `<circle cx="${getX(0)}" cy="${getY(line.data[0])}" r="4" fill="${line.color}" opacity="0.9"/>`;
-        if (line.data[0] > 0) svg += `<text x="${getX(0) + 8}" y="${getY(line.data[0]) + 3}" fill="${line.color}" font-size="8" font-weight="700">${line.data[0]}</text>`;
+        const key = `0_${line.data[0]}`;
+        const group = dotPositions[key];
+        const offsetIdx = group.indexOf(li);
+        const offsetY = group.length > 1 ? (offsetIdx - (group.length - 1) / 2) * 10 : 0;
+        const cx = getX(0);
+        const cy = getY(line.data[0]) + offsetY;
+        svg += `<circle cx="${cx}" cy="${cy}" r="4" fill="${line.color}" opacity="0.9"/>`;
+        if (line.data[0] > 0) svg += `<text x="${cx + 8}" y="${cy + 3}" fill="${line.color}" font-size="8" font-weight="700">${line.data[0]}</text>`;
       } else {
         const points = line.data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
         svg += `<polyline points="${points}" fill="none" stroke="${line.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
         line.data.forEach((v, i) => {
-          svg += `<circle cx="${getX(i)}" cy="${getY(v)}" r="3" fill="${line.color}"/>`;
-          if (v > 0) svg += `<text x="${getX(i)}" y="${getY(v) - 6}" text-anchor="middle" fill="${line.color}" font-size="7" font-weight="700">${v}</text>`;
+          const key = `${i}_${v}`;
+          const group = dotPositions[key];
+          const offsetIdx = group.indexOf(li);
+          const offsetY = group.length > 1 ? (offsetIdx - (group.length - 1) / 2) * 8 : 0;
+          const cy = getY(v) + offsetY;
+          svg += `<circle cx="${getX(i)}" cy="${cy}" r="3" fill="${line.color}"/>`;
+          if (v > 0) svg += `<text x="${getX(i)}" y="${cy - 5}" text-anchor="middle" fill="${line.color}" font-size="7" font-weight="700">${v}</text>`;
         });
       }
     });
