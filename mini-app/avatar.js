@@ -94,7 +94,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <div class="av-orb-ring av-orb-r1"><span class="av-orb-e" style="font-size:${efi}px">${e(0)}</span></div>
         <div class="av-orb-ring av-orb-r2"><span class="av-orb-e" style="font-size:${efi}px">${e(1)}</span></div>
         <div class="av-orb-ring av-orb-r3"><span class="av-orb-e" style="font-size:${efi}px">${e(2)}</span></div>
-        <span class="av-core-dark" style="${core}">${L}</span>
+        <span class="av-core-dark av-letter-orbital" style="${core}">${L}</span>
       </div>`;
 
     case 'eruption':
@@ -103,7 +103,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-erupt av-er2" style="font-size:${efi}px">${e(1)}</span>
         <span class="av-erupt av-er3" style="font-size:${efi}px">${e(2)}</span>
         ${emojis.length>3?`<span class="av-erupt av-er4" style="font-size:${efi}px">${e(3)}</span>`:''}
-        <span class="av-core-fire" style="${core}">${L}</span>
+        <span class="av-core-fire av-letter-fire" style="${core}">${L}</span>
       </div>`;
 
     case 'constel':
@@ -112,7 +112,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-star av-st2" style="font-size:${Math.round(efo*0.7)}px">${e(1)}</span>
         <span class="av-star av-st3" style="font-size:${efi}px">${e(2)}</span>
         <span class="av-star av-st4" style="font-size:${efo}px">${e(3%emojis.length)}</span>
-        <span class="av-core-star" style="${core}">${L}</span>
+        <span class="av-core-star av-letter-star" style="${core}">${L}</span>
       </div>`;
 
     case 'windbell':
@@ -122,7 +122,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
           <div class="av-wb-str av-wb-s2"><span style="font-size:${efi}px">${e(1)}</span></div>
           <div class="av-wb-str av-wb-s3"><span style="font-size:${efi}px">${e(2)}</span></div>
         </div>
-        <span class="av-core-bell" style="${core};margin-top:${Math.round(sz*0.18)}px;color:var(--text2);">${L}</span>
+        <span class="av-core-bell av-letter-bell" style="${core};margin-top:${Math.round(sz*0.18)}px;color:var(--text2);">${L}</span>
       </div>`;
 
     case 'carousel':
@@ -143,7 +143,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-growth-stage av-growth-seed" style="font-size:${eSz}px;bottom:${plantBot}px;left:50%;transform:translateX(-50%);">🌰</span>
         <span class="av-growth-stage av-growth-sprout" style="font-size:${eSz}px;bottom:${plantBot}px;left:50%;transform:translateX(-50%);">🌱</span>
         <span class="av-growth-stage av-growth-tree" style="font-size:${Math.round(sz*0.45)}px;bottom:${plantBot - 4}px;left:50%;transform:translateX(-50%);">🌳</span>
-        <span style="${core};${txtStyle}color:${customTxt||'#166534'};z-index:10;text-shadow:0 1px 3px rgba(255,255,255,0.7);">${L}</span>
+        <span class="av-letter-growth" style="${core};${txtStyle}color:${customTxt||'#166534'};z-index:10;text-shadow:0 1px 3px rgba(255,255,255,0.7);">${L}</span>
       </div>`;
     }
 
@@ -151,13 +151,13 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
       return `<div class="av-manna" style="${wrap};background:#fdf4ff;border-radius:${Math.round(sz*0.3)}px;">
         <span class="av-food av-f1" style="font-size:${efi}px">${e(0)}</span>
         <span class="av-food av-f2" style="font-size:${efi}px">${e(1)}</span>
-        <span style="${core};color:#334155;">${L}</span>
+        <span class="av-letter-manna" style="${core};color:#334155;">${L}</span>
       </div>`;
 
     case 'whale':
       return `<div class="av-whale" style="${wrap}">
         <div class="av-wh-belly"><span class="av-wh-fish">🐋</span></div>
-        <span style="${core};color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.3);">${L}</span>
+        <span class="av-letter-whale" style="${core};color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.3);">${L}</span>
       </div>`;
 
     case 'angel':
@@ -165,7 +165,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <div class="av-halo"></div>
         <div class="av-wing-wrap-l"><span class="av-wflap">🪽</span></div>
         <div class="av-wing-wrap-r"><span class="av-wflap">🪽</span></div>
-        <span style="${core};color:#f59e0b;z-index:10;">${L}</span>
+        <span class="av-letter-angel" style="${core};color:#f59e0b;z-index:10;">${L}</span>
       </div>`;
 
     case 'ark': {
@@ -173,7 +173,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
       return `<div class="av-ark" style="${wrap};background:linear-gradient(180deg,#bae6fd 55%,#0ea5e9 55%,#0369a1);overflow:hidden;border-radius:50%;">
         <div class="av-ark-w2"></div><div class="av-ark-w1"></div>
         <span class="av-ark-ship" style="font-size:${shipSz}px;left:50%;transform:translateX(-50%);">🚢</span>
-        <span style="position:absolute;top:10%;left:50%;transform:translateX(-50%);font-size:${fz}px;font-weight:900;color:#1e3a5f;z-index:20;text-shadow:0 1px 3px rgba(255,255,255,0.6);">${L}</span>
+        <span class="av-letter-ark" style="position:absolute;top:10%;left:50%;font-size:${fz}px;font-weight:900;color:#1e3a5f;z-index:20;text-shadow:0 1px 3px rgba(255,255,255,0.6);">${L}</span>
       </div>`;
     }
 
@@ -184,7 +184,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-fish-sw av-fs1">🐟</span>
         <span class="av-fish-sw av-fs2">🐠</span>
         <span class="av-fish-sw av-fs3">🐡</span>
-        <span style="${core};color:#78350f;z-index:10;">${L}</span>
+        <span class="av-letter-fish" style="${core};color:#78350f;z-index:10;">${L}</span>
       </div>`;
     }
 
@@ -193,7 +193,7 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
         <span class="av-fruitbob av-fb1" style="font-size:${efi}px">${e(0)}</span>
         <span class="av-fruitbob av-fb2" style="font-size:${efi}px">${e(1)}</span>
         <span class="av-fruitbob av-fb3" style="font-size:${efi}px">${e(2)}</span>
-        <span style="${core};color:#be123c;">${L}</span>
+        <span class="av-letter-fruit" style="${core};color:#be123c;">${L}</span>
       </div>`;
 
     default:

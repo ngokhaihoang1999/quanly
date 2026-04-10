@@ -8,6 +8,51 @@
 .av-bob { animation: av-bob 1s ease-in-out infinite alternate; }
 .av-dove { animation: av-wobble 0.5s infinite alternate; }
 
+/* ── LETTER ANIMATIONS (per style) ──────────────────────── */
+/* Orbital: slow breathe */
+.av-letter-orbital { animation: av-lt-breathe 2.5s ease-in-out infinite alternate; }
+@keyframes av-lt-breathe { 0% { transform: scale(0.95); opacity: 0.85; } 100% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 12px rgba(255,255,255,0.6); } }
+
+/* Eruption/Fire: flicker shake */
+.av-letter-fire { animation: av-lt-flicker 0.3s ease-in-out infinite alternate; }
+@keyframes av-lt-flicker { 0% { transform: translateY(1px) scale(1); } 50% { transform: translateY(-2px) scale(1.06); } 100% { transform: translateY(0px) scale(0.98); } }
+
+/* Constellation: twinkle glow */
+.av-letter-star { animation: av-lt-twinkle 2s ease-in-out infinite alternate; }
+@keyframes av-lt-twinkle { 0% { text-shadow: 0 0 5px #818cf8; transform: scale(1); } 100% { text-shadow: 0 0 20px #c4b5fd, 0 0 40px #818cf8; transform: scale(1.08); } }
+
+/* Windbell: sway like hanging */
+.av-letter-bell { animation: av-lt-sway 2.5s ease-in-out infinite alternate; transform-origin: top center; }
+@keyframes av-lt-sway { 0% { transform: rotate(-6deg) translateX(-2px); } 100% { transform: rotate(6deg) translateX(2px); } }
+
+/* Growth: sprout up bounce */
+.av-letter-growth { animation: av-lt-sprout 3s ease-in-out infinite; }
+@keyframes av-lt-sprout { 0%,100% { transform: translateY(0) scale(1); } 25% { transform: translateY(-4px) scale(1.06); } 50% { transform: translateY(0) scale(1); } 75% { transform: translateY(-2px) scale(1.03); } }
+
+/* Manna: gentle float */
+.av-letter-manna { animation: av-lt-float 2s ease-in-out infinite alternate; }
+@keyframes av-lt-float { 0% { transform: translateY(2px) rotate(-2deg); } 100% { transform: translateY(-3px) rotate(2deg); } }
+
+/* Whale: wave riding */
+.av-letter-whale { animation: av-lt-wave 3s ease-in-out infinite; }
+@keyframes av-lt-wave { 0%,100% { transform: translateY(0) translateX(0); } 25% { transform: translateY(-3px) translateX(2px); } 50% { transform: translateY(1px) translateX(0); } 75% { transform: translateY(-2px) translateX(-2px); } }
+
+/* Angel: levitate */
+.av-letter-angel { animation: av-lt-levitate 2s ease-in-out infinite alternate; }
+@keyframes av-lt-levitate { 0% { transform: translateY(2px); text-shadow: 0 2px 4px rgba(245,158,11,0.3); } 100% { transform: translateY(-4px); text-shadow: 0 4px 12px rgba(245,158,11,0.6); } }
+
+/* Ark: rock with ship */
+.av-letter-ark { animation: av-lt-rock 3s ease-in-out infinite alternate; }
+@keyframes av-lt-rock { 0% { transform: translateX(-50%) translateY(0) rotate(-3deg); } 100% { transform: translateX(-50%) translateY(-2px) rotate(3deg); } }
+
+/* Fishing: bob on water */
+.av-letter-fish { animation: av-lt-bob 2s ease-in-out infinite; }
+@keyframes av-lt-bob { 0%,100% { transform: translateY(0); } 30% { transform: translateY(-3px); } 60% { transform: translateY(2px); } }
+
+/* Fruit: playful bounce */
+.av-letter-fruit { animation: av-lt-bounce 1.5s ease-in-out infinite; }
+@keyframes av-lt-bounce { 0%,100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-5px) scale(1.05); } 60% { transform: translateY(0) scale(0.97); } }
+
 /* ── 1. ORBITAL ──────────────────────────────────────────── */
 .av-orbital { transform-style: preserve-3d; perspective: 400px; }
 .av-orb-ring {
