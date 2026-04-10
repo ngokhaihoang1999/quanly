@@ -261,60 +261,89 @@ async function loadReports() {
     html += '</div></div>';
 
     // ═════════════════════════════════════════════════════
-    // MODULE 3: XU HƯỚNG THEO THÁNG (6 tháng)
+    // MODULE 3: XU HƯỚNG THEO KỲ KHAI GIẢNG
     // ═════════════════════════════════════════════════════
-    const months = [];
-    for (let i = 2; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      months.push({ key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: `T${d.getMonth()+1}` });
+    // Group profiles by semester
+    const semesters = (allSemesters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const semIds = semesters.map(s => s.id);
+    const semLabels = semesters.map(s => s.name || '?');
+
+    // Count profiles reaching each phase per semester
+    // Use ALL profiles (alive + dropout) to show total input per semester
+    const allProfilesInScope = profiles; // already scoped
+    function countBySem(filterFn) {
+      return semIds.map(sid => allProfilesInScope.filter(p => {
+        const pFull = allProfiles.find(x => x.id === p.id);
+        return (pFull?.semester_id === sid) && filterFn(p);
+      }).length);
     }
+    // Hapja approved per semester
+    const hapjaBySem = semIds.map(sid => allHapja.filter(h => h.status === 'approved' && (h.semester_id === sid || (!h.semester_id && sid === semIds[0]))).length);
 
-    function countByMonth(items, dateField = 'created_at') {
-      const counts = {};
-      months.forEach(m => counts[m.key] = 0);
-      items.forEach(item => {
-        const d = item[dateField];
-        if (!d) return;
-        const key = d.substring(0, 7);
-        if (counts[key] !== undefined) counts[key]++;
-      });
-      return months.map(m => counts[m.key]);
-    }
-
-    const approvedHapja = allHapja.filter(h => h.status === 'approved');
-    const bbRecords = allRecords.filter(r => r.record_type === 'bien_ban');
-    const moKtRecords = allRecords.filter(r => r.record_type === 'mo_kt');
-
-    const trendSeries = [
-      { label: '🍎 Hapja duyệt', data: countByMonth(approvedHapja), color: '#f59e0b' },
-      { label: '📝 BC BB', data: countByMonth(bbRecords), color: '#22c55e' },
-      { label: '📖 Mở KT', data: countByMonth(moKtRecords), color: '#6366f1' },
+    const trendLines = [
+      { label: 'Hapja', data: hapjaBySem, color: '#f59e0b' },
+      { label: 'TV Hình', data: countBySem(p => PHASE_IDX[p.phase] >= 1), color: '#ef4444' },
+      { label: 'TV', data: countBySem(p => PHASE_IDX[p.phase] >= 2), color: '#6366f1' },
+      { label: 'BB', data: countBySem(p => PHASE_IDX[p.phase] >= 3), color: '#22c55e' },
+      { label: 'Center', data: countBySem(p => PHASE_IDX[p.phase] >= 4), color: '#8b5cf6' },
     ];
 
     html += `<div class="rpt-section">
-      <div class="rpt-title" onclick="this.nextElementSibling.classList.toggle('rpt-hidden')">📈 XU HƯỚNG (3 tháng)</div>
+      <div class="rpt-title" onclick="this.nextElementSibling.classList.toggle('rpt-hidden')">📈 XU HƯỚNG THEO KỲ</div>
       <div>`;
 
-    trendSeries.forEach(series => {
-      const max = Math.max(...series.data, 1);
-      const total = series.data.reduce((a,b) => a+b, 0);
+    if (semesters.length === 0) {
+      html += '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Chưa có kỳ khai giảng</div>';
+    } else {
+      // SVG line chart
+      const W = 300, H = 140, PAD_L = 30, PAD_R = 10, PAD_T = 15, PAD_B = 25;
+      const chartW = W - PAD_L - PAD_R;
+      const chartH = H - PAD_T - PAD_B;
+      const maxVal = Math.max(...trendLines.flatMap(l => l.data), 1);
+      const n = semIds.length;
+
+      function getX(i) { return PAD_L + (n === 1 ? chartW / 2 : (i / (n - 1)) * chartW); }
+      function getY(v) { return PAD_T + chartH - (v / maxVal) * chartH; }
+
+      let svgContent = '';
+      // Grid lines
+      const gridSteps = 4;
+      for (let g = 0; g <= gridSteps; g++) {
+        const y = PAD_T + (g / gridSteps) * chartH;
+        const val = Math.round(maxVal * (1 - g / gridSteps));
+        svgContent += `<line x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>`;
+        svgContent += `<text x="${PAD_L - 4}" y="${y + 3}" text-anchor="end" fill="var(--text3)" font-size="8" font-weight="600">${val}</text>`;
+      }
+      // X labels
+      semLabels.forEach((lbl, i) => {
+        const x = getX(i);
+        svgContent += `<text x="${x}" y="${H - 4}" text-anchor="middle" fill="var(--text2)" font-size="8" font-weight="700">${lbl}</text>`;
+      });
+      // Lines + dots
+      trendLines.forEach(line => {
+        if (n === 1) {
+          // Single point
+          svgContent += `<circle cx="${getX(0)}" cy="${getY(line.data[0])}" r="4" fill="${line.color}" opacity="0.9"/>`;
+          svgContent += `<text x="${getX(0) + 6}" y="${getY(line.data[0]) - 4}" fill="${line.color}" font-size="8" font-weight="700">${line.data[0]}</text>`;
+        } else {
+          // Polyline
+          const points = line.data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
+          svgContent += `<polyline points="${points}" fill="none" stroke="${line.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
+          // Dots + values
+          line.data.forEach((v, i) => {
+            svgContent += `<circle cx="${getX(i)}" cy="${getY(v)}" r="3" fill="${line.color}"/>`;
+            if (v > 0) svgContent += `<text x="${getX(i)}" y="${getY(v) - 6}" text-anchor="middle" fill="${line.color}" font-size="7" font-weight="700">${v}</text>`;
+          });
+        }
+      });
+
       html += `<div class="rpt-trend-card">
-        <div class="rpt-trend-header">
-          <span>${series.label}</span>
-          <span class="rpt-trend-total" style="color:${series.color};">${total}</span>
-        </div>
-        <div class="rpt-bar-chart">
-          ${series.data.map((val, i) => `
-            <div class="rpt-bar-col">
-              <div class="rpt-bar-val">${val}</div>
-              <div class="rpt-bar" style="height:${Math.max(val/max*60, val > 0 ? 4 : 0)}px;background:${series.color};"></div>
-              <div class="rpt-bar-label">${months[i].label}</div>
-            </div>
-          `).join('')}
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">${svgContent}</svg>
+        <div class="rpt-legend">
+          ${trendLines.map(l => `<span class="rpt-legend-item"><span class="rpt-legend-dot" style="background:${l.color};"></span>${l.label}</span>`).join('')}
         </div>
       </div>`;
-    });
+    }
 
     html += '</div></div>';
 
