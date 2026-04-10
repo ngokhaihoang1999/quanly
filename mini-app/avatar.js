@@ -563,11 +563,9 @@ function _openStaffAvatarPicker() {
     <div style="width:100%;max-width:520px;max-height:90vh;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:20px 16px 36px;box-shadow:0 -8px 50px rgba(0,0,0,0.35);">
       <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
       
-      <!-- PREVIEW -->
       <div style="display:flex;justify-content:center;margin-bottom:20px;">
         <div id="avPickerPreview" style="transform:scale(1.2);"></div>
       </div>
-      <div id="avPickerStyleName" style="text-align:center;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:20px;min-height:18px;"></div>
 
       <!-- STYLE GRID -->
       <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">✨ Phong cách Epic</div>
@@ -578,7 +576,10 @@ function _openStaffAvatarPicker() {
 
       <!-- EMOJI PICKER -->
       <div id="avEmojiSection" style="display:none;">
-        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">🎨 Chọn Emoji (nhấn để thêm/bỏ)</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
+          <span>🎨 Chọn Emoji (nhấn để thêm)</span>
+          <input type="text" placeholder="➕ Nhập từ phím..." style="width:110px;background:none;border:none;border-bottom:1px dashed var(--accent);color:var(--text);font-size:12px;font-weight:600;text-align:right;outline:none;" oninput="if(this.value.trim()){_addCustomEmoji(this.value.trim()); this.value='';}" title="Gõ emoji bất kỳ từ bàn phím điện thoại của bạn" />
+        </div>
         <div id="avSelectedEmojis" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:32px;padding:8px 10px;background:var(--surface2);border-radius:10px;border:1px dashed var(--border);"></div>
         <div id="avEmojiGrid" style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow-y:auto;margin-bottom:16px;padding:4px;"></div>
       </div>
