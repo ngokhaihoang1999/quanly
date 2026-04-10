@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css?v=2026040911" />
   <link rel="stylesheet" href="avatar.css?v=2026041016" />
+  <link rel="stylesheet" href="reports.css?v=2026041001" />
 </head>
 <body>
 <div class="header">
@@ -44,6 +45,7 @@
     <div class="tab" data-tab="priority" onclick="switchMainTab(this,'priority')">⚡ Ưu tiên</div>
     <div class="tab" data-tab="calendar" onclick="switchMainTab(this,'calendar')">📅 Lịch</div>
     <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')">🏗️ Cơ cấu</div>
+    <div class="tab" data-tab="reports" id="tabReportsBtn" onclick="switchMainTab(this,'reports')" style="display:none;">📊 Báo cáo</div>
     <div class="tab" data-tab="staff" id="tabStaffBtn" onclick="switchMainTab(this,'staff')" style="display:none;">👥 TĐ</div>
   </div>
 </div>
@@ -125,6 +127,11 @@
       </div>
     </div>
     <div id="structureTree"><div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-sub">Đang tải...</div></div></div>
+  </div>
+
+  <!-- BÁO CÁO -->
+  <div id="tab-reports" style="display:none;">
+    <div id="reportContent"><div class="empty-state"><div class="empty-icon">📊</div><div class="empty-sub">Đang tải...</div></div></div>
   </div>
 
   <!-- DETAIL VIEW -->
@@ -598,7 +605,8 @@
 </div>
 <script src="webhook.js?v=2026040910"></script>
 <script src="avatar.js?v=2026041017"></script>
-<script src="core.js?v=2026041015"></script>
+<script src="reports.js?v=2026041001"></script>
+<script src="core.js?v=2026041016"></script>
 <script src="dashboard.js?v=2026040910"></script>
 <script src="profiles.js?v=2026041001"></script>
 <script src="hapja.js?v=2026040910"></script>

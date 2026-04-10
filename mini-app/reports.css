@@ -1,0 +1,196 @@
+/* ============ REPORTS TAB ============ */
+
+/* Sections */
+.rpt-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.rpt-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text1);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.rpt-hidden { display: none !important; }
+
+/* Badges */
+.rpt-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: white;
+}
+.rpt-badge-red { background: #ef4444; }
+.rpt-badge-green { background: var(--green); }
+.rpt-badge-yellow { background: #f59e0b; }
+
+/* Chips */
+.rpt-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 10px;
+  color: white;
+}
+.rpt-chip-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+.rpt-chip-yellow { background: rgba(245,158,11,0.15); color: #d97706; }
+.rpt-chip-blue { background: rgba(99,102,241,0.12); color: #6366f1; }
+
+/* Warning list */
+.rpt-warn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rpt-warn-item {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.rpt-warn-item:hover { filter: brightness(0.95); }
+.rpt-warn-red { background: rgba(239,68,68,0.08); color: #dc2626; border-left: 3px solid #ef4444; }
+.rpt-warn-orange { background: rgba(245,158,11,0.08); color: #d97706; border-left: 3px solid #f59e0b; }
+.rpt-warn-yellow { background: rgba(245,158,11,0.06); color: #b45309; border-left: 3px solid #fbbf24; }
+.rpt-warn-blue { background: rgba(99,102,241,0.06); color: #4f46e5; border-left: 3px solid #818cf8; }
+
+/* ── FUNNEL ── */
+.rpt-funnel-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 60px 40px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.rpt-funnel-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rpt-funnel-bar-wrap {
+  height: 20px;
+  background: var(--surface2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.rpt-funnel-bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+  min-width: 0;
+}
+.rpt-funnel-num {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text1);
+  text-align: right;
+}
+.rpt-funnel-conv {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+}
+
+/* ── BAR CHART ── */
+.rpt-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  padding: 0 4px;
+}
+.rpt-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.rpt-bar-val {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 2px;
+}
+.rpt-bar {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease;
+}
+.rpt-bar-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-top: 3px;
+}
+
+/* ── NDD TABLE ── */
+.rpt-ndd-table {
+  font-size: 11px;
+  width: 100%;
+}
+.rpt-ndd-header {
+  display: grid;
+  grid-template-columns: 1fr 40px 36px 30px 80px;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+.rpt-ndd-row {
+  display: grid;
+  grid-template-columns: 1fr 40px 36px 30px 80px;
+  gap: 4px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.rpt-ndd-row:last-child { border-bottom: none; }
+.rpt-ndd-name {
+  font-weight: 600;
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rpt-ndd-num {
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+.rpt-ndd-bar {
+  display: flex;
+  align-items: center;
+}
+.rpt-phase-bar {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface2);
+  gap: 1px;
+}

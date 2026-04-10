@@ -892,7 +892,7 @@ function switchFormTab(el, cardId) {
 }
 function switchMainTab(el, tab) {
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+tab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
@@ -903,6 +903,7 @@ function switchMainTab(el, tab) {
   if (tab==='structure') { if (!isFresh('structure')) loadStructure(); }
   if (tab==='calendar' && typeof loadCalendar === 'function') { if (!isFresh('calendar')) loadCalendar(); }
   if (tab==='priority' && typeof loadPriority === 'function') { if (!isFresh('priority')) loadPriority(); }
+  if (tab==='reports' && typeof loadReports === 'function') { if (!isFresh('reports')) loadReports(); }
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============
@@ -1029,6 +1030,14 @@ function applyPermissions() {
   // Tab TĐ: only visible for admin (manage_positions permission)
   const tabStaffBtn = document.getElementById('tabStaffBtn');
   if (tabStaffBtn) tabStaffBtn.style.display = hasPermission('manage_positions') ? '' : 'none';
+  // Tab Báo cáo: visible for GYJN+ (anyone with team scope or higher)
+  const tabReportsBtn = document.getElementById('tabReportsBtn');
+  if (tabReportsBtn) {
+    const scope = getScope();
+    const pos = getCurrentPosition();
+    const showReports = ['team','group','area','system'].includes(scope) || ['gyjn','bgyjn','tjn','yjyn','admin'].includes(pos);
+    tabReportsBtn.style.display = showReports ? '' : 'none';
+  }
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();
   // Init priority badge + notification count (deferred to let DOM/data settle)
