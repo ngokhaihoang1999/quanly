@@ -130,12 +130,16 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
       </div>`;
 
     // ── CUTE BIBLE ──
-    case 'rainbow':
-      return `<div class="av-rain" style="${wrap};background:#f0fdf4;border-radius:50%;border:${sz<50?2:3}px solid #fff;">
-        <span style="position:absolute;top:${sz<50?-3:-5}px;font-size:${Math.round(sz*0.6)}px;opacity:0.8;">🌈</span>
-        <span style="position:absolute;font-size:${efo}px;top:${Math.round(sz*0.18)}px;right:${sz<50?-3:-5}px;z-index:15;" class="av-dove">🕊️</span>
-        <span class="av-bob" style="${core};color:#166534;">${L}</span>
+    case 'rainbow': {
+      const arcR = Math.round(sz * 0.38); // arc radius
+      return `<div class="av-rain" style="${wrap};${bgStyle}background:${customBg||'#f0fdf4'};border-radius:50%;border:${sz<50?2:3}px solid #fff;overflow:visible;">
+        <div class="av-rainbow-arc" style="width:${sz}px;height:${Math.round(sz*0.5)}px;"></div>
+        <span class="av-rain-letter" style="font-size:${fz}px;font-weight:900;${txtStyle}color:${customTxt||'#166534'};">
+          ${L}
+        </span>
+        <span class="av-dove" style="position:absolute;font-size:${efo}px;top:${Math.round(sz*0.12)}px;right:${sz<50?-3:-6}px;z-index:15;">🕊️</span>
       </div>`;
+    }
 
     case 'manna':
       return `<div class="av-manna" style="${wrap};background:#fdf4ff;border-radius:${Math.round(sz*0.3)}px;">
