@@ -276,24 +276,22 @@ async function loadReports() {
     const semIds = semesters.map(s => s.id);
     const semLabels = semesters.map(s => s.name || '?');
 
-    // Count profiles reaching each phase per semester
-    // Use ALL profiles (alive + dropout) to show total input per semester
+    // Count profiles reaching each phase per semester (cumulative)
+    // Hapja = total profiles in that semester (every profile starts from Hapja)
     const allProfilesInScope = profiles; // already scoped
-    function countBySem(filterFn) {
+    function countBySem(minPhaseIdx) {
       return semIds.map(sid => allProfilesInScope.filter(p => {
         const pFull = allProfiles.find(x => x.id === p.id);
-        return (pFull?.semester_id === sid) && filterFn(p);
+        return (pFull?.semester_id === sid) && (PHASE_IDX[p.phase] !== undefined ? PHASE_IDX[p.phase] >= minPhaseIdx : false);
       }).length);
     }
-    // Hapja approved per semester
-    const hapjaBySem = semIds.map(sid => allHapja.filter(h => h.status === 'approved' && (h.semester_id === sid || (!h.semester_id && sid === semIds[0]))).length);
-
+    // Hapja = all profiles in semester (phase >= 0, i.e. everyone)
     const trendLines = [
-      { label: 'Hapja', data: hapjaBySem, color: '#f59e0b' },
-      { label: 'TV Hình', data: countBySem(p => PHASE_IDX[p.phase] >= 1), color: '#ef4444' },
-      { label: 'TV', data: countBySem(p => PHASE_IDX[p.phase] >= 2), color: '#6366f1' },
-      { label: 'BB', data: countBySem(p => PHASE_IDX[p.phase] >= 3), color: '#22c55e' },
-      { label: 'Center', data: countBySem(p => PHASE_IDX[p.phase] >= 4), color: '#8b5cf6' },
+      { label: 'Hapja', data: countBySem(0), color: '#f59e0b' },
+      { label: 'TV Hình', data: countBySem(1), color: '#ef4444' },
+      { label: 'TV', data: countBySem(2), color: '#6366f1' },
+      { label: 'BB', data: countBySem(3), color: '#22c55e' },
+      { label: 'Center', data: countBySem(4), color: '#8b5cf6' },
     ];
 
     html += `<div class="rpt-section">
