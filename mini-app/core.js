@@ -1662,7 +1662,7 @@ function openPersonalizationPanel() {
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">🎨 Avatar (nhấn để chọn phong cách)</label>
             <div style="display:flex;align-items:center;gap:14px;">
               <div id="staffAvatarPreviewBox" onclick="_openStaffAvatarPicker()" style="cursor:pointer;">
-                ${typeof renderAnimatedAvatar==='function' ? renderAnimatedAvatar((myStaff?.avatar_emoji || (myStaff?.nickname||myStaff?.full_name||'?')[0]), myStaff?.staff_avatar_color||'', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">'+((myStaff?.full_name||'?')[0])+'</div>'}
+                ${typeof renderAnimatedAvatar==='function' ? renderAnimatedAvatar(((myStaff?.nickname||myStaff?.full_name||'?')[0]), myStaff?.staff_avatar_color||'', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">'+((myStaff?.full_name||'?')[0])+'</div>'}
               </div>
               <div style="flex:1;">
                 <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhấn avatar để chọn 11 phong cách animated + emoji tuỳ chỉnh</div>
@@ -1670,7 +1670,7 @@ function openPersonalizationPanel() {
               </div>
             </div>
             <input type="hidden" id="prof_staff_avatar_color" value="${myStaff?.staff_avatar_color||''}" />
-            <input type="hidden" id="prof_avatar_emoji" value="${myStaff?.avatar_emoji||''}" />
+            <input type="hidden" id="prof_avatar_emoji" value="" />
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;">
             <div>
@@ -1969,8 +1969,8 @@ function showStaffCard(code) {
   if (!s) { showToast('Khong tim thay: ' + code); return; }
   var existing = document.getElementById('staffCardModal');
   if (existing) existing.remove();
-  var avatar = s.avatar_emoji || (s.nickname || s.full_name || '?')[0];
-  var isEmoji = !!(s.avatar_emoji && s.avatar_emoji.length <= 4);
+  var avatar = (s.nickname || s.full_name || '?')[0];
+  var isEmoji = false;
   var unit    = getStaffUnit(code) || '';
   var gStr = s.gender ? ' · ' + s.gender : '';
   var bStr = s.birth_year ? (gStr ? '' : '') + ' · ' + s.birth_year : '';

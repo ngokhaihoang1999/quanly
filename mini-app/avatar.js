@@ -419,7 +419,7 @@ async function _saveAvatarStyle() {
 function _openStaffAvatarPicker() {
   const currentRaw = document.getElementById('prof_staff_avatar_color')?.value || '';
   const cfg = parseAvatarConfig(currentRaw) || {};
-  const letter = myStaff?.avatar_emoji || (myStaff?.nickname || myStaff?.full_name || '?')[0];
+  const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
 
   _avatarPickerState = {
     profileId: '__staff__',  // special marker
@@ -503,7 +503,7 @@ function _saveStaffAvatarStyle() {
 
   // Update the preview box
   const previewBox = document.getElementById('staffAvatarPreviewBox');
-  const letter = myStaff?.avatar_emoji || (myStaff?.nickname || myStaff?.full_name || '?')[0];
+  const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
   if (previewBox) {
     previewBox.innerHTML = renderAnimatedAvatar(letter, value, 'md');
   }
