@@ -818,6 +818,21 @@ async function loadStaffInfo() {
       if (myStaff.specialist_position) badgeText += ` + ${getPositionName(myStaff.specialist_position)}`;
       const badgeEl = document.getElementById('staffBadge');
       if (badgeEl) badgeEl.textContent = badgeText;
+      // Populate header avatar + nickname
+      const headerAv = document.getElementById('headerAvatar');
+      if (headerAv) {
+        const displayName = myStaff.nickname || myStaff.full_name || '?';
+        const letter = displayName[0];
+        const avatarHtml = typeof renderAnimatedAvatar === 'function'
+          ? renderAnimatedAvatar(letter, myStaff.staff_avatar_color || '', 'sm')
+          : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:white;">${letter}</div>`;
+        headerAv.innerHTML = `
+          <div style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá">
+            ${avatarHtml}
+            <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.95);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.2);">${displayName}</span>
+          </div>`;
+        headerAv.style.display = 'block';
+      }
       if (hasPermission('manage_positions')) {
         const bar = document.getElementById('viewAsBar');
         if (bar) bar.classList.add('active');
@@ -1956,6 +1971,17 @@ async function saveMyStaffProfile() {
       badge.textContent = txt;
     }
     showToast('✅ Đã lưu hồ sơ TĐ!');
+    // Refresh header avatar
+    const headerAv = document.getElementById('headerAvatar');
+    if (headerAv) {
+      const dn = myStaff.nickname || myStaff.full_name || '?';
+      const lt = dn[0];
+      const avH = typeof renderAnimatedAvatar === 'function'
+        ? renderAnimatedAvatar(lt, myStaff.staff_avatar_color || '', 'sm')
+        : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:white;">${lt}</div>`;
+      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá">${avH}<span style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.95);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.2);">${dn}</span></div>`;
+      headerAv.style.display = 'block';
+    }
     if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu hồ sơ TĐ'; }
   } catch(e) {
     showToast('❌ Lỗi lưu hồ sơ'); console.error(e);
