@@ -260,7 +260,6 @@ function openAvatarStylePicker(profileId, encodedRaw) {
       <div style="display:flex;justify-content:center;margin-bottom:20px;">
         <div id="avPickerPreview" style="transform:scale(1.2);"></div>
       </div>
-      <div id="avPickerStyleName" style="text-align:center;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:20px;min-height:18px;"></div>
 
       <!-- STYLE GRID -->
       <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">✨ Phong cách Epic</div>
@@ -386,11 +385,6 @@ function _selectAvatarStyle(styleId, letter) {
     if (bgPick && _avatarPickerState.bgColor) bgPick.value = _avatarPickerState.bgColor;
     if (txtPick && _avatarPickerState.textColor) txtPick.value = _avatarPickerState.textColor;
   }
-
-  // Update style name
-  const nameEl = document.getElementById('avPickerStyleName');
-  if (nameEl) nameEl.textContent = styleDef ? `${styleDef.label} — ${styleDef.desc}` : '';
-
   _renderSelectedEmojis();
   _updateAvatarPreview(letter || 'A');
 }
