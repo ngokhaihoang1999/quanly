@@ -238,19 +238,24 @@ async function loadReports() {
     } else {
       funnelData.forEach((d, i) => {
         const convRate = i > 0 && funnelData[i-1].count > 0 ? Math.round(d.count / funnelData[i-1].count * 100) : 100;
+        // Dropout at this phase
+        const phaseKey = PHASES_ORDER[i];
+        const doAtPhase = dropouts.filter(p => p.phase === phaseKey || (phaseKey === 'chakki' && (p.phase === 'new' || p.phase === 'chakki'))).length;
+        const doPct = funnelData[i].count > 0 ? Math.round(doAtPhase / (funnelData[i].count + doAtPhase) * 100) : 0;
         html += `<div class="rpt-funnel-row">
           <div class="rpt-funnel-label">${funnelLabels[i]}</div>
           <div class="rpt-funnel-bar-wrap">
             <div class="rpt-funnel-bar" style="width:${d.pct}%;background:${funnelColors[i]};"></div>
           </div>
           <div class="rpt-funnel-num">${d.count} <span style="color:var(--text3);font-size:10px;">(${d.pct}%)</span></div>
-          ${i > 0 ? `<div class="rpt-funnel-conv">↓${convRate}%</div>` : ''}
-        </div>`;
+          <div class="rpt-funnel-conv">${i > 0 ? `↓${convRate}%` : ''}</div>
+        </div>
+        ${doAtPhase > 0 ? `<div class="rpt-funnel-dropout">💔 Drop-out tại giai đoạn này: ${doAtPhase} (${doPct}%)</div>` : ''}`;
       });
-      // Dropout rate
+      // Total dropout
       const dropoutRate = total > 0 ? Math.round(dropouts.length / total * 100) : 0;
-      html += `<div style="margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:8px;font-size:12px;color:#ef4444;font-weight:600;">
-        📉 Tỷ lệ rơi rụng: ${dropouts.length}/${total} (${dropoutRate}%)
+      html += `<div style="margin-top:10px;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:8px;font-size:12px;color:#ef4444;font-weight:600;">
+        📉 Tổng rơi rụng: ${dropouts.length}/${total} (${dropoutRate}%)
       </div>`;
     }
     html += '</div></div>';
@@ -293,8 +298,12 @@ async function loadReports() {
 
     trendSeries.forEach(series => {
       const max = Math.max(...series.data, 1);
-      html += `<div style="margin-bottom:14px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;">${series.label}</div>
+      const total = series.data.reduce((a,b) => a+b, 0);
+      html += `<div class="rpt-trend-card">
+        <div class="rpt-trend-header">
+          <span>${series.label}</span>
+          <span class="rpt-trend-total" style="color:${series.color};">${total}</span>
+        </div>
         <div class="rpt-bar-chart">
           ${series.data.map((val, i) => `
             <div class="rpt-bar-col">

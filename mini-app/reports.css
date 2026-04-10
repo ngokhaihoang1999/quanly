@@ -107,6 +107,35 @@
   color: var(--text3);
   text-align: center;
 }
+.rpt-funnel-dropout {
+  font-size: 10px;
+  color: #ef4444;
+  padding: 2px 0 6px 108px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ── TREND CARD ── */
+.rpt-trend-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--surface2);
+}
+.rpt-trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.rpt-trend-total {
+  font-size: 16px;
+  font-weight: 800;
+}
 
 /* ── BAR CHART ── */
 .rpt-bar-chart {
