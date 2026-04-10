@@ -15,12 +15,14 @@
   border: 2px solid rgba(255,255,255,0.35); border-radius: 50%;
   display: flex; align-items: flex-start; justify-content: center;
 }
-.av-orb-r1 { transform: rotateX(65deg) rotateY(0deg); animation: av-orb-spin 5s linear infinite; --ry: 0deg; }
-.av-orb-r2 { transform: rotateX(65deg) rotateY(60deg); animation: av-orb-spin 7s linear infinite; --ry: 60deg; }
-.av-orb-r3 { transform: rotateX(65deg) rotateY(120deg); animation: av-orb-spin 9s linear infinite; --ry: 120deg; }
+.av-orb-r1 { transform: rotateX(65deg) rotateY(0deg); animation: av-orb-spin1 3s linear infinite; }
+.av-orb-r2 { transform: rotateX(65deg) rotateY(60deg); animation: av-orb-spin2 4s linear infinite; }
+.av-orb-r3 { transform: rotateX(65deg) rotateY(120deg); animation: av-orb-spin3 5s linear infinite; }
 .av-orb-e { margin-top: -7px; transform: rotateX(-65deg); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
 .av-core-dark { color: #e2e8f0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-@keyframes av-orb-spin { 100% { transform: rotateX(65deg) rotateY(var(--ry)) rotateZ(360deg); } }
+@keyframes av-orb-spin1 { from { transform: rotateX(65deg) rotateY(0deg) rotateZ(0deg); } to { transform: rotateX(65deg) rotateY(0deg) rotateZ(360deg); } }
+@keyframes av-orb-spin2 { from { transform: rotateX(65deg) rotateY(60deg) rotateZ(0deg); } to { transform: rotateX(65deg) rotateY(60deg) rotateZ(360deg); } }
+@keyframes av-orb-spin3 { from { transform: rotateX(65deg) rotateY(120deg) rotateZ(0deg); } to { transform: rotateX(65deg) rotateY(120deg) rotateZ(360deg); } }
 
 /* ── 2. ERUPTION ─────────────────────────────────────────── */
 .av-erupt {
@@ -61,10 +63,10 @@
   transform-origin: top center;
   animation: av-swing-s 2s infinite alternate ease-in-out;
 }
-.av-wb-s1 { left: 15%; height: 85%; animation-duration: 2.1s; }
-.av-wb-s2 { left: 50%; height: 110%; animation-duration: 1.8s; }
-.av-wb-s3 { left: 85%; height: 75%; animation-duration: 2.3s; }
-.av-wb-str span { position: absolute; bottom: -12px; left: -8px; }
+.av-wb-s1 { left: 15%; height: 120%; animation-duration: 2.1s; }
+.av-wb-s2 { left: 50%; height: 150%; animation-duration: 1.8s; }
+.av-wb-s3 { left: 85%; height: 100%; animation-duration: 2.3s; }
+.av-wb-str span { position: absolute; bottom: -14px; left: -10px; }
 .av-core-bell { color: var(--text2, #cbd5e1); }
 @keyframes av-swing { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
 @keyframes av-swing-s { 0% { transform: rotate(-15deg); } 100% { transform: rotate(15deg); } }

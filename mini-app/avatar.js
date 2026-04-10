@@ -73,9 +73,13 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
   const emojis = cfg.emojis || AVATAR_STYLES.find(s=>s.id===cfg.style)?.defaultEmojis || [];
   const e = (i) => emojis[i % emojis.length] || '✨';
   const L = letter;
-  const r = sz < 50 ? 12 : 16; // border-radius
-  const wrap = `position:relative;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
-  const core = `position:relative;z-index:10;font-size:${fz}px;font-weight:900;`;
+  const r = sz < 50 ? 12 : 16;
+  const customBg = cfg.bgColor || '';
+  const customTxt = cfg.textColor || '';
+  const bgStyle = customBg ? `background:${customBg};` : '';
+  const txtStyle = customTxt ? `color:${customTxt};` : '';
+  const wrap = `position:relative;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${bgStyle}border-radius:${r}px;`;
+  const core = `position:relative;z-index:10;font-size:${fz}px;font-weight:900;${txtStyle}`;
 
   switch(cfg.style) {
     // ── EPIC ──
@@ -186,6 +190,8 @@ function openAvatarStylePicker(profileId, encodedRaw) {
     style: cfg.style || null,
     emojis: cfg.emojis ? [...cfg.emojis] : [],
     gradient: cfg.gradient || 'linear-gradient(135deg,var(--accent),#ec4899)',
+    bgColor: cfg.bgColor || '',
+    textColor: cfg.textColor || '',
   };
 
   let existing = document.getElementById('avatarStyleModal');
@@ -224,6 +230,22 @@ function openAvatarStylePicker(profileId, encodedRaw) {
       <div id="avGradientSection" style="display:none;">
         <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">🖌 Hoặc chỉ chọn màu nền</div>
         <div id="avGradientGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      </div>
+
+      <!-- CUSTOM COLORS -->
+      <div id="avColorSection" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">🎨 Tuỳ chỉnh màu sắc</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="color" id="avBgColorPick" value="#1e1b4b" onchange="_onAvatarColorChange()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;padding:0;" />
+            <span style="font-size:11px;color:var(--text2);font-weight:600;">Nền</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="color" id="avTxtColorPick" value="#ffffff" onchange="_onAvatarColorChange()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;padding:0;" />
+            <span style="font-size:11px;color:var(--text2);font-weight:600;">Chữ</span>
+          </div>
+          <button onclick="_clearAvatarColors()" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Xóa màu</button>
+        </div>
       </div>
 
       <!-- ACTIONS -->
@@ -293,15 +315,25 @@ function _selectAvatarStyle(styleId, letter) {
     el.style.background = sel ? 'rgba(99,102,241,0.08)' : 'var(--surface2)';
   });
 
-  // Show/hide emoji section
+  // Show/hide emoji section + color section
   const emojiSec = document.getElementById('avEmojiSection');
   const gradSec = document.getElementById('avGradientSection');
+  const colorSec = document.getElementById('avColorSection');
   if (styleDef?.hasEmoji) {
     emojiSec.style.display = 'block';
     gradSec.style.display = 'none';
   } else {
     emojiSec.style.display = 'none';
     gradSec.style.display = 'none';
+  }
+  // Always show color customization when a style is selected
+  if (colorSec) {
+    colorSec.style.display = 'block';
+    // Pre-fill with saved values
+    const bgPick = document.getElementById('avBgColorPick');
+    const txtPick = document.getElementById('avTxtColorPick');
+    if (bgPick && _avatarPickerState.bgColor) bgPick.value = _avatarPickerState.bgColor;
+    if (txtPick && _avatarPickerState.textColor) txtPick.value = _avatarPickerState.textColor;
   }
 
   // Update style name
@@ -310,6 +342,31 @@ function _selectAvatarStyle(styleId, letter) {
 
   _renderSelectedEmojis();
   _updateAvatarPreview(letter || 'A');
+}
+
+function _onAvatarColorChange() {
+  const bg = document.getElementById('avBgColorPick')?.value || '';
+  const txt = document.getElementById('avTxtColorPick')?.value || '';
+  _avatarPickerState.bgColor = bg;
+  _avatarPickerState.textColor = txt;
+  const letter = _avatarPickerState.profileId === '__staff__'
+    ? (myStaff?.nickname || myStaff?.full_name || '?')[0]
+    : (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
+  _updateAvatarPreview(letter);
+}
+
+function _clearAvatarColors() {
+  _avatarPickerState.bgColor = '';
+  _avatarPickerState.textColor = '';
+  const bgPick = document.getElementById('avBgColorPick');
+  const txtPick = document.getElementById('avTxtColorPick');
+  if (bgPick) bgPick.value = '#1e1b4b';
+  if (txtPick) txtPick.value = '#ffffff';
+  const letter = _avatarPickerState.profileId === '__staff__'
+    ? (myStaff?.nickname || myStaff?.full_name || '?')[0]
+    : (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
+  _updateAvatarPreview(letter);
+  showToast('Đã xoá màu tuỳ chỉnh');
 }
 
 function _renderEmojiGrid() {
@@ -379,17 +436,22 @@ function _updateAvatarPreview(letter) {
     style: _avatarPickerState.style,
     emojis: _avatarPickerState.emojis.length ? _avatarPickerState.emojis : undefined,
     gradient: _avatarPickerState.gradient,
+    bgColor: _avatarPickerState.bgColor || undefined,
+    textColor: _avatarPickerState.textColor || undefined,
   };
   box.innerHTML = renderAnimatedAvatar(letter, cfg, 'lg');
 }
 
 async function _saveAvatarStyle() {
-  const { profileId, style, emojis, gradient } = _avatarPickerState;
+  const { profileId, style, emojis, gradient, bgColor, textColor } = _avatarPickerState;
   if (!profileId) return;
 
   let value;
   if (style) {
-    value = serializeAvatarConfig({ style, emojis: emojis.length ? emojis : undefined, gradient });
+    const cfgObj = { style, emojis: emojis.length ? emojis : undefined, gradient };
+    if (bgColor) cfgObj.bgColor = bgColor;
+    if (textColor) cfgObj.textColor = textColor;
+    value = serializeAvatarConfig(cfgObj);
   } else if (gradient) {
     // Legacy gradient-only
     value = gradient;
@@ -422,10 +484,12 @@ function _openStaffAvatarPicker() {
   const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
 
   _avatarPickerState = {
-    profileId: '__staff__',  // special marker
+    profileId: '__staff__',
     style: cfg.style || null,
     emojis: cfg.emojis ? [...cfg.emojis] : [],
     gradient: cfg.gradient || 'linear-gradient(135deg,var(--accent),#ec4899)',
+    bgColor: cfg.bgColor || '',
+    textColor: cfg.textColor || '',
   };
 
   let existing = document.getElementById('avatarStyleModal');
@@ -465,6 +529,23 @@ function _openStaffAvatarPicker() {
       </div>
 
       <!-- ACTIONS -->
+      <!-- CUSTOM COLORS -->
+      <div id="avColorSection" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">🎨 Tuỳ chỉnh màu sắc</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="color" id="avBgColorPick" value="#1e1b4b" onchange="_onAvatarColorChange()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;padding:0;" />
+            <span style="font-size:11px;color:var(--text2);font-weight:600;">Nền</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="color" id="avTxtColorPick" value="#ffffff" onchange="_onAvatarColorChange()" style="width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;padding:0;" />
+            <span style="font-size:11px;color:var(--text2);font-weight:600;">Chữ</span>
+          </div>
+          <button onclick="_clearAvatarColors()" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;">Xóa màu</button>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('avatarStyleModal').remove()" style="flex:1;padding:13px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Huỷ</button>
         <button onclick="_saveStaffAvatarStyle()" style="flex:2;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">✅ Lưu Avatar TĐ</button>
@@ -487,17 +568,20 @@ function _openStaffAvatarPicker() {
 }
 
 function _saveStaffAvatarStyle() {
-  const { style, emojis, gradient } = _avatarPickerState;
+  const { style, emojis, gradient, bgColor, textColor } = _avatarPickerState;
   let value;
   if (style) {
-    value = serializeAvatarConfig({ style, emojis: emojis.length ? emojis : undefined, gradient });
+    const cfgObj = { style, emojis: emojis.length ? emojis : undefined, gradient };
+    if (bgColor) cfgObj.bgColor = bgColor;
+    if (textColor) cfgObj.textColor = textColor;
+    value = serializeAvatarConfig(cfgObj);
   } else if (gradient) {
     value = gradient;
   } else {
     return;
   }
 
-  // Update hidden inputs in the settings panel (will be saved when user clicks "Lưu hồ sơ TĐ")
+  // Update hidden inputs in the settings panel
   const input = document.getElementById('prof_staff_avatar_color');
   if (input) input.value = value;
 
