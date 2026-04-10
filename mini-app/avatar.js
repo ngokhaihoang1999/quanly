@@ -488,11 +488,15 @@ async function _saveAvatarStyle() {
     if (textColor) cfgObj.textColor = textColor;
     value = serializeAvatarConfig(cfgObj);
   } else if (gradient) {
-    // Legacy gradient-only
     value = gradient;
   } else {
+    showToast('⚠️ Chưa chọn phong cách');
     return;
   }
+
+  // Disable button during save
+  const saveBtn = document.querySelector('#avatarStyleModal button[onclick*="_saveAvatarStyle"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Đang lưu...'; }
 
   try {
     await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
@@ -508,6 +512,7 @@ async function _saveAvatarStyle() {
   } catch(e) {
     console.error('saveAvatarStyle:', e);
     showToast('❌ Lỗi lưu avatar');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ Lưu Avatar'; }
   }
 }
 
@@ -603,7 +608,7 @@ function _openStaffAvatarPicker() {
   }
 }
 
-function _saveStaffAvatarStyle() {
+async function _saveStaffAvatarStyle() {
   const { style, emojis, gradient, bgColor, textColor } = _avatarPickerState;
   let value;
   if (style) {
@@ -614,20 +619,45 @@ function _saveStaffAvatarStyle() {
   } else if (gradient) {
     value = gradient;
   } else {
+    showToast('⚠️ Chưa chọn phong cách');
     return;
   }
 
-  // Update hidden inputs in the settings panel
-  const input = document.getElementById('prof_staff_avatar_color');
-  if (input) input.value = value;
+  // Save directly to DB
+  try {
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ staff_avatar_color: value })
+    });
+    // Update local cache
+    myStaff.staff_avatar_color = value;
 
-  // Update the preview box
-  const previewBox = document.getElementById('staffAvatarPreviewBox');
-  const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
-  if (previewBox) {
-    previewBox.innerHTML = renderAnimatedAvatar(letter, value, 'md');
+    // Update hidden input in settings panel (if open)
+    const input = document.getElementById('prof_staff_avatar_color');
+    if (input) input.value = value;
+
+    // Update preview box in settings panel
+    const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
+    const previewBox = document.getElementById('staffAvatarPreviewBox');
+    if (previewBox) {
+      previewBox.innerHTML = renderAnimatedAvatar(letter, value, 'md');
+    }
+
+    // Refresh header avatar
+    const headerAv = document.getElementById('headerAvatar');
+    if (headerAv) {
+      const dn = myStaff.nickname || myStaff.full_name || '?';
+      const lt = dn[0];
+      const avH = typeof renderAnimatedAvatar === 'function'
+        ? renderAnimatedAvatar(lt, value, 'md')
+        : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${lt}</div>`;
+      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
+    }
+
+    showToast('✅ Đã lưu avatar!');
+    document.getElementById('avatarStyleModal')?.remove();
+  } catch(e) {
+    console.error('saveStaffAvatarStyle:', e);
+    showToast('❌ Lỗi lưu avatar');
   }
-
-  showToast('✅ Đã chọn phong cách! Nhấn "Lưu hồ sơ TĐ" để áp dụng.');
-  document.getElementById('avatarStyleModal')?.remove();
 }
