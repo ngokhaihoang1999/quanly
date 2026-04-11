@@ -189,10 +189,7 @@ function _renderReports(el, subUnitIdx) {
 
   // ── HEADER + DROPDOWN ──
   html += `<div style="margin-bottom:16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div style="font-size:15px;font-weight:700;">📊 Báo cáo · ${activeLabel || 'Đơn vị'}</div>
-      <button onclick="_copyReportSummary()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text1);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">📋 Copy</button>
-    </div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px;">📊 Báo cáo · ${activeLabel || 'Đơn vị'}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Kỳ: ${semName} · ${total} hồ sơ · ${alive.length} alive · ${dropouts.length} dropout</div>`;
   if (scopeUnits.length > 0) {
     html += `<select id="rptUnitSelect" class="rpt-unit-select" onchange="_switchReportUnit(this.value)">
@@ -586,94 +583,4 @@ function _renderReports(el, subUnitIdx) {
   }
 
   el.innerHTML = html;
-}
-
-// ── Copy Report Summary ──
-function _copyReportSummary() {
-  if (!_rptCache) { showToast('⚠️ Chưa có dữ liệu'); return; }
-  const { profileMap, scopeLabel, scopeUnits } = _rptCache;
-  const profiles = Array.from(profileMap.values());
-  const alive = profiles.filter(p => p.fruit_status !== 'dropout');
-  const dropouts = profiles.filter(p => p.fruit_status === 'dropout');
-  const total = profiles.length;
-
-  const PHASES_ORDER = ['chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center'];
-  const PHASE_IDX = {};
-  PHASES_ORDER.forEach((p, i) => PHASE_IDX[p] = i);
-  PHASE_IDX['new'] = 0; PHASE_IDX['completed'] = 4;
-  function pi(phase) { return PHASE_IDX[phase] !== undefined ? PHASE_IDX[phase] : 0; }
-
-  const semName = currentSemesterId ? (allSemesters.find(s => s.id === currentSemesterId)?.name || '') : 'Tất cả';
-  const phaseLabels = ['Hapja', 'TV Hình', 'TV', 'BB', 'Center'];
-  const funnelNums = PHASES_ORDER.map((_, i) => {
-    const reached = alive.filter(p => pi(p.phase) >= i).length + dropouts.filter(p => pi(p.phase) >= i).length;
-    return reached;
-  });
-
-  // Warnings count
-  const now = Date.now();
-  const DAY = 86400000;
-  let dormantCount = 0, stuckCount = 0, noTvvCount = 0, noGvbbCount = 0;
-  alive.forEach(p => {
-    const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
-    const daysCreated = createdMs ? Math.floor((now - createdMs) / DAY) : 0;
-    // Simplified dormant check using created_at as proxy
-    if (daysCreated > 14) dormantCount++; // rough estimate
-    if (daysCreated > 30 && !['center','completed'].includes(p.phase)) stuckCount++;
-  });
-  profiles.forEach(p => {
-    if (p.fruit_status === 'dropout') return;
-    const roles = _rptCache.allRoles?.filter(r => r.fruit_groups?.profile_id === p.id) || [];
-    if (!roles.some(r => r.role_type === 'tvv') && !['new','chakki'].includes(p.phase)) noTvvCount++;
-    if (!roles.some(r => r.role_type === 'gvbb') && ['tu_van','bb','center'].includes(p.phase)) noGvbbCount++;
-  });
-
-  let text = `📊 Báo cáo ${scopeLabel} - ${semName}\n`;
-  text += `────────────────────\n`;
-  text += `🌱 Tổng: ${total} | 🟢 Alive: ${alive.length} | 🔴 Drop: ${dropouts.length}\n`;
-  text += `\n🔄 Phễu: ${funnelNums.map((n, i) => `${phaseLabels[i]}(${n})`).join(' → ')}\n`;
-
-  if (dormantCount || stuckCount || noTvvCount || noGvbbCount) {
-    text += `\n⚠️ Cảnh báo:\n`;
-    if (dormantCount) text += `  😴 ${dormantCount} ngủ đông\n`;
-    if (stuckCount) text += `  ⏳ ${stuckCount} kẹt phase\n`;
-    if (noTvvCount) text += `  🔵 ${noTvvCount} thiếu TVV\n`;
-    if (noGvbbCount) text += `  🔵 ${noGvbbCount} thiếu GVBB\n`;
-  } else {
-    text += `\n✅ Không có cảnh báo\n`;
-  }
-
-  // NDD ranking
-  const nddStats = {};
-  profiles.forEach(p => {
-    if (!p.ndd) return;
-    if (!nddStats[p.ndd]) nddStats[p.ndd] = { alive: 0, drop: 0 };
-    if (p.fruit_status === 'dropout') nddStats[p.ndd].drop++;
-    else nddStats[p.ndd].alive++;
-  });
-  const nddList = Object.entries(nddStats).sort((a, b) => b[1].alive - a[1].alive);
-  if (nddList.length > 0) {
-    text += `\n👥 NDD (${nddList.length}):${nddList.length <= 6 ? '\n' : ' '}`;
-    nddList.forEach(([code, s]) => {
-      const staff = allStaff.find(x => x.staff_code === code);
-      const name = staff ? (staff.nickname || staff.full_name || code) : code;
-      text += `  ${name}: ${s.alive}↑${s.drop > 0 ? ` ${s.drop}↓` : ''}\n`;
-    });
-  }
-
-  // Copy
-  try {
-    navigator.clipboard.writeText(text).then(() => showToast('📋 Đã copy báo cáo!')).catch(() => _fallbackCopyText(text));
-  } catch { _fallbackCopyText(text); }
-}
-
-function _fallbackCopyText(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;left:-9999px;';
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); showToast('📋 Đã copy báo cáo!'); }
-  catch { showToast('⚠️ Không thể copy'); }
-  ta.remove();
 }

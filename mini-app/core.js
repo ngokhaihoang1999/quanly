@@ -497,6 +497,72 @@ function toggleChip(el) { el.classList.toggle('selected'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
+// ── Celebration: confetti + big toast for phase transitions ──
+function showCelebration(emoji, message) {
+  // 1. Big toast
+  showToast(`${emoji} ${message}`);
+
+  // 2. Confetti burst
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  const colors = ['#f59e0b','#22c55e','#3b82f6','#ef4444','#8b5cf6','#ec4899','#f97316','#14b8a6'];
+  const emojis = ['🎉','✨','🌟','🎊','💫','⭐'];
+  const particles = [];
+  const cx = canvas.width / 2, cy = canvas.height * 0.35;
+
+  for (let i = 0; i < 60; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 6;
+    const isEmoji = Math.random() < 0.3;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+      vy: Math.sin(angle) * speed * (0.5 + Math.random()) - 3,
+      size: isEmoji ? 16 + Math.random() * 10 : 4 + Math.random() * 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      emoji: isEmoji ? emojis[Math.floor(Math.random() * emojis.length)] : null,
+      alpha: 1,
+      rot: Math.random() * 360,
+      rotSpeed: (Math.random() - 0.5) * 10
+    });
+  }
+
+  let frame = 0;
+  const maxFrames = 90;
+  function animate() {
+    frame++;
+    if (frame > maxFrames) { canvas.remove(); return; }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15; // gravity
+      p.rot += p.rotSpeed;
+      p.alpha = Math.max(0, 1 - frame / maxFrames);
+      ctx.globalAlpha = p.alpha;
+      if (p.emoji) {
+        ctx.font = `${p.size}px serif`;
+        ctx.fillText(p.emoji, p.x, p.y);
+      } else {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        ctx.restore();
+      }
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
 function getStaffCodeFromInput(id) {
   const el = document.getElementById(id);
   if (!el) return '';

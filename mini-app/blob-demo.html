@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏆 MASTER AVATARS: BUG FREE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&family=Nunito:wght@800;900&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f111a; color: #e2e8f0; font-family: 'Outfit', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px 10px; gap: 40px; overflow-x: hidden; }
+  
+  .section-title { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 900; color: #fff; text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; border-bottom: 2px solid #334155; padding-bottom: 10px; width: 100%; max-width: 900px;}
+  
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 900px; width: 100%; margin-bottom: 20px;}
+  @media(min-width: 768px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  
+  .card { padding: 30px 15px; display: flex; flex-direction: column; align-items: center; gap: 20px; background: #1e202e; border: 1px solid #334155; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: all 0.3s;}
+  .card:hover { transform: translateY(-5px); border-color: #6366f1; }
+  .card.cute { background: #fff; border: 4px solid #f8fafc; }
+  .card.cute:hover { border-color: #fce7f3; }
+  
+  .lbl { font-size: 15px; font-weight: 800; color: #a5b4fc; text-align: center;}
+  .cute .lbl { color: #db2777; font-family: 'Nunito', sans-serif;}
+
+  .desc { font-size: 12px; color: #64748b; text-align: center; max-width: 180px; line-height: 1.5; margin-top: -10px; }
+  
+  .awrap { position: relative; width: 85px; height: 85px; display: flex; align-items: center; justify-content: center; }
+  
+  .core { position: relative; z-index: 10; font-size: 44px; font-weight: 900; color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,0.5);}
+  .cute .core { font-family: 'Nunito', sans-serif; color: #334155; text-shadow: 2px 2px 0 rgba(255,255,255,0.9);}
+
+  /* -- GLOBAL ANIMATIONS -- */
+  @keyframes u-bob { 0% { transform: translateY(4px); } 100% { transform: translateY(-4px); } }
+  @keyframes u-wobble { 0% { transform: rotate(-8deg); } 100% { transform: rotate(8deg); } }
+
+  /* ---------- SECTION 1: THE EPICS ---------- */
+  
+  /* 1. S-ORBITAL */
+  .s-orbital { transform-style: preserve-3d; perspective: 400px;}
+  .s-orbital .ring { position:absolute; width: 85px; height: 85px; border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; display:flex; align-items:flex-start; justify-content:center;}
+  .s-orbital .r1 { transform: rotateX(65deg) rotateY(0deg); animation: orb-sp 5s linear infinite; }
+  .s-orbital .r2 { transform: rotateX(65deg) rotateY(60deg); animation: orb-sp 7s linear infinite; }
+  .s-orbital .r3 { transform: rotateX(65deg) rotateY(120deg); animation: orb-sp 9s linear infinite; }
+  .s-orbital .e { font-size: 14px; margin-top:-7px; transform: rotateX(-65deg); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8));}
+  @keyframes orb-sp { 100% { transform: rotateX(65deg) rotateY(var(--ry)) rotateZ(360deg); } }
+
+  /* 2. S-ERUPTION */
+  .s-eruption .e { position:absolute; font-size:16px; opacity:0; animation: erupt 2s infinite ease-out; }
+  .s-eruption .e1 { animation-delay: 0s; --tx: -30px; --ty: -40px; }
+  .s-eruption .e2 { animation-delay: 0.4s; --tx: 35px; --ty: -30px; }
+  .s-eruption .e3 { animation-delay: 0.8s; --tx: -20px; --ty: 40px; }
+  .s-eruption .e4 { animation-delay: 1.2s; --tx: 40px; --ty: 20px; }
+  .s-eruption .core { color: #f43f5e; text-shadow: 0 0 15px #e11d48; animation: pulse-c 1s infinite alternate;}
+  @keyframes erupt { 0% { transform: scale(0.5) translate(0,0); opacity:1;} 100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity:0;} }
+  @keyframes pulse-c { 100% { transform: scale(1.1); filter: brightness(1.2);} }
+
+  /* 3. S-CONSTELLATION */
+  .s-constel .e { position:absolute; font-size:12px; filter: drop-shadow(0 0 5px #fff); animation: float-c 3s infinite alternate ease-in-out;}
+  .s-constel .e1 { top: -10px; left: 0px; animation-delay: 0s;}
+  .s-constel .e2 { top: 10px; right: 0px; font-size:8px; animation-delay: 1s;}
+  .s-constel .e3 { bottom: 0px; left: -10px; font-size:16px; animation-delay: 2s;}
+  .s-constel .e4 { bottom: -10px; right: 10px; animation-delay: 0.5s;}
+  .s-constel .core { color: #e0e7ff; text-shadow: 0 0 15px #818cf8; }
+  @keyframes float-c { 0% { transform: translate(0,0) scale(0.8); opacity:0.6;} 100% { transform: translate(5px,-5px) scale(1.2); opacity:1;} }
+
+  /* 4. S-WINDBELL (PHONG LINH) */
+  .windbell-roof { position:absolute; top: -5px; width: 60px; height: 10px; border-top: 3px solid #475569; border-radius: 5px; transform-origin: top center; animation: swing-bell 3s infinite alternate ease-in-out;}
+  .windbell-roof .string { position:absolute; top: 0; width: 2px; background: #334155; transform-origin: top center; animation: swing-s 2s infinite alternate ease-in-out;}
+  .windbell-roof .st1 { left: 10px; height: 35px; animation-duration: 2.1s; }
+  .windbell-roof .st2 { left: 30px; height: 45px; animation-duration: 1.8s; }
+  .windbell-roof .st3 { left: 50px; height: 25px; animation-duration: 2.3s; }
+  .windbell-roof .e { position:absolute; bottom:-12px; left:-8px; font-size: 16px;}
+  @keyframes swing-bell { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
+  @keyframes swing-s { 0% { transform: rotate(-15deg); } 100% { transform: rotate(15deg); } }
+
+  /* 5. S-CAROUSEL */
+  .s-carousel { transform-style: preserve-3d; perspective: 500px; }
+  .s-carousel .cylinder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; transform-style: preserve-3d; animation: spin-cyl 8s linear infinite; }
+  .s-carousel .c-item { position:absolute; font-size: 20px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));}
+  .s-carousel .c1 { transform: rotateY(0deg) translateZ(35px); }
+  .s-carousel .c2 { transform: rotateY(120deg) translateZ(35px); }
+  .s-carousel .c3 { transform: rotateY(240deg) translateZ(35px); }
+  .s-carousel .core { transform: translateZ(0); color: #38bdf8; text-shadow: 0 0 15px #0284c7;}
+  @keyframes spin-cyl { 100% { transform: rotateY(360deg); } }
+
+  /* ---------- SECTION 2: THE CUTE BIBLE ---------- */
+
+  /* 6. S-RAINBOW */
+  .s-rain { background: #f0fdf4; border-radius: 50%; border: 3px solid #fff;}
+  .s-rain .bow { position:absolute; top: -5px; font-size: 50px; opacity: 0.8; }
+  .s-rain .core { animation: u-bob 1s ease-in-out infinite alternate; color: #166534;}
+  .s-rain .dove { position:absolute; font-size:14px; top:15px; right:-5px; animation: u-wobble 0.5s infinite alternate; z-index:15;}
+
+  /* 7. S-MANNA */
+  .s-manna { background: #fdf4ff; border-radius: 25px; }
+  .s-manna .food { position:absolute; top:-20px; font-size: 14px; animation: m-fall 3s linear infinite;}
+  .s-manna .f1 { left: 5px; animation-duration: 2.5s;}
+  .s-manna .f2 { left: 40px; animation-delay: 1s;}
+  @keyframes m-fall { 0% { transform: translateY(0) rotate(0deg); opacity:0;} 20%,80% { opacity:1;} 100% { transform: translateY(80px) rotate(360deg); opacity:0;} }
+
+  /* 8. S-WHALE */
+  .s-whale .belly { 
+    position:absolute; inset:0; 
+    background: radial-gradient(circle, #38bdf8, #0284c7); 
+    border-radius: 45% 55% 45% 55%; 
+    box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2); 
+    overflow: hidden; 
+    z-index: 1;
+    animation: belly-move 4s ease-in-out infinite alternate;
+  }
+  .s-whale .wh { 
+    position:absolute; font-size: 24px; z-index: 2; 
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); 
+    animation: swim-wh 6s linear infinite;
+  }
+  .s-whale .core { color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index:10;}
+  
+  @keyframes belly-move {
+    0% { transform: translateY(-3px) scale(0.95); border-radius: 45% 55% 45% 55%; }
+    100% { transform: translateY(3px) scale(1.05); border-radius: 55% 45% 55% 45%; }
+  }
+  @keyframes swim-wh { 
+    0%   { transform: translate(75px, 20px) scaleX(1); } 
+    25%  { transform: translate(25px, 45px) scaleX(1) rotate(15deg); }
+    45%  { transform: translate(-25px, 30px) scaleX(1) rotate(-10deg); }
+    46%  { transform: translate(-25px, 30px) scaleX(-1) rotate(0deg); } 
+    70%  { transform: translate(25px, 5px) scaleX(-1) rotate(-15deg); } 
+    95%  { transform: translate(75px, 20px) scaleX(-1) rotate(10deg); }
+    100% { transform: translate(75px, 20px) scaleX(1); } 
+  }
+
+  /* 9. S-ANGEL (ABSOLUTE FLAWLESS NESTED FIX) */
+  .s-angel { position:relative; }
+  .s-angel .halo { 
+    position:absolute; width: 45px; height: 16px; border: 3px solid #fde047; 
+    border-radius: 50%; top: -15px; left: 50%; transform: translateX(-50%); 
+    box-shadow: 0 0 8px #fef08a; z-index:15;
+  }
+  
+  /* Use absolute separate wrappers to flip statically, and animate cleanly inside */
+  .s-angel .w-wrap {
+      position: absolute; top: 18px; z-index: 1; display:flex; align-items:center;
+  }
+  /* Pushed way out: 20px outside left and right of awrap */
+  .s-angel .w-wrap-l { left: -20px; transform: scaleX(-1); }
+  .s-angel .w-wrap-r { right: -20px; }
+
+  /* Both wings naturally point right in their wrapper. Base is on the left. */
+  .s-angel .w-flap { 
+      font-size: 32px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+      transform-origin: left center;
+      animation: flap-wing 0.4s ease-in-out infinite alternate;
+  }
+  .s-angel .core { color: #f59e0b; z-index:10; }
+  
+  @keyframes flap-wing { 
+    0% { transform: rotate(-5deg); } 
+    100% { transform: rotate(35deg); } 
+  }
+
+  /* 10. S-ARK */
+  .s-ark { background: #e0f2fe; overflow: hidden; border-radius:50%;}
+  .s-ark .w { position:absolute; height: 35px; border-radius: 50% 50% 0 0; }
+  .s-ark .w1 { bottom:-10px; width: 120px; background: #0ea5e9; animation: u-wobble 2s ease-in-out infinite alternate;}
+  .s-ark .w2 { bottom:-20px; width: 130px; background: #0369a1; animation: u-wobble 2.5s ease-in-out infinite alternate-reverse;}
+  .s-ark .ship { position:absolute; bottom: 8px; font-size: 30px; animation: a-rock 3s ease-in-out infinite alternate; filter: drop-shadow(0 4px 2px rgba(0,0,0,0.2)); z-index:5;}
+  .s-ark .core { color: #fff; z-index: 10; text-shadow: 0 2px 2px #000; animation: a-rock 3s ease-in-out infinite alternate-reverse;}
+  @keyframes a-rock { 0% { transform: translateY(0) rotate(-5deg); } 100% { transform: translateY(2px) rotate(5deg); } }
+
+  /* 11. S-FRUIT */
+  .s-fruit { background: #fff1f2; border-radius: 50%; box-shadow: inset -4px -4px 0 #ffe4e6;}
+  .s-fruit .f { position:absolute; font-size:16px; animation: u-bob 1s infinite alternate; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));}
+  .s-fruit .f1 { top:-5px; left:15px; animation-duration: 0.8s;}
+  .s-fruit .f2 { bottom:-2px; left:-2px; animation-duration: 1.2s; animation-delay: 0.5s;}
+  .s-fruit .f3 { bottom:5px; right:-5px; animation-duration: 0.9s; animation-delay: 1s;}
+  .s-fruit .core { color: #be123c;}
+
+</style>
+</head>
+<body>
+
+<div class="section-title">✨ PHẦN 1: THE EPICS ✨</div>
+<p class="sub" style="margin-bottom:20px;">Dành cho những tâm hồn thích viễn tưởng và công nghệ.</p>
+
+<div class="grid" id="grid1"></div>
+
+<div class="section-title" style="margin-top: 20px;">🧸 PHẦN 2: CUTE BIBLE KEAWAII 🧸</div>
+<p class="sub" style="margin-bottom:20px;">Khoảng trống thiên thần chuẩn xác, cá voi bới lội bên trong mượt mà.</p>
+
+<div class="grid" id="grid2"></div>
+
+<script>
+const L = "P"; 
+
+// PART 1
+const data1 = [
+  { id: 's-orbital', title: 'Orbital (Hệ Mặt Trời)', desc: 'Các vành đai xoay chiều 3D.', html: `<div class="ring r1" style="--ry:0deg"><div class="e">🪐</div></div><div class="ring r2" style="--ry:60deg"><div class="e">☄️</div></div><div class="ring r3" style="--ry:120deg"><div class="e">⭐</div></div><div class="core">${L}</div>` },
+  { id: 's-eruption', title: 'Eruption (Phun Trào)', desc: 'Phun trào năng lượng.', html: `<div class="e e1">🔥</div><div class="e e2">💥</div><div class="e e3">🚀</div><div class="e e4">⚡</div><div class="core">${L}</div>` },
+  { id: 's-constel', title: 'Chòm Sao (Constellation)', desc: 'Các vì sao bay lượn.', html: `<div class="e e1">✨</div><div class="e e2">🌟</div><div class="e e3">💫</div><div class="e e4">✨</div><div class="core">${L}</div>` },
+  { id: 's-windbell', title: 'Phong Linh (Chuông Gió)', desc: 'Chuông gió đong đưa.', html: `<div class="windbell-roof"><div class="string st1"><div class="e">🎐</div></div><div class="string st2"><div class="e">🌸</div></div><div class="string st3"><div class="e">🍃</div></div></div><div class="core" style="margin-top:15px; color:#cbd5e1;">${L}</div>` },
+  { id: 's-carousel', title: '3D Carousel', desc: 'Vòng quay băng chuyền 3D.', html: `<div class="cylinder"><div class="c-item c1">👾</div><div class="c-item c2">💠</div><div class="c-item c3">🌀</div></div><div class="core">${L}</div>` }
+];
+
+// PART 2 (CUTE)
+const data2 = [
+  { id: 's-rain', title: 'Cầu Vồng Lời Hứa', desc: 'Bình an tươi sáng.', html: `<div class="bow">🌈</div><div class="dove">🕊️</div><div class="core">${L}</div>` },
+  { id: 's-manna', title: 'Bánh Manna', desc: 'Mưa bánh rơi xuống.', html: `<div class="food f1">🍞</div><div class="food f2">🥨</div><div class="core">${L}</div>` },
+  
+  // FIX: WHALE IS NOW SAFELY CONSTRAINED INSIDE BELLY
+  { id: 's-whale', title: 'Cá Voi Jonah', desc: 'Cá lớn vùng vẫy bơi lội.', html: `<div class="belly"><div class="wh">🐋</div></div><div class="core">${L}</div>` },
+  
+  // SECURE ARCHITECTURE FOR ANGEL WING: Completely isolated flip & flap mechanics. Pushed -20px outside.
+  { id: 's-angel', title: 'Bé Thiên Thần', desc: 'Khoảng trống chữ rộng mở.', html: `<div class="halo"></div><div class="w-wrap w-wrap-l"><div class="w-flap">🪽</div></div><div class="w-wrap w-wrap-r"><div class="w-flap">🪽</div></div><div class="core">${L}</div>` },
+  
+  { id: 's-ark', title: 'Đại Tàu Nô-ê', desc: 'Tàu rẽ trên sóng lớn.', html: `<div class="w w2"></div><div class="w w1"></div><div class="ship">🚢</div><div class="core">${L}</div>` },
+  { id: 's-fruit', title: 'Trái Cây Thánh Linh', desc: 'Trái cây vui vẻ.', html: `<div class="f f1">🍇</div><div class="f f2">🍉</div><div class="f f3">🍎</div><div class="core">${L}</div>` }
+];
+
+const g1 = document.getElementById('grid1');
+const g2 = document.getElementById('grid2');
+
+data1.forEach(item => {
+  const card = document.createElement('div'); card.className = 'card';
+  card.innerHTML = `<div class="awrap ${item.id}">${item.html}</div><div class="lbl">${item.title}</div><div class="desc">${item.desc}</div>`;
+  g1.appendChild(card);
+});
+
+data2.forEach(item => {
+  const card = document.createElement('div'); card.className = 'card cute';
+  card.innerHTML = `<div class="awrap ${item.id}">${item.html}</div><div class="lbl">${item.title}</div><div class="desc">${item.desc}</div>`;
+  g2.appendChild(card);
+});
+
+</script>
+</body></html>

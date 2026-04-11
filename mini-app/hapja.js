@@ -249,7 +249,7 @@ async function approveHapja(id) {
       setTimeout(() => syncToGoogleSheet(newPid), 1000); // delay 1s to ensure form data is saved
     }
 
-    showToast('✅ Đã duyệt! Hồ sơ Trái quả đã được tạo.');
+    showCelebration('🍎', `Duyệt Hapja — ${h.full_name}!`);
     closeModal('hapjaDetailModal');
 
     // === Auto-triggers for Hapja approval ===

@@ -622,7 +622,12 @@ async function saveScheduleTV() {
     }
 
     closeModal('scheduleTVModal');
-    showToast(editingSessionId ? '✅ Đã cập nhật Chốt TV' : '✅ Đã chốt Tư vấn');
+    if (editingSessionId) {
+      showToast('✅ Đã cập nhật Chốt TV');
+    } else {
+      const p2 = allProfiles.find(x => x.id === currentProfileId);
+      showCelebration('📅', `Chốt TV lần ${num} — ${p2?.full_name || ''}!`);
+    }
 
     // Calendar: sync Chốt TV event (Create or Update)
     if (typeof createCalEventFromChotTV === 'function') {
@@ -760,7 +765,8 @@ async function saveChotBB() {
       } catch(e) { console.warn('Assign GVBB fail:', e); }
     }
     closeModal('chotBBModal');
-    showToast('🎓 Đã lập group TV - BB!' + (gvbb ? ` GVBB: ${gvbb}` : ' Hãy tạo group Telegram và gắn hồ sơ.'));
+    const pName2 = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
+    showCelebration('🎓', `Lập Group TV-BB — ${pName2}!`);
 
     // === Auto-triggers for Chốt BB ===
     const p = allProfiles.find(x => x.id === currentProfileId);
@@ -823,7 +829,8 @@ async function chotCenter() {
     await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
       profile_id: currentProfileId, record_type: 'chot_center', content: { label: 'Chốt Center', phase: 'center' }
     })});
-    showToast('🏛️ Đã chốt Center!');
+    const pName3 = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
+    showCelebration('🏛️', `${pName3} nhập học Center!`);
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
