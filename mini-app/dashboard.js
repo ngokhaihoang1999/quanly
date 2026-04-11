@@ -463,61 +463,28 @@ async function loadDashboard() {
       });
     }
 
+    window._personalLists = {
+      ndd: nddList,
+      tvv: tvvList,
+      gvbb: gvbbList,
+      managed: Array.from(managedPids).map(id => allProfiles.find(p => p.id === id)).filter(Boolean)
+    };
+    window._personalRecordMap = recordMap;
+    window._personalSessionMap = sessionMap;
+
     document.getElementById('dashPersonalMetrics').innerHTML = `
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num" style="color:var(--accent);">${nddList.length}</div><div class="lbl">Trái NDD</div></div>
-        <div class="dash-stat"><div class="num" style="color:var(--green);">${tvvList.length}</div><div class="lbl">Trái TV</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('ndd')"><div class="num" style="color:var(--accent);">${nddList.length}</div><div class="lbl">Trái NDD</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('tvv')"><div class="num" style="color:var(--green);">${tvvList.length}</div><div class="lbl">Trái TV</div></div>
       </div>
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num" style="color:#f59e0b;">${gvbbList.length}</div><div class="lbl">Trái BB</div></div>
-        <div class="dash-stat"><div class="num" style="color:#8b5cf6;">${managedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('gvbb')"><div class="num" style="color:#f59e0b;">${gvbbList.length}</div><div class="lbl">Trái BB</div></div>
+        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('managed')"><div class="num" style="color:#8b5cf6;">${managedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
       </div>`;
 
-    // ── NDD DETAIL LIST ──
-    const listEl = document.getElementById('dashMyList');
-    document.getElementById('dashMyListTitle').textContent = '🍎 Trái tôi làm NDD';
-    if (nddList.length === 0) {
-      listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
-    } else {
-      const missingIds = nddList.map(p => p.id).filter(id => !recordMap[id] && !sessionMap[id]);
-      if (missingIds.length > 0) {
-        const ids = missingIds.map(id => `"${id}"`).join(',');
-        try {
-          const [recRes, sRes2] = await Promise.all([
-            sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
-            sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
-          ]);
-          const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
-          const ss2   = await sRes2.json(); ss2.forEach(s =>   { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
-        } catch(e) {}
-      }
-      listEl.innerHTML = nddList.map(p => {
-        const allRoles = p.fruit_groups?.[0]?.fruit_roles || [];
-        const tvvs = allRoles.filter(x => x.role_type === 'tvv').map(x => x.staff_code).join(', ');
-        const gvbbs = allRoles.filter(x => x.role_type === 'gvbb').map(x => x.staff_code).join(', ');
-        const latestActivity = latestActivityLabel(recordMap[p.id], sessionMap[p.id]);
-        return renderProfileCard(p, {
-          profileId: p.id,
-          ndd: p.ndd_staff_code || '',
-          tvv: tvvs,
-          gvbb: gvbbs,
-          latestActivity: latestActivity
-        });
-      }).join('');
-    }
+    // Render NDD by default
+    renderPersonalList('ndd');
 
-    // TVV / GVBB summary (compact)
-    if (tvvList.length > 0 || gvbbList.length > 0) {
-      const tvvGvbbProfiles = [...new Set([...tvvList, ...gvbbList])];
-      const otherItems = tvvGvbbProfiles.map(p => {
-        const allRoles = p.fruit_groups?.[0]?.fruit_roles || [];
-        const isTvv = allRoles.some(r => r.staff_code === myCode && r.role_type === 'tvv');
-        const roleStr = isTvv ? '💬 TVV' : '🎓 GVBB';
-        const roleBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${roleStr}</span>`;
-        return renderProfileCard(p, { profileId: p.id, extraBadges: roleBadge });
-      }).join('');
-      if (otherItems) listEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
-    }
   } catch(e) {
     console.error('Dashboard error:', e);
     // Clear any stuck loading states
@@ -546,3 +513,73 @@ async function loadDashboard() {
   }
 }
 
+window.renderPersonalList = async function(type) {
+  const lists = window._personalLists;
+  if (!lists) return;
+  
+  const listData = lists[type] || [];
+  const listEl = document.getElementById('dashMyList');
+  const titleEl = document.getElementById('dashMyListTitle');
+  if (!listEl || !titleEl) return;
+  
+  const titles = {
+    ndd: '🍎 Trái tôi làm NDD',
+    tvv: '💬 Trái tôi làm TVV',
+    gvbb: '🎓 Trái tôi làm GVBB',
+    managed: '🛡️ Tổng hồ sơ được quyền quản lý'
+  };
+  titleEl.textContent = titles[type] || 'Danh sách';
+  
+  if (listData.length === 0) {
+    listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
+    return;
+  }
+  
+  // Show a mini loading state
+  listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Đang tải...</div>';
+  
+  // Try fetching missing records for this specific list (so it displays "latest activity")
+  const recordMap = window._personalRecordMap || {};
+  const sessionMap = window._personalSessionMap || {};
+  const missingIds = listData.map(p => p.id).filter(id => !recordMap[id] && !sessionMap[id]);
+  
+  if (missingIds.length > 0) {
+    const ids = missingIds.map(id => `"${id}"`).join(',');
+    try {
+      const [recRes, sRes2] = await Promise.all([
+        sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+        sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
+      ]);
+      const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+      const ss2   = await sRes2.json(); ss2.forEach(s =>   { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
+    } catch(e) {}
+  }
+  
+  const myCode = typeof getEffectiveStaffCode === 'function' ? getEffectiveStaffCode() : '';
+  
+  listEl.innerHTML = listData.map(p => {
+    const allRoles = p.fruit_groups?.[0]?.fruit_roles || [];
+    const tvvs = allRoles.filter(x => x.role_type === 'tvv').map(x => x.staff_code).join(', ');
+    const gvbbs = allRoles.filter(x => x.role_type === 'gvbb').map(x => x.staff_code).join(', ');
+    const latestActivity = typeof latestActivityLabel === 'function' ? latestActivityLabel(recordMap[p.id], sessionMap[p.id]) : '';
+    
+    let extraBadge = '';
+    if (type === 'managed') {
+      const pNdd = allRoles.find(r => r.role_type === 'ndd')?.staff_code || p.ndd_staff_code;
+      const isNdd = pNdd === myCode;
+      const isTvv = allRoles.some(x=>x.role_type==='tvv' && x.staff_code===myCode);
+      const isGvbb = allRoles.some(x=>x.role_type==='gvbb' && x.staff_code===myCode);
+      let rName = isNdd ? 'NDD' : (isTvv ? 'TVV' : (isGvbb ? 'GVBB' : 'Quản lý'));
+      extraBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${rName}</span>`;
+    }
+    
+    return renderProfileCard(p, {
+      profileId: p.id,
+      ndd: p.ndd_staff_code || '',
+      tvv: tvvs,
+      gvbb: gvbbs,
+      latestActivity: latestActivity,
+      extraBadges: extraBadge
+    });
+  }).join('');
+};
