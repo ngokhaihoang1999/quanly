@@ -293,7 +293,6 @@ function renderTeamMembers(teamItem) {
           </select>
         </div>` : '';
       const botIcon = m.telegram_id ? '<span title="Đã kết nối Bot" style="font-size:10px;">🟢</span>' : '<span title="Chưa kết nối Bot" style="font-size:10px;">🔴</span>';
-      const deleteStaffBtn = isAdmin ? `<button onclick="event.stopPropagation();deleteStaffPermanently('${m.staff_code}')" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px;" title="X\u00f3a T\u0110 kh\u1ecfi h\u1ec7 th\u1ed1ng">\u2716</button>` : '';
       return `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
@@ -302,7 +301,6 @@ function renderTeamMembers(teamItem) {
           ${assignHtml}
         </div>
         <button onclick="removeMemberFromTeam('${m.staff_code}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;" title="G\u1ee1 kh\u1ecfi t\u1ed5">\u21A9</button>
-        ${deleteStaffBtn}
       </div>`;
     }).join('');
   }
