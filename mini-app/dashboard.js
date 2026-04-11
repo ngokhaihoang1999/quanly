@@ -434,46 +434,54 @@ async function loadDashboard() {
     }
 
     // ── SECTION 2: CÁ NHÂN ──
-    let myRoles = [];
+    const isManagerWithEdit = hasPermission('edit_profile');
+    
+    const nddList = [];
+    const tvvList = [];
+    const gvbbList = [];
+    const managedPids = new Set();
+    
     if (myCode) {
-      // Fetch all roles I have, with full profile data + all roles of those profiles (for TVV/GVBB display)
-      const rRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${myCode}&select=*,fruit_groups(id,profile_id,telegram_group_title,level,profiles(id,full_name,phone_number,phase,is_kt_opened,fruit_status,birth_year,dropout_reason,gender,avatar_color),fruit_roles(staff_code,role_type))`);
-      const allMyRoles = await rRes.json();
-      // Apply semester filter to personal roles (includes Alive + Dropout)
-      myRoles = allMyRoles.filter(r => inSem(r.fruit_groups?.profile_id));
+      allProfiles.forEach(p => {
+        const allRoles = p.fruit_groups?.[0]?.fruit_roles || [];
+        const pNdd = allRoles.find(r => r.role_type === 'ndd')?.staff_code || p.ndd_staff_code;
+        
+        const isNdd = pNdd === myCode;
+        const isTvv = allRoles.some(r => r.staff_code === myCode && r.role_type === 'tvv');
+        const isGvbb = allRoles.some(r => r.staff_code === myCode && r.role_type === 'gvbb');
+        
+        if (isNdd) nddList.push(p);
+        if (isTvv) tvvList.push(p);
+        if (isGvbb) gvbbList.push(p);
+        
+        let canEdit = false;
+        if (isNdd) canEdit = true;
+        if (isManagerWithEdit && unitStaffCodes.includes(pNdd)) canEdit = true;
+        if (isTvv || isGvbb) canEdit = true;
+        
+        if (canEdit) managedPids.add(p.id);
+      });
     }
-    const nddRoles = myRoles.filter(r => r.role_type === 'ndd');
-    const tvvRoles = myRoles.filter(r => r.role_type === 'tvv');
-    const gvbbRoles = myRoles.filter(r => r.role_type === 'gvbb');
-    // Count unique profiles per role (Alive + Dropout)
-    const countUniq = arr => new Set(arr.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
-    // Total profiles I manage (union of NDD + TVV + GVBB, deduplicated)
-    const allManagedPids = new Set([
-      ...nddRoles.map(r => r.fruit_groups?.profile_id),
-      ...tvvRoles.map(r => r.fruit_groups?.profile_id),
-      ...gvbbRoles.map(r => r.fruit_groups?.profile_id),
-    ].filter(Boolean));
+
     document.getElementById('dashPersonalMetrics').innerHTML = `
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num" style="color:var(--accent);">${countUniq(nddRoles)}</div><div class="lbl">Trái NDD</div></div>
-        <div class="dash-stat"><div class="num" style="color:var(--green);">${countUniq(tvvRoles)}</div><div class="lbl">Trái TV</div></div>
+        <div class="dash-stat"><div class="num" style="color:var(--accent);">${nddList.length}</div><div class="lbl">Trái NDD</div></div>
+        <div class="dash-stat"><div class="num" style="color:var(--green);">${tvvList.length}</div><div class="lbl">Trái TV</div></div>
       </div>
       <div class="dash-card-row">
-        <div class="dash-stat"><div class="num" style="color:#f59e0b;">${countUniq(gvbbRoles)}</div><div class="lbl">Trái BB</div></div>
-        <div class="dash-stat"><div class="num" style="color:#8b5cf6;">${allManagedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
+        <div class="dash-stat"><div class="num" style="color:#f59e0b;">${gvbbList.length}</div><div class="lbl">Trái BB</div></div>
+        <div class="dash-stat"><div class="num" style="color:#8b5cf6;">${managedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
       </div>`;
 
     // ── NDD DETAIL LIST ──
     const listEl = document.getElementById('dashMyList');
     document.getElementById('dashMyListTitle').textContent = '🍎 Trái tôi làm NDD';
-    if (nddRoles.length === 0) {
+    if (nddList.length === 0) {
       listEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Chưa có trái nào</div>';
     } else {
-      // Supplement recordMap + sessionMap with NDD-only profile IDs not yet fetched
-      const nddProfileIds = [...new Set(nddRoles.map(r=>r.fruit_groups?.profile_id).filter(Boolean))];
-      const missingIds = nddProfileIds.filter(id => !recordMap[id] && !sessionMap[id]);
+      const missingIds = nddList.map(p => p.id).filter(id => !recordMap[id] && !sessionMap[id]);
       if (missingIds.length > 0) {
-        const ids = missingIds.map(id=>`"${id}"`).join(',');
+        const ids = missingIds.map(id => `"${id}"`).join(',');
         try {
           const [recRes, sRes2] = await Promise.all([
             sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
@@ -481,65 +489,34 @@ async function loadDashboard() {
           ]);
           const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
           const ss2   = await sRes2.json(); ss2.forEach(s =>   { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
-        } catch(e) { console.warn('Supplement fetch:', e); }
+        } catch(e) {}
       }
-      const seenP = new Set();
-      listEl.innerHTML = nddRoles.filter(r => {
-        const pid = r.fruit_groups?.profile_id;
-        if (!pid || seenP.has(pid)) return false;
-        seenP.add(pid); return true;
-      }).map(r => {
-
-        const p = r.fruit_groups?.profiles;
-        const name = p?.full_name || 'N/A';
-        const pid = r.fruit_groups?.profile_id;
-        const ph = p?.phase || 'new';
-        const phaseLabel = PHASE_LABELS[ph]||ph;
-        const phaseColor = PHASE_COLORS[ph]||'#f59e0b';
-        
-        const isKT = p?.is_kt_opened;
-        const showKT = ['bb', 'center', 'completed'].includes(ph);
-        const ktLabel = showKT ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-left:4px;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>` : '';
-
-        // Caregivers from all roles of this fruit_group
-        const allRolesInGroup = r.fruit_groups?.fruit_roles || [];
-        const tvvList = allRolesInGroup.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ');
-        const gvbbList = allRolesInGroup.filter(x=>x.role_type==='gvbb').map(x=>x.staff_code).join(', ');
-        // Latest activity — unified via latestActivityLabel()
-        const latestActivity = latestActivityLabel(recordMap[pid], sessionMap[pid]);
-        // Use full profile from allProfiles cache if available (has all fields)
-        const fullP = allProfiles.find(x => x.id === pid) || p;
-        return renderProfileCard(fullP, {
-          profileId: pid,
-          ndd: fullP?.ndd_staff_code || '',
-          tvv: tvvList,
-          gvbb: gvbbList,
+      listEl.innerHTML = nddList.map(p => {
+        const allRoles = p.fruit_groups?.[0]?.fruit_roles || [];
+        const tvvs = allRoles.filter(x => x.role_type === 'tvv').map(x => x.staff_code).join(', ');
+        const gvbbs = allRoles.filter(x => x.role_type === 'gvbb').map(x => x.staff_code).join(', ');
+        const latestActivity = latestActivityLabel(recordMap[p.id], sessionMap[p.id]);
+        return renderProfileCard(p, {
+          profileId: p.id,
+          ndd: p.ndd_staff_code || '',
+          tvv: tvvs,
+          gvbb: gvbbs,
           latestActivity: latestActivity
         });
       }).join('');
     }
 
     // TVV / GVBB summary (compact)
-    const myListEl = document.getElementById('dashMyList');
-    if (tvvRoles.length > 0 || gvbbRoles.length > 0) {
-      const seen2 = new Set();
-      const otherItems = [...tvvRoles, ...gvbbRoles].filter(r => {
-        const pid = r.fruit_groups?.profile_id;
-        if (!pid || seen2.has(pid)) return false;
-        seen2.add(pid); return true;
-      }).map(r => {
-        const p = r.fruit_groups?.profiles;
-        const name = p?.full_name || 'N/A';
-        const role = {ndd:'NDD',tvv:'💬 TVV',gvbb:'🎓 GVBB',la:'Lá'}[r.role_type]||r.role_type;
-        const ph = p?.phase || 'new';
-        const isKT = p?.is_kt_opened;
-        const showKT = ['bb', 'center', 'completed'].includes(ph);
-        const ktLabel = showKT ? `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;margin-right:6px;">${isKT ? '📖 KT' : '📕 Chưa KT'}</span>` : '';
-        const fullP2 = allProfiles.find(x => x.id === r.fruit_groups?.profile_id) || p;
-        const roleBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${role}</span>`;
-        return renderProfileCard(fullP2, { profileId: r.fruit_groups?.profile_id, extraBadges: roleBadge });
+    if (tvvList.length > 0 || gvbbList.length > 0) {
+      const tvvGvbbProfiles = [...new Set([...tvvList, ...gvbbList])];
+      const otherItems = tvvGvbbProfiles.map(p => {
+        const allRoles = p.fruit_groups?.[0]?.fruit_roles || [];
+        const isTvv = allRoles.some(r => r.staff_code === myCode && r.role_type === 'tvv');
+        const roleStr = isTvv ? '💬 TVV' : '🎓 GVBB';
+        const roleBadge = `<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--text2);margin-left:6px;">${roleStr}</span>`;
+        return renderProfileCard(p, { profileId: p.id, extraBadges: roleBadge });
       }).join('');
-      if (otherItems) myListEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
+      if (otherItems) listEl.innerHTML += `<div class="section-header" style="margin-top:12px;margin-bottom:6px;"><div class="section-title" style="font-size:13px;">💬 TVV & 🎓 GVBB</div></div>${otherItems}`;
     }
   } catch(e) {
     console.error('Dashboard error:', e);
