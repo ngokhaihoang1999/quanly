@@ -475,13 +475,43 @@ async function viewRecord(recordId, recordType) {
       }
     }
 
+    // Build plain-text for copy (Telegram-friendly format)
+    let copyText = '';
+    const addCopyLine = (icon, label, value) => {
+      if (!value) return;
+      copyText += `${icon} ${label}:\n${value}\n\n`;
+    };
+    if (isTV) {
+      copyText += `📝 BÁO CÁO TƯ VẤN — Lần ${c.lan_thu || '?'}\n`;
+      copyText += `🍎 ${pName}\n━━━━━━━━━━━━━━━━━━━━━\n`;
+      copyText += `📅 Ngày: ${date}${c.ten_cong_cu ? ` · 🔧 ${c.ten_cong_cu}` : ''}\n\n`;
+      addCopyLine('📌', 'Kết quả test', c.ket_qua_test);
+      addCopyLine('💬', 'Vấn đề / Nhu cầu khai thác', c.van_de);
+      addCopyLine('💭', 'Phản hồi của trái', c.phan_hoi);
+      addCopyLine('🎯', 'Điểm hái trái', c.diem_hai);
+      addCopyLine('📋', 'Đề xuất TVV', c.de_xuat);
+    } else {
+      let buoiTiepCopy = '';
+      if (c.buoi_tiep) { try { buoiTiepCopy = shinDateTime(c.buoi_tiep); } catch(e) {} }
+      copyText += `📖 BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}\n`;
+      copyText += `🍎 ${pName}\n━━━━━━━━━━━━━━━━━━━━━\n`;
+      copyText += `📅 Ngày: ${date}\n\n`;
+      addCopyLine('📚', 'Nội dung buổi học', c.noi_dung);
+      addCopyLine('😊', 'Phản ứng HS', c.phan_ung);
+      addCopyLine('🔍', 'Khai thác mới', c.khai_thac);
+      addCopyLine('💡', 'Tương tác đáng chú ý', c.tuong_tac);
+      addCopyLine('📋', 'Đề xuất chăm sóc', c.de_xuat_cs);
+      if (buoiTiepCopy) copyText += `📅 Buổi tiếp: ${buoiTiepCopy}\n`;
+      if (c.noi_dung_tiep) copyText += `📝 Nội dung tiếp: ${c.noi_dung_tiep}\n`;
+    }
+
     // Show in a read-only popup
-    showReportPopup(sections, recordId, recordType);
+    showReportPopup(sections, recordId, recordType, copyText.trim());
   } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
 
 // ── Polished report popup ──
-function showReportPopup(contentHtml, recordId, recordType) {
+function showReportPopup(contentHtml, recordId, recordType, copyText) {
   let modal = document.getElementById('reportViewModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -496,9 +526,12 @@ function showReportPopup(contentHtml, recordId, recordType) {
     modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
   }
   document.getElementById('reportViewBody').innerHTML = contentHtml;
-  // Actions: Edit + Close
+  // Store copy text
+  window._reportCopyText = copyText || '';
+  // Actions: Copy + Edit + Close
   const acts = document.getElementById('reportViewActions');
   acts.innerHTML = `
+    <button onclick="copyToClipboard(window._reportCopyText)" style="padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;cursor:pointer;" title="Copy báo cáo">📋</button>
     <button onclick="document.getElementById('reportViewModal').classList.remove('open');editRecord('${recordId}','${recordType}')" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">✏️ Chỉnh sửa</button>
     <button onclick="document.getElementById('reportViewModal').classList.remove('open')" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:none;background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;">Đóng</button>`;
   modal.classList.add('open');

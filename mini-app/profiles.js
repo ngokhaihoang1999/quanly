@@ -424,7 +424,45 @@ async function saveInfoSheet() {
   } catch { showToast('❌ Lỗi khi lưu'); }
 }
 
-// Records (Tư vấn / BB) → loadRecords() và deleteRecord() định nghĩa trong hapja.js
+// ── Copy info sheet to clipboard (formatted for Telegram) ──
+function copyInfoSheet() {
+  const v = id => document.getElementById(id)?.value?.trim() || '';
+  const chipVal = id => { try { return getChipValues(id)?.join(', ') || ''; } catch(e) { return ''; } };
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  const name = v('t2_ho_ten') || p?.full_name || '';
+  
+  const fields = [
+    { l: 'Họ tên', v: name },
+    { l: 'Giới tính', v: v('t2_gioi_tinh') },
+    { l: 'Năm sinh', v: v('t2_nam_sinh') },
+    { l: 'Nghề nghiệp', v: v('t2_nghe_nghiep') },
+    { l: 'Thời gian làm việc', v: v('t2_thoi_gian_lam_viec') },
+    { l: 'SĐT', v: v('t2_sdt') },
+    { l: 'Địa chỉ', v: v('t2_dia_chi') },
+    { l: 'Mục tiêu tháng', v: v('t2_que_quan') },
+    { l: 'Khung rảnh', v: v('t2_khung_ranh') },
+    { l: 'Sở thích', v: v('t2_so_thich') },
+    { l: 'Tính cách', v: v('t2_tinh_cach') },
+    { l: 'Dự định', v: v('t2_du_dinh') },
+    { l: 'Chuyện cũ', v: v('t2_chuyen_cu') },
+    { l: 'Người thân', v: v('t2_nguoi_than') },
+    { l: 'Người quan trọng', v: v('t2_nguoi_quan_trong') },
+    { l: 'Quan điểm', v: v('t2_quan_diem') },
+    { l: 'Concept / Vỏ bọc', v: v('t2_cong_cu') },
+    { l: 'Tôn giáo', v: chipVal('chips_ton_giao') },
+    { l: 'Hôn nhân', v: chipVal('chips_hon_nhan') },
+    { l: 'Quan hệ NDD', v: chipVal('chips_quan_he_ndd') },
+    { l: 'Không gian sống', v: chipVal('chips_khong_gian_song') },
+    { l: 'Lưu ý', v: v('t2_luu_y') },
+  ];
+
+  let text = `📋 PHIẾU THÔNG TIN\n🍎 ${name}\n━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  fields.forEach(f => {
+    if (f.v) text += `• ${f.l}: ${f.v}\n`;
+  });
+  copyToClipboard(text.trim());
+}
+
 async function openRecord(recordId, type) {
   // Fetch full record from server
   const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);

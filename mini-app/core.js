@@ -528,6 +528,21 @@ function toggleChip(el) { el.classList.toggle('selected'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
+// ── Copy text to clipboard with toast feedback ──
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('📋 Đã copy!');
+  } catch(e) {
+    // Fallback for older browsers / Telegram WebApp
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('📋 Đã copy!');
+  }
+}
+
 // ── Celebration: confetti + big toast for phase transitions ──
 function showCelebration(emoji, message) {
   // 1. Big toast
