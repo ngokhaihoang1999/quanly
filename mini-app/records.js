@@ -413,16 +413,95 @@ async function loadJourney(profileId, currentPhase) {
   } catch(e) { console.error('Journey error:', e); }
 }
 
-// ── View a report record (fetch content & open modal in READ-ONLY mode) ──
+// ── View a report record (polished read-only popup matching Telegram style) ──
 async function viewRecord(recordId, recordType) {
   try {
     const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
     const rows = await res.json();
-    if (rows[0]) {
-      currentRecordId = null; // null = read-only, no save
-      openAddRecordModal(recordType, rows[0].content, true); // true = readOnly
+    if (!rows[0]) { showToast('⚠️ Không tìm thấy báo cáo'); return; }
+    const r = rows[0];
+    const c = r.content || {};
+    const date = shinDate(r.created_at);
+    const pName = allProfiles.find(x => x.id === r.profile_id)?.full_name || '';
+    const isTV = recordType === 'tu_van';
+
+    // Build styled content sections
+    let sections = '';
+    const addSection = (icon, label, value) => {
+      if (!value) return;
+      sections += `<div style="margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:4px;">${icon} ${label}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;">${value}</div>
+      </div>`;
+    };
+
+    if (isTV) {
+      // ── TV Report ──
+      const header = `<div style="text-align:center;padding:12px 0 8px;">
+        <div style="font-size:16px;font-weight:800;color:var(--accent);">📝 BÁO CÁO TƯ VẤN — Lần ${c.lan_thu || '?'}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px;">🍎 ${pName}</div>
+        <div style="margin:8px auto 0;width:80%;height:1px;background:linear-gradient(90deg, transparent, var(--border), transparent);"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">📅 ${date}${c.ten_cong_cu ? ` · 🔧 ${c.ten_cong_cu}` : ''}</div>
+      </div>`;
+      sections = header;
+      addSection('📌', 'Kết quả test', c.ket_qua_test);
+      addSection('💬', 'Vấn đề / Nhu cầu khai thác', c.van_de);
+      addSection('💭', 'Phản hồi của trái', c.phan_hoi);
+      addSection('🎯', 'Điểm hái trái', c.diem_hai);
+      addSection('📋', 'Đề xuất TVV', c.de_xuat);
+    } else {
+      // ── BB Report ──
+      let buoiTiepDisplay = '';
+      if (c.buoi_tiep) {
+        try { buoiTiepDisplay = shinDateTime(c.buoi_tiep); } catch(e) {}
+      }
+      const header = `<div style="text-align:center;padding:12px 0 8px;">
+        <div style="font-size:16px;font-weight:800;color:var(--green);">📖 BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px;">🍎 ${pName}</div>
+        <div style="margin:8px auto 0;width:80%;height:1px;background:linear-gradient(90deg, transparent, var(--border), transparent);"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">📅 ${date}</div>
+      </div>`;
+      sections = header;
+      addSection('📚', 'Nội dung buổi học', c.noi_dung);
+      addSection('😊', 'Phản ứng HS', c.phan_ung);
+      addSection('🔍', 'Khai thác mới về HS', c.khai_thac);
+      addSection('💡', 'Tương tác đáng chú ý', c.tuong_tac);
+      addSection('📋', 'Đề xuất hướng chăm sóc', c.de_xuat_cs);
+      if (buoiTiepDisplay || c.noi_dung_tiep) {
+        sections += `<div style="margin-top:8px;padding:10px 12px;background:var(--surface);border-radius:var(--radius-sm);border:1px dashed var(--border);">`;
+        if (buoiTiepDisplay) sections += `<div style="font-size:12px;font-weight:600;color:var(--text2);">📅 Buổi tiếp: ${buoiTiepDisplay}</div>`;
+        if (c.noi_dung_tiep) sections += `<div style="font-size:12px;color:var(--text2);margin-top:4px;">📝 Nội dung tiếp: ${c.noi_dung_tiep}</div>`;
+        sections += `</div>`;
+      }
     }
+
+    // Show in a read-only popup
+    showReportPopup(sections, recordId, recordType);
   } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
+}
+
+// ── Polished report popup ──
+function showReportPopup(contentHtml, recordId, recordType) {
+  let modal = document.getElementById('reportViewModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'reportViewModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `<div class="modal" style="max-height:85vh;padding:0;display:flex;flex-direction:column;">
+      <div class="modal-handle" style="margin-top:12px;"></div>
+      <div style="overflow-y:auto;overflow-x:hidden;padding:0 16px 16px;flex:1;" id="reportViewBody"></div>
+      <div style="display:flex;gap:8px;padding:8px 16px 16px;border-top:1px solid var(--border);" id="reportViewActions"></div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+  }
+  document.getElementById('reportViewBody').innerHTML = contentHtml;
+  // Actions: Edit + Close
+  const acts = document.getElementById('reportViewActions');
+  acts.innerHTML = `
+    <button onclick="document.getElementById('reportViewModal').classList.remove('open');editRecord('${recordId}','${recordType}')" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">✏️ Chỉnh sửa</button>
+    <button onclick="document.getElementById('reportViewModal').classList.remove('open')" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:none;background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;">Đóng</button>`;
+  modal.classList.add('open');
 }
 
 // ── Edit a report record (fetch content & open modal in EDIT mode) ──
