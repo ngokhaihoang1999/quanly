@@ -420,10 +420,16 @@ async function loadDashboard() {
       hList.innerHTML = hapjas.map(h => {
         const date = shinDate(h.created_at);
         const statusDot = h.status === 'revision' ? 'revision' : h.status === 'revision_submitted' ? 'resubmitted' : 'pending';
-        const statusBadge = h.status === 'revision' ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#ef4444;color:white;font-weight:600;margin-left:4px;">Cần sửa</span>'
-          : h.status === 'revision_submitted' ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#8b5cf6;color:white;font-weight:600;margin-left:4px;">Đã sửa</span>'
-          : '';
-        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot ${statusDot}"></div><div class="profile-info"><div class="profile-name">${h.full_name}${statusBadge}</div><div class="profile-meta">📆 ${date} · NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">›</div></div>`;
+        const statusBadge = h.status === 'revision_submitted' ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#8b5cf6;color:white;font-weight:600;margin-left:4px;">Đã sửa</span>' : '';
+        // ⚠️ Warning icon for revision status — click to show feedback popup
+        let warnIcon = '';
+        if (h.status === 'revision' && h.feedback) {
+          const escapedFb = h.feedback.replace(/'/g, "\\\\'").replace(/\n/g, '\\\\n');
+          const fbBy = h.feedback_by ? getStaffLabel(h.feedback_by) : '';
+          const fbDate = h.feedback_at ? shinDateTime(h.feedback_at) : '';
+          warnIcon = `<span onclick="event.stopPropagation();showHapjaFeedback('${escapedFb}','${fbBy}','${fbDate}')" style="font-size:18px;cursor:pointer;animation:pulse 1.5s infinite;margin-right:4px;" title="Cần chỉnh sửa — bấm xem">⚠️</span>`;
+        }
+        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot ${statusDot}"></div><div class="profile-info"><div class="profile-name">${warnIcon}${h.full_name}${statusBadge}</div><div class="profile-meta">📆 ${date} · NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">›</div></div>`;
       }).join('');
     }
 

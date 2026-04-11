@@ -158,14 +158,25 @@ async function openHapjaDetail(id) {
     const titleEl = document.getElementById('hapjaDetailTitle');
     if (titleEl) titleEl.innerHTML = `📋 Chi tiết Check Hapja <span style="font-size:12px;padding:3px 8px;border-radius:20px;background:${statusInfo.color};color:white;font-weight:600;margin-left:6px;">${statusInfo.label}</span>`;
     
-    // Feedback banner (if exists)
+    // Feedback indicator (compact ⚠️ icon → click to popup)
     let feedbackHtml = '';
-    if (h.feedback) {
+    if (h.feedback && h.status === 'revision') {
       const fbDate = h.feedback_at ? shinDateTime(h.feedback_at) : '';
       const fbBy = h.feedback_by ? getStaffLabel(h.feedback_by) : '';
-      feedbackHtml = `<div style="background:linear-gradient(135deg, #fef3c7, #fde68a);border-radius:var(--radius-sm);padding:12px;border-left:4px solid #f59e0b;margin-bottom:12px;">
-        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">📝 Phản hồi từ người duyệt${fbBy ? ` (${fbBy})` : ''}${fbDate ? ` — ${fbDate}` : ''}</div>
-        <div style="font-size:13px;color:#78350f;white-space:pre-wrap;">${h.feedback}</div>
+      const escapedFb = h.feedback.replace(/'/g, "\\'").replace(/\n/g, '\\n');
+      feedbackHtml = `<div onclick="showHapjaFeedback('${escapedFb}', '${fbBy}', '${fbDate}')" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg, #fef3c7, #fde68a);border-radius:var(--radius-sm);padding:10px 14px;border-left:4px solid #ef4444;margin-bottom:12px;">
+        <span style="font-size:24px;animation:pulse 1.5s infinite;">⚠️</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:700;color:#dc2626;">Cần chỉnh sửa — bấm để xem chi tiết</div>
+          <div style="font-size:11px;color:#92400e;margin-top:2px;">${fbBy ? `Từ: ${fbBy}` : ''}${fbDate ? ` · ${fbDate}` : ''}</div>
+        </div>
+        <span style="font-size:16px;color:#92400e;">›</span>
+      </div>`;
+    } else if (h.feedback && h.status !== 'revision') {
+      // Show muted feedback for already-resolved revision
+      feedbackHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;opacity:0.6;">
+        <span style="font-size:14px;">✅</span>
+        <span style="font-size:11px;color:var(--text2);">Đã phản hồi góp ý trước đó</span>
       </div>`;
     }
     
@@ -247,11 +258,9 @@ async function openHapjaDetail(id) {
     const actions = document.getElementById('hapjaDetailActions');
     let actHtml = '';
     
-    // Creator: Save & Resubmit
+    // Creator: Save (always shows 'Lưu thay đổi')
     if (canEdit) {
-      actHtml += `<button onclick="saveHapjaEdit('${h.id}', ${h.status === 'revision' ? 'true' : 'false'})" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:white;font-size:14px;font-weight:700;cursor:pointer;">
-        ${h.status === 'revision' ? '📤 Chỉnh sửa & Gửi lại' : '💾 Lưu thay đổi'}
-      </button>`;
+      actHtml += `<button onclick="saveHapjaEdit('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:white;font-size:14px;font-weight:700;cursor:pointer;">💾 Lưu thay đổi</button>`;
     }
     
     // Approver: Approve + Request revision + Reject
@@ -271,7 +280,7 @@ async function openHapjaDetail(id) {
 }
 
 // ── Save edits to Hapja (creator) ──
-async function saveHapjaEdit(id, isResubmit) {
+async function saveHapjaEdit(id) {
   const el = k => document.getElementById(`hjd_${k}`);
   const val = k => { const e = el(k); return e ? (e.value?.trim() || '') : ''; };
   const ndd = val('ndd_staff_code') ? getStaffCodeFromInput('hjd_ndd_staff_code') || val('ndd_staff_code') : '';
@@ -281,6 +290,16 @@ async function saveHapjaEdit(id, isResubmit) {
   const gender = val('gender');
   
   if (!fullName) { showToast('⚠️ Họ tên không được trống'); return; }
+  
+  // Fetch current status to determine if this is a revision response
+  let currentStatus = 'pending';
+  try {
+    const cRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=status`);
+    const cRows = await cRes.json();
+    if (cRows[0]) currentStatus = cRows[0].status;
+  } catch(e) {}
+  
+  const isRevisionResponse = currentStatus === 'revision';
   
   const updatedData = {
     ndd_staff_code: ndd,
@@ -309,28 +328,39 @@ async function saveHapjaEdit(id, isResubmit) {
     data: updatedData,
   };
   
-  // If resubmitting after revision → set status to revision_submitted
-  if (isResubmit) {
+  // If responding to revision → clear feedback flag, set revision_submitted
+  if (isRevisionResponse) {
     payload.status = 'revision_submitted';
+    payload.feedback = null;
+    payload.feedback_by = null;
+    payload.feedback_at = null;
   }
   
   try {
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-    showToast(isResubmit ? '📤 Đã chỉnh sửa và gửi lại!' : '💾 Đã lưu thay đổi!');
+    showToast('💾 Đã lưu thay đổi!');
     closeModal('hapjaDetailModal');
     
-    // Notify approvers about resubmission
-    if (isResubmit) {
+    // Always notify approvers when saving from revision status
+    if (isRevisionResponse) {
       try {
         const approverCodes = typeof getApproverCodes === 'function' ? await getApproverCodes() : [];
         if (typeof createNotification === 'function' && approverCodes.length > 0) {
-          await createNotification(approverCodes, 'hapja_resubmitted', '📤 Phiếu Hapja đã chỉnh sửa', `${fullName} — cần duyệt lại`, null);
+          await createNotification(approverCodes, 'hapja_resubmitted', '✅ Phiếu Hapja đã chỉnh sửa xong', `${fullName} — cần duyệt lại`, null);
         }
       } catch(e) { console.warn('Notify resubmit:', e); }
     }
     
     if (typeof loadDashboard === 'function') loadDashboard();
   } catch(e) { showToast('❌ Lỗi lưu: ' + e.message); console.error(e); }
+}
+
+// ── Popup feedback content ──
+function showHapjaFeedback(feedback, fromName, date) {
+  const msg = `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:#dc2626;">⚠️ GÓP Ý TỪ NGƯỜI DUYỆT</div>` +
+    `<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">${fromName ? `Từ: ${fromName}` : ''}${date ? ` · ${date}` : ''}</div>` +
+    `<div style="font-size:13px;line-height:1.6;white-space:pre-wrap;text-align:left;background:var(--surface2);padding:12px;border-radius:8px;border-left:4px solid #ef4444;">${feedback}</div>`;
+  showConfirmAsync(msg);
 }
 
 // ── Request revision (approver sends feedback) ──
