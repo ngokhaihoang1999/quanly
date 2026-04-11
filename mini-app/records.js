@@ -1,3 +1,30 @@
+// === Date format helpers: dd/mm/yy hh:mm ===
+function formatDateTimeInput(el) {
+  let v = el.value.replace(/[^\d]/g, '');
+  let out = '';
+  if (v.length > 0) out += v.substring(0, Math.min(2, v.length));
+  if (v.length > 2) out += '/' + v.substring(2, Math.min(4, v.length));
+  if (v.length > 4) out += '/' + v.substring(4, Math.min(6, v.length));
+  if (v.length > 6) out += ' ' + v.substring(6, Math.min(8, v.length));
+  if (v.length > 8) out += ':' + v.substring(8, Math.min(10, v.length));
+  if (out !== el.value) { const pos = out.length; el.value = out; el.setSelectionRange(pos, pos); }
+}
+function parseDDMMYYHHMM(str) {
+  if (!str) return null;
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const [,dd,mm,yy,hh,mi] = m;
+  const year = 2000 + parseInt(yy);
+  return `${year}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T${hh.padStart(2,'0')}:${mi}`;
+}
+function isoToDDMMYYHHMM(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // ── Shared utility: label for the latest activity of a profile ──────────────
 // rec = latest record row, sess = latest consultation_session row (either can be null)
 function latestActivityLabel(rec, sess) {
@@ -506,13 +533,9 @@ async function openScheduleTVModal(existingSession) {
     if (el('stv_session_num')) el('stv_session_num').value = existingSession.session_number || 1;
     if (el('stv_tool')) el('stv_tool').value = existingSession.tool || '';
     if (el('stv_datetime')) {
-      // Format datetime-local: YYYY-MM-DDTHH:MM
+      // Format dd/mm/yy hh:mm
       const dt = existingSession.scheduled_at || existingSession.created_at;
-      if (dt) {
-        const d = new Date(dt);
-        const pad = n => String(n).padStart(2,'0');
-        el('stv_datetime').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      } else el('stv_datetime').value = '';
+      el('stv_datetime').value = isoToDDMMYYHHMM(dt);
     }
     if (el('stv_tvv')) el('stv_tvv').value = existingSession.tvv_staff_code || '';
     const subtitleEl = el('stv_subtitle');
@@ -567,7 +590,9 @@ async function saveScheduleTV() {
 
   const num = parseInt(document.getElementById('stv_session_num').value) || 1;
   const tool = document.getElementById('stv_tool').value.trim();
-  const dt = document.getElementById('stv_datetime').value;
+  const dtRaw = document.getElementById('stv_datetime').value.trim();
+  const dt = parseDDMMYYHHMM(dtRaw) || '';
+  if (dtRaw && !dt) { showToast('\u26a0\ufe0f Th\u1eddi gian sai \u0111\u1ecbnh d\u1ea1ng (dd/mm/yy hh:mm)'); if (btn) { btn.disabled = false; btn.textContent = editingSessionId ? '\ud83d\udcbe C\u1eadp nh\u1eadt' : '\u2705 Ch\u1ed1t T\u01b0 V\u1ea5n'; } return; }
   const tvv = getStaffCodeFromInput('stv_tvv');
 
   if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
