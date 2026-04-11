@@ -502,5 +502,82 @@ function _renderReports(el, subUnitIdx) {
   }
 
   html += '</div></div>';
+
+  // ═══════════════════════════════════════════════════
+  // MODULE 5: SO SÁNH GIỮA CÁC ĐƠN VỊ
+  // ═══════════════════════════════════════════════════
+  // Only show at the "tổng thể" level when there are sub-units to compare
+  // Compare only direct children (same type level)
+  const compareType = scopeUnits.length > 0 ? scopeUnits[0].type : null;
+  const compareUnits = scopeUnits.filter(u => u.type === compareType);
+  const typeLabels = { area: 'Khu vực', group: 'Nhóm', team: 'Tổ' };
+
+  if (subUnitIdx === null && compareUnits.length >= 2) {
+    // Compute stats per unit
+    const unitStats = compareUnits.map(u => {
+      const codeSet = new Set(u.codes);
+      const uProfiles = Array.from(profileMap.values()).filter(p => codeSet.has(p.ndd));
+      const uAlive = uProfiles.filter(p => p.fruit_status !== 'dropout');
+      const uDrop = uProfiles.filter(p => p.fruit_status === 'dropout');
+      const uDormant = uAlive.filter(p => {
+        const recs = recMap[p.id] || [];
+        const sess = sessMap[p.id] || [];
+        const allDates = [...recs.map(r => new Date(r.created_at).getTime()), ...sess.map(r => new Date(r.created_at).getTime())];
+        const last = allDates.length > 0 ? Math.max(...allDates) : 0;
+        return last && (now - last) > 14 * DAY;
+      }).length;
+
+      // Conversion: how many alive moved past chakki
+      const converted = uAlive.filter(p => phaseIdx(p.phase) >= 2).length; // at least TV
+      const convRate = uAlive.length > 0 ? Math.round(converted / uAlive.length * 100) : 0;
+
+      return {
+        label: u.label.trim().replace(/^└\s*/, ''),
+        total: uProfiles.length,
+        alive: uAlive.length,
+        dropout: uDrop.length,
+        dropPct: uProfiles.length > 0 ? Math.round(uDrop.length / uProfiles.length * 100) : 0,
+        dormant: uDormant,
+        convRate,
+      };
+    }).sort((a, b) => b.alive - a.alive);
+
+    html += `<div class="rpt-section">
+      <div class="rpt-title" onclick="this.nextElementSibling.classList.toggle('rpt-hidden')">
+        🏆 SO SÁNH ${(typeLabels[compareType] || 'Đơn vị').toUpperCase()}
+        <span style="font-size:11px;font-weight:500;color:var(--text3);">(${compareUnits.length} ${typeLabels[compareType] || 'đơn vị'})</span>
+      </div>
+      <div>`;
+
+    html += '<div class="rpt-compare-table">';
+    html += `<div class="rpt-compare-header">
+      <div class="rpt-compare-name">${typeLabels[compareType] || 'Đơn vị'}</div>
+      <div class="rpt-compare-num">Tổng</div>
+      <div class="rpt-compare-num">🟢</div>
+      <div class="rpt-compare-num">🔴</div>
+      <div class="rpt-compare-num">%Drop</div>
+      <div class="rpt-compare-num">😴</div>
+      <div class="rpt-compare-num">→TV%</div>
+    </div>`;
+
+    unitStats.forEach((s, idx) => {
+      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+      const dropColor = s.dropPct > 30 ? '#ef4444' : s.dropPct > 15 ? '#f59e0b' : 'var(--green)';
+      const convColor = s.convRate >= 50 ? 'var(--green)' : s.convRate >= 25 ? '#f59e0b' : '#ef4444';
+
+      html += `<div class="rpt-compare-row">
+        <div class="rpt-compare-name">${medal} ${s.label}</div>
+        <div class="rpt-compare-num" style="font-weight:700;">${s.total}</div>
+        <div class="rpt-compare-num" style="color:var(--green);font-weight:700;">${s.alive}</div>
+        <div class="rpt-compare-num" style="color:${s.dropout > 0 ? '#ef4444' : 'var(--text3)'};">${s.dropout}</div>
+        <div class="rpt-compare-num" style="color:${dropColor};font-weight:700;">${s.dropPct}%</div>
+        <div class="rpt-compare-num" style="color:${s.dormant > 0 ? '#f59e0b' : 'var(--text3)'};">${s.dormant}</div>
+        <div class="rpt-compare-num" style="color:${convColor};font-weight:700;">${s.convRate}%</div>
+      </div>`;
+    });
+
+    html += '</div></div></div>';
+  }
+
   el.innerHTML = html;
 }

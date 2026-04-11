@@ -285,3 +285,42 @@
   background: var(--surface2);
   gap: 1px;
 }
+
+/* ── UNIT COMPARISON TABLE ── */
+.rpt-compare-table {
+  font-size: 11px;
+}
+.rpt-compare-header,
+.rpt-compare-row {
+  display: grid;
+  grid-template-columns: 1fr repeat(6, 36px);
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+}
+.rpt-compare-header {
+  font-weight: 800;
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.3px;
+}
+.rpt-compare-row {
+  border-bottom: 1px solid var(--border);
+}
+.rpt-compare-row:last-child {
+  border-bottom: none;
+}
+.rpt-compare-name {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rpt-compare-num {
+  text-align: center;
+  font-size: 11px;
+}
