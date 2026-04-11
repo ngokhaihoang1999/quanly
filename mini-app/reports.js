@@ -210,6 +210,13 @@ function _renderReports(el, subUnitIdx) {
   const DAY = 86400000;
   const warnings = [];
 
+  // Helper: get NDD name for a profile
+  function nddName(p) {
+    if (!p.ndd) return '';
+    const staff = allStaff.find(x => x.staff_code === p.ndd);
+    return staff ? (staff.nickname || staff.full_name || p.ndd) : p.ndd;
+  }
+
   alive.forEach(p => {
     const recs = recMap[p.id] || [];
     const sess = sessMap[p.id] || [];
@@ -218,13 +225,13 @@ function _renderReports(el, subUnitIdx) {
     const daysSince = lastActivity ? Math.floor((now - lastActivity) / DAY) : 999;
 
     if (daysSince > 14) {
-      warnings.push({ type: 'dormant', severity: 'red', label: `🔴 ${p.full_name} — ${daysSince} ngày không hoạt động`, profile: p, days: daysSince });
+      warnings.push({ type: 'dormant', severity: 'red', label: `🔴 ${p.full_name} — ${daysSince} ngày không HĐ · NDD: ${nddName(p)}`, profile: p, days: daysSince });
     }
     if (!['center','completed'].includes(p.phase)) {
       const createdTime = p.created_at ? new Date(p.created_at).getTime() : 0;
       const daysSinceCreated = createdTime ? Math.floor((now - createdTime) / DAY) : 0;
       if (daysSinceCreated > 30 && daysSince > 14) {
-        warnings.push({ type: 'stuck', severity: 'yellow', label: `🟡 ${p.full_name} — kẹt giai đoạn ${PHASE_LABELS[p.phase]||p.phase} > 30 ngày`, profile: p });
+        warnings.push({ type: 'stuck', severity: 'yellow', label: `🟡 ${p.full_name} — kẹt ${PHASE_LABELS[p.phase]||p.phase} >30d · NDD: ${nddName(p)}`, profile: p });
       }
     }
   });
@@ -242,10 +249,10 @@ function _renderReports(el, subUnitIdx) {
     const hasTVV = roles.some(r => r.role_type === 'tvv');
     const hasGVBB = roles.some(r => r.role_type === 'gvbb');
     if (!hasTVV && !['new','chakki'].includes(p.phase)) {
-      warnings.push({ type: 'no_tvv', severity: 'blue', label: `🔵 ${p.full_name} — chưa có TVV`, profile: p });
+      warnings.push({ type: 'no_tvv', severity: 'blue', label: `🔵 ${p.full_name} — chưa có TVV · NDD: ${nddName(p)}`, profile: p });
     }
     if (!hasGVBB && ['tu_van','bb','center'].includes(p.phase)) {
-      warnings.push({ type: 'no_gvbb', severity: 'blue', label: `🔵 ${p.full_name} — chưa có GVBB`, profile: p });
+      warnings.push({ type: 'no_gvbb', severity: 'blue', label: `🔵 ${p.full_name} — chưa có GVBB · NDD: ${nddName(p)}`, profile: p });
     }
   });
 

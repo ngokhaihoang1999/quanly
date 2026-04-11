@@ -2,6 +2,9 @@
 
 const PRIORITY_ICONS = {
   duyet_hapja:  '🍎',
+  ngu_dong:     '😴',  // Auto-detect: dormant fruit
+  thieu_vai_tro:'🔵',  // Auto-detect: missing TVV/GVBB
+  ket_phase:    '⏳',  // Auto-detect: stuck in phase
   chot_tv_1:    '🔴',  // Chốt TV lần 1 → vào Chakki
   chot_tv_hinh: '🖼️', // Chốt TV lần 2+ → vào TV Hình
   viet_bc_tv:   '🟠',
@@ -11,6 +14,9 @@ const PRIORITY_ICONS = {
 };
 const PRIORITY_GROUP_LABELS = {
   duyet_hapja:  'Duyệt Check Hapja',
+  ngu_dong:     'Trái ngủ đông (>14 ngày)',
+  thieu_vai_tro:'Thiếu vai trò TVV/GVBB',
+  ket_phase:    'Kẹt giai đoạn (>30 ngày)',
   chot_tv_1:    'Cần chuẩn bị TV lần 1',
   chot_tv_hinh: 'Cần Chốt TV Hình (lần 2+)',
   viet_bc_tv:   'Cần viết Báo cáo TV',
@@ -18,7 +24,7 @@ const PRIORITY_GROUP_LABELS = {
   hoc_bb:       'Cần học BB',
   viet_bc_bb:   'Cần viết Báo cáo BB'
 };
-const PRIORITY_ORDER = ['duyet_hapja', 'chot_tv_1', 'chot_tv_hinh', 'viet_bc_tv', 'lap_group', 'viet_bc_bb', 'hoc_bb'];
+const PRIORITY_ORDER = ['duyet_hapja', 'ngu_dong', 'thieu_vai_tro', 'ket_phase', 'chot_tv_1', 'chot_tv_hinh', 'viet_bc_tv', 'lap_group', 'viet_bc_bb', 'hoc_bb'];
 
 
 async function loadPriority() {
@@ -82,6 +88,97 @@ async function loadPriority() {
       });
     });
 
+    // === Auto-detect: dormant, stuck, missing roles ===
+    try {
+      const myCode = getEffectiveStaffCode();
+      const myCodes = scopeCodes;
+      const codesIn = myCodes.map(c => `"${c}"`).join(',');
+      // Fetch NDD roles with profile data
+      const rolesRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codesIn})&role_type=eq.ndd&select=staff_code,role_type,fruit_groups(profile_id,profiles(full_name,phase,fruit_status,created_at))`);
+      const nddRoles = await rolesRes.json();
+      // Fetch recent records for activity check
+      const recsRes = await sbFetch(`/rest/v1/records?select=profile_id,created_at&order=created_at.desc&limit=500`);
+      const allRecs = await recsRes.json();
+      const sessRes = await sbFetch(`/rest/v1/consultation_sessions?select=profile_id,created_at&order=created_at.desc&limit=500`);
+      const allSess = await sessRes.json();
+      // Fetch existing roles for TVV/GVBB check
+      const allRolesRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codesIn})&select=role_type,fruit_groups(profile_id)`);
+      const allRolesData = await allRolesRes.json();
+
+      const nowMs = Date.now();
+      const DAY_MS = 86400000;
+      const PHASE_LABELS_P = { new: 'Mới', chakki: 'Chakki', tu_van_hinh: 'TV Hình', tu_van: 'Tư vấn', bb: 'BB', center: 'Center' };
+
+      // Build activity map: profile_id -> last activity timestamp
+      const actMap = {};
+      allRecs.forEach(r => { if (!actMap[r.profile_id] || new Date(r.created_at).getTime() > actMap[r.profile_id]) actMap[r.profile_id] = new Date(r.created_at).getTime(); });
+      allSess.forEach(s => { if (!actMap[s.profile_id] || new Date(s.created_at).getTime() > actMap[s.profile_id]) actMap[s.profile_id] = new Date(s.created_at).getTime(); });
+
+      // Build role map: profile_id -> Set of role_types
+      const roleMap = {};
+      allRolesData.forEach(r => {
+        const pid = r.fruit_groups?.profile_id;
+        if (!pid) return;
+        if (!roleMap[pid]) roleMap[pid] = new Set();
+        roleMap[pid].add(r.role_type);
+      });
+
+      // Process each NDD's profiles
+      const seen = new Set();
+      nddRoles.forEach(r => {
+        const p = r.fruit_groups?.profiles;
+        const pid = r.fruit_groups?.profile_id;
+        if (!p || !pid || seen.has(pid)) return;
+        if (p.fruit_status === 'dropout') return;
+        seen.add(pid);
+
+        const lastAct = actMap[pid] || (p.created_at ? new Date(p.created_at).getTime() : 0);
+        const daysSince = lastAct ? Math.floor((nowMs - lastAct) / DAY_MS) : 999;
+        const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
+        const daysCreated = createdMs ? Math.floor((nowMs - createdMs) / DAY_MS) : 0;
+        const roles = roleMap[pid] || new Set();
+
+        // 😴 Dormant: >14 days no activity
+        if (daysSince > 14) {
+          if (!groups['ngu_dong']) groups['ngu_dong'] = [];
+          groups['ngu_dong'].push({
+            id: `auto_nd_${pid}`, profile_id: pid, task_type: 'ngu_dong',
+            title: p.full_name, meta: `${daysSince} ngày không hoạt động · ${PHASE_LABELS_P[p.phase] || p.phase}`,
+            is_seen: true, created_at: new Date(lastAct).toISOString(), deadline: null, _auto: true
+          });
+        }
+
+        // 🔵 Missing TVV: past chakki but no TVV
+        if (!roles.has('tvv') && !['new', 'chakki'].includes(p.phase)) {
+          if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+          groups['thieu_vai_tro'].push({
+            id: `auto_tvv_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
+            title: `${p.full_name} — chưa có TVV`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+            is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+          });
+        }
+        // 🔵 Missing GVBB: in tu_van/bb/center but no GVBB
+        if (!roles.has('gvbb') && ['tu_van', 'bb', 'center'].includes(p.phase)) {
+          if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+          groups['thieu_vai_tro'].push({
+            id: `auto_gvbb_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
+            title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+            is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+          });
+        }
+
+        // ⏳ Stuck: >30 days same phase & >14 days no activity
+        if (!['center', 'completed'].includes(p.phase) && daysCreated > 30 && daysSince > 14) {
+          if (!groups['ket_phase']) groups['ket_phase'] = [];
+          groups['ket_phase'].push({
+            id: `auto_kp_${pid}`, profile_id: pid, task_type: 'ket_phase',
+            title: p.full_name, meta: `Kẹt ${PHASE_LABELS_P[p.phase] || p.phase} > 30 ngày`,
+            is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+          });
+        }
+      });
+    } catch(e) { console.warn('Priority auto-detect:', e); }
+
     // Check if nothing
     const totalCount = Object.values(groups).reduce((sum, g) => sum + g.length, 0);
     if (totalCount === 0) {
@@ -123,6 +220,9 @@ async function loadPriority() {
         html += `<div class="priority-item ${unseenCls} ${overdueCls}" onclick="${clickAction}">
           <div class="priority-item-dot" style="background:${
             type==='duyet_hapja'?'#f97316':
+            type==='ngu_dong'?'#ef4444':
+            type==='thieu_vai_tro'?'#3b82f6':
+            type==='ket_phase'?'#f59e0b':
             type==='chot_tv_1'?'#ef4444':
             type==='chot_tv_hinh'?'#ef4444':
             type==='viet_bc_tv'?'#f97316':
@@ -132,7 +232,7 @@ async function loadPriority() {
             <div class="priority-item-name">${t.title}</div>
             <div class="priority-item-meta">${t.meta || timeAgo}${deadlineStr ? ` · ${deadlineStr}` : ''}</div>
           </div>
-          ${!t.is_seen && type !== 'duyet_hapja' ? `<button onclick="event.stopPropagation();markPriorityItemSeen('${t.id}','${t.profile_id}','${t.task_type}')" class="priority-seen-btn" title="Đã xem">👁</button>` : ''}
+          ${!t.is_seen && type !== 'duyet_hapja' && !t._auto ? `<button onclick="event.stopPropagation();markPriorityItemSeen('${t.id}','${t.profile_id}','${t.task_type}')" class="priority-seen-btn" title="Đã xem">👁</button>` : ''}
         </div>`;
       });
 
