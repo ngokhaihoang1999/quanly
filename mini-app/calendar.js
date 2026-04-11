@@ -466,11 +466,11 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
   const myCode = getEffectiveStaffCode();
   const toolText = toolStr ? ` (${toolStr})` : '';
   const titleStr = `Chốt TV lần ${sessionNum}${toolText} — ${pName}`;
-  const oldTitlePattern = `Chốt TV lần ${sessionNum}`;
+  const oldTitlePattern = encodeURIComponent(`%Chốt TV lần ${sessionNum}%`);
 
   try {
     // Delete old event with similar pattern for this session (idempotent update)
-    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.%${oldTitlePattern}%`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${oldTitlePattern}`, { method: 'DELETE' });
 
     // ONLY create calendar event if a date was actually scheduled
     if (!scheduledAt) return;

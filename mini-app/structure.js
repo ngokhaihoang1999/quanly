@@ -235,6 +235,7 @@ function renderTeamMembers(teamItem) {
   const listEl = document.getElementById('edit_members_list');
   const pos = getCurrentPosition();
   const canAssignPos = hasPermission('assign_position');
+  const isAdmin = hasPermission('manage_structure');
   // Find parent area/group for YJYN/TJN cross-reference
   let parentArea = null, parentGroup = null;
   for (const a of (structureData||[])) {
@@ -291,13 +292,17 @@ function renderTeamMembers(teamItem) {
             ${getSpecialistPositions().map(p => `<option value="${p.code}" ${m.specialist_position===p.code?'selected':''}>${p.name}</option>`).join('')}
           </select>
         </div>` : '';
+      const botIcon = m.telegram_id ? '<span title="Đã kết nối Bot" style="font-size:10px;">🟢</span>' : '<span title="Chưa kết nối Bot" style="font-size:10px;">🔴</span>';
+      const deleteStaffBtn = isAdmin ? `<button onclick="event.stopPropagation();deleteStaffPermanently('${m.staff_code}')" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px;" title="X\u00f3a T\u0110 kh\u1ecfi h\u1ec7 th\u1ed1ng">\u2716</button>` : '';
       return `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;">${m.staff_code} ${posBadge}${cmBadge}</div>
+          <div style="font-size:13px;font-weight:600;">${botIcon} ${m.staff_code} ${posBadge}${cmBadge}</div>
+          <div style="font-size:11px;color:var(--text3);">${m.full_name || ''}</div>
           ${assignHtml}
         </div>
-        <button onclick="removeMemberFromTeam('${m.staff_code}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;" title="G\u1ee1 kh\u1ecfi t\u1ed5">\u2716</button>
+        <button onclick="removeMemberFromTeam('${m.staff_code}')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;" title="G\u1ee1 kh\u1ecfi t\u1ed5">\u21A9</button>
+        ${deleteStaffBtn}
       </div>`;
     }).join('');
   }
@@ -377,14 +382,68 @@ async function deleteStructure() {
   const type = document.getElementById('edit_struct_type').value;
   const name = document.getElementById('edit_struct_name').value;
   const labels = {area:'Khu v\u1ef1c', group:'Nh\u00f3m', team:'T\u1ed5'};
-  if (!await showConfirmAsync(`X\u00f3a ${labels[type]} "${name}"?\nT\u1ea5t c\u1ea3 d\u1eef li\u1ec7u b\u00ean trong s\u1ebd b\u1ecb x\u00f3a!`)) return;
-  const tables = {area:'areas', group:'org_groups', team:'teams'};
+
+  let childInfo = '';
+  if (type === 'team') {
+    const item = findStructItem('team', id);
+    const mc = (item?.staff||[]).length;
+    if (mc) childInfo = `\n${mc} th\u00e0nh vi\u00ean s\u1ebd b\u1ecb g\u1ee1 kh\u1ecfi t\u1ed5.`;
+  } else if (type === 'group') {
+    const area = (structureData||[]).find(a => (a.org_groups||[]).some(g => g.id === id));
+    const grp = area ? (area.org_groups||[]).find(g => g.id === id) : null;
+    const tc = (grp?.teams||[]).length;
+    if (tc) childInfo = `\n${tc} t\u1ed5 b\u00ean trong s\u1ebd b\u1ecb x\u00f3a.`;
+  } else if (type === 'area') {
+    const area = (structureData||[]).find(a => a.id === id);
+    const gc = (area?.org_groups||[]).length;
+    if (gc) childInfo = `\n${gc} nh\u00f3m b\u00ean trong s\u1ebd b\u1ecb x\u00f3a.`;
+  }
+
+  if (!await showConfirmAsync(`X\u00f3a ${labels[type]} "${name}"?${childInfo}\n\u26a0\ufe0f Thao t\u00e1c kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c!`)) return;
+
+  const delBtn = document.getElementById('deleteStructBtn');
+  if (delBtn) { delBtn.disabled = true; delBtn.textContent = '\u23f3 \u0110ang x\u00f3a...'; }
+
   try {
-    await sbFetch(`/rest/v1/${tables[type]}?id=eq.${id}`, { method:'DELETE' });
+    if (type === 'team') {
+      // Detach staff from this team
+      await sbFetch(`/rest/v1/staff?team_id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ team_id: null }) });
+      // Clear GYJN/BGYJN references
+      await sbFetch(`/rest/v1/teams?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ gyjn_staff_code: null, bgyjn_staff_code: null }) });
+      // Delete the team
+      await sbFetch(`/rest/v1/teams?id=eq.${id}`, { method:'DELETE' });
+    } else if (type === 'group') {
+      // Find all teams in this group and cascade delete
+      const area = (structureData||[]).find(a => (a.org_groups||[]).some(g => g.id === id));
+      const grp = area ? (area.org_groups||[]).find(g => g.id === id) : null;
+      for (const t of (grp?.teams||[])) {
+        await sbFetch(`/rest/v1/staff?team_id=eq.${t.id}`, { method:'PATCH', body: JSON.stringify({ team_id: null }) });
+        await sbFetch(`/rest/v1/teams?id=eq.${t.id}`, { method:'DELETE' });
+      }
+      // Clear TJN reference
+      await sbFetch(`/rest/v1/org_groups?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ tjn_staff_code: null }) });
+      await sbFetch(`/rest/v1/org_groups?id=eq.${id}`, { method:'DELETE' });
+    } else {
+      // Area: cascade delete groups -> teams -> detach staff
+      const area = (structureData||[]).find(a => a.id === id);
+      for (const g of (area?.org_groups||[])) {
+        for (const t of (g.teams||[])) {
+          await sbFetch(`/rest/v1/staff?team_id=eq.${t.id}`, { method:'PATCH', body: JSON.stringify({ team_id: null }) });
+          await sbFetch(`/rest/v1/teams?id=eq.${t.id}`, { method:'DELETE' });
+        }
+        await sbFetch(`/rest/v1/org_groups?id=eq.${g.id}`, { method:'DELETE' });
+      }
+      await sbFetch(`/rest/v1/areas?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ yjyn_staff_code: null }) });
+      await sbFetch(`/rest/v1/areas?id=eq.${id}`, { method:'DELETE' });
+    }
     closeModal('editStructModal');
     showToast('\u2705 \u0110\u00e3 x\u00f3a ' + name);
-    loadStructure();
-  } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
+    loadStructure(); loadStaff();
+  } catch(e) {
+    showToast('\u274c L\u1ed7i x\u00f3a: ' + (e.message||'')); console.error(e);
+  } finally {
+    if (delBtn) { delBtn.disabled = false; delBtn.textContent = '\ud83d\uddd1\ufe0f Xo\u00e1'; }
+  }
 }
 
 // ============ TEAM MEMBERS ============
@@ -482,6 +541,39 @@ async function createAndAddStaff() {
     showToast('\u274c L\u1ed7i: ' + (e.message || ''));
     console.error('createAndAddStaff:', e);
   }
+}
+
+async function deleteStaffPermanently(staffCode) {
+  const staff = allStaff.find(s => s.staff_code === staffCode);
+  const name = staff?.full_name || staffCode;
+  // Check how many profiles this staff manages
+  const profileCount = (allProfiles || []).filter(p => p.ndd_staff_code === staffCode).length;
+  let warn = '';
+  if (profileCount > 0) warn = `\n\u26a0\ufe0f T\u0110 n\u00e0y \u0111ang qu\u1ea3n l\u00fd ${profileCount} h\u1ed3 s\u01a1 tr\u00e1i qu\u1ea3.`;
+  if (!await showConfirmAsync(`X\u00f3a v\u0129nh vi\u1ec5n T\u0110 "${staffCode}"?\n${name}${warn}\n\nThao t\u00e1c kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c!`)) return;
+  try {
+    // Clear any structural role references
+    for (const a of (structureData||[])) {
+      if (a.yjyn_staff_code === staffCode) await sbFetch(`/rest/v1/areas?id=eq.${a.id}`, { method:'PATCH', body: JSON.stringify({ yjyn_staff_code: null }) });
+      for (const g of (a.org_groups||[])) {
+        if (g.tjn_staff_code === staffCode) await sbFetch(`/rest/v1/org_groups?id=eq.${g.id}`, { method:'PATCH', body: JSON.stringify({ tjn_staff_code: null }) });
+        for (const t of (g.teams||[])) {
+          const up = {};
+          if (t.gyjn_staff_code === staffCode) up.gyjn_staff_code = null;
+          if (t.bgyjn_staff_code === staffCode) up.bgyjn_staff_code = null;
+          if (Object.keys(up).length) await sbFetch(`/rest/v1/teams?id=eq.${t.id}`, { method:'PATCH', body: JSON.stringify(up) });
+        }
+      }
+    }
+    // Delete the staff record
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    showToast('\u2705 \u0110\u00e3 x\u00f3a T\u0110 ' + staffCode);
+    const teamId = document.getElementById('edit_struct_id').value;
+    await loadStructure();
+    const item = findStructItem('team', teamId);
+    if (item) renderTeamMembers(item);
+    await loadStaff();
+  } catch(e) { showToast('\u274c L\u1ed7i: ' + (e.message||'')); console.error(e); }
 }
 async function removeMemberFromTeam(staffCode) {
   if (!await showConfirmAsync('G\u1ee1 th\u00e0nh vi\u00ean n\u00e0y kh\u1ecfi t\u1ed5?')) return;
