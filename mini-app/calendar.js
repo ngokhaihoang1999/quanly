@@ -186,7 +186,8 @@ function renderCalendarDayEvents(date) {
   if (!titleEl || !listEl) return;
   
   const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-  const dayLabel = date.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
+  const weekdays = ['Chủ Nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+  const dayLabel = `${weekdays[date.getDay()]} — ${shinDate(date)}`;
   titleEl.textContent = `📅 ${dayLabel}`;
   
   const dayEvents = calEvents.filter(e => e.event_date === dateStr);

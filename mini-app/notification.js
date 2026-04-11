@@ -163,7 +163,7 @@ function getTimeAgo(dateStr) {
   if (h < 24) return `${h} giờ trước`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d} ngày trước`;
-  return new Date(dateStr).toLocaleDateString('vi-VN');
+  return shinDate(dateStr);
 }
 
 // ─── SCOPE HELPERS ────────────────────────────────────────────────────────────

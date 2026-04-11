@@ -1,28 +1,63 @@
-// === Date format helpers: dd/mm/yy hh:mm ===
+// === Shin Calendar: 2026 = Shin 43 → offset = year - 1983 ===
+// Format date: "Shin 43.04.12"  |  Format datetime: "Shin 43.04.12 09:26"
+const SHIN_OFFSET = 1983;
+
+function shinDate(dateInput) {
+  if (!dateInput) return '';
+  const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2,'0');
+  const sy = d.getFullYear() - SHIN_OFFSET;
+  return `Shin ${sy}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
+}
+
+function shinDateTime(dateInput) {
+  if (!dateInput) return '';
+  const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2,'0');
+  const sy = d.getFullYear() - SHIN_OFFSET;
+  return `Shin ${sy}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function shinTime(dateInput) {
+  if (!dateInput) return '';
+  const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Auto-mask input for Shin yy.mm.dd hh:mm (e.g. "43.04.12 09:26")
 function formatDateTimeInput(el) {
   let v = el.value.replace(/[^\d]/g, '');
   let out = '';
-  if (v.length > 0) out += v.substring(0, Math.min(2, v.length));
-  if (v.length > 2) out += '/' + v.substring(2, Math.min(4, v.length));
-  if (v.length > 4) out += '/' + v.substring(4, Math.min(6, v.length));
-  if (v.length > 6) out += ' ' + v.substring(6, Math.min(8, v.length));
-  if (v.length > 8) out += ':' + v.substring(8, Math.min(10, v.length));
+  if (v.length > 0) out += v.substring(0, Math.min(2, v.length));       // yy
+  if (v.length > 2) out += '.' + v.substring(2, Math.min(4, v.length));  // .mm
+  if (v.length > 4) out += '.' + v.substring(4, Math.min(6, v.length));  // .dd
+  if (v.length > 6) out += ' ' + v.substring(6, Math.min(8, v.length));  // hh
+  if (v.length > 8) out += ':' + v.substring(8, Math.min(10, v.length)); // :mm
   if (out !== el.value) { const pos = out.length; el.value = out; el.setSelectionRange(pos, pos); }
 }
-function parseDDMMYYHHMM(str) {
+
+// Parse "43.04.12 09:26" → ISO "2026-04-12T09:26"
+function parseShinInput(str) {
   if (!str) return null;
-  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{2})$/);
+  const m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})$/);
   if (!m) return null;
-  const [,dd,mm,yy,hh,mi] = m;
-  const year = 2000 + parseInt(yy);
+  const [,sy,mm,dd,hh,mi] = m;
+  const year = parseInt(sy) + SHIN_OFFSET;
   return `${year}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T${hh.padStart(2,'0')}:${mi}`;
 }
-function isoToDDMMYYHHMM(iso) {
+
+// ISO → "43.04.12 09:26" (for input field display, no "Shin" prefix)
+function isoToShinInput(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   if (isNaN(d)) return '';
   const pad = n => String(n).padStart(2,'0');
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()).slice(-2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const sy = d.getFullYear() - SHIN_OFFSET;
+  return `${sy}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // ── Shared utility: label for the latest activity of a profile ──────────────
@@ -296,7 +331,7 @@ async function loadJourney(profileId, currentPhase) {
       let html = '<div class="tl-container">';
 
       finalEvents.forEach((e) => {
-        const d = e.date ? new Date(e.date).toLocaleDateString('vi-VN') : '';
+        const d = e.date ? shinDate(e.date) : '';
 
         // Delete button helper
         let delBtn = '';
@@ -535,7 +570,7 @@ async function openScheduleTVModal(existingSession) {
     if (el('stv_datetime')) {
       // Format dd/mm/yy hh:mm
       const dt = existingSession.scheduled_at || existingSession.created_at;
-      el('stv_datetime').value = isoToDDMMYYHHMM(dt);
+      el('stv_datetime').value = isoToShinInput(dt);
     }
     if (el('stv_tvv')) el('stv_tvv').value = existingSession.tvv_staff_code || '';
     const subtitleEl = el('stv_subtitle');
@@ -591,8 +626,8 @@ async function saveScheduleTV() {
   const num = parseInt(document.getElementById('stv_session_num').value) || 1;
   const tool = document.getElementById('stv_tool').value.trim();
   const dtRaw = document.getElementById('stv_datetime').value.trim();
-  const dt = parseDDMMYYHHMM(dtRaw) || '';
-  if (dtRaw && !dt) { showToast('\u26a0\ufe0f Th\u1eddi gian sai \u0111\u1ecbnh d\u1ea1ng (dd/mm/yy hh:mm)'); if (btn) { btn.disabled = false; btn.textContent = editingSessionId ? '\ud83d\udcbe C\u1eadp nh\u1eadt' : '\u2705 Ch\u1ed1t T\u01b0 V\u1ea5n'; } return; }
+  const dt = parseShinInput(dtRaw) || '';
+  if (dtRaw && !dt) { showToast('\u26a0\ufe0f Sai \u0111\u1ecbnh d\u1ea1ng (VD: 43.04.12 09:26)'); if (btn) { btn.disabled = false; btn.textContent = editingSessionId ? '\ud83d\udcbe C\u1eadp nh\u1eadt' : '\u2705 Ch\u1ed1t T\u01b0 V\u1ea5n'; } return; }
   const tvv = getStaffCodeFromInput('stv_tvv');
 
   if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
@@ -1054,7 +1089,7 @@ async function loadNotes(profileId) {
     listEl.innerHTML = notes.map(n => {
       const title = (n.content?.title || 'Không tiêu đề').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const body = (n.content?.body || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const date = new Date(n.created_at).toLocaleDateString('vi-VN');
+      const date = shinDate(n.created_at);
       const rawTitle = (n.content?.title || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
       const rawBody = (n.content?.body || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
       return `<div class="sticky-note" id="note_${n.id}">

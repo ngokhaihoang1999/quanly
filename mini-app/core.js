@@ -1139,7 +1139,7 @@ function showUnitPopup(type) {
     return `<div style="cursor:pointer;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:6px;"
       onclick="${h.profile_id ? `openProfileById('${h.profile_id}');closeModal('unitPopupModal')` : ''}">
       <div style="font-weight:700;font-size:13px;">${h.full_name || '???'}</div>
-      <div style="font-size:11px;color:var(--text2);">NDD: ${h.data?.ndd_staff_code || h.created_by} · ${new Date(h.created_at).toLocaleDateString('vi-VN')}</div>
+      <div style="font-size:11px;color:var(--text2);">NDD: ${h.data?.ndd_staff_code || h.created_by} · ${shinDate(h.created_at)}</div>
     </div>`;
   }
 

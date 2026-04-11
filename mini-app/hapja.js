@@ -136,7 +136,7 @@ async function openHapjaDetail(id) {
     if (!hapjas.length) { showToast('⚠️ Không tìm thấy phiếu'); return; }
     const h = hapjas[0];
     const d = h.data || {};
-    const date = new Date(h.created_at).toLocaleDateString('vi-VN');
+    const date = shinDate(h.created_at);
     const canApprove = hasPermission('approve_hapja') && h.status === 'pending';
     const body = document.getElementById('hapjaDetailBody');
     const fields = [
@@ -158,7 +158,7 @@ async function openHapjaDetail(id) {
       ['Nỗi lo', d.noi_lo_lang || d.noi_lo],
       ['Sự quan tâm', d.su_quan_tam],
       ['SĐT', d.sdt],
-      ['Hẹn lịch TV', d.hen_tv ? new Date(d.hen_tv).toLocaleString('vi-VN') : ''],
+      ['Hẹn lịch TV', d.hen_tv ? shinDateTime(d.hen_tv) : ''],
       ['Trạng thái', h.status === 'pending' ? '⏳ Chờ duyệt' : h.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'],
       ['Ngày tạo', date],
       ['Người tạo', h.created_by],
@@ -313,7 +313,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
                     c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
                     c.ten_cong_cu || 'Phiếu #'+(i+1);
       const preview = c.van_de || c.noi_dung || c.phan_hoi || '';
-      const date = new Date(r.created_at).toLocaleDateString('vi-VN');
+      const date = shinDate(r.created_at);
       // Nút xóa chỉ hiện nếu đây là record mới nhất TRÊN TOÀN BỘ dòng thời gian
       const isGlobalNewest = (r.id === globalNewestId && globalNewestType === type);
       const delBtn = isGlobalNewest

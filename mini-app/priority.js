@@ -259,7 +259,7 @@ function formatDeadline(dateStr) {
   const hours = Math.floor(diff / 3600000);
   if (hours < 1) return `⏰ Còn ${Math.floor(diff/60000)} phút`;
   if (hours < 24) return `⏰ Còn ${hours}h`;
-  return `📅 ${d.toLocaleDateString('vi-VN')}`;
+  return `📅 ${shinDate(d)}`;
 }
 
 async function handlePriorityClick(taskId, profileId, taskType) {

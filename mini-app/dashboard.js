@@ -418,7 +418,7 @@ async function loadDashboard() {
       hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu chờ duyệt</div>';
     } else {
       hList.innerHTML = hapjas.map(h => {
-        const date = new Date(h.created_at).toLocaleDateString('vi-VN');
+        const date = shinDate(h.created_at);
         return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${h.full_name}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">\u203a</div></div>`;
       }).join('');
     }
