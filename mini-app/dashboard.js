@@ -424,9 +424,9 @@ async function loadDashboard() {
         // ⚠️ Warning icon for revision status — click to show feedback popup
         let warnIcon = '';
         if (h.status === 'revision' && h.feedback) {
-          const escapedFb = h.feedback.replace(/'/g, "\\\\'").replace(/\n/g, '\\\\n');
-          const fbBy = h.feedback_by ? getStaffLabel(h.feedback_by) : '';
-          const fbDate = h.feedback_at ? shinDateTime(h.feedback_at) : '';
+          const escapedFb = encodeURIComponent(h.feedback || '');
+          const fbBy = encodeURIComponent(h.feedback_by ? getStaffLabel(h.feedback_by) : '');
+          const fbDate = encodeURIComponent(h.feedback_at ? shinDateTime(h.feedback_at) : '');
           warnIcon = `<span onclick="event.stopPropagation();showHapjaFeedback('${escapedFb}','${fbBy}','${fbDate}')" style="font-size:18px;cursor:pointer;animation:pulse 1.5s infinite;margin-right:4px;" title="Cần chỉnh sửa — bấm xem">⚠️</span>`;
         }
         return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot ${statusDot}"></div><div class="profile-info"><div class="profile-name">${warnIcon}${h.full_name}${statusBadge}</div><div class="profile-meta">📆 ${date} · NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">›</div></div>`;

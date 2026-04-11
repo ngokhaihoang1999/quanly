@@ -161,14 +161,14 @@ async function openHapjaDetail(id) {
     // Feedback indicator (compact ⚠️ icon → click to popup)
     let feedbackHtml = '';
     if (h.feedback && h.status === 'revision') {
-      const fbDate = h.feedback_at ? shinDateTime(h.feedback_at) : '';
-      const fbBy = h.feedback_by ? getStaffLabel(h.feedback_by) : '';
-      const escapedFb = h.feedback.replace(/'/g, "\\'").replace(/\n/g, '\\n');
+      const fbDate = encodeURIComponent(h.feedback_at ? shinDateTime(h.feedback_at) : '');
+      const fbBy = encodeURIComponent(h.feedback_by ? getStaffLabel(h.feedback_by) : '');
+      const escapedFb = encodeURIComponent(h.feedback || '');
       feedbackHtml = `<div onclick="showHapjaFeedback('${escapedFb}', '${fbBy}', '${fbDate}')" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg, #fef3c7, #fde68a);border-radius:var(--radius-sm);padding:10px 14px;border-left:4px solid #ef4444;margin-bottom:12px;">
         <span style="font-size:24px;animation:pulse 1.5s infinite;">⚠️</span>
         <div style="flex:1;">
           <div style="font-size:12px;font-weight:700;color:#dc2626;">Cần chỉnh sửa — bấm để xem chi tiết</div>
-          <div style="font-size:11px;color:#92400e;margin-top:2px;">${fbBy ? `Từ: ${fbBy}` : ''}${fbDate ? ` · ${fbDate}` : ''}</div>
+          <div style="font-size:11px;color:#92400e;margin-top:2px;">${h.feedback_by ? `Từ: ${getStaffLabel(h.feedback_by)}` : ''}${(h.feedback_by && h.feedback_at) ? ' · ' : ''}${h.feedback_at ? shinDateTime(h.feedback_at) : ''}</div>
         </div>
         <span style="font-size:16px;color:#92400e;">›</span>
       </div>`;
@@ -356,7 +356,10 @@ async function saveHapjaEdit(id) {
 }
 
 // ── Popup feedback content ──
-function showHapjaFeedback(feedback, fromName, date) {
+function showHapjaFeedback(encFeedback, encFromName, encDate) {
+  const feedback = decodeURIComponent(encFeedback || '');
+  const fromName = decodeURIComponent(encFromName || '');
+  const date = decodeURIComponent(encDate || '');
   const msg = `<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:#dc2626;">⚠️ GÓP Ý TỪ NGƯỜI DUYỆT</div>` +
     `<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">${fromName ? `Từ: ${fromName}` : ''}${date ? ` · ${date}` : ''}</div>` +
     `<div style="font-size:13px;line-height:1.6;white-space:pre-wrap;text-align:left;background:var(--surface2);padding:12px;border-radius:8px;border-left:4px solid #ef4444;">${feedback}</div>`;
