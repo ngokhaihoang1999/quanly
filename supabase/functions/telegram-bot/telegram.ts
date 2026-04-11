@@ -44,6 +44,13 @@ export async function getChatAdmins(chatId: number) {
   return res.ok ? res.result : [];
 }
 
+export async function getChatMember(chatId: number, userId: number) {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${chatId}&user_id=${userId}`).then(r => r.json());
+    return res.ok ? res.result : null;
+  } catch { return null; }
+}
+
 export async function getBotId(): Promise<number | null> {
   const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`).then(r => r.json());
   return res.result?.id || null;

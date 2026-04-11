@@ -92,6 +92,11 @@ Deno.serve(async (req) => {
           return new Response("OK");
         }
         await supabase.from('staff').update({ telegram_id: telegramId }).eq('staff_code', code);
+        // Auto-resolve any tg:{telegramId} GVBB roles → replace with real staff_code
+        const tempCode = `tg:${telegramId}`;
+        await supabase.from('fruit_roles')
+          .update({ staff_code: code, display_name: null })
+          .eq('staff_code', tempCode);
         await sendText(chatId, `✅ Đăng ký thành công! Mừng *${existing.full_name}* (${code}).\nDùng /start để bắt đầu.`);
         return new Response("OK");
       }

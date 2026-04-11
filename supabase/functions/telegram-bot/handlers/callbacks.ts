@@ -1,6 +1,6 @@
 import { supabase, BOT_TOKEN, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
-import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
+import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getChatMember, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
 import { sendBBFormTemplate } from "./group.ts";
 
 // ============ CALLBACK QUERY HANDLER ============
@@ -442,27 +442,54 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // menu_assign_role — Xác nhận GVBB
+  // menu_assign_role — Xác nhận GVBB (detects ALL group members by probing staff telegram_ids)
   if (cbData === 'menu_assign_role') {
     if (!canAssignRole(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền xác nhận GVBB.`);
+    
+    // 1) Get group admins (these are always visible)
     const admins = await getChatAdmins(chatId);
-    if (!admins || !admins.length) return sendText(chatId, `❌ Không thể lấy danh sách quản trị viên của group.`);
+    const seenTids = new Set<number>();
+    const memberList: { tid: number; staffCode: string | null; displayName: string }[] = [];
     
-    const adminIds = admins.filter((a: any) => !a.user.is_bot).map((a: any) => a.user.id);
-    const { data: staffList } = await supabase.from('staff').select('telegram_id, staff_code, full_name').in('telegram_id', adminIds);
-    const staffMap: any = {};
-    staffList?.forEach((s: any) => staffMap[s.telegram_id] = s);
-    
-    const kb: any[] = [];
+    // Process admins first
     for (const a of admins) {
       if (a.user.is_bot) continue;
       const tid = a.user.id;
-      const staff = staffMap[tid];
-      if (staff) {
-        kb.push([{ text: staff.staff_code, callback_data: `assign_gvbb_${staff.staff_code}` }]);
+      seenTids.add(tid);
+      const { data: staff } = await supabase.from('staff').select('staff_code, full_name').eq('telegram_id', tid).single();
+      memberList.push({
+        tid,
+        staffCode: staff?.staff_code || null,
+        displayName: staff?.staff_code || [a.user.first_name, a.user.last_name].filter(Boolean).join(' ') || `User ${tid}`
+      });
+    }
+    
+    // 2) Probe all staff with known telegram_ids to see if they're in THIS group
+    const { data: allStaff } = await supabase.from('staff').select('telegram_id, staff_code, full_name').not('telegram_id', 'is', null);
+    if (allStaff) {
+      for (const s of allStaff) {
+        if (seenTids.has(s.telegram_id)) continue; // already processed as admin
+        // Check if this staff member is in the group
+        const member = await getChatMember(chatId, s.telegram_id);
+        if (member && ['member', 'restricted', 'administrator', 'creator'].includes(member.status)) {
+          seenTids.add(s.telegram_id);
+          memberList.push({ tid: s.telegram_id, staffCode: s.staff_code, displayName: s.staff_code });
+        }
       }
     }
-    if (kb.length === 0) return sendText(chatId, `❌ Không tìm thấy TĐ nào đã đăng ký trong group này.`);
+    
+    // 3) Build keyboard
+    const kb: any[] = [];
+    for (const m of memberList) {
+      if (m.staffCode) {
+        // Known staff → show staff_code
+        kb.push([{ text: `🪪 ${m.staffCode}`, callback_data: `assign_gvbb_${m.staffCode}` }]);
+      } else {
+        // Unknown user → show telegram name, callback encodes telegram_id + name
+        kb.push([{ text: `👤 ${m.displayName}`, callback_data: `assign_gvbb_tg_${m.tid}` }]);
+      }
+    }
+    if (kb.length === 0) return sendText(chatId, `❌ Không tìm thấy thành viên nào trong group này.`);
     await sendKeyboard(chatId, `Chọn TĐ đảm nhận vai trò *GVBB*:`, kb);
     return;
   }
@@ -567,8 +594,8 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // assign_gvbb_{staffCode} — Assign GVBB role
-  if (cbData.startsWith('assign_gvbb_')) {
+  // assign_gvbb_{staffCode} — Assign GVBB role (by staff_code)
+  if (cbData.startsWith('assign_gvbb_') && !cbData.startsWith('assign_gvbb_tg_')) {
     const targetCode = cbData.replace('assign_gvbb_', '');
     await editMessageReplyMarkup(chatId, messageId, null);
     const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
@@ -577,6 +604,25 @@ export async function handleCallback(update: any, staffData: any) {
       fruit_group_id: fg.id, staff_code: targetCode, role_type: 'gvbb', assigned_by: staffData.staff_code
     }, { onConflict: 'fruit_group_id,staff_code,role_type' });
     await sendText(chatId, `✅ Đã xác nhận *${targetCode}* đảm nhận vai trò *GVBB* trong group này.`);
+    return;
+  }
+
+  // assign_gvbb_tg_{telegramId} — Assign GVBB by telegram_id (unregistered user)
+  if (cbData.startsWith('assign_gvbb_tg_')) {
+    const tgId = parseInt(cbData.replace('assign_gvbb_tg_', ''));
+    await editMessageReplyMarkup(chatId, messageId, null);
+    const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
+    if (!fg) return sendText(chatId, `❌ Group chưa đăng ký.`);
+    // Get user name from Telegram
+    const member = await getChatMember(chatId, tgId);
+    const displayName = member ? [member.user.first_name, member.user.last_name].filter(Boolean).join(' ') : `User ${tgId}`;
+    // Store with a temp identifier: tg:{telegram_id} as staff_code, so we can resolve later
+    const tempCode = `tg:${tgId}`;
+    await supabase.from('fruit_roles').upsert({
+      fruit_group_id: fg.id, staff_code: tempCode, role_type: 'gvbb',
+      assigned_by: staffData.staff_code, display_name: displayName
+    }, { onConflict: 'fruit_group_id,staff_code,role_type' });
+    await sendText(chatId, `✅ Đã xác nhận *${displayName}* (chưa có mã TĐ) đảm nhận vai trò *GVBB*.\n\n💡 _Khi user này kết nối với hệ thống bằng mã TĐ, tên sẽ được cập nhật tự động._`);
     return;
   }
 

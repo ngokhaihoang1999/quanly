@@ -97,7 +97,7 @@ async function openProfile(p) {
   let realGroupTitle = '';
   let realGroupInviteLink = '';
   try {
-    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type)`);
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type,display_name)`);
     const fgs = await fgRes.json();
     (fgs||[]).forEach(fg => {
       // Real Telegram group ID: negative but > -1e12 (max ~13 digits)
@@ -112,7 +112,10 @@ async function openProfile(p) {
       (fg.fruit_roles||[]).forEach(r => {
         if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
         if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
-        if (r.role_type==='gvbb' && !rolesInfo.gvbb) rolesInfo.gvbb = r.staff_code;
+        if (r.role_type==='gvbb' && !rolesInfo.gvbb) {
+          rolesInfo.gvbb = r.staff_code;
+          rolesInfo.gvbbDisplayName = r.display_name || null;
+        }
       });
     });
   } catch(e) {}
@@ -122,7 +125,10 @@ async function openProfile(p) {
   const nddDisplay = nddCode ? getStaffLabel(nddCode) : '—';
   const tvvDisplay = rolesInfo.tvv.length
     ? rolesInfo.tvv.map(c => getStaffLabel(c)).join(', ') : '—';
-  const gvbbDisplay = gvbbCode ? getStaffLabel(gvbbCode) : '—';
+  // GVBB: if staff_code starts with 'tg:' → show display_name (unregistered user)
+  const gvbbDisplay = gvbbCode
+    ? (gvbbCode.startsWith('tg:') ? (rolesInfo.gvbbDisplayName || gvbbCode) : getStaffLabel(gvbbCode))
+    : '—';
 
   // Per-profile role of current user
   const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);
