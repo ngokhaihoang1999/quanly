@@ -427,6 +427,62 @@ async function addMemberToTeam() {
     if (inputEl) inputEl.value = '';
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
+
+function toggleNewStaffForm() {
+  const form = document.getElementById('newStaffForm');
+  const btn = document.getElementById('btnToggleNewStaff');
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    btn.textContent = '\u25b2 \u1ea8n form';
+    document.getElementById('new_staff_code').value = '';
+    document.getElementById('new_staff_name').value = '';
+    document.getElementById('new_staff_code').focus();
+  } else {
+    form.style.display = 'none';
+    btn.textContent = '\u2795 T\u1ea1o T\u0110 m\u1edbi';
+  }
+}
+
+async function createAndAddStaff() {
+  const codeEl = document.getElementById('new_staff_code');
+  const nameEl = document.getElementById('new_staff_name');
+  const code = codeEl.value.trim();
+  const fullName = nameEl.value.trim();
+
+  if (!code) { showToast('\u26a0\ufe0f Nh\u1eadp m\u00e3 T\u0110'); codeEl.focus(); return; }
+  if (!fullName) { showToast('\u26a0\ufe0f Nh\u1eadp h\u1ecd t\u00ean'); nameEl.focus(); return; }
+
+  // Validate format: must be digits-then-letters with dash
+  if (!/^\d{3,6}-.+$/.test(code)) {
+    showToast('\u26a0\ufe0f M\u00e3 T\u0110 ph\u1ea3i c\u00f3 d\u1ea1ng: 000xxx-ABC'); codeEl.focus(); return;
+  }
+
+  // Check duplicate
+  if (allStaff.some(s => s.staff_code === code)) {
+    showToast('\u26a0\ufe0f M\u00e3 "' + code + '" \u0111\u00e3 t\u1ed3n t\u1ea1i! D\u00f9ng \u00f4 t\u00ecm ki\u1ebfm \u1edf tr\u00ean.');
+    return;
+  }
+
+  const teamId = document.getElementById('edit_struct_id').value;
+  try {
+    const res = await sbFetch('/rest/v1/staff', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({ staff_code: code, full_name: fullName, position: 'td', team_id: teamId })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'L\u1ed7i'); }
+    showToast('\u2705 \u0110\u00e3 t\u1ea1o "' + code + '" v\u00e0 th\u00eam v\u00e0o T\u1ed5');
+    codeEl.value = '';
+    nameEl.value = '';
+    await loadStructure();
+    const item = findStructItem('team', teamId);
+    if (item) renderTeamMembers(item);
+    await loadStaff();
+  } catch(e) {
+    showToast('\u274c L\u1ed7i: ' + (e.message || ''));
+    console.error('createAndAddStaff:', e);
+  }
+}
 async function removeMemberFromTeam(staffCode) {
   if (!await showConfirmAsync('G\u1ee1 th\u00e0nh vi\u00ean n\u00e0y kh\u1ecfi t\u1ed5?')) return;
   const teamId = document.getElementById('edit_struct_id').value;

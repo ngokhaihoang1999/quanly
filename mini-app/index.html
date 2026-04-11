@@ -503,6 +503,19 @@
       <input type="text" id="edit_add_member" data-list="teamAddDatalist" placeholder="Thêm TĐ vào Tổ..." style="flex:1;" />
       <button onclick="addMemberToTeam()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;">＋</button>
     </div>
+    <div style="margin-top:8px;">
+      <button onclick="toggleNewStaffForm()" id="btnToggleNewStaff" style="background:none;border:1px dashed var(--accent);color:var(--accent);padding:6px 12px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;width:100%;">➕ Tạo TĐ mới</button>
+      <div id="newStaffForm" style="display:none;margin-top:8px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;">Tạo thành viên mới</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input type="text" id="new_staff_code" placeholder="Mã TĐ (VD: 000125-ABC)" style="flex:1;font-size:12px;padding:6px 10px;" />
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" id="new_staff_name" placeholder="Họ tên đầy đủ" style="flex:1;font-size:12px;padding:6px 10px;" />
+        </div>
+        <button onclick="createAndAddStaff()" style="width:100%;padding:8px;background:var(--green);color:white;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;">✅ Tạo & Thêm vào Tổ</button>
+      </div>
+    </div>
   </div>
   <button class="save-btn" onclick="updateStructure()">💾 Lưu</button>
   <button id="deleteStructBtn" onclick="deleteStructure()" style="width:100%;padding:12px;background:none;border:1px solid var(--red);color:var(--red);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;">🗑️ Xoá</button>
@@ -612,7 +625,7 @@
 <script src="hapja.js?v=2026041104"></script>
 <script src="records.js?v=2026041104"></script>
 <script src="staff.js?v=2026040910"></script>
-<script src="structure.js?v=2026040921"></script>
+<script src="structure.js?v=2026041104"></script>
 <script src="calendar.js?v=2026040802"></script>
 <script src="notification.js?v=2026040802"></script>
 <script src="priority.js?v=2026041104"></script>
