@@ -89,94 +89,82 @@ async function loadPriority() {
     });
 
     // === Auto-detect: dormant, stuck, missing roles ===
+    // Uses cached allProfiles (loaded by profiles.js) — NO extra API calls for profile/role data
     try {
-      const myCode = getEffectiveStaffCode();
-      const myCodes = scopeCodes;
-      const codesIn = myCodes.map(c => `"${c}"`).join(',');
-      // Fetch NDD roles with profile data
-      const rolesRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codesIn})&role_type=eq.ndd&select=staff_code,role_type,fruit_groups(profile_id,profiles(full_name,phase,fruit_status,created_at))`);
-      const nddRoles = await rolesRes.json();
-      // Fetch recent records for activity check
-      const recsRes = await sbFetch(`/rest/v1/records?select=profile_id,created_at&order=created_at.desc&limit=500`);
-      const allRecs = await recsRes.json();
-      const sessRes = await sbFetch(`/rest/v1/consultation_sessions?select=profile_id,created_at&order=created_at.desc&limit=500`);
-      const allSess = await sessRes.json();
-      // Fetch existing roles for TVV/GVBB check
-      const allRolesRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codesIn})&select=role_type,fruit_groups(profile_id)`);
-      const allRolesData = await allRolesRes.json();
-
+      const codeSet = new Set(scopeCodes);
       const nowMs = Date.now();
       const DAY_MS = 86400000;
       const PHASE_LABELS_P = { new: 'Mới', chakki: 'Chakki', tu_van_hinh: 'TV Hình', tu_van: 'Tư vấn', bb: 'BB', center: 'Center' };
 
-      // Build activity map: profile_id -> last activity timestamp
-      const actMap = {};
-      allRecs.forEach(r => { if (!actMap[r.profile_id] || new Date(r.created_at).getTime() > actMap[r.profile_id]) actMap[r.profile_id] = new Date(r.created_at).getTime(); });
-      allSess.forEach(s => { if (!actMap[s.profile_id] || new Date(s.created_at).getTime() > actMap[s.profile_id]) actMap[s.profile_id] = new Date(s.created_at).getTime(); });
+      // Only 1 lightweight query: latest activity per profile (records + sessions)
+      // Use allProfiles for profile data (already in memory)
+      const myProfiles = (allProfiles || []).filter(p =>
+        p.ndd_staff_code && codeSet.has(p.ndd_staff_code) && p.fruit_status !== 'dropout'
+      );
 
-      // Build role map: profile_id -> Set of role_types
-      const roleMap = {};
-      allRolesData.forEach(r => {
-        const pid = r.fruit_groups?.profile_id;
-        if (!pid) return;
-        if (!roleMap[pid]) roleMap[pid] = new Set();
-        roleMap[pid].add(r.role_type);
-      });
+      if (myProfiles.length > 0) {
+        // Batch fetch last activity for these profiles
+        const pids = myProfiles.map(p => p.id);
+        const pidsIn = pids.map(id => `"${id}"`).join(',');
+        const [recsRes, sessRes] = await Promise.all([
+          sbFetch(`/rest/v1/records?profile_id=in.(${pidsIn})&select=profile_id,created_at&order=created_at.desc`),
+          sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${pidsIn})&select=profile_id,created_at&order=created_at.desc`)
+        ]);
+        const recs = await recsRes.json();
+        const sess = await sessRes.json();
 
-      // Process each NDD's profiles
-      const seen = new Set();
-      nddRoles.forEach(r => {
-        const p = r.fruit_groups?.profiles;
-        const pid = r.fruit_groups?.profile_id;
-        if (!p || !pid || seen.has(pid)) return;
-        if (p.fruit_status === 'dropout') return;
-        seen.add(pid);
+        // Build activity map
+        const actMap = {};
+        recs.forEach(r => { const t = new Date(r.created_at).getTime(); if (!actMap[r.profile_id] || t > actMap[r.profile_id]) actMap[r.profile_id] = t; });
+        sess.forEach(s => { const t = new Date(s.created_at).getTime(); if (!actMap[s.profile_id] || t > actMap[s.profile_id]) actMap[s.profile_id] = t; });
 
-        const lastAct = actMap[pid] || (p.created_at ? new Date(p.created_at).getTime() : 0);
-        const daysSince = lastAct ? Math.floor((nowMs - lastAct) / DAY_MS) : 999;
-        const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
-        const daysCreated = createdMs ? Math.floor((nowMs - createdMs) / DAY_MS) : 0;
-        const roles = roleMap[pid] || new Set();
+        myProfiles.forEach(p => {
+          const pid = p.id;
+          const lastAct = actMap[pid] || (p.created_at ? new Date(p.created_at).getTime() : 0);
+          const daysSince = lastAct ? Math.floor((nowMs - lastAct) / DAY_MS) : 999;
+          const createdMs = p.created_at ? new Date(p.created_at).getTime() : 0;
+          const daysCreated = createdMs ? Math.floor((nowMs - createdMs) / DAY_MS) : 0;
 
-        // 😴 Dormant: >14 days no activity
-        if (daysSince > 14) {
-          if (!groups['ngu_dong']) groups['ngu_dong'] = [];
-          groups['ngu_dong'].push({
-            id: `auto_nd_${pid}`, profile_id: pid, task_type: 'ngu_dong',
-            title: p.full_name, meta: `${daysSince} ngày không hoạt động · ${PHASE_LABELS_P[p.phase] || p.phase}`,
-            is_seen: true, created_at: new Date(lastAct).toISOString(), deadline: null, _auto: true
-          });
-        }
+          // 😴 Dormant: >14 days no activity
+          if (daysSince > 14) {
+            if (!groups['ngu_dong']) groups['ngu_dong'] = [];
+            groups['ngu_dong'].push({
+              id: `auto_nd_${pid}`, profile_id: pid, task_type: 'ngu_dong',
+              title: p.full_name, meta: `${daysSince} ngày không hoạt động · ${PHASE_LABELS_P[p.phase] || p.phase}`,
+              is_seen: true, created_at: new Date(lastAct).toISOString(), deadline: null, _auto: true
+            });
+          }
 
-        // 🔵 Missing TVV: past chakki but no TVV
-        if (!roles.has('tvv') && !['new', 'chakki'].includes(p.phase)) {
-          if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-          groups['thieu_vai_tro'].push({
-            id: `auto_tvv_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
-            title: `${p.full_name} — chưa có TVV`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-            is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-          });
-        }
-        // 🔵 Missing GVBB: in tu_van/bb/center but no GVBB
-        if (!roles.has('gvbb') && ['tu_van', 'bb', 'center'].includes(p.phase)) {
-          if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-          groups['thieu_vai_tro'].push({
-            id: `auto_gvbb_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
-            title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-            is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-          });
-        }
+          // 🔵 Missing TVV: past chakki but no TVV
+          if (!p.tvv_staff_code && !['new', 'chakki'].includes(p.phase)) {
+            if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+            groups['thieu_vai_tro'].push({
+              id: `auto_tvv_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
+              title: `${p.full_name} — chưa có TVV`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+              is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+            });
+          }
+          // 🔵 Missing GVBB: in tu_van/bb/center but no GVBB
+          if (!p.gvbb_staff_code && ['tu_van', 'bb', 'center'].includes(p.phase)) {
+            if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+            groups['thieu_vai_tro'].push({
+              id: `auto_gvbb_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
+              title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+              is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+            });
+          }
 
-        // ⏳ Stuck: >30 days same phase & >14 days no activity
-        if (!['center', 'completed'].includes(p.phase) && daysCreated > 30 && daysSince > 14) {
-          if (!groups['ket_phase']) groups['ket_phase'] = [];
-          groups['ket_phase'].push({
-            id: `auto_kp_${pid}`, profile_id: pid, task_type: 'ket_phase',
-            title: p.full_name, meta: `Kẹt ${PHASE_LABELS_P[p.phase] || p.phase} > 30 ngày`,
-            is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-          });
-        }
-      });
+          // ⏳ Stuck: >30 days same phase & >14 days no activity
+          if (!['center', 'completed'].includes(p.phase) && daysCreated > 30 && daysSince > 14) {
+            if (!groups['ket_phase']) groups['ket_phase'] = [];
+            groups['ket_phase'].push({
+              id: `auto_kp_${pid}`, profile_id: pid, task_type: 'ket_phase',
+              title: p.full_name, meta: `Kẹt ${PHASE_LABELS_P[p.phase] || p.phase} > 30 ngày`,
+              is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+            });
+          }
+        });
+      }
     } catch(e) { console.warn('Priority auto-detect:', e); }
 
     // Check if nothing
