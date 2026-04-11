@@ -389,6 +389,37 @@ function showConfirmAsync(message) {
   return new Promise(resolve => showConfirm(message, () => resolve(true), () => resolve(false)));
 }
 
+// Promise-based prompt: await showPromptAsync('message', 'default') → string|null
+function showPromptAsync(message, defaultValue = '') {
+  return new Promise(resolve => {
+    let modal = document.getElementById('customPromptModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'customPromptModal';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);';
+      modal.innerHTML = `
+        <div style="background:var(--surface,#fff);border-radius:14px;padding:20px 20px 14px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+          <div id="customPromptMsg" style="font-size:14px;color:var(--text,#111);line-height:1.5;margin-bottom:12px;white-space:pre-line;"></div>
+          <textarea id="customPromptInput" rows="3" style="width:100%;padding:10px;border:1px solid var(--border,#ddd);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;background:var(--surface2,#f9f9f9);color:var(--text,#111);box-sizing:border-box;"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+            <button id="customPromptCancel" style="padding:8px 16px;border:1px solid var(--border,#ddd);border-radius:8px;background:transparent;color:var(--text2,#555);font-size:13px;cursor:pointer;">Huỷ</button>
+            <button id="customPromptOk" style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent,#6366f1);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Gửi</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+    document.getElementById('customPromptMsg').textContent = message;
+    const input = document.getElementById('customPromptInput');
+    input.value = defaultValue;
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 100);
+
+    const cleanup = () => { modal.style.display = 'none'; };
+    document.getElementById('customPromptOk').onclick = () => { const v = input.value; cleanup(); resolve(v); };
+    document.getElementById('customPromptCancel').onclick = () => { cleanup(); resolve(null); };
+    modal.onclick = (e) => { if (e.target === modal) { cleanup(); resolve(null); } };
+  });
+}
 
 // ============ POSITIONS (DB-driven) ============
 const ALL_PERMISSION_KEYS = [

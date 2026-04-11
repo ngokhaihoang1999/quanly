@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026040911" />
+  <link rel="stylesheet" href="styles.css?v=2026041200" />
   <link rel="stylesheet" href="avatar.css?v=2026041016" />
   <link rel="stylesheet" href="reports.css?v=2026041104" />
 </head>
@@ -411,12 +411,14 @@
 
 <!-- Hapja Detail Modal -->
 <div class="modal-overlay" id="hapjaDetailModal">
-<div class="modal">
-  <div class="modal-handle"></div>
-  <div class="modal-title" id="hapjaDetailTitle">📋 Chi tiết Check Hapja</div>
-  <div id="hapjaDetailBody" style="display:flex;flex-direction:column;gap:12px;"></div>
-  <div id="hapjaDetailActions" style="display:flex;gap:8px;margin-top:16px;"></div>
-  <button onclick="closeModal('hapjaDetailModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
+<div class="modal" style="max-height:85vh; padding:0; display:flex; flex-direction:column;">
+  <div class="modal-handle" style="margin-top:12px;"></div>
+  <div class="modal-title" id="hapjaDetailTitle" style="padding:0 16px;">📋 Chi tiết Check Hapja</div>
+  <div style="overflow-y:auto; overflow-x:hidden; padding:0 16px 16px; flex:1;">
+    <div id="hapjaDetailBody" style="display:flex;flex-direction:column;gap:12px;"></div>
+    <div id="hapjaDetailActions" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;"></div>
+    <button onclick="closeModal('hapjaDetailModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
+  </div>
 </div>
 </div>
 
@@ -606,16 +608,16 @@
 <script src="webhook.js?v=2026040910"></script>
 <script src="avatar.js?v=2026041017"></script>
 <script src="reports.js?v=2026041104"></script>
-<script src="core.js?v=2026041106"></script>
-<script src="dashboard.js?v=2026041106"></script>
+<script src="core.js?v=2026041200"></script>
+<script src="dashboard.js?v=2026041200"></script>
 <script src="profiles.js?v=2026041106"></script>
-<script src="hapja.js?v=2026041106"></script>
+<script src="hapja.js?v=2026041200"></script>
 <script src="records.js?v=2026041106"></script>
 <script src="staff.js?v=2026041106"></script>
 <script src="structure.js?v=2026041106"></script>
 <script src="calendar.js?v=2026041106"></script>
 <script src="notification.js?v=2026041106"></script>
-<script src="priority.js?v=2026041106"></script>
+<script src="priority.js?v=2026041200"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>

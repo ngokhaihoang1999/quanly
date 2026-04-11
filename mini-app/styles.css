@@ -233,6 +233,8 @@
     .dash-dot.tv { background: var(--yellow); }
     .dash-dot.bb { background: var(--green); }
     .dash-dot.pending { background: var(--accent); animation: pulse 1.5s infinite; }
+    .dash-dot.revision { background: #ef4444; animation: pulse 1.5s infinite; }
+    .dash-dot.resubmitted { background: #8b5cf6; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     /* Structure tree - chart style with connectors */

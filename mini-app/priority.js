@@ -44,7 +44,7 @@ async function loadPriority() {
     const [hapjaRes, tasksRes] = await Promise.all([
       // "Duyệt Hapja": visible to anyone with approve_hapja permission
       hasPermission('approve_hapja')
-        ? sbFetch(`/rest/v1/check_hapja?status=eq.pending&select=id,full_name,created_by,created_at,data&order=created_at.asc`)
+        ? sbFetch(`/rest/v1/check_hapja?status=in.(pending,revision_submitted)&select=id,full_name,created_by,created_at,data,status&order=created_at.asc`)
         : Promise.resolve(null),
       // Priority tasks — only show if visible_at has passed (or is null)
       // Note: encode ISO timestamp to avoid URL issues with colons

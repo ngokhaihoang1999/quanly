@@ -137,56 +137,241 @@ async function openHapjaDetail(id) {
     const h = hapjas[0];
     const d = h.data || {};
     const date = shinDate(h.created_at);
-    const canApprove = hasPermission('approve_hapja') && h.status === 'pending';
+    const myCode = getEffectiveStaffCode();
+    const canApprove = hasPermission('approve_hapja') && (h.status === 'pending' || h.status === 'revision_submitted');
+    const isCreator = h.created_by === myCode;
+    const canEdit = isCreator && (h.status === 'pending' || h.status === 'revision');
+    
+    // Status label + color
+    const statusMap = {
+      'pending': { label: '⏳ Chờ duyệt', color: '#f59e0b' },
+      'revision': { label: '📝 Yêu cầu chỉnh sửa', color: '#ef4444' },
+      'revision_submitted': { label: '📤 Đã chỉnh sửa — Chờ duyệt lại', color: '#8b5cf6' },
+      'approved': { label: '✅ Đã duyệt', color: '#22c55e' },
+      'rejected': { label: '❌ Từ chối', color: '#dc2626' },
+    };
+    const statusInfo = statusMap[h.status] || { label: h.status, color: 'var(--text2)' };
+
     const body = document.getElementById('hapjaDetailBody');
+    
+    // Build title with status
+    const titleEl = document.getElementById('hapjaDetailTitle');
+    if (titleEl) titleEl.innerHTML = `📋 Chi tiết Check Hapja <span style="font-size:12px;padding:3px 8px;border-radius:20px;background:${statusInfo.color};color:white;font-weight:600;margin-left:6px;">${statusInfo.label}</span>`;
+    
+    // Feedback banner (if exists)
+    let feedbackHtml = '';
+    if (h.feedback) {
+      const fbDate = h.feedback_at ? shinDateTime(h.feedback_at) : '';
+      const fbBy = h.feedback_by ? getStaffLabel(h.feedback_by) : '';
+      feedbackHtml = `<div style="background:linear-gradient(135deg, #fef3c7, #fde68a);border-radius:var(--radius-sm);padding:12px;border-left:4px solid #f59e0b;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">📝 Phản hồi từ người duyệt${fbBy ? ` (${fbBy})` : ''}${fbDate ? ` — ${fbDate}` : ''}</div>
+        <div style="font-size:13px;color:#78350f;white-space:pre-wrap;">${h.feedback}</div>
+      </div>`;
+    }
+    
+    // Define fields config
     const fields = [
-      ['Họ tên', h.full_name],
-      ['Năm sinh', h.birth_year],
-      ['Giới tính', h.gender],
-      ['NDD', d.ndd_staff_code || h.created_by],
-      ['Ngày Chakki', d.ngay_chakki],
-      ['Concept', d.concept],
-      ['Hình thức', d.hinh_thuc || (Array.isArray(d.hinh_thuc) ? d.hinh_thuc.join(', ') : '')],
-      ['Mức thân thiết', d.than_thiet || (Array.isArray(d.than_thiet) ? d.than_thiet.join(', ') : '')],
-      ['Nơi ở', d.noi_o],
-      ['Nghề nghiệp', d.nghe_nghiep],
-      ['Tính cách (CC)', d.tinh_cach_cong_cu || d.tinh_cach],
-      ['Tính cách (TN)', d.tinh_cach_ket_noi],
-      ['Thần tính', (d.than_tinh_co_khong || '') + (d.than_tinh_chi_tiet ? ` - ${d.than_tinh_chi_tiet}` : '') || (Array.isArray(d.than_tinh) ? d.than_tinh.join(', ') : d.than_tinh)],
-      ['Hoàn cảnh HT', d.hoan_canh_hien_tai || d.hoan_canh],
-      ['Học kì', d.hoc_ki],
-      ['Nỗi lo', d.noi_lo_lang || d.noi_lo],
-      ['Sự quan tâm', d.su_quan_tam],
-      ['SĐT', d.sdt],
-      ['Hẹn lịch TV', d.hen_tv ? shinDateTime(d.hen_tv) : ''],
-      ['Trạng thái', h.status === 'pending' ? '⏳ Chờ duyệt' : h.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'],
-      ['Ngày tạo', date],
-      ['Người tạo', h.created_by],
+      { key: 'full_name', label: 'Họ tên', val: h.full_name, type: 'text', top: true },
+      { key: 'birth_year', label: 'Năm sinh', val: h.birth_year, type: 'text', top: true },
+      { key: 'gender', label: 'Giới tính', val: h.gender, type: 'select', options: ['Nam','Nữ','Khác'], top: true },
+      { key: 'ndd_staff_code', label: 'NDD', val: d.ndd_staff_code || h.created_by, type: 'staff' },
+      { key: 'ngay_chakki', label: 'Ngày Chakki', val: d.ngay_chakki, type: 'date' },
+      { key: 'concept', label: 'Concept', val: d.concept, type: 'text' },
+      { key: 'hinh_thuc', label: 'Hình thức', val: d.hinh_thuc, type: 'text' },
+      { key: 'than_thiet', label: 'Mức thân thiết', val: d.than_thiet, type: 'select', options: ['Cao','Trung bình','Thấp'] },
+      { key: 'noi_o', label: 'Nơi ở', val: d.noi_o, type: 'text' },
+      { key: 'nghe_nghiep', label: 'Nghề nghiệp', val: d.nghe_nghiep, type: 'text' },
+      { key: 'tinh_cach_cong_cu', label: 'Tính cách (CC)', val: d.tinh_cach_cong_cu || d.tinh_cach, type: 'text' },
+      { key: 'tinh_cach_ket_noi', label: 'Kết nối TN', val: d.tinh_cach_ket_noi, type: 'select', options: ['Phản hồi','Không phản hồi'] },
+      { key: 'than_tinh_co_khong', label: 'Thần tính', val: d.than_tinh_co_khong, type: 'select', options: ['Chưa khai thác','Có','Không'] },
+      { key: 'than_tinh_chi_tiet', label: 'Chi tiết thần tính', val: d.than_tinh_chi_tiet, type: 'text' },
+      { key: 'hoan_canh_hien_tai', label: 'Hoàn cảnh HT', val: d.hoan_canh_hien_tai || d.hoan_canh, type: 'text' },
+      { key: 'hoc_ki', label: 'Học kì', val: d.hoc_ki, type: 'text' },
+      { key: 'noi_lo_lang', label: 'Nỗi lo', val: d.noi_lo_lang || d.noi_lo, type: 'text' },
+      { key: 'su_quan_tam', label: 'Sự quan tâm', val: d.su_quan_tam, type: 'textarea' },
+      { key: 'sdt', label: 'SĐT', val: d.sdt, type: 'tel' },
+      { key: 'hen_tv', label: 'Hẹn lịch TV', val: d.hen_tv || '', type: 'datetime' },
     ];
-    body.innerHTML = fields.filter(([,v]) => v).map(([label, val]) =>
-      `<div style="display:flex;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);min-width:100px;">${label}</div>
-        <div style="font-size:13px;color:var(--text);flex:1;">${val}</div>
-      </div>`
-    ).join('');
+
+    let html = feedbackHtml;
+    
+    // Info header
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2);padding:4px 0;">
+      <span>📅 ${date} — Người tạo: ${getStaffLabel(h.created_by)}</span>
+    </div>`;
+    
+    // Fields
+    html += `<div style="display:flex;flex-direction:column;gap:8px;">`;
+    for (const f of fields) {
+      const v = f.val || '';
+      if (canEdit) {
+        // Editable field
+        let input = '';
+        const inputStyle = 'width:100%;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;';
+        if (f.type === 'select') {
+          input = `<select id="hjd_${f.key}" style="${inputStyle}">
+            <option value="">—</option>
+            ${(f.options||[]).map(o => `<option value="${o}" ${v===o?'selected':''}>${o}</option>`).join('')}
+          </select>`;
+        } else if (f.type === 'textarea') {
+          input = `<textarea id="hjd_${f.key}" style="${inputStyle}resize:vertical;min-height:48px;">${v}</textarea>`;
+        } else if (f.type === 'date') {
+          input = `<input type="date" id="hjd_${f.key}" value="${v}" style="${inputStyle}" />`;
+        } else if (f.type === 'datetime') {
+          input = `<input type="datetime-local" id="hjd_${f.key}" value="${v ? v.replace('Z','').slice(0,16) : ''}" style="${inputStyle}" />`;
+        } else if (f.type === 'staff') {
+          input = `<input type="text" id="hjd_${f.key}" value="${v}" data-list="staffSuggest" placeholder="Mã TĐ..." style="${inputStyle}" />`;
+        } else {
+          input = `<input type="${f.type}" id="hjd_${f.key}" value="${v}" style="${inputStyle}" />`;
+        }
+        html += `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px 12px;border:1px solid var(--border);">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;">${f.label}</div>
+          ${input}
+        </div>`;
+      } else {
+        // Read-only field
+        if (!v) continue;
+        let displayVal = v;
+        if (f.key === 'hen_tv' && v) displayVal = shinDateTime(v);
+        if (f.key === 'ndd_staff_code' && v) displayVal = getStaffLabel(v);
+        html += `<div style="display:flex;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);min-width:100px;">${f.label}</div>
+          <div style="font-size:13px;color:var(--text);flex:1;">${displayVal}</div>
+        </div>`;
+      }
+    }
+    html += `</div>`;
+    body.innerHTML = html;
+    
+    // Actions
     const actions = document.getElementById('hapjaDetailActions');
     let actHtml = '';
-    if (canApprove && h.status === 'pending') {
-      actHtml += `<button onclick="approveHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;">✅ Duyệt</button>
-        <button onclick="rejectHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--red);color:white;font-size:14px;font-weight:700;cursor:pointer;">❌ Từ chối</button>`;
+    
+    // Creator: Save & Resubmit
+    if (canEdit) {
+      actHtml += `<button onclick="saveHapjaEdit('${h.id}', ${h.status === 'revision' ? 'true' : 'false'})" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:white;font-size:14px;font-weight:700;cursor:pointer;">
+        ${h.status === 'revision' ? '📤 Chỉnh sửa & Gửi lại' : '💾 Lưu thay đổi'}
+      </button>`;
     }
-    if (h.created_by === getEffectiveStaffCode() && h.status === 'pending') {
+    
+    // Approver: Approve + Request revision + Reject
+    if (canApprove) {
+      actHtml += `<button onclick="approveHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;">✅ Duyệt</button>`;
+      actHtml += `<button onclick="requestHapjaRevision('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:#f59e0b;color:white;font-size:14px;font-weight:700;cursor:pointer;">📝 Góp ý</button>`;
+      actHtml += `<button onclick="rejectHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--red);color:white;font-size:14px;font-weight:700;cursor:pointer;">❌ Từ chối</button>`;
+    }
+    
+    // Creator: Delete
+    if (isCreator && h.status !== 'approved') {
       actHtml += `<button onclick="deleteHapja('${h.id}')" style="flex:1;padding:12px;border-radius:var(--radius-sm);border:none;background:var(--text2);color:white;font-size:14px;font-weight:700;cursor:pointer;">🗑️ Xoá</button>`;
     }
     actions.innerHTML = actHtml;
     document.getElementById('hapjaDetailModal').classList.add('open');
   } catch(e) { showToast('❌ Lỗi tải phiếu'); console.error(e); }
 }
+
+// ── Save edits to Hapja (creator) ──
+async function saveHapjaEdit(id, isResubmit) {
+  const el = k => document.getElementById(`hjd_${k}`);
+  const val = k => { const e = el(k); return e ? (e.value?.trim() || '') : ''; };
+  const ndd = val('ndd_staff_code') ? getStaffCodeFromInput('hjd_ndd_staff_code') || val('ndd_staff_code') : '';
+  
+  const fullName = val('full_name');
+  const birthYear = val('birth_year');
+  const gender = val('gender');
+  
+  if (!fullName) { showToast('⚠️ Họ tên không được trống'); return; }
+  
+  const updatedData = {
+    ndd_staff_code: ndd,
+    ngay_chakki: val('ngay_chakki'),
+    concept: val('concept'),
+    hinh_thuc: val('hinh_thuc'),
+    than_thiet: val('than_thiet'),
+    noi_o: val('noi_o'),
+    nghe_nghiep: val('nghe_nghiep'),
+    tinh_cach_cong_cu: val('tinh_cach_cong_cu'),
+    tinh_cach_ket_noi: val('tinh_cach_ket_noi'),
+    than_tinh_co_khong: val('than_tinh_co_khong'),
+    than_tinh_chi_tiet: val('than_tinh_chi_tiet'),
+    hoan_canh_hien_tai: val('hoan_canh_hien_tai'),
+    hoc_ki: val('hoc_ki'),
+    noi_lo_lang: val('noi_lo_lang'),
+    su_quan_tam: val('su_quan_tam'),
+    sdt: val('sdt'),
+    hen_tv: val('hen_tv') || null,
+  };
+  
+  const payload = {
+    full_name: fullName,
+    birth_year: birthYear,
+    gender: gender,
+    data: updatedData,
+  };
+  
+  // If resubmitting after revision → set status to revision_submitted
+  if (isResubmit) {
+    payload.status = 'revision_submitted';
+  }
+  
+  try {
+    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    showToast(isResubmit ? '📤 Đã chỉnh sửa và gửi lại!' : '💾 Đã lưu thay đổi!');
+    closeModal('hapjaDetailModal');
+    
+    // Notify approvers about resubmission
+    if (isResubmit) {
+      try {
+        const approverCodes = typeof getApproverCodes === 'function' ? await getApproverCodes() : [];
+        if (typeof createNotification === 'function' && approverCodes.length > 0) {
+          await createNotification(approverCodes, 'hapja_resubmitted', '📤 Phiếu Hapja đã chỉnh sửa', `${fullName} — cần duyệt lại`, null);
+        }
+      } catch(e) { console.warn('Notify resubmit:', e); }
+    }
+    
+    if (typeof loadDashboard === 'function') loadDashboard();
+  } catch(e) { showToast('❌ Lỗi lưu: ' + e.message); console.error(e); }
+}
+
+// ── Request revision (approver sends feedback) ──
+async function requestHapjaRevision(id) {
+  // Show prompt for feedback
+  const feedbackText = await showPromptAsync('📝 Nhập nội dung góp ý/yêu cầu chỉnh sửa:', '');
+  if (!feedbackText || !feedbackText.trim()) { showToast('⚠️ Vui lòng nhập nội dung góp ý'); return; }
+  
+  try {
+    const myCode = getEffectiveStaffCode();
+    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({
+      status: 'revision',
+      feedback: feedbackText.trim(),
+      feedback_by: myCode,
+      feedback_at: new Date().toISOString()
+    })});
+    
+    // Notify creator
+    const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=created_by,full_name`);
+    const h = (await hRes.json())[0];
+    if (h && typeof createNotification === 'function') {
+      createNotification(
+        [h.created_by],
+        'hapja_revision',
+        '📝 Phiếu Hapja cần chỉnh sửa',
+        `${h.full_name} — ${feedbackText.trim().substring(0, 60)}`,
+        null
+      );
+    }
+    
+    showToast('📝 Đã gửi yêu cầu chỉnh sửa!');
+    closeModal('hapjaDetailModal');
+    if (typeof loadDashboard === 'function') loadDashboard();
+  } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error(e); }
+}
+
 async function approveHapja(id) {
   try {
     const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=*`);
     const hapjas = await hRes.json();
-    if (!hapjas.length || hapjas[0].status !== 'pending') { showToast('⚠️ Phiếu đã xử lý'); return; }
+    if (!hapjas.length || !['pending','revision_submitted'].includes(hapjas[0].status)) { showToast('⚠️ Phiếu đã xử lý'); return; }
     const h = hapjas[0];
     const nddCode = h.data?.ndd_staff_code || h.created_by;
     const d = h.data || {};

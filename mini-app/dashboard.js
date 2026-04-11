@@ -128,8 +128,8 @@ async function loadDashboard() {
         }
       });
 
-      // Pending hapja for section below
-      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20${semF}`);
+      // Pending + revision hapja for section below
+      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20${semF}`);
       unitHapja = (await uhRes.json()).length;
     }
 
@@ -403,23 +403,27 @@ async function loadDashboard() {
 
     // ── HAPJA (filter by unit scope + semester) ──
     const canApprove = hasPermission('approve_hapja');
-    let hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&select=*&order=created_at.desc&limit=20${semF}`;
+    let hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&select=*&order=created_at.desc&limit=20${semF}`;
     if (canApprove && unitStaffCodes.length > 0 && scope !== 'system') {
       const codeFilter2 = unitStaffCodes.map(c => `"${c}"`).join(',');
-      hapjaQuery = `/rest/v1/check_hapja?status=eq.pending&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20${semF}`;
+      hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20${semF}`;
     } else if (!canApprove && myCode) {
-      hapjaQuery += `&created_by=eq.${myCode}`;
+      hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=eq.${myCode}&select=*&order=created_at.desc&limit=20${semF}`;
     }
     const hRes = await sbFetch(hapjaQuery);
     const hapjas = await hRes.json();
-    document.getElementById('dashHapjaTitle').textContent = '📋 Check Hapja đang chờ';
+    document.getElementById('dashHapjaTitle').textContent = '📋 Check Hapja đang xử lý';
     const hList = document.getElementById('dashHapjaList');
     if (hapjas.length === 0) {
-      hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu chờ duyệt</div>';
+      hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu đang xử lý</div>';
     } else {
       hList.innerHTML = hapjas.map(h => {
         const date = shinDate(h.created_at);
-        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot pending"></div><div class="profile-info"><div class="profile-name">${h.full_name}</div><div class="profile-meta">\ud83d\udcc6 ${date} \u00b7 NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">\u203a</div></div>`;
+        const statusDot = h.status === 'revision' ? 'revision' : h.status === 'revision_submitted' ? 'resubmitted' : 'pending';
+        const statusBadge = h.status === 'revision' ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#ef4444;color:white;font-weight:600;margin-left:4px;">Cần sửa</span>'
+          : h.status === 'revision_submitted' ? '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:#8b5cf6;color:white;font-weight:600;margin-left:4px;">Đã sửa</span>'
+          : '';
+        return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot ${statusDot}"></div><div class="profile-info"><div class="profile-name">${h.full_name}${statusBadge}</div><div class="profile-meta">📆 ${date} · NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">›</div></div>`;
       }).join('');
     }
 
