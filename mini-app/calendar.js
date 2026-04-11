@@ -42,7 +42,7 @@ async function loadCalendar() {
   
   // Update month label
   const label = document.getElementById('calMonthLabel');
-  if (label) label.textContent = `Tháng ${calMonth + 1}, ${calYear}`;
+  if (label) label.textContent = `Shin ${calYear - 1983} — Tháng ${calMonth + 1}`;
   
   try {
     // Fetch events for this month
