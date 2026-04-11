@@ -865,6 +865,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadPositions();
     const ok = await loadStaffInfo();
     if (!ok) return; // Access denied — stop here, don't proceed to load data
+    
+    if (window.isGuestMode) {
+      const header = document.querySelector('.header');
+      if (header) header.style.display = 'none';
+      const pid = _getDeepLinkProfileId();
+      await openGuestProfile(pid);
+      return; // Stop standard app loading
+    }
+    
     await loadSemesters();
     // Load structure FIRST so structureData is available for dashboard unit-scope calculation
     try { await loadStructure(); } catch(e) { console.warn('loadStructure init error:', e); }
@@ -908,6 +917,38 @@ function _handleDeepLink() {
   }
 }
 
+async function openGuestProfile(pid) {
+  try {
+    const res = await sbFetch(`/rest/v1/profiles?id=eq.${pid}&select=*,staff(staff_code,full_name,nickname)`);
+    const data = await res.json();
+    if (!data.length) {
+      document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:16px;color:#b45309;padding:24px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">⚠️ Không tìm thấy hồ sơ hoặc đã bị xoá.</div>';
+      return;
+    }
+    allProfiles = data; // Set the single profile as the only one available
+    
+    if (typeof openProfileById === 'function') {
+      openProfileById(pid);
+      
+      // Visual adjustments for guest
+      const detailView = document.getElementById('detailView');
+      if (detailView) detailView.style.paddingTop = '12px'; // No header present
+      const mainTabBar = document.getElementById('mainTabBar');
+      if (mainTabBar) mainTabBar.style.display = 'none';
+      const fabBtn = document.getElementById('fabBtn');
+      if (fabBtn) fabBtn.style.display = 'none';
+      
+      // Ensure back button is hidden (wait for render first)
+      setTimeout(() => {
+        const backBtn = document.querySelector('.back-btn');
+        if (backBtn) backBtn.style.display = 'none';
+      }, 100);
+    }
+  } catch(e) {
+    console.error('Guest load error:', e);
+  }
+}
+
 // Case 2: App already open — Telegram may update hash when user clicks deep link again
 window.addEventListener('hashchange', function() {
   _deepLinkHandled = false; // reset so new deep link can fire
@@ -916,8 +957,15 @@ window.addEventListener('hashchange', function() {
 
 async function loadStaffInfo() {
   const userId = tg?.initDataUnsafe?.user?.id;
+  const deepLinkPid = _getDeepLinkProfileId();
+
   if (!userId) {
-    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:18px;color:red;padding:20px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">\u26a0\ufe0f Truy c\u1eadp b\u1ecb t\u1eeb ch\u1ed1i.<br>Vui l\u00f2ng m\u1edf \u1ee9ng d\u1ee5ng qua Telegram \u0111\u1ec3 x\u00e1c th\u1ef1c danh t\u00ednh.</div>';
+    if (deepLinkPid) {
+      window.isGuestMode = true;
+      document.body.classList.add('guest-mode');
+      return true;
+    }
+    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:18px;color:red;padding:20px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">⚠️ Truy cập bị từ chối.<br>Vui lòng mở ứng dụng qua Telegram để xác thực danh tính.</div>';
     return false; // Signal failure — caller will stop init chain
   }
   try {
@@ -926,7 +974,7 @@ async function loadStaffInfo() {
     const data = await res.json();
     if (data.length > 0) {
       myStaff = data[0];
-      let badgeText = `${myStaff.staff_code} \u00b7 ${getPositionName(myStaff.position)}`;
+      let badgeText = `${myStaff.staff_code} · ${getPositionName(myStaff.position)}`;
       if (myStaff.specialist_position) badgeText += ` + ${getPositionName(myStaff.specialist_position)}`;
       const badgeEl = document.getElementById('staffBadge');
       if (badgeEl) badgeEl.textContent = badgeText;
@@ -964,13 +1012,22 @@ async function loadStaffInfo() {
         if (dl) dl.innerHTML = allS.map(s=>`<option value="${s.full_name} (${s.staff_code})">`).join('');
       } catch(e2) { console.warn('loadStaffInfo - allStaff fetch failed:', e2); }
     } else {
+      if (deepLinkPid) {
+        window.isGuestMode = true;
+        document.body.classList.add('guest-mode');
+        return true;
+      }
       // Telegram user exists but not in staff table
-      document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:16px;color:#b45309;padding:24px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">\u26a0\ufe0f T\u00e0i kho\u1ea3n c\u1ee7a b\u1ea1n ch\u01b0a \u0111\u01b0\u1ee3c \u0111\u0103ng k\u00fd trong h\u1ec7 th\u1ed1ng.<br><br>Vui l\u00f2ng li\u00ean h\u1ec7 qu\u1ea3n tr\u1ecb vi\u00ean \u0111\u1ec3 \u0111\u01b0\u1ee3c th\u00eam v\u00e0o.</div>';
+      document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:16px;color:#b45309;padding:24px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">⚠️ Tài khoản của bạn chưa được đăng ký trong hệ thống.<br><br>Vui lòng liên hệ quản trị viên để được thêm vào.</div>';
       return false;
     }
   } catch(e) {
     console.error('loadStaffInfo error:', e);
-    // Don't block init — just log the error, let applyPermissions run
+    if (deepLinkPid) {
+      window.isGuestMode = true;
+      document.body.classList.add('guest-mode');
+      return true;
+    }
   }
   applyPermissions();
   return true;

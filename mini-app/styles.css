@@ -1019,3 +1019,24 @@
 .pin-switch input:checked + .pin-slider::before {
   transform: translateX(22px);
 }
+
+/* ═══════════════ GUEST MODE (READ-ONLY) ═══════════════ */
+.guest-mode .save-btn,
+.guest-mode .add-record-btn,
+.guest-mode .delete-profile-btn,
+.guest-mode .record-delete,
+.guest-mode .tl-btn-group,
+.guest-mode .fab,
+.guest-mode .sticky-note-actions {
+  display: none !important;
+}
+
+.guest-mode input,
+.guest-mode textarea,
+.guest-mode select {
+  pointer-events: none !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--text) !important;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+}

@@ -374,12 +374,18 @@ async function requestHapjaRevision(id) {
   
   try {
     const myCode = getEffectiveStaffCode();
-    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({
+    const patchRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({
       status: 'revision',
       feedback: feedbackText.trim(),
       feedback_by: myCode,
       feedback_at: new Date().toISOString()
     })});
+    
+    // Bắt lỗi nếu db từ chối (VD: quên chạy câu lệnh SQL thêm cột feedback)
+    if (!patchRes.ok) {
+      const err = await patchRes.json();
+      throw new Error(err.message || 'Lỗi cập nhật CSDL');
+    }
     
     // Notify creator
     const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=created_by,full_name`);
