@@ -3,6 +3,15 @@ import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapj
 import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getChatMember, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
 import { sendBBFormTemplate } from "./group.ts";
 
+// Shin Calendar: 2026 = Shin 43
+const SHIN_OFFSET = 1983;
+function shinDate(dateInput: string | Date): string {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `Shin ${d.getFullYear() - SHIN_OFFSET}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
+}
+
 // ============ CALLBACK QUERY HANDLER ============
 
 export async function handleCallback(update: any, staffData: any) {
@@ -276,7 +285,7 @@ export async function handleCallback(update: any, staffData: any) {
     if (!rec) return sendText(chatId, `❌ Không tìm thấy báo cáo.`);
     const { data: p } = await supabase.from('profiles').select('full_name').eq('id', rec.profile_id).single();
     const c = rec.content || {};
-    const date = new Date(rec.created_at).toLocaleDateString('vi-VN');
+    const date = shinDate(rec.created_at);
     let msg = `📝 *BÁO CÁO TƯ VẤN — Lần ${c.lan_thu || '?'}*\n`;
     msg += `🍎 _${p?.full_name || ''}_\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -300,14 +309,13 @@ export async function handleCallback(update: any, staffData: any) {
     if (!rec) return sendText(chatId, `❌ Không tìm thấy báo cáo.`);
     const { data: p } = await supabase.from('profiles').select('full_name').eq('id', rec.profile_id).single();
     const c = rec.content || {};
-    const date = new Date(rec.created_at).toLocaleDateString('vi-VN');
+    const date = shinDate(rec.created_at);
     let buoiTiepDisplay = '';
     if (c.buoi_tiep) {
-      const isoMatch = String(c.buoi_tiep).match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-      if (isoMatch) buoiTiepDisplay = `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]} ${isoMatch[4]}:${isoMatch[5]}`;
-      else {
-        const oldMatch = String(c.buoi_tiep).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
-        if (oldMatch) buoiTiepDisplay = c.buoi_tiep;
+      const d = new Date(c.buoi_tiep);
+      if (!isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        buoiTiepDisplay = `Shin ${d.getFullYear()-SHIN_OFFSET}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
     }
     let msg = `📖 *BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}*\n`;
