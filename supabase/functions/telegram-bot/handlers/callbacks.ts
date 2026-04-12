@@ -634,9 +634,15 @@ export async function handleCallback(update: any, staffData: any) {
     await editMessageReplyMarkup(chatId, messageId, null);
     const { data: fg } = await supabase.from('fruit_groups').select('*').eq('telegram_group_id', chatId).single();
     if (!fg) return sendText(chatId, `❌ Group chưa đăng ký.`);
-    await supabase.from('fruit_roles').upsert({
+    // Remove any existing GVBB roles for this group (prevent duplicates from different staff)
+    await supabase.from('fruit_roles').delete().eq('fruit_group_id', fg.id).eq('role_type', 'gvbb');
+    await supabase.from('fruit_roles').insert({
       fruit_group_id: fg.id, staff_code: targetCode, role_type: 'gvbb', assigned_by: staffData.staff_code
-    }, { onConflict: 'fruit_group_id,staff_code,role_type' });
+    });
+    // Also update profiles.gvbb_staff_code for consistency
+    if (fg.profile_id) {
+      await supabase.from('profiles').update({ gvbb_staff_code: targetCode }).eq('id', fg.profile_id);
+    }
     await sendText(chatId, `✅ Đã xác nhận *${targetCode}* đảm nhận vai trò *GVBB* trong group này.`);
     return;
   }
@@ -652,10 +658,16 @@ export async function handleCallback(update: any, staffData: any) {
     const displayName = member ? [member.user.first_name, member.user.last_name].filter(Boolean).join(' ') : `User ${tgId}`;
     // Store with a temp identifier: tg:{telegram_id} as staff_code, so we can resolve later
     const tempCode = `tg:${tgId}`;
-    await supabase.from('fruit_roles').upsert({
+    // Remove any existing GVBB roles for this group (prevent duplicates from different staff)
+    await supabase.from('fruit_roles').delete().eq('fruit_group_id', fg.id).eq('role_type', 'gvbb');
+    await supabase.from('fruit_roles').insert({
       fruit_group_id: fg.id, staff_code: tempCode, role_type: 'gvbb',
       assigned_by: staffData.staff_code, display_name: displayName
-    }, { onConflict: 'fruit_group_id,staff_code,role_type' });
+    });
+    // Also update profiles.gvbb_staff_code for consistency
+    if (fg.profile_id) {
+      await supabase.from('profiles').update({ gvbb_staff_code: tempCode }).eq('id', fg.profile_id);
+    }
     await sendText(chatId, `✅ Đã xác nhận *${displayName}* (chưa có mã JD) đảm nhận vai trò *GVBB*.\n\n💡 _Khi user này kết nối với hệ thống bằng mã JD, tên sẽ được cập nhật tự động._`);
     return;
   }

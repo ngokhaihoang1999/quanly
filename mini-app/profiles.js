@@ -2,15 +2,21 @@
 async function loadProfiles() {
   try {
     const semFilter = typeof getSemesterFilter === 'function' ? getSemesterFilter() : '';
-    const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(fruit_roles(staff_code,role_type))&order=created_at.desc' + semFilter);
+    const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(telegram_group_id,fruit_roles(staff_code,role_type))&order=created_at.desc' + semFilter);
     const rawData = await res.json();
     allProfiles = rawData.map(p => {
       let tvv = [], gvbb = null, nddRole = null;
-      (p.fruit_groups || []).forEach(fg => {
+      // Sort fruit_groups: real Telegram groups first (has telegram_group_id > -1e12), placeholders last
+      const sortedFGs = (p.fruit_groups || []).sort((a, b) => {
+        const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
+        const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
+        return bReal - aReal; // real groups first
+      });
+      sortedFGs.forEach(fg => {
         (fg.fruit_roles || []).forEach(r => {
-          if (r.role_type === 'ndd') nddRole = r.staff_code;
+          if (r.role_type === 'ndd' && !nddRole) nddRole = r.staff_code;
           if (r.role_type === 'tvv') tvv.push(r.staff_code);
-          if (r.role_type === 'gvbb') gvbb = r.staff_code;
+          if (r.role_type === 'gvbb' && !gvbb) gvbb = r.staff_code;
         });
       });
       p.ndd_staff_code = nddRole || p.ndd_staff_code;
@@ -55,17 +61,22 @@ async function openProfileById(id) {
   // Profile not in filtered cache (e.g. different semester) → fetch directly from DB
   if (!p) {
     try {
-      const res = await sbFetch(`/rest/v1/profiles?id=eq.${id}&select=*,fruit_groups(fruit_roles(staff_code,role_type))`);
+      const res = await sbFetch(`/rest/v1/profiles?id=eq.${id}&select=*,fruit_groups(telegram_group_id,fruit_roles(staff_code,role_type))`);
       const data = await res.json();
       if (!data || !data.length) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
       p = data[0];
-      // Inject roles like loadProfiles does
+      // Inject roles like loadProfiles does — prioritize real groups
       let tvv = [], gvbb = null, nddRole = null;
-      (p.fruit_groups || []).forEach(fg => {
+      const sortedFGs = (p.fruit_groups || []).sort((a, b) => {
+        const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
+        const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
+        return bReal - aReal;
+      });
+      sortedFGs.forEach(fg => {
         (fg.fruit_roles || []).forEach(r => {
-          if (r.role_type === 'ndd') nddRole = r.staff_code;
+          if (r.role_type === 'ndd' && !nddRole) nddRole = r.staff_code;
           if (r.role_type === 'tvv') tvv.push(r.staff_code);
-          if (r.role_type === 'gvbb') gvbb = r.staff_code;
+          if (r.role_type === 'gvbb' && !gvbb) gvbb = r.staff_code;
         });
       });
       p.ndd_staff_code = nddRole || p.ndd_staff_code;
@@ -99,9 +110,13 @@ async function openProfile(p) {
   try {
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type,display_name)`);
     const fgs = await fgRes.json();
-    (fgs||[]).forEach(fg => {
-      // Real Telegram group ID: negative but > -1e12 (max ~13 digits)
-      // Old placeholder -Date.now() values are < -1e12 — skip those
+    // Sort: real groups (telegram_group_id > -1e12) first → their roles take priority
+    const sortedFGs = (fgs||[]).sort((a, b) => {
+      const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
+      const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
+      return bReal - aReal;
+    });
+    sortedFGs.forEach(fg => {
       const gid = fg.telegram_group_id;
       if (gid && gid > -1000000000000) {
         hasRealBBGroup = true;
