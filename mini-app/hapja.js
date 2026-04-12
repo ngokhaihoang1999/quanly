@@ -452,6 +452,9 @@ async function approveHapja(id) {
           t2_so_thich: d.su_quan_tam || '',
           t2_chuyen_cu: d.hoan_canh_hien_tai || d.hoan_canh || '',
           t2_luu_y: d.noi_lo_lang || d.noi_lo || '',
+          t2_hinh_thuc: d.hinh_thuc || '',
+          t2_ngay_chakki: d.ngay_chakki || '',
+          t2_ndd: nddCode ? (typeof getStaffLabel === 'function' ? getStaffLabel(nddCode) : nddCode) : '',
         };
         await sbFetch('/rest/v1/form_hanh_chinh', { method:'POST', body: JSON.stringify({ profile_id: newPid, data: infoData }) });
       } catch(e) { console.warn('form_hanh_chinh creation:', e); }

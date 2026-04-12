@@ -361,29 +361,53 @@ async function loadInfoSheet(profileId) {
   try {
     const res = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=*`);
     const data = await res.json();
-    if (data.length > 0 && data[0].data) {
-      const d = data[0].data;
-      // Store for mindmap use
-      window._currentInfoSheet = {
-        gioi_tinh: d.t2_gioi_tinh, nam_sinh: d.t2_nam_sinh, nghe_nghiep: d.t2_nghe_nghiep,
-        ton_giao: d.t2_ton_giao, hon_nhan: d.t2_hon_nhan, dia_chi: d.t2_dia_chi,
-        que_quan: d.t2_que_quan, tinh_cach: d.t2_tinh_cach, so_thich: d.t2_so_thich,
-        du_dinh: d.t2_du_dinh, nguoi_quan_trong: d.t2_nguoi_quan_trong,
-        quan_diem: d.t2_quan_diem, sdt: d.t2_sdt,
-        chuyen_cu: d.t2_chuyen_cu, nguoi_than: d.t2_nguoi_than, luu_y: d.t2_luu_y,
-        khong_gian_song: d.t2_khong_gian_song, quan_he_ndd: d.t2_quan_he_ndd
-      };
-      Object.entries(d).forEach(([key, val]) => { if (typeof val === 'string') { const el=document.getElementById(key); if(el) el.value=val; } });
-      if (d.t2_ton_giao) setChipValues('chips_ton_giao', d.t2_ton_giao);
-      if (d.t2_hon_nhan) setChipValues('chips_hon_nhan', d.t2_hon_nhan);
-      if (d.t2_quan_he_ndd) setChipValues('chips_quan_he_ndd', d.t2_quan_he_ndd);
-      if (d.t2_khong_gian_song) setChipValues('chips_khong_gian_song', d.t2_khong_gian_song);
-    }
+    const d = (data.length > 0 && data[0].data) ? data[0].data : {};
+    // Store for mindmap use
+    window._currentInfoSheet = {
+      gioi_tinh: d.t2_gioi_tinh, nam_sinh: d.t2_nam_sinh, nghe_nghiep: d.t2_nghe_nghiep,
+      ton_giao: d.t2_ton_giao, hon_nhan: d.t2_hon_nhan, dia_chi: d.t2_dia_chi,
+      que_quan: d.t2_que_quan, tinh_cach: d.t2_tinh_cach, so_thich: d.t2_so_thich,
+      du_dinh: d.t2_du_dinh, nguoi_quan_trong: d.t2_nguoi_quan_trong,
+      quan_diem: d.t2_quan_diem, sdt: d.t2_sdt,
+      chuyen_cu: d.t2_chuyen_cu, nguoi_than: d.t2_nguoi_than, luu_y: d.t2_luu_y,
+      khong_gian_song: d.t2_khong_gian_song, quan_he_ndd: d.t2_quan_he_ndd
+    };
+    Object.entries(d).forEach(([key, val]) => { if (typeof val === 'string') { const el=document.getElementById(key); if(el) el.value=val; } });
+    if (d.t2_ton_giao) setChipValues('chips_ton_giao', d.t2_ton_giao);
+    if (d.t2_hon_nhan) setChipValues('chips_hon_nhan', d.t2_hon_nhan);
+    if (d.t2_quan_he_ndd) setChipValues('chips_quan_he_ndd', d.t2_quan_he_ndd);
+    if (d.t2_khong_gian_song) setChipValues('chips_khong_gian_song', d.t2_khong_gian_song);
+
+    // Pre-fill fields 19, 21, 22 from Hapja/profile if empty
+    const p = allProfiles.find(x => x.id === profileId);
+    try {
+      // Field 22: NDD phụ trách — from profile
+      if (!d.t2_ndd && p?.ndd_staff_code) {
+        const nddEl = document.getElementById('t2_ndd');
+        if (nddEl) nddEl.value = typeof getStaffLabel === 'function' ? getStaffLabel(p.ndd_staff_code) : p.ndd_staff_code;
+      }
+      // Fetch Hapja for fields 19, 21
+      const hjRes = await sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&status=eq.approved&select=data&limit=1`);
+      const hjRows = await hjRes.json();
+      if (hjRows.length > 0) {
+        const hd = hjRows[0].data || {};
+        // Field 19: Hình thức tiếp cận
+        if (!d.t2_hinh_thuc && hd.hinh_thuc) {
+          const htEl = document.getElementById('t2_hinh_thuc');
+          if (htEl) htEl.value = hd.hinh_thuc;
+        }
+        // Field 21: Ngày Chakki
+        if (!d.t2_ngay_chakki && hd.ngay_chakki) {
+          const ckEl = document.getElementById('t2_ngay_chakki');
+          if (ckEl) ckEl.value = hd.ngay_chakki;
+        }
+      }
+    } catch(e) { console.warn('Pre-fill from hapja:', e); }
   } catch {}
 }
 async function saveInfoSheet() {
   const data = {};
-  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ data[id]=document.getElementById(id)?.value||''; });
+  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y','t2_hinh_thuc','t2_ket_noi','t2_ngay_chakki','t2_ndd','t2_ghi_chu'].forEach(id=>{ data[id]=document.getElementById(id)?.value||''; });
   data.t2_ton_giao = getChipValues('chips_ton_giao');
   data.t2_hon_nhan = getChipValues('chips_hon_nhan');
   data.t2_quan_he_ndd = getChipValues('chips_quan_he_ndd');
@@ -430,6 +454,11 @@ function copyInfoSheet() {
   const chipVal = id => { try { return getChipValues(id)?.join(', ') || ''; } catch(e) { return ''; } };
   const p = allProfiles.find(x => x.id === currentProfileId);
   const name = v('t2_ho_ten') || p?.full_name || '';
+  // Get current semester label
+  const semLabel = (typeof currentSemesterId !== 'undefined' && currentSemesterId && typeof allSemesters !== 'undefined')
+    ? (allSemesters.find(s => s.id === currentSemesterId)?.name || '') : '';
+  // Format date for copy
+  const fmtDate = val => { if (!val) return ''; try { const d = new Date(val); return d.toLocaleDateString('vi-VN'); } catch { return val; } };
   
   const fields = [
     { l: 'Họ tên', v: name },
@@ -439,7 +468,7 @@ function copyInfoSheet() {
     { l: 'Thời gian làm việc', v: v('t2_thoi_gian_lam_viec') },
     { l: 'SĐT', v: v('t2_sdt') },
     { l: 'Địa chỉ', v: v('t2_dia_chi') },
-    { l: 'Mục tiêu tháng', v: v('t2_que_quan') },
+    { l: semLabel ? `Kỳ khai giảng (${semLabel})` : 'Kỳ khai giảng', v: v('t2_que_quan') },
     { l: 'Khung rảnh', v: v('t2_khung_ranh') },
     { l: 'Sở thích', v: v('t2_so_thich') },
     { l: 'Tính cách', v: v('t2_tinh_cach') },
@@ -449,16 +478,17 @@ function copyInfoSheet() {
     { l: 'Người quan trọng', v: v('t2_nguoi_quan_trong') },
     { l: 'Quan điểm', v: v('t2_quan_diem') },
     { l: 'Concept / Vỏ bọc', v: v('t2_cong_cu') },
-    { l: 'Tôn giáo', v: chipVal('chips_ton_giao') },
-    { l: 'Hôn nhân', v: chipVal('chips_hon_nhan') },
-    { l: 'Quan hệ NDD', v: chipVal('chips_quan_he_ndd') },
-    { l: 'Không gian sống', v: chipVal('chips_khong_gian_song') },
     { l: 'Lưu ý', v: v('t2_luu_y') },
+    { l: 'Hình thức tiếp cận', v: v('t2_hinh_thuc') },
+    { l: 'Kết nối', v: v('t2_ket_noi') },
+    { l: 'Ngày Chakki', v: fmtDate(v('t2_ngay_chakki')) },
+    { l: 'NDD phụ trách', v: v('t2_ndd') },
+    { l: 'Ghi chú NDD', v: v('t2_ghi_chu') },
   ];
 
   let text = `📋 PHIẾU THÔNG TIN\n🍎 ${name}\n━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  fields.forEach(f => {
-    if (f.v) text += `• ${f.l}: ${f.v}\n`;
+  fields.forEach((f, i) => {
+    text += `${i + 1}. ${f.l}: ${f.v || '—'}\n`;
   });
   copyToClipboard(text.trim());
 }
