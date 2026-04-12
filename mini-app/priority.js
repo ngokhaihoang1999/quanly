@@ -145,13 +145,17 @@ async function loadPriority() {
             });
           }
           // 🔵 Missing GVBB: in tu_van/bb/center but no GVBB
+          // Skip if profile already has a 'hoc_bb' task in DB (avoids duplication)
           if (!p.gvbb_staff_code && ['tu_van', 'bb', 'center'].includes(p.phase)) {
-            if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-            groups['thieu_vai_tro'].push({
-              id: `auto_gvbb_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
-              title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-              is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-            });
+            const hasHocBBTask = tasks.some(t => t.profile_id === pid && t.task_type === 'hoc_bb');
+            if (!hasHocBBTask) {
+              if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+              groups['thieu_vai_tro'].push({
+                id: `auto_gvbb_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
+                title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+              });
+            }
           }
 
           // ⏳ Stuck: >30 days same phase & >14 days no activity

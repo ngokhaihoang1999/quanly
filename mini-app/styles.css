@@ -1024,10 +1024,13 @@
 .guest-mode .save-btn,
 .guest-mode .add-record-btn,
 .guest-mode .delete-profile-btn,
+.guest-mode #deleteProfileBtn,
 .guest-mode .record-delete,
 .guest-mode .tl-btn-group,
 .guest-mode .fab,
-.guest-mode .sticky-note-actions {
+.guest-mode .sticky-note-actions,
+.guest-mode .ai-chat-input-area,
+.guest-mode #mmResetBtn {
   display: none !important;
 }
 

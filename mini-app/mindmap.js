@@ -181,7 +181,15 @@ async function renderCollectMM(container, p) {
     }
   } catch(e) { console.warn('Load mindmap:', e); }
 
-  // 3. No saved result — show button
+  // 3. No saved result — show button (or read-only message for guest)
+  if (window.isGuestMode) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;">' +
+      '<div style="font-size:36px;margin-bottom:8px;">📋</div>' +
+      '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">Chưa có phân tích</div>' +
+      '<div style="font-size:11px;color:var(--text3);">Hồ sơ này chưa được phân tích bởi AI.</div>' +
+      '</div>';
+    return;
+  }
   container.innerHTML = '<div style="text-align:center;padding:40px;">' +
     '<div style="font-size:36px;margin-bottom:8px;">\ud83d\udc7c</div>' +
     '<div style="font-weight:700;font-size:14px;color:var(--text1);margin-bottom:6px;">Hỗ trợ BB</div>' +
@@ -191,6 +199,7 @@ async function renderCollectMM(container, p) {
 }
 
 async function runAIAnalysis() {
+  if (window.isGuestMode) { if (typeof showToast === 'function') showToast('🔒 Chế độ xem — không thể phân tích'); return; }
   var container = document.getElementById('mindmapContainer');
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!container || !p) return;
@@ -303,6 +312,7 @@ async function saveAIMindmap(profileId, md) {
 }
 
 function clearMindmapCache(profileId) {
+  if (window.isGuestMode) { if (typeof showToast === 'function') showToast('🔒 Chế độ xem — không thể thao tác'); return; }
   if (profileId) delete _mmCache[profileId];
   else Object.keys(_mmCache).forEach(function(k){delete _mmCache[k];});
   // Also delete from Supabase so next analysis is fresh
@@ -402,6 +412,7 @@ async function buildChatCtx() {
 }
 
 async function sendAIChat() {
+  if (window.isGuestMode) { if (typeof showToast === 'function') showToast('🔒 Chế độ xem — không thể gửi tin nhắn'); return; }
   var input = document.getElementById('aiChatInput');
   var msgBox = document.getElementById('aiChatMessages');
   if (!input || !msgBox) return;

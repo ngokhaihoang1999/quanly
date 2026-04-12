@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026041202" />
+  <link rel="stylesheet" href="styles.css?v=2026041300" />
   <link rel="stylesheet" href="avatar.css?v=2026041016" />
   <link rel="stylesheet" href="reports.css?v=2026041104" />
 </head>
@@ -235,7 +235,7 @@
           <button class="chip active" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Thông tin cơ bản</button>
           <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)">📚 Hỗ trợ BB</button>
           <span style="flex:1;"></span>
-          <button onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;" title="Phân tích lại">🔄</button>
+          <button id="mmResetBtn" onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;" title="Phân tích lại">🔄</button>
         </div>
         <div id="mindmapContainer" style="width:100%;height:380px;overflow:hidden;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
         <button onclick="toggleFullscreen('mindmapContainer')" style="margin-top:4px;background:none;border:1px solid var(--border);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">⛶ Toàn màn hình</button>
@@ -391,7 +391,7 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title">🎓 Lập Group TV - BB</div>
-  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Sau khi Lập Group hãy tạo Group Telegram, thêm bot vào Group, cho bot quyền Admin, sau đó gõ <code>/menu</code> và làm theo hướng dẫn.</div>
+  <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Sau khi Lập Group hãy tạo Group Telegram, thêm bot vào Group, cho bot quyền Admin, sau đó gõ <code>/start</code> và làm theo hướng dẫn.</div>
   <div class="field-group"><label>GVBB phụ trách (tuỳ chọn)</label><input type="text" id="cbb_gvbb" data-list="staffSuggest" placeholder="Có thể gắn sau..." /></div>
   <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Lập Group</button>
   <button onclick="closeModal('chotBBModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
@@ -610,20 +610,20 @@
 <script src="reports.js?v=2026041104"></script>
 <script src="core.js?v=2026041204"></script>
 <script src="dashboard.js?v=2026041204"></script>
-<script src="profiles.js?v=2026041202"></script>
+<script src="profiles.js?v=2026041301"></script>
 <script src="hapja.js?v=2026041203"></script>
 <script src="records.js?v=2026041202"></script>
 <script src="staff.js?v=2026041201"></script>
 <script src="structure.js?v=2026041106"></script>
 <script src="calendar.js?v=2026041106"></script>
 <script src="notification.js?v=2026041106"></script>
-<script src="priority.js?v=2026041200"></script>
+<script src="priority.js?v=2026041300"></script>
 <script>
   window.markmap = { autoLoader: { manual: true, toolbar: true } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
 <script src="lacie.js?v=2026041201"></script>
-<script src="mindmap.js?v=2026041201"></script>
+<script src="mindmap.js?v=2026041300"></script>
 <!-- Deep link logic moved to core.js -->
 </body>
 </html>

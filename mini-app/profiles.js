@@ -144,8 +144,8 @@ async function openProfile(p) {
 
   // Warning: phase tu_van/BB/center but no real Telegram group
   const bbNoGroupWarning = ['tu_van','bb','center'].includes(ph) && !hasRealBBGroup
-    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;">
-        ⚠️ Chưa kết nối Group Telegram
+    ? `<div onclick="showGroupConnectGuide()" style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;">
+        ⚠️ Chưa kết nối Group Telegram <span style="margin-left:auto;opacity:0.6;font-size:10px;">Nhấn để xem hướng dẫn →</span>
        </div>` : '';
 
   // Latest activity
@@ -291,7 +291,7 @@ async function openProfile(p) {
   
   // Show/hide delete button at bottom of infoSheet
   const delBtn = document.getElementById('deleteProfileBtn');
-  if (delBtn) delBtn.style.display = hasPermission('edit_profile') ? 'block' : 'none';
+  if (delBtn) delBtn.style.display = (hasPermission('edit_profile') && !window.isGuestMode) ? 'block' : 'none';
 
   // Hide add buttons if dropout
   document.querySelectorAll('.add-record-btn').forEach(b => {
@@ -521,6 +521,7 @@ function openBBGroup(btnEl) {
 
 // ── XOÁ HỒ SƠ ──────────────────────────────────────────────────────────────
 async function deleteProfile(profileId, name) {
+  if (window.isGuestMode) { if (typeof showToast === 'function') showToast('🔒 Chế độ xem — không thể xoá'); return; }
   if (!hasPermission('edit_profile')) { showToast('🚫 Không có quyền xoá'); return; }
   const confirmed = await showConfirmAsync(
     `🗑️ Xoá hồ sơ "${name}"?\n\nHành động này sẽ xoá TOÀN BỘ dữ liệu liên quan (records, ghi chú, TV, BB, Hapja...) và KHÔNG THỂ KHÔI PHỤC.`
@@ -732,4 +733,93 @@ function _fallbackCopy(text) {
   try { document.execCommand('copy'); showToast('📋 Đã sao chép link!'); }
   catch(e) { showToast('⚠️ Không thể copy, hãy copy thủ công: ' + text); }
   ta.remove();
+}
+
+// ============ GROUP CONNECT GUIDE ============
+function showGroupConnectGuide() {
+  let existing = document.getElementById('groupConnectGuideModal');
+  if (existing) existing.remove();
+
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  const pName = p?.full_name || 'trái quả';
+  const hasGVBB = !!(p?.gvbb_staff_code || window._rolesDisplay?.gvbb !== '—');
+
+  const modal = document.createElement('div');
+  modal.id = 'groupConnectGuideModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.5);';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px;box-shadow:0 -8px 40px rgba(0,0,0,0.3);max-height:85vh;overflow-y:auto;">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">📋 Hướng dẫn kết nối Group Telegram</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">Cho hồ sơ: <b>${pName}</b></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <!-- Step 1 -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</span>
+            <span style="font-size:13px;font-weight:600;">Tạo Group Telegram</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;padding-left:32px;">
+            Mở Telegram → New Group → đặt tên (VD: "BB - ${pName}") → thêm <b>@quanlyhcm_bot</b> vào Group.
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</span>
+            <span style="font-size:13px;font-weight:600;">Cho bot quyền Admin</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;padding-left:32px;">
+            Vào Group Settings → chọn bot → Promote to Admin → bật <b>tất cả quyền</b> → Done.
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</span>
+            <span style="font-size:13px;font-weight:600;">Gõ lệnh <code>/start</code></span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;padding-left:32px;">
+            Trong Group chat, gõ <code>/start</code> → Bot sẽ hiện menu → chọn <b>"🔗 Gắn hồ sơ trái quả"</b>.
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">4</span>
+            <span style="font-size:13px;font-weight:600;">Chọn hồ sơ để gắn</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;padding-left:32px;">
+            Bot sẽ hiện danh sách hồ sơ của bạn → nhấn chọn <b>"${pName}"</b> → Group sẽ tự động kết nối.
+          </div>
+        </div>
+
+        ${!hasGVBB ? `
+        <!-- Step 5: GVBB -->
+        <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:24px;height:24px;border-radius:50%;background:var(--red);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">5</span>
+            <span style="font-size:13px;font-weight:600;color:var(--red);">⚠️ Cần xác nhận GVBB</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5;padding-left:32px;">
+            Hồ sơ này <b>chưa có GVBB</b>. Sau khi gắn Group, trong Group chat chọn <b>"👤 Xác nhận GVBB"</b> để ghi nhận GVBB phụ trách.<br>
+            <span style="font-size:11px;color:var(--text3);">Nếu GVBB không có mã JD trong hệ thống, bot sẽ tự nhận diện qua Telegram ID.</span>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.5;">
+        💡 <b>Mẹo:</b> Sau khi kết nối, nhấn nút 🔄 trên hồ sơ để đồng bộ dữ liệu Group mới nhất.
+      </div>
+
+      <button onclick="document.getElementById('groupConnectGuideModal').remove()"
+        style="width:100%;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;margin-top:12px;">Đóng</button>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
