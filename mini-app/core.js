@@ -919,7 +919,7 @@ function _handleDeepLink() {
 
 async function openGuestProfile(pid) {
   try {
-    const res = await sbFetch(`/rest/v1/profiles?id=eq.${pid}&select=*,staff(staff_code,full_name,nickname)`);
+    const res = await sbFetch(`/rest/v1/profiles?id=eq.${pid}&select=*,fruit_groups(fruit_roles(staff_code,role_type))`);
     const data = await res.json();
     if (!data.length) {
       document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:16px;color:#b45309;padding:24px;text-align:center;background:#fff;z-index:999999;position:fixed;top:0;left:0;width:100%;">⚠️ Không tìm thấy hồ sơ hoặc đã bị xoá.</div>';
