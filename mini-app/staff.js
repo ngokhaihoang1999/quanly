@@ -60,9 +60,9 @@ function openAddStaffModal() {
 async function addStaff() {
   const name = document.getElementById('new_staff_name').value.trim();
   const code = document.getElementById('new_staff_code').value.trim();
-  if (!name || !code) { showToast('⚠️ Nhập họ tên và mã TĐ'); return; }
+  if (!name || !code) { showToast('⚠️ Nhập họ tên và mã JD'); return; }
   // Validate format
-  if (!/^\d{3,6}-.+$/.test(code)) { showToast('⚠️ Mã TĐ phải có dạng: 000xxx-ABC'); return; }
+  if (!/^\d{3,6}-.+$/.test(code)) { showToast('⚠️ Mã JD phải có dạng: 000xxx-ABC'); return; }
   // Check dup
   if (allStaff.some(s => s.staff_code === code)) { showToast('⚠️ Mã "' + code + '" đã tồn tại!'); return; }
   const tgId = document.getElementById('new_staff_tg')?.value.trim() || null;

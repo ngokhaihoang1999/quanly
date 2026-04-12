@@ -19,7 +19,7 @@ export async function handlePrivateChat(update: any, staffData: any) {
     // Build keyboard based on position
     const keyboard: any[] = [
       [{ text: "🖥️ Mở Quản Lý (Mini App)", web_app: { url: miniAppUrl } }],
-      [{ text: "💬 Liên hệ Admin", callback_data: "btn_support" }],
+      [{ text: "💬 Liên hệ Admin", callback_data: "btn_support" }, { text: "🚪 Đăng xuất mã JD", callback_data: "btn_logout" }],
     ];
 
     await sendKeyboard(chatId,
@@ -90,7 +90,7 @@ export async function handlePrivateChat(update: any, staffData: any) {
     }
     const parts = text.split(/\s+/);
     if (parts.length < 2) {
-      await sendText(chatId, `⚠️ Cú pháp: \`/assign_pos [mã_TĐ]\`\nVD: \`/assign_pos 000707-TNHA\``);
+      await sendText(chatId, `⚠️ Cú pháp: \`/assign_pos [mã_JD]\`\nVD: \`/assign_pos 000707-TNHA\``);
       return;
     }
     const targetCode = parts[1];
@@ -186,7 +186,7 @@ export async function handlePrivateChat(update: any, staffData: any) {
   if (pos === 'admin' && text.startsWith('/reply ')) {
     const parts = text.split(' ');
     const targetCode = parts[1]; const replyMsg = parts.slice(2).join(' ').trim();
-    if (!targetCode || !replyMsg) { await sendText(chatId, "⚠️ `/reply [Mã_TĐ] [nội dung]`"); return; }
+    if (!targetCode || !replyMsg) { await sendText(chatId, "⚠️ `/reply [Mã_JD] [nội dung]`"); return; }
     const { data: ts } = await supabase.from('staff').select('*').eq('staff_code', targetCode).single();
     if (!ts?.telegram_id) { await sendText(chatId, `❌ Không tìm thấy *${targetCode}*.`); return; }
     await sendText(ts.telegram_id, `📩 *Phản hồi từ Admin:*\n\n${replyMsg}`);

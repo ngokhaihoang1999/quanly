@@ -577,7 +577,7 @@ function shareProfile(profileId, profileName) {
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🔔 Gửi tới TĐ trong hệ thống</div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">TĐ sẽ nhận hồ sơ trong phần Thông báo 🔔</div>
         <div style="position:relative;">
-          <input type="text" id="shareStaffSearch" placeholder="Tìm mã TĐ hoặc tên..." oninput="_searchShareStaff(this.value)"
+          <input type="text" id="shareStaffSearch" placeholder="Tìm mã JD hoặc tên..." oninput="_searchShareStaff(this.value)"
             style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;" />
           <div id="shareStaffResults" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
         </div>

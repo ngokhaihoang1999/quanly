@@ -69,11 +69,11 @@ Deno.serve(async (req) => {
       if (text && text.startsWith('/register')) {
         const code = text.split(" ")[1];
         if (!code) {
-          await sendText(chatId, "⚠️ Cú pháp: `/register [Mã_TĐ]`\nVD: `/register 012345-ABC`");
+          await sendText(chatId, "⚠️ Cú pháp: `/register [Mã_JD]`\nVD: `/register 012345-ABC`");
           return new Response("OK");
         }
         const { data: existing } = await supabase.from('staff').select('*').eq('staff_code', code).single();
-        if (!existing) { await sendText(chatId, "❌ Mã TĐ không tồn tại."); return new Response("OK"); }
+        if (!existing) { await sendText(chatId, "❌ Mã JD không tồn tại."); return new Response("OK"); }
         if (existing.telegram_id && existing.telegram_id !== telegramId) {
           // Request TG change approval
           await supabase.from('staff')
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
         await sendText(chatId, `✅ Đăng ký thành công! Mừng *${existing.full_name}* (${code}).\nDùng /start để bắt đầu.`);
         return new Response("OK");
       }
-      await sendText(chatId, `⚠️ Chưa nhận diện!\n👉 \`/register [Mã_TĐ]\`\nVD: \`/register 012345-ABC\``);
+      await sendText(chatId, `⚠️ Chưa nhận diện!\n👉 \`/register [Mã_JD]\`\nVD: \`/register 012345-ABC\``);
       return new Response("OK");
     }
 

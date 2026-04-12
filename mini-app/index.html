@@ -90,7 +90,7 @@
 
   <!-- TĐ -->
   <div id="tab-staff" style="display:none;">
-    <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã TĐ..." id="staffSearchInput" oninput="filterStaff()" /></div>
+    <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã JD..." id="staffSearchInput" oninput="filterStaff()" /></div>
     <div class="section-header"><div class="section-title">Tất cả TĐ</div><div class="section-count" id="staffCount">--</div></div>
     <div id="staffList"><div class="staff-card skeleton" style="height:68px;"></div></div>
     <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">＋ Đăng ký TĐ mới</button>
@@ -175,7 +175,7 @@
         <div class="field-group"><label>19. Hình thức tiếp cận</label><input type="text" id="t2_hinh_thuc" placeholder="..." /></div>
         <div class="field-group"><label>20. Kết nối</label><input type="text" id="t2_ket_noi" placeholder="..." /></div>
         <div class="field-group"><label>21. Ngày Chakki</label><input type="date" id="t2_ngay_chakki" /></div>
-        <div class="field-group"><label>22. NDD phụ trách</label><input type="text" id="t2_ndd" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." /></div>
+        <div class="field-group"><label>22. NDD phụ trách</label><input type="text" id="t2_ndd" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." /></div>
         <div class="field-group"><label>23. Ghi chú NDD</label><textarea id="t2_ghi_chu" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
         <button class="save-btn" onclick="saveInfoSheet()">💾 Lưu Phiếu</button>
         <button id="deleteProfileBtn" onclick="deleteProfile(currentProfileId, document.getElementById('t2_ho_ten')?.value || '')" style="display:none;width:100%;padding:12px;background:none;border:1px solid rgba(248,113,113,0.5);color:var(--red);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;">🗑️ Xoá hồ sơ này</button>
@@ -379,7 +379,7 @@
   </div>
   <div class="field-group">
     <label>👤 TVV phụ trách</label>
-    <input type="text" id="stv_tvv" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+    <input type="text" id="stv_tvv" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
   <button class="save-btn" onclick="saveScheduleTV()" style="margin-top:4px;">✅ Chốt Tư Vấn</button>
   <button onclick="closeModal('scheduleTVModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:6px;width:100%;text-align:center;">Huỷ</button>
@@ -438,7 +438,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">👤 Đăng ký TĐ mới</div>
   <div class="field-group"><label>Họ và tên <span style="color:var(--red);">*</span></label><input type="text" id="new_staff_name" placeholder="Họ và tên đầy đủ..." /></div>
-  <div class="field-group"><label>Mã TĐ <span style="color:var(--red);">*</span></label><input type="text" id="new_staff_code" placeholder="VD: NKH001..." style="text-transform:uppercase;" /></div>
+  <div class="field-group"><label>Mã JD <span style="color:var(--red);">*</span></label><input type="text" id="new_staff_code" placeholder="VD: NKH001..." style="text-transform:uppercase;" /></div>
   <div class="field-group"><label>Telegram ID</label><input type="text" id="new_staff_tg" placeholder="Số ID Telegram..." /></div>
   <button class="save-btn" onclick="addStaff()">💾 Lưu TĐ</button>
   <button onclick="closeModal('addStaffModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
@@ -471,11 +471,11 @@
   </div>
   <div class="field-group" id="struct_manager_wrap" style="display:none;">
     <label id="struct_manager_label">Phụ trách</label>
-    <input type="text" id="struct_manager" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+    <input type="text" id="struct_manager" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
   <div class="field-group" id="struct_manager2_wrap" style="display:none;">
     <label>Phụ trách 2</label>
-    <input type="text" id="struct_manager2" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+    <input type="text" id="struct_manager2" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
   <button class="save-btn" onclick="saveStructure()">💾 Lưu</button>
   <button onclick="closeModal('structureModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
@@ -492,11 +492,11 @@
   <div class="field-group"><label>Tên</label><input type="text" id="edit_struct_name" placeholder="Nhập tên..." /></div>
   <div class="field-group" id="edit_mgr1_wrap" style="display:none;">
     <label id="edit_mgr1_label">Phụ trách</label>
-    <input type="text" id="edit_mgr1" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+    <input type="text" id="edit_mgr1" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
   <div class="field-group" id="edit_mgr2_wrap" style="display:none;">
     <label>Phụ trách 2</label>
-    <input type="text" id="edit_mgr2" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." />
+    <input type="text" id="edit_mgr2" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
   <div id="edit_members_wrap" style="display:none;">
     <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">👥 Thành viên Tổ</div>
@@ -528,7 +528,7 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title">🔄 Chuyển NDD</div>
-  <div class="field-group"><label>NDD mới <span style="color:var(--red);">*</span></label><input type="text" id="transfer_ndd_new" data-list="staffSuggest" placeholder="Tìm mã TĐ hoặc tên..." /></div>
+  <div class="field-group"><label>NDD mới <span style="color:var(--red);">*</span></label><input type="text" id="transfer_ndd_new" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." /></div>
   <button class="save-btn" onclick="confirmTransferNDD()">🔄 Chuyển NDD</button>
   <button onclick="closeModal('transferNDDModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
@@ -608,12 +608,12 @@
 <script src="webhook.js?v=2026040910"></script>
 <script src="avatar.js?v=2026041017"></script>
 <script src="reports.js?v=2026041104"></script>
-<script src="core.js?v=2026041203"></script>
+<script src="core.js?v=2026041204"></script>
 <script src="dashboard.js?v=2026041204"></script>
-<script src="profiles.js?v=2026041201"></script>
-<script src="hapja.js?v=2026041202"></script>
+<script src="profiles.js?v=2026041202"></script>
+<script src="hapja.js?v=2026041203"></script>
 <script src="records.js?v=2026041202"></script>
-<script src="staff.js?v=2026041106"></script>
+<script src="staff.js?v=2026041201"></script>
 <script src="structure.js?v=2026041106"></script>
 <script src="calendar.js?v=2026041106"></script>
 <script src="notification.js?v=2026041106"></script>

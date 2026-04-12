@@ -231,7 +231,7 @@ async function openHapjaDetail(id) {
         } else if (f.type === 'datetime') {
           input = `<input type="datetime-local" id="hjd_${f.key}" value="${v ? v.replace('Z','').slice(0,16) : ''}" style="${inputStyle}" />`;
         } else if (f.type === 'staff') {
-          input = `<input type="text" id="hjd_${f.key}" value="${v}" data-list="staffSuggest" placeholder="Mã TĐ..." style="${inputStyle}" />`;
+          input = `<input type="text" id="hjd_${f.key}" value="${v}" data-list="staffSuggest" placeholder="Mã JD..." style="${inputStyle}" />`;
         } else {
           input = `<input type="${f.type}" id="hjd_${f.key}" value="${v}" style="${inputStyle}" />`;
         }

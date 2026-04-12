@@ -80,6 +80,32 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
+  // btn_logout — Đăng xuất mã JD (unlink Telegram)
+  if (cbData === 'btn_logout') {
+    await editMessageReplyMarkup(chatId, messageId, null);
+    await sendKeyboard(chatId,
+      `⚠️ *Đăng xuất mã JD*\n\nBạn chắc chắn muốn ngắt kết nối mã *${staffData.staff_code}* khỏi Telegram này?\n\n_Sau khi đăng xuất, bạn cần dùng \`/register\` để đăng nhập lại._`,
+      [[{ text: "✅ Xác nhận đăng xuất", callback_data: `confirm_logout_${staffData.staff_code}` }, { text: "❌ Huỷ", callback_data: "cancel_logout" }]]
+    );
+    return;
+  }
+
+  // confirm_logout_{code}
+  if (cbData.startsWith('confirm_logout_')) {
+    const code = cbData.replace('confirm_logout_', '');
+    await editMessageReplyMarkup(chatId, messageId, null);
+    await supabase.from('staff').update({ telegram_id: null }).eq('staff_code', code);
+    await sendText(chatId, `✅ Đã đăng xuất mã JD *${code}*.\n\nĐể đăng nhập lại: \`/register [Mã_JD]\``);
+    return;
+  }
+
+  // cancel_logout
+  if (cbData === 'cancel_logout') {
+    await editMessageReplyMarkup(chatId, messageId, null);
+    await sendText(chatId, `❌ Đã huỷ đăng xuất.`);
+    return;
+  }
+
   // ============ GROUP MENU CALLBACKS ============
 
   // ── Helper: rebuild main menu inline ──
@@ -630,7 +656,7 @@ export async function handleCallback(update: any, staffData: any) {
       fruit_group_id: fg.id, staff_code: tempCode, role_type: 'gvbb',
       assigned_by: staffData.staff_code, display_name: displayName
     }, { onConflict: 'fruit_group_id,staff_code,role_type' });
-    await sendText(chatId, `✅ Đã xác nhận *${displayName}* (chưa có mã TĐ) đảm nhận vai trò *GVBB*.\n\n💡 _Khi user này kết nối với hệ thống bằng mã TĐ, tên sẽ được cập nhật tự động._`);
+    await sendText(chatId, `✅ Đã xác nhận *${displayName}* (chưa có mã JD) đảm nhận vai trò *GVBB*.\n\n💡 _Khi user này kết nối với hệ thống bằng mã JD, tên sẽ được cập nhật tự động._`);
     return;
   }
 

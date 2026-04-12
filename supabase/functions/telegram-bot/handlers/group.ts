@@ -273,7 +273,7 @@ export async function handleGroupChat(update: any) {
     }
     const parts = text.split(/\s+/);
     if (parts.length < 3) {
-      await sendText(chatId, `⚠️ Cú pháp: \`/assign_role [mã_TĐ] [ndd/tvv/gvbb/la]\``);
+      await sendText(chatId, `⚠️ Cú pháp: \`/assign_role [mã_JD] [ndd/tvv/gvbb/la]\``);
       return;
     }
     const targetCode = parts[1];

@@ -1849,7 +1849,7 @@ function openPersonalizationPanel() {
             </div>
           </div>
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã TĐ)</span></label>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã JD)</span></label>
             <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Khải, Phi, Hoa..."
               oninput="const v=this.value.trim();document.getElementById('nickname_preview').textContent=v||'(chưa đặt)';"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
