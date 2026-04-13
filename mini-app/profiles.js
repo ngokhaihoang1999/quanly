@@ -159,8 +159,8 @@ async function openProfile(p) {
 
   // Warning: phase tu_van/BB/center but no real Telegram group
   const bbNoGroupWarning = ['tu_van','bb','center'].includes(ph) && !hasRealBBGroup
-    ? `<div onclick="showGroupConnectGuide()" style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;">
-        ⚠️ Chưa kết nối Group Telegram <span style="margin-left:auto;opacity:0.6;font-size:10px;">Nhấn để xem hướng dẫn →</span>
+    ? `<div onclick="showGroupConnectGuide()" style="display:flex;align-items:center;gap:5px;margin-top:6px;padding:5px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;white-space:nowrap;">
+        ⚠️ Chưa kết nối Group Telegram <span style="margin-left:auto;opacity:0.5;font-size:12px;">›</span>
        </div>` : '';
 
   // Latest activity

@@ -177,22 +177,17 @@ async function loadJourney(profileId, currentPhase) {
         groupBox.style.border = '1px solid rgba(34,197,94,0.35)';
         groupBox.style.background = 'rgba(34,197,94,0.06)';
       } else {
-        // 🔴 Not connected
+        // 🔴 Not connected — compact, with action button
         groupBox.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;" onclick="showGroupConnectGuide()" style="cursor:pointer;">
             <span style="font-size:22px;">💬</span>
-            <div style="flex:1;">
+            <div style="flex:1;min-width:0;">
               <div style="font-size:13px;font-weight:600;color:var(--text1);">Group Telegram</div>
               <div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px;">🔴 Chưa kết nối</div>
             </div>
-          </div>
-          <div style="font-size:11px;color:var(--text2);line-height:1.8;padding:10px 12px;background:var(--surface2);border-radius:8px;">
-            <div style="font-weight:700;margin-bottom:6px;font-size:12px;color:var(--text1);">📋 Hướng dẫn kết nối:</div>
-            <div>1️⃣ Tạo Group mới trên Telegram</div>
-            <div>2️⃣ Thêm bot <b style="color:var(--accent);">@quanlyhcm_bot</b> vào Group</div>
-            <div>3️⃣ Cho bot quyền <b>Admin</b></div>
-            <div>4️⃣ Gõ <code style="background:var(--bg2);padding:1px 6px;border-radius:4px;font-weight:600;">/start</code> trong Group</div>
-            <div>5️⃣ Bấm <b>"Gắn hồ sơ"</b> → chọn trái quả này</div>
+            <button onclick="showGroupConnectGuide()"
+              style="padding:6px 14px;border-radius:20px;background:var(--red);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;"
+            >Hướng dẫn →</button>
           </div>`;
         groupBox.style.border = '1px solid rgba(248,113,113,0.35)';
         groupBox.style.background = 'rgba(248,113,113,0.06)';
