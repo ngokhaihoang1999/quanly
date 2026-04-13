@@ -153,45 +153,27 @@ async function loadJourney(profileId, currentPhase) {
     }
   }
 
-  // ── Group Status Box (connection status + instructions) ──────────────────
+  // ── Group Status Box (only shown when connected — provides "Mở Group" button) ──
   const groupBox = document.getElementById('groupStatusBox');
   if (groupBox) {
-    if (['tu_van','bb','center','completed'].includes(cp) && !isDropout) {
+    if (['tu_van','bb','center','completed'].includes(cp) && !isDropout && bbGroupInfo) {
       groupBox.style.display = 'block';
-      if (bbGroupInfo) {
-        // ✅ Connected
-        const gTitle = bbGroupInfo.telegram_group_title || 'Group Trái quả';
-        const gid = bbGroupInfo.telegram_group_id;
-        const invLink = (bbGroupInfo.invite_link || '').replace(/"/g, '&quot;');
-        groupBox.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:22px;">💬</span>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${gTitle}</div>
-              <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:2px;">✅ Đã kết nối Group Telegram</div>
-            </div>
-            <button onclick="openBBGroup(this)" data-gid="${gid}" data-link="${invLink}"
-              style="padding:6px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;"
-            >Mở Group →</button>
-          </div>`;
-        groupBox.style.border = '1px solid rgba(34,197,94,0.35)';
-        groupBox.style.background = 'rgba(34,197,94,0.06)';
-      } else {
-        // 🔴 Not connected — compact, with action button
-        groupBox.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;" onclick="showGroupConnectGuide()" style="cursor:pointer;">
-            <span style="font-size:22px;">💬</span>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;color:var(--text1);">Group Telegram</div>
-              <div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px;">🔴 Chưa kết nối</div>
-            </div>
-            <button onclick="showGroupConnectGuide()"
-              style="padding:6px 14px;border-radius:20px;background:var(--red);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;"
-            >Hướng dẫn →</button>
-          </div>`;
-        groupBox.style.border = '1px solid rgba(248,113,113,0.35)';
-        groupBox.style.background = 'rgba(248,113,113,0.06)';
-      }
+      const gTitle = bbGroupInfo.telegram_group_title || 'Group Trái quả';
+      const gid = bbGroupInfo.telegram_group_id;
+      const invLink = (bbGroupInfo.invite_link || '').replace(/"/g, '&quot;');
+      groupBox.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:22px;">💬</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${gTitle}</div>
+            <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:2px;">✅ Đã kết nối Group Telegram</div>
+          </div>
+          <button onclick="openBBGroup(this)" data-gid="${gid}" data-link="${invLink}"
+            style="padding:6px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;"
+          >Mở Group →</button>
+        </div>`;
+      groupBox.style.border = '1px solid rgba(34,197,94,0.35)';
+      groupBox.style.background = 'rgba(34,197,94,0.06)';
     } else {
       groupBox.style.display = 'none';
     }
