@@ -135,26 +135,17 @@ async function loadPriority() {
             });
           }
 
-          // 🔵 Missing TVV: past chakki but no TVV
+          // 🔵 Missing TVV/GVBB: verify against fruit_roles (cache may be stale)
+          // Collect candidates first, verify in batch below
           if (!p.tvv_staff_code && !['new', 'chakki'].includes(p.phase)) {
-            if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-            groups['thieu_vai_tro'].push({
-              id: `auto_tvv_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
-              title: `${p.full_name} — chưa có TVV`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-              is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-            });
+            if (!groups['_tvv_check']) groups['_tvv_check'] = [];
+            groups['_tvv_check'].push(p);
           }
-          // 🔵 Missing GVBB: in tu_van/bb/center but no GVBB
-          // Skip if profile already has a 'hoc_bb' task in DB (avoids duplication)
           if (!p.gvbb_staff_code && ['tu_van', 'bb', 'center'].includes(p.phase)) {
             const hasHocBBTask = tasks.some(t => t.profile_id === pid && t.task_type === 'hoc_bb');
             if (!hasHocBBTask) {
-              if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-              groups['thieu_vai_tro'].push({
-                id: `auto_gvbb_${pid}`, profile_id: pid, task_type: 'thieu_vai_tro',
-                title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-              });
+              if (!groups['_gvbb_check']) groups['_gvbb_check'] = [];
+              groups['_gvbb_check'].push(p);
             }
           }
 
@@ -169,6 +160,49 @@ async function loadPriority() {
           }
         });
       }
+
+      // Batch-verify missing TVV/GVBB against DB fruit_roles
+      const tvvCandidates = groups['_tvv_check'] || [];
+      const gvbbCandidates = groups['_gvbb_check'] || [];
+      const allCandidatePids = [...new Set([...tvvCandidates, ...gvbbCandidates].map(p => p.id))];
+      if (allCandidatePids.length > 0) {
+        try {
+          const idsStr = allCandidatePids.map(id => `"${id}"`).join(',');
+          const frRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=in.(${idsStr})&select=profile_id,fruit_roles(role_type)`);
+          const frData = await frRes.json();
+          // Build role sets per profile
+          const roleMap = {};
+          (frData || []).forEach(fg => {
+            const pid = fg.profile_id;
+            if (!roleMap[pid]) roleMap[pid] = new Set();
+            (fg.fruit_roles || []).forEach(r => roleMap[pid].add(r.role_type));
+          });
+          // Only flag truly missing TVV
+          tvvCandidates.forEach(p => {
+            if (!roleMap[p.id]?.has('tvv')) {
+              if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+              groups['thieu_vai_tro'].push({
+                id: `auto_tvv_${p.id}`, profile_id: p.id, task_type: 'thieu_vai_tro',
+                title: `${p.full_name} — chưa có TVV`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+              });
+            }
+          });
+          // Only flag truly missing GVBB
+          gvbbCandidates.forEach(p => {
+            if (!roleMap[p.id]?.has('gvbb')) {
+              if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
+              groups['thieu_vai_tro'].push({
+                id: `auto_gvbb_${p.id}`, profile_id: p.id, task_type: 'thieu_vai_tro',
+                title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+              });
+            }
+          });
+        } catch(e) { console.warn('Role verify fail:', e); }
+      }
+      delete groups['_tvv_check'];
+      delete groups['_gvbb_check'];
     } catch(e) { console.warn('Priority auto-detect:', e); }
 
     // Check if nothing
