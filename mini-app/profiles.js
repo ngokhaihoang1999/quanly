@@ -167,7 +167,7 @@ async function openProfile(p) {
   let latestInfo = '';
   try {
     const [rRes, sRes] = await Promise.all([
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`)
     ]);
     latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);

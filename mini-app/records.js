@@ -261,6 +261,7 @@ async function loadJourney(profileId, currentPhase) {
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; }
       else if (r.record_type === 'note')        { return; }
+      else if (r.record_type === 'phase_change') { return; }
       else if (r.record_type === 'drop_out')    { icon='🔴'; text=`Drop-out: ${r.content?.reason||'Không có lý do'}`; isMajor = true; }
       else if (r.record_type === 'alive')       { icon='🟢'; text='Khôi phục Alive'; isMajor = true; }
       else { icon='📌'; text=r.record_type; }
@@ -1282,49 +1283,42 @@ async function deleteNote(noteId) {
 async function confirmMoKT() {
   if (!currentProfileId) return;
   try {
-    // Fetch BB reports for this profile
+    const p = allProfiles.find(x => x.id === currentProfileId);
+    // Fetch BB reports
     const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
     const bbRecords = await bbRes.json();
     if (!bbRecords || bbRecords.length === 0) {
       showToast('⚠️ Chưa có báo cáo BB nào để xác nhận mở KT.');
       return;
     }
-    // Fetch existing mo_kt records to know which sessions already confirmed
+    // Fetch existing mo_kt records
     const ktRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt&select=id,content`);
     const ktRecords = await ktRes.json();
     const confirmedSessions = new Set((ktRecords || []).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
-
-    // Build session list
     const sessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
     const unconfirmed = sessions.filter(n => !confirmedSessions.has(n));
+
     if (unconfirmed.length === 0) {
-      // Edge case: all confirmed but phase stuck at tu_van (from previous crash)
-      const pStuck = allProfiles.find(x => x.id === currentProfileId);
-      if (pStuck && pStuck.phase === 'tu_van') {
+      // All sessions confirmed — but phase may be stuck from a previous crash
+      if (p && p.phase === 'tu_van') {
         await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
           method: 'PATCH', body: JSON.stringify({ phase: 'bb', is_kt_opened: true })
         });
-        pStuck.phase = 'bb';
-        pStuck.is_kt_opened = true;
-        await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
-          profile_id: currentProfileId, record_type: 'phase_change',
-          content: { label: 'Chuyển sang giai đoạn BB', from: 'tu_van', to: 'bb' }
-        })});
+        p.phase = 'bb';
+        p.is_kt_opened = true;
         showToast('📖 Đã chuyển sang giai đoạn BB!');
-        openProfile(pStuck);
-        return;
+        openProfile(p);
+      } else {
+        showToast('✅ Tất cả buổi BB đã được xác nhận mở KT.');
       }
-      showToast('✅ Tất cả buổi BB đã được xác nhận mở KT.');
       return;
     }
 
-    // Show session picker dialog
+    // Show session picker
     const picked = await showKTSessionPicker(unconfirmed, confirmedSessions, sessions);
     if (!picked || picked.length === 0) return;
 
-    const _loadEl = document.getElementById('loadingOverlay');
-    if (_loadEl) _loadEl.style.display = 'flex';
-    // Create mo_kt record for each picked session
+    // Create mo_kt records
     for (const session of picked) {
       await sbFetch('/rest/v1/records', {
         method: 'POST',
@@ -1335,34 +1329,24 @@ async function confirmMoKT() {
         })
       });
     }
-    // Update is_kt_opened flag on profile
+
+    // Update profile: is_kt_opened + auto-transition tu_van → bb
+    const patchData = { is_kt_opened: true };
+    if (p && p.phase === 'tu_van') patchData.phase = 'bb';
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ is_kt_opened: true })
+      method: 'PATCH', body: JSON.stringify(patchData)
     });
-    // Auto-transition phase: tu_van → bb when KT is opened
-    const p = allProfiles.find(x => x.id === currentProfileId);
-    if (p) p.is_kt_opened = true;
-    if (p && p.phase === 'tu_van') {
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
-        method: 'PATCH', body: JSON.stringify({ phase: 'bb' })
-      });
-      p.phase = 'bb';
-      // Record phase change on timeline
-      await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
-        profile_id: currentProfileId, record_type: 'phase_change',
-        content: { label: 'Chuyển sang giai đoạn BB', from: 'tu_van', to: 'bb' }
-      })});
+
+    // Sync local cache
+    if (p) {
+      p.is_kt_opened = true;
+      if (patchData.phase) p.phase = 'bb';
     }
 
     showToast(`📖 Đã xác nhận mở KT cho ${picked.length} buổi!`);
-    // Reload profile detail with updated phase + timeline
     if (p) openProfile(p);
   } catch (e) {
     showToast('❌ Lỗi: ' + e.message);
-  } finally {
-    const _loadEl2 = document.getElementById('loadingOverlay');
-    if (_loadEl2) _loadEl2.style.display = 'none';
   }
 }
 
