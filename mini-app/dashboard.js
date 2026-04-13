@@ -118,7 +118,7 @@ async function loadDashboard() {
           if (r.role_type === 'ndd' && ex.role_type !== 'ndd') unitProfilesMapAll.set(pid, { profile: p, role: r });
         }
         // ALIVE-ONLY map
-        if (p.fruit_status !== 'dropout') {
+        if (p.fruit_status !== 'dropout' && p.fruit_status !== 'pause') {
           if (!unitProfilesMapAlive.has(pid)) {
             unitProfilesMapAlive.set(pid, { profile: p, role: r });
           } else {
@@ -287,7 +287,7 @@ async function loadDashboard() {
         const pid = r.fruit_groups?.profile_id;
         const p = r.fruit_groups?.profiles;
         if (!pid || !codes.includes(r.staff_code) || seen.has(pid)) return false;
-        if (p?.fruit_status === 'dropout') return false; // Filter out drop-outs from tracking
+        if (p?.fruit_status === 'dropout' || p?.fruit_status === 'pause') return false; // Filter out drop-outs and paused from tracking
         seen.add(pid); return true;
       });
       if (!matching.length) return '';
@@ -302,7 +302,7 @@ async function loadDashboard() {
         const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
         const latest = latestActivityLabel(recordMap[pid], sessionMap[pid]);
         const fStatus = p?.fruit_status || 'alive';
-        const sDot = fStatus === 'dropout' ? '🔴' : '🟢';
+        const sDot = fStatus === 'dropout' ? '🔴' : fStatus === 'pause' ? '⏸️' : '🟢';
         
         const isKT = p?.is_kt_opened;
         const showKT = ['bb', 'center', 'completed'].includes(ph);
@@ -327,7 +327,7 @@ async function loadDashboard() {
       const fr = unitRoles.filter(r => r.role_type === 'ndd' && codes.includes(r.staff_code));
       // Only count Alive fruits (exclude dropout)
       const alivePids = new Set(
-        fr.filter(r => r.fruit_groups?.profiles?.fruit_status !== 'dropout')
+        fr.filter(r => r.fruit_groups?.profiles?.fruit_status !== 'dropout' && r.fruit_groups?.profiles?.fruit_status !== 'pause')
           .map(r => r.fruit_groups?.profile_id).filter(Boolean)
       );
       return {

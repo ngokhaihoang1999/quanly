@@ -95,9 +95,9 @@ async function openProfile(p) {
 
   const ph = p.phase || 'chakki';
   const fStatus = p.fruit_status || 'alive';
-  const isDropout = fStatus === 'dropout';
-  const statusBg = isDropout ? 'var(--red)' : 'var(--green)';
-  const statusText = isDropout ? '🔴 Drop-out' : '🟢 Alive';
+  const isInactive = fStatus === 'dropout' || fStatus === 'pause';
+  const statusBg = fStatus === 'dropout' ? 'var(--red)' : fStatus === 'pause' ? '#9ca3af' : 'var(--green)';
+  const statusText = fStatus === 'dropout' ? '🔴 Drop-out' : fStatus === 'pause' ? '⏸️ Pause' : '🟢 Alive';
   const myCode2 = getEffectiveStaffCode();
   const pos2 = getCurrentPosition();
 
@@ -177,7 +177,7 @@ async function openProfile(p) {
   const statusBtn = canToggleStatus
     ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`
     : `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
-  const reasonHtml = (fStatus==='dropout' && p.dropout_reason)
+  const reasonHtml = (isInactive && p.dropout_reason)
     ? `<div style="font-size:11px;color:var(--red);padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-top:4px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
 
   // KT toggle: NDD, GVBB hoặc full edit
@@ -310,7 +310,7 @@ async function openProfile(p) {
 
   // Hide add buttons if dropout
   document.querySelectorAll('.add-record-btn').forEach(b => {
-      if (fStatus === 'dropout') b.style.display = 'none';
+      if (isInactive) b.style.display = 'none';
       else b.style.display = '';
   });
 }
@@ -446,7 +446,7 @@ async function saveInfoSheet() {
         // Re-render summary card with updated data
         const p = allProfiles[idx];
         const fStatus = p.fruit_status || 'alive';
-        const statusLabel = fStatus === 'dropout' ? '🔴 Drop-out' : '🟢 Alive';
+        const statusLabel = fStatus === 'dropout' ? '🔴 Drop-out' : fStatus === 'pause' ? '⏸️ Pause' : '🟢 Alive';
         // Update just the name+meta in the card without full reload
         const nameEl = document.querySelector('#profileSummaryCard [data-field="name"]');
         if (nameEl) nameEl.textContent = p.full_name;

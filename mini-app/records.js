@@ -74,6 +74,7 @@ function latestActivityLabel(rec, sess) {
     if (rt === 'chot_center') return '🏛️ Chốt Center';
     if (rt === 'mo_kt')       return '📖 Đã mở KT';
     if (rt === 'drop_out')    return '🔴 Drop-out';
+    if (rt === 'pause')        return '⏸️ Pause';
     if (rt === 'alive')       return '🟢 Khôi phục Alive';
     return rt;
   } else {
@@ -91,7 +92,7 @@ async function loadJourney(profileId, currentPhase) {
   if (!phBtnEl || !tlEl) return;
 
   const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
-  const isDropout = allProfiles.find(x => x.id === profileId)?.fruit_status === 'dropout';
+  const isDropout = ['dropout','pause'].includes(allProfiles.find(x => x.id === profileId)?.fruit_status);
 
   // Fetch group info (for tu_van/BB/center phase — after Lập Group)
   let bbGroupInfo = null;
@@ -240,6 +241,7 @@ async function loadJourney(profileId, currentPhase) {
       else if (r.record_type === 'note')        { return; }
       else if (r.record_type === 'phase_change') { return; }
       else if (r.record_type === 'drop_out')    { icon='🔴'; text=`Drop-out: ${r.content?.reason||'Không có lý do'}`; isMajor = true; }
+      else if (r.record_type === 'pause')         { icon='⏸️'; text=`Pause: ${r.content?.reason||'Tạm dừng'}`; isMajor = true; }
       else if (r.record_type === 'alive')       { icon='🟢'; text='Khôi phục Alive'; isMajor = true; }
       else { icon='📌'; text=r.record_type; }
 

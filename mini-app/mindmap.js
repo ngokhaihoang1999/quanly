@@ -219,7 +219,7 @@ async function runAIAnalysis() {
     var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
     var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
 
-    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+(p.phase||'chakki')+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do nghỉ: '+p.dropout_reason : '')+'\nNgư\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
+    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+(p.phase||'chakki')+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do: '+p.dropout_reason : '')+'\nNg\u01b0\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
@@ -242,7 +242,7 @@ async function runAIAnalysis() {
       '- Concept là tên vỏ bọc tổ chức mà NDD dựng lên. Enneagram, MBTI KHÔNG PHẢI là concept.\n\n' +
       'LƯU Ý ĐIỂM HÁI TRÁI & KINH THÁNH:\n' +
       '- Điểm hái trái: Cần CHỈ MẶT ĐIỂM CHẠM. Từ điểm hái trái đó, phân tích SÂU: Kinh Thánh (KT) có thể GIÚP ĐƯỢC GÌ cho trái quả? (Tạo các nhánh con chi tiết để làm rõ ý này giúp GVBB dễ chuẩn bị).\n\n' +
-      (p.fruit_status === 'dropout'
+      (p.fruit_status === 'dropout' || p.fruit_status === 'pause'
         ? 'CÁC NHÁNH (DROP-OUT):\n' +
           '## 📋 Tổng quan — Giai đoạn nghỉ, NGƯỜI PHỤ TRÁCH (GHI RÕ TÊN NDD, TVV, GVBB), lý do nghỉ\n' +
           '## ⚠️ Nguyên nhân tiềm năng — Vì sao nghỉ? Phân tích sâu\n' +
@@ -396,7 +396,7 @@ async function buildChatCtx() {
   var nddName = window._rolesDisplay?.ndd || 'chưa rõ';
   var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
   var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
-  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+(p.phase||'chakki')+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do nghỉ: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
+  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+(p.phase||'chakki')+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
   if (Object.keys(d).length) {
     ctx += 'PHI\u1ebeU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){

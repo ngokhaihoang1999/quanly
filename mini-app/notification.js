@@ -94,6 +94,7 @@ function getNotifNavFn(n) {
     case 'bc_bb':
     case 'mo_kt':
     case 'drop_out':
+    case 'pause':
     case 'chot_center':
       if (n.profile_id) {
         return `${markRead};${closePanel};openProfileById('${n.profile_id}');`;
@@ -149,7 +150,7 @@ function getNotifIcon(type) {
     hapja_created:'🍎', hapja_approved:'✅', hapja_rejected:'❌',
     chot_tv:'📅', bc_tv:'📝',
     lap_group_tv_bb:'🎓', bc_bb:'📋',
-    mo_kt:'📖', drop_out:'🔴', chot_center:'🏛️', reminder:'⏰'
+    mo_kt:'📖', drop_out:'🔴', pause:'⏸️', chot_center:'🏛️', reminder:'⏰'
   };
   return m[type] || '🔔';
 }
@@ -255,7 +256,7 @@ async function _addGvbbForScope(scopeSet) {
 // ─── CREATE NOTIFICATIONS ──────────────────────────────────────────────────────
 const ALL_EVENT_TYPES = [
   'hapja_created','hapja_approved','hapja_rejected',
-  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','chot_center','reminder'
+  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','pause','chot_center','reminder'
 ];
 
 async function getMyPrefs() {
@@ -365,6 +366,7 @@ const NOTIF_EVENT_LABELS = {
   bc_bb:             { label: 'Báo cáo BB mới',          icon: '📋' },
   mo_kt:             { label: 'Mở KT',                   icon: '📖' },
   drop_out:          { label: 'Drop-out',                icon: '🔴' },
+  pause:             { label: 'Pause',                   icon: '⏸️' },
   chot_center:       { label: 'Chốt Center',             icon: '🏛️' },
   reminder:          { label: 'Nhắc nhở lịch',           icon: '⏰' },
 };

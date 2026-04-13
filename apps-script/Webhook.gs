@@ -21,13 +21,13 @@ function doPost(e) {
     var action = data.action || "upsert";
     
     var arrStr = function(val) { return Array.isArray(val) ? val.join(', ') : (val || ""); };
-    var getPhaseName = function(ph) {
-      if (ph === 'chakki') return 'Chakki';
-      if (ph === 'tu_van') return 'Tư vấn';
+    var getPhaseCode = function(ph) {
+      if (ph === 'chakki' || ph === 'new' || !ph) return 'CK';
+      if (ph === 'tu_van_hinh') return 'TVH';
+      if (ph === 'tu_van') return 'TV';
       if (ph === 'bb') return 'BB';
-      if (ph === 'center') return 'Center';
-      if (ph === 'completed') return 'Hoàn thành';
-      return ph ? ph : 'Chakki';
+      if (ph === 'center' || ph === 'completed') return 'CT';
+      return 'CK';
     };
 
     // Helper to generate a full row array from payload data
@@ -35,13 +35,12 @@ function doPost(e) {
       var p = itemData.p || {};
       var d = itemData.d || {};   // form_hanh_chinh.data (t2_ prefix fields)
       var hj = itemData.hj || {}; // check_hapja.data (no prefix: hinh_thuc, ket_noi, concept, ngay_chakki)
-      var hinhThuc = arrStr(hj.hinh_thuc || d.hinh_thuc || "").toUpperCase(); 
-      var phuongThuc = arrStr(hj.ket_noi || d.ket_noi || ""); 
-      var trangThai = (p.fruit_status === 'dropout') ? "Drop-out" : "Alive";
-      var dangKyBB = "";
-      if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = "O";
-      else if (p.fruit_status === 'dropout') dangKyBB = "X";
-      var giaiDoan = getPhaseName(p.phase);
+      var trangThai = "Alive";
+      if (p.fruit_status === 'dropout') trangThai = "Drop-out";
+      else if (p.fruit_status === 'pause') trangThai = "Pause";
+      var dangKyBB = false;
+      if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = true;
+      var giaiDoan = getPhaseCode(p.phase);
       var congCu = itemData.tools || d.t2_cong_cu || ""; 
       var ghiChu = itemData.recentNote || ""; 
       var gvbb = p.gvbb_staff_code || "";
@@ -53,9 +52,13 @@ function doPost(e) {
       var ngayChakki = hj.ngay_chakki || d.ngay_chakki || "";
       var concept = hj.concept || d.concept || "";
       
+      var hinhThuc = arrStr(hj.hinh_thuc || d.hinh_thuc || "").toUpperCase();
+      var phuongThuc = arrStr(hj.ket_noi || d.ket_noi || "");
+      var tinh = d.t2_tinh || hj.tinh || p.province || "";
+      
       return [
         nhomNDD, rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, mucTieuThang, ghiChu,
-        dangKyBB, "", "", gvbb, ngayChakki, hinhThuc, phuongThuc, "", lyDo, concept, reqDataPhone, "", itemData.profile_id || ""
+        dangKyBB, false, "", gvbb, ngayChakki, hinhThuc, phuongThuc, tinh, lyDo, concept, reqDataPhone, "", itemData.profile_id || ""
       ];
     };
 
@@ -95,11 +98,8 @@ function doPost(e) {
           if (rowObj[9] === "O" || rowObj[9] === "X") redCells.push(i + 2); // Row index (1-based, +1 for header)
         }
         sheet.getRange(2, 1, newValues.length, 22).setValues(newValues);
-        // Clean all font colors then set RED for column J (10) manually
-        sheet.getRange(2, 10, newValues.length, 1).setFontColor(null).setFontWeight("normal");
-        for (var k = 0; k < redCells.length; k++) {
-          sheet.getRange(redCells[k], 10).setFontColor("red").setFontWeight("bold");
-        }
+        // Set checkboxes for columns J (10) and K (11)
+        sheet.getRange(2, 10, newValues.length, 2).insertCheckboxes();
       }
       return ContentService.createTextOutput(JSON.stringify({"status": "bulk_success"})).setMimeType(ContentService.MimeType.JSON);
     }
@@ -113,20 +113,20 @@ function doPost(e) {
     
     var trangThai = "Alive";
     if (p.fruit_status === 'dropout') trangThai = "Drop-out";
+    else if (p.fruit_status === 'pause') trangThai = "Pause";
 
-    var dangKyBB = "";
-    if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = "O";
-    else if (p.fruit_status === 'dropout') dangKyBB = "X";
+    var dangKyBB = false;
+    if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = true;
     
-    var getPhaseName = function(ph) {
-      if (ph === 'chakki') return 'Chakki';
-      if (ph === 'tu_van') return 'Tư vấn';
+    var getPhaseCode = function(ph) {
+      if (ph === 'chakki' || ph === 'new' || !ph) return 'CK';
+      if (ph === 'tu_van_hinh') return 'TVH';
+      if (ph === 'tu_van') return 'TV';
       if (ph === 'bb') return 'BB';
-      if (ph === 'center') return 'Center';
-      if (ph === 'completed') return 'Hoàn thành';
-      return ph ? ph : 'Chakki';
+      if (ph === 'center' || ph === 'completed') return 'CT';
+      return 'CK';
     };
-    var giaiDoan = getPhaseName(p.phase);
+    var giaiDoan = getPhaseCode(p.phase);
     
     var congCu = data.tools || d.t2_cong_cu || ""; 
     var ghiChu = data.recentNote || ""; 
@@ -167,14 +167,14 @@ function doPost(e) {
         trangThai,                      // 7. Trạng thái
         mucTieuThang,                   // 8. Mục tiêu Tháng
         ghiChu,                         // 9. Ghi chú
-        dangKyBB,                       // 10. Đăng kýBB
-        "",                             // 11. Tham gia talkshow
+        dangKyBB,                       // 10. Đăng kýBB (checkbox)
+        false,                          // 11. Tham gia talkshow (checkbox)
         "",                             // 12. Tư vấn sau talkshow
         gvbb,                           // 13. GVBB찾기
         ngayChakki,                     // 14. Ngay Chakki
         hinhThuc,                       // 15. ONLINE/OFFLINE
         phuongThuc,                     // 16. Phuong thuc dau vao
-        "",                             // 17. Tinh
+        d.t2_tinh || hj.tinh || p.province || "", // 17. Tinh
         lyDo,                           // 18. Li do nghi hoc
         concept,                        // 19. Chu de
         reqDataPhone,                   // 20. Số điện thoại (giữ số 0)
@@ -193,9 +193,6 @@ function doPost(e) {
       
       var cell10 = sheet.getRange(rowIdx, 10);
       cell10.setValue(dangKyBB);
-      if (dangKyBB === "O" || dangKyBB === "X") {
-         cell10.setFontColor("red").setFontWeight("bold");
-      }
       
       if (gvbb) sheet.getRange(rowIdx, 13).setValue(gvbb);
       if (lyDo) sheet.getRange(rowIdx, 18).setValue(lyDo);

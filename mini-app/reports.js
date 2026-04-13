@@ -170,7 +170,8 @@ function _renderReports(el, subUnitIdx) {
   }
 
   const profiles = _filterProfiles(activeCodes);
-  const alive = profiles.filter(p => p.fruit_status !== 'dropout');
+  const alive = profiles.filter(p => p.fruit_status !== 'dropout' && p.fruit_status !== 'pause');
+  const paused = profiles.filter(p => p.fruit_status === 'pause');
   const dropouts = profiles.filter(p => p.fruit_status === 'dropout');
 
   const PHASES_ORDER = ['chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center'];
@@ -190,7 +191,7 @@ function _renderReports(el, subUnitIdx) {
   // ── HEADER + DROPDOWN ──
   html += `<div style="margin-bottom:16px;">
     <div style="font-size:15px;font-weight:700;margin-bottom:4px;">📊 Báo cáo · ${activeLabel || 'Đơn vị'}</div>
-    <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Kỳ: ${semName} · ${total} hồ sơ · ${alive.length} alive · ${dropouts.length} dropout</div>`;
+    <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Kỳ: ${semName} · ${total} hồ sơ · ${alive.length} alive${paused.length > 0 ? ` · ${paused.length} pause` : ''} · ${dropouts.length} dropout</div>`;
   if (scopeUnits.length > 0) {
     html += `<select id="rptUnitSelect" class="rpt-unit-select" onchange="_switchReportUnit(this.value)">
       <option value="__all__" ${subUnitIdx === null ? 'selected' : ''}>📍 ${scopeLabel} (tổng thể)</option>
@@ -284,6 +285,35 @@ function _renderReports(el, subUnitIdx) {
   }
   html += '</div></div>';
 
+  // ── Cross-semester Pause profiles (ONLY for team/Tổ scope) ──
+  const scope = getScope();
+  if (scope === 'team') {
+    // Fetch ALL profiles (any semester) that are paused and belong to this team's NDD codes
+    const teamCodes = activeCodes || allScopeCodes;
+    const pausedCrossSem = (allProfiles || []).filter(p =>
+      p.fruit_status === 'pause' && p.ndd_staff_code && teamCodes.includes(p.ndd_staff_code)
+    );
+    if (pausedCrossSem.length > 0) {
+      html += `<div class="rpt-section">
+        <div class="rpt-title" onclick="this.nextElementSibling.classList.toggle('rpt-hidden')">
+          ⏸️ HỒ SƠ PAUSE (xuyên kỳ)
+          <span class="rpt-badge" style="background:rgba(156,163,175,0.2);color:#9ca3af;">${pausedCrossSem.length}</span>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Trái quả đang Pause thuộc Tổ (định kỳ rà soát để Alive hoặc Drop-out)</div>
+          <div class="rpt-warn-list">`;
+      pausedCrossSem.forEach(p => {
+        const semObj = (allSemesters || []).find(s => s.id === p.semester_id);
+        const semLabel = semObj ? semObj.name : 'Chưa xác định';
+        const reason = p.dropout_reason ? ` — ${p.dropout_reason}` : '';
+        html += `<div class="rpt-warn-item" style="border-left:3px solid #9ca3af;cursor:pointer;" onclick="openProfileById('${p.id}')">
+          ⏸️ ${p.full_name}${reason} · Kỳ: ${semLabel} · NDD: ${nddName(p)}
+        </div>`;
+      });
+      html += '</div></div></div>';
+    }
+  }
+
   // ═══════════════════════════════════════════════════
   // MODULE 2: PHỄU CHUYỂN ĐỔI
   // ═══════════════════════════════════════════════════
@@ -298,14 +328,14 @@ function _renderReports(el, subUnitIdx) {
       const isLast = i === PHASES_ORDER.length - 1;
       // Everyone who reached at least this phase
       const aliveReached = alive.filter(p => phaseIdx(p.phase) >= i).length;
-      const dropReached = dropouts.filter(p => phaseIdx(p.phase) >= i).length;
+      const dropReached = [...dropouts, ...paused].filter(p => phaseIdx(p.phase) >= i).length;
       const phaseTotal = aliveReached + dropReached;
 
       // Split alive into: passed (moved beyond) vs staying (at exactly this phase)
       const alivePassed = isLast ? 0 : alive.filter(p => phaseIdx(p.phase) > i).length;
       const aliveStaying = alive.filter(p => phaseIdx(p.phase) === i).length;
       // Dropout at exactly this phase
-      const dropHere = dropouts.filter(p => phaseIdx(p.phase) === i).length;
+      const dropHere = [...dropouts, ...paused].filter(p => phaseIdx(p.phase) === i).length;
       // Dropout that passed through (reached higher phases before dropping)
       const dropPassed = dropReached - dropHere;
 
@@ -448,7 +478,7 @@ function _renderReports(el, subUnitIdx) {
     if (!nddStats[p.ndd]) nddStats[p.ndd] = { code: p.ndd, alive: 0, dropout: 0, total: 0, phases: {}, dormant: 0 };
     const s = nddStats[p.ndd];
     s.total++;
-    if (p.fruit_status === 'dropout') { s.dropout++; }
+    if (p.fruit_status === 'dropout' || p.fruit_status === 'pause') { s.dropout++; }
     else {
       s.alive++;
       const recs = recMap[p.id] || [];
@@ -520,8 +550,8 @@ function _renderReports(el, subUnitIdx) {
     const unitStats = compareUnits.map(u => {
       const codeSet = new Set(u.codes);
       const uProfiles = Array.from(profileMap.values()).filter(p => codeSet.has(p.ndd));
-      const uAlive = uProfiles.filter(p => p.fruit_status !== 'dropout');
-      const uDrop = uProfiles.filter(p => p.fruit_status === 'dropout');
+      const uAlive = uProfiles.filter(p => p.fruit_status !== 'dropout' && p.fruit_status !== 'pause');
+      const uDrop = uProfiles.filter(p => p.fruit_status === 'dropout' || p.fruit_status === 'pause');
       const uDormant = uAlive.filter(p => {
         const recs = recMap[p.id] || [];
         const sess = sessMap[p.id] || [];

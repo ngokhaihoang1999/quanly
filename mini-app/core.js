@@ -287,10 +287,13 @@ function getStaffLabel(code) {
 // opts: { extraMeta, clickFn, showPhase, extraBadges, ndd, tvv, gvbb, latestActivity, profileId }
 function renderProfileCard(p, opts = {}) {
   if (!p) return '';
-  const isDropout = p.fruit_status === 'dropout';
-  const statusColor = isDropout ? 'var(--red)' : 'var(--green)';
-  const statusLabel = isDropout ? 'Drop-out' : 'Alive';
-  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isDropout?'rgba(248,113,113,0.15)':'rgba(52,211,153,0.15)'};color:${statusColor};border:1px solid ${isDropout?'rgba(248,113,113,0.3)':'rgba(52,211,153,0.3)'};margin-left:4px;white-space:nowrap;vertical-align:middle;"><span style="background:${statusColor};width:6px;height:6px;border-radius:50%;margin-right:4px;display:inline-block;"></span>${statusLabel}</span>`;
+  const _fs = p.fruit_status || 'alive';
+  const isInactive = _fs === 'dropout' || _fs === 'pause';
+  const statusColor = _fs === 'dropout' ? 'var(--red)' : _fs === 'pause' ? '#9ca3af' : 'var(--green)';
+  const statusLabel = _fs === 'dropout' ? 'Drop-out' : _fs === 'pause' ? 'Pause' : 'Alive';
+  const statusBg = _fs === 'dropout' ? 'rgba(248,113,113,0.15)' : _fs === 'pause' ? 'rgba(156,163,175,0.15)' : 'rgba(52,211,153,0.15)';
+  const statusBorder = _fs === 'dropout' ? 'rgba(248,113,113,0.3)' : _fs === 'pause' ? 'rgba(156,163,175,0.3)' : 'rgba(52,211,153,0.3)';
+  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder};margin-left:4px;white-space:nowrap;vertical-align:middle;"><span style="background:${statusColor};width:6px;height:6px;border-radius:50%;margin-right:4px;display:inline-block;"></span>${statusLabel}</span>`;
 
   const ph = p.phase || 'chakki';
   const showPhase = opts.showPhase !== false && ph && ph !== 'new';
@@ -308,7 +311,7 @@ function renderProfileCard(p, opts = {}) {
   const clickFn = opts.clickFn || `openProfileById('${resolvedId}')`;
 
   // Birth year or dropout reason — shown inline on row 1 after name
-  const birthYear = !isDropout && p.birth_year ? p.birth_year : '';
+  const birthYear = !isInactive && p.birth_year ? p.birth_year : '';
   const yearTag = birthYear ? `<span style="font-size:12px;color:var(--text2);margin-left:4px;vertical-align:middle;">(${birthYear})</span>` : '';
 
   // Data fields for rows below
@@ -339,7 +342,7 @@ function renderProfileCard(p, opts = {}) {
   }
 
   // Dropout reason as a small note under name
-  const dropoutNote = isDropout && p.dropout_reason ? `<div style="font-size:11px;color:var(--red);margin-top:4px;">Lý do: ${p.dropout_reason}</div>` : '';
+  const dropoutNote = isInactive && p.dropout_reason ? `<div style="font-size:11px;color:${_fs==='pause'?'#9ca3af':'var(--red)'};margin-top:4px;">Lý do: ${p.dropout_reason}</div>` : '';
 
   return `<div class="profile-card" onclick="${clickFn}" style="padding:12px 14px;">
     <div class="profile-info" style="width:100%;">
@@ -1464,25 +1467,57 @@ async function promptChangeSemester(profileId, currentSemId) {
   }
 }
 
-// ============ FRUIT STATUS TOGGLE ============
+// ============ FRUIT STATUS TOGGLE (3-way: alive / pause / dropout) ============
 async function toggleFruitStatus(profileId, current) {
-  const newStatus = current === 'alive' ? 'dropout' : 'alive';
-  const label = newStatus === 'dropout' ? 'Drop-out' : 'Alive';
-  
+  // Show 3-option picker
+  const newStatus = await new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:16px;padding:20px;min-width:260px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
+    box.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:16px;color:var(--text1);">Chuyển trạng thái</div>`;
+    const options = [
+      { val: 'alive',   label: '🟢 Alive',    color: 'var(--green)', bg: 'rgba(52,211,153,0.12)' },
+      { val: 'pause',   label: '⏸️ Pause',    color: '#9ca3af',       bg: 'rgba(156,163,175,0.12)' },
+      { val: 'dropout', label: '🔴 Drop-out', color: 'var(--red)',    bg: 'rgba(248,113,113,0.12)' }
+    ];
+    options.forEach(o => {
+      const isCurrent = o.val === current;
+      const btn = document.createElement('button');
+      btn.textContent = isCurrent ? `${o.label} (hiện tại)` : o.label;
+      btn.disabled = isCurrent;
+      btn.style.cssText = `display:block;width:100%;padding:10px;margin-bottom:8px;border-radius:10px;border:1.5px solid ${isCurrent ? o.color : 'var(--border)'};background:${isCurrent ? o.bg : 'var(--bg2)'};color:${o.color};font-size:13px;font-weight:700;cursor:${isCurrent ? 'default' : 'pointer'};opacity:${isCurrent ? '0.5' : '1'};`;
+      if (!isCurrent) btn.onclick = () => { overlay.remove(); resolve(o.val); };
+      box.appendChild(btn);
+    });
+    const cancel = document.createElement('button');
+    cancel.textContent = 'Huỷ';
+    cancel.style.cssText = 'display:block;width:100%;padding:8px;border:none;background:transparent;color:var(--text3);font-size:12px;cursor:pointer;margin-top:4px;';
+    cancel.onclick = () => { overlay.remove(); resolve(null); };
+    box.appendChild(cancel);
+    overlay.appendChild(box);
+    overlay.onclick = e => { if (e.target === overlay) { overlay.remove(); resolve(null); } };
+    document.body.appendChild(overlay);
+  });
+  if (!newStatus || newStatus === current) return;
+
+  const label = newStatus === 'dropout' ? 'Drop-out' : newStatus === 'pause' ? 'Pause' : 'Alive';
+
+  // Ask reason for pause/dropout
   let reason = '';
-  if (newStatus === 'dropout') {
-    reason = prompt('Nhập lý do Drop-out (có thể để trống):');
-    if (reason === null) return; // Chỉ huỷ khi bấm Cancel
+  if (newStatus === 'dropout' || newStatus === 'pause') {
+    const prompt_label = newStatus === 'dropout' ? 'Nhập lý do Drop-out (có thể để trống):' : 'Nhập lý do Pause (có thể để trống):';
+    reason = prompt(prompt_label);
+    if (reason === null) return;
     reason = reason.trim();
   }
 
   if (!await showConfirmAsync(`Chuyển trạng thái trái quả thành "${label}"?`)) return;
   try {
     const patchBody = { fruit_status: newStatus };
-    if (newStatus === 'dropout') patchBody.dropout_reason = reason;
+    if (newStatus === 'dropout' || newStatus === 'pause') patchBody.dropout_reason = reason;
     else patchBody.dropout_reason = null;
 
-    // PATCH with return=representation to verify the change
     const patchRes = await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
       method: 'PATCH',
       headers: { 'Prefer': 'return=representation' },
@@ -1496,14 +1531,12 @@ async function toggleFruitStatus(profileId, current) {
       return;
     }
 
-    // Try to use the representation response
     let updatedProfile = null;
     try {
       const patchData = await patchRes.json();
       if (Array.isArray(patchData) && patchData[0]) updatedProfile = patchData[0];
     } catch(e) {}
 
-    // If no representation, update local cache directly
     const idx = allProfiles.findIndex(x => x.id === profileId);
     if (idx >= 0) {
       if (updatedProfile) {
@@ -1512,17 +1545,16 @@ async function toggleFruitStatus(profileId, current) {
         allProfiles[idx].fruit_status = newStatus;
         allProfiles[idx].dropout_reason = patchBody.dropout_reason;
       }
-      
-      // Auto-sync status change to Google Sheets
       if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(profileId);
-      
       openProfile(allProfiles[idx]);
     }
 
-    // Add timeline record for status change
+    // Add timeline record
     try {
-      const recType = newStatus === 'dropout' ? 'drop_out' : 'alive';
-      const _cn = newStatus === 'dropout' ? { reason: reason || 'Không có lý do' } : { note: 'Chuyển lại trạng thái Alive' };
+      const recType = newStatus === 'dropout' ? 'drop_out' : newStatus === 'pause' ? 'pause' : 'alive';
+      const _cn = newStatus === 'dropout' ? { reason: reason || 'Không có lý do' }
+               : newStatus === 'pause'   ? { reason: reason || 'Tạm dừng' }
+               : { note: 'Chuyển lại trạng thái Alive' };
       await sbFetch('/rest/v1/records', {
         method: 'POST',
         headers: { 'Prefer': 'return=minimal' },

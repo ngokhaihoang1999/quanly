@@ -99,7 +99,7 @@ async function loadPriority() {
       // Only 1 lightweight query: latest activity per profile (records + sessions)
       // Use allProfiles for profile data (already in memory)
       const myProfiles = (allProfiles || []).filter(p =>
-        p.ndd_staff_code && codeSet.has(p.ndd_staff_code) && p.fruit_status !== 'dropout'
+        p.ndd_staff_code && codeSet.has(p.ndd_staff_code) && p.fruit_status !== 'dropout' && p.fruit_status !== 'pause'
       );
 
       if (myProfiles.length > 0) {
