@@ -183,7 +183,7 @@ async function openProfile(p) {
   // KT toggle: NDD, GVBB hoặc full edit
   const isKT = p.is_kt_opened === true;
   const showKT = ['bb', 'center', 'completed'].includes(ph);
-  const canToggleKT = (hasFullEdit || isProfileGVBB) && !isDropout;
+  const canToggleKT = (hasFullEdit || isProfileGVBB) && !isInactive;
   const ktHtml = showKT
     ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
