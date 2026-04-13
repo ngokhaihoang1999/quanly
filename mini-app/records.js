@@ -1306,7 +1306,8 @@ async function confirmMoKT() {
     const picked = await showKTSessionPicker(unconfirmed, confirmedSessions, sessions);
     if (!picked || picked.length === 0) return;
 
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    const _loadEl = document.getElementById('loadingOverlay');
+    if (_loadEl) _loadEl.style.display = 'flex';
     // Create mo_kt record for each picked session
     for (const session of picked) {
       await sbFetch('/rest/v1/records', {
@@ -1331,7 +1332,8 @@ async function confirmMoKT() {
   } catch (e) {
     showToast('❌ Lỗi: ' + e.message);
   } finally {
-    document.getElementById('loadingOverlay').style.display = 'none';
+    const _loadEl2 = document.getElementById('loadingOverlay');
+    if (_loadEl2) _loadEl2.style.display = 'none';
   }
 }
 
