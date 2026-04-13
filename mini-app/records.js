@@ -1324,11 +1324,24 @@ async function confirmMoKT() {
       method: 'PATCH',
       body: JSON.stringify({ is_kt_opened: true })
     });
-    const idx = allProfiles.findIndex(x => x.id === currentProfileId);
-    if (idx >= 0) allProfiles[idx].is_kt_opened = true;
+    // Auto-transition phase: tu_van → bb when KT is opened
+    const p = allProfiles.find(x => x.id === currentProfileId);
+    if (p) p.is_kt_opened = true;
+    if (p && p.phase === 'tu_van') {
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
+        method: 'PATCH', body: JSON.stringify({ phase: 'bb' })
+      });
+      p.phase = 'bb';
+      // Record phase change on timeline
+      await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
+        profile_id: currentProfileId, record_type: 'phase_change',
+        content: { label: 'Chuyển sang giai đoạn BB', from: 'tu_van', to: 'bb' }
+      })});
+    }
 
     showToast(`📖 Đã xác nhận mở KT cho ${picked.length} buổi!`);
-    await fetchRecordsAndUpdate(currentProfileId);
+    // Reload profile detail with updated phase + timeline
+    if (p) openProfile(p);
   } catch (e) {
     showToast('❌ Lỗi: ' + e.message);
   } finally {
