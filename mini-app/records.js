@@ -1298,6 +1298,22 @@ async function confirmMoKT() {
     const sessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
     const unconfirmed = sessions.filter(n => !confirmedSessions.has(n));
     if (unconfirmed.length === 0) {
+      // Edge case: all confirmed but phase stuck at tu_van (from previous crash)
+      const pStuck = allProfiles.find(x => x.id === currentProfileId);
+      if (pStuck && pStuck.phase === 'tu_van') {
+        await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
+          method: 'PATCH', body: JSON.stringify({ phase: 'bb', is_kt_opened: true })
+        });
+        pStuck.phase = 'bb';
+        pStuck.is_kt_opened = true;
+        await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
+          profile_id: currentProfileId, record_type: 'phase_change',
+          content: { label: 'Chuyển sang giai đoạn BB', from: 'tu_van', to: 'bb' }
+        })});
+        showToast('📖 Đã chuyển sang giai đoạn BB!');
+        openProfile(pStuck);
+        return;
+      }
       showToast('✅ Tất cả buổi BB đã được xác nhận mở KT.');
       return;
     }
