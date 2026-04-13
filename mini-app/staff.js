@@ -87,7 +87,7 @@ async function deleteStaffFromList(staffCode) {
   if (staff?.team_id) warn += `\n📁 TĐ đang thuộc tổ.`;
   if (!await showConfirmAsync(`Xóa vĩnh viễn TĐ "${staffCode}"?\n${name}${warn}\n\nThao tác không thể hoàn tác!`)) return;
   try {
-    // Clear structural role references
+    // 1. Clear structural role references (YJYN, TJN, GYJN, BGYJN)
     for (const a of (structureData||[])) {
       if (a.yjyn_staff_code === staffCode) await sbFetch(`/rest/v1/areas?id=eq.${a.id}`, { method:'PATCH', body: JSON.stringify({ yjyn_staff_code: null }) });
       for (const g of (a.org_groups||[])) {
@@ -100,9 +100,24 @@ async function deleteStaffFromList(staffCode) {
         }
       }
     }
-    await sbFetch(`/rest/v1/staff?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    // 2. Clear fruit_roles referencing this staff
+    await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    // 3. Clear profiles.ndd_staff_code and profiles.gvbb_staff_code
+    await sbFetch(`/rest/v1/profiles?ndd_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'PATCH', body: JSON.stringify({ ndd_staff_code: null }) });
+    await sbFetch(`/rest/v1/profiles?gvbb_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'PATCH', body: JSON.stringify({ gvbb_staff_code: null }) });
+    // 4. Clear notifications
+    await sbFetch(`/rest/v1/notifications?recipient_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    await sbFetch(`/rest/v1/notifications?source_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    // 5. Clear notification_preferences
+    await sbFetch(`/rest/v1/notification_preferences?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    // 6. Finally delete the staff record
+    const res = await sbFetch(`/rest/v1/staff?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error(errBody || `HTTP ${res.status}`);
+    }
     showToast('✅ Đã xóa TĐ ' + staffCode);
     await loadStaff();
     await loadStructure();
-  } catch(e) { showToast('❌ Lỗi: ' + (e.message||'')); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi xoá: ' + (e.message||'')); console.error('deleteStaffFromList:', e); }
 }
