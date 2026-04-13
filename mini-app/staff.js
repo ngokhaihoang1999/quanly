@@ -87,37 +87,54 @@ async function deleteStaffFromList(staffCode) {
   if (staff?.team_id) warn += `\n📁 TĐ đang thuộc tổ.`;
   if (!await showConfirmAsync(`Xóa vĩnh viễn TĐ "${staffCode}"?\n${name}${warn}\n\nThao tác không thể hoàn tác!`)) return;
   try {
-    // 1. Clear structural role references (YJYN, TJN, GYJN, BGYJN)
+    const sc = encodeURIComponent(staffCode);
+    // 1. Clear structural role refs (YJYN, TJN, GYJN, BGYJN, created_by)
     for (const a of (structureData||[])) {
-      if (a.yjyn_staff_code === staffCode) await sbFetch(`/rest/v1/areas?id=eq.${a.id}`, { method:'PATCH', body: JSON.stringify({ yjyn_staff_code: null }) });
+      const aUp = {};
+      if (a.yjyn_staff_code === staffCode) aUp.yjyn_staff_code = null;
+      if (a.created_by === staffCode) aUp.created_by = null;
+      if (Object.keys(aUp).length) await sbFetch(`/rest/v1/areas?id=eq.${a.id}`, { method:'PATCH', body: JSON.stringify(aUp) });
       for (const g of (a.org_groups||[])) {
-        if (g.tjn_staff_code === staffCode) await sbFetch(`/rest/v1/org_groups?id=eq.${g.id}`, { method:'PATCH', body: JSON.stringify({ tjn_staff_code: null }) });
+        const gUp = {};
+        if (g.tjn_staff_code === staffCode) gUp.tjn_staff_code = null;
+        if (g.created_by === staffCode) gUp.created_by = null;
+        if (Object.keys(gUp).length) await sbFetch(`/rest/v1/org_groups?id=eq.${g.id}`, { method:'PATCH', body: JSON.stringify(gUp) });
         for (const t of (g.teams||[])) {
-          const up = {};
-          if (t.gyjn_staff_code === staffCode) up.gyjn_staff_code = null;
-          if (t.bgyjn_staff_code === staffCode) up.bgyjn_staff_code = null;
-          if (Object.keys(up).length) await sbFetch(`/rest/v1/teams?id=eq.${t.id}`, { method:'PATCH', body: JSON.stringify(up) });
+          const tUp = {};
+          if (t.gyjn_staff_code === staffCode) tUp.gyjn_staff_code = null;
+          if (t.bgyjn_staff_code === staffCode) tUp.bgyjn_staff_code = null;
+          if (t.created_by === staffCode) tUp.created_by = null;
+          if (Object.keys(tUp).length) await sbFetch(`/rest/v1/teams?id=eq.${t.id}`, { method:'PATCH', body: JSON.stringify(tUp) });
         }
       }
     }
-    // 2. Clear fruit_roles referencing this staff
-    await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
-    // 3. Clear profiles.ndd_staff_code and profiles.gvbb_staff_code
-    await sbFetch(`/rest/v1/profiles?ndd_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'PATCH', body: JSON.stringify({ ndd_staff_code: null }) });
-    await sbFetch(`/rest/v1/profiles?gvbb_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'PATCH', body: JSON.stringify({ gvbb_staff_code: null }) });
-    // 4. Clear notifications
-    await sbFetch(`/rest/v1/notifications?recipient_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
-    await sbFetch(`/rest/v1/notifications?source_staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
-    // 5. Clear notification_preferences
-    await sbFetch(`/rest/v1/notification_preferences?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
-    // 6. Finally delete the staff record
-    const res = await sbFetch(`/rest/v1/staff?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
-    if (!res.ok) {
-      const errBody = await res.text();
-      throw new Error(errBody || `HTTP ${res.status}`);
+    // 2. Clear fruit_roles (staff_code + assigned_by)
+    await sbFetch(`/rest/v1/fruit_roles?staff_code=eq.${sc}`, { method:'DELETE' });
+    await sbFetch(`/rest/v1/fruit_roles?assigned_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ assigned_by: null }) });
+    // 3. Clear profiles
+    await sbFetch(`/rest/v1/profiles?ndd_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ ndd_staff_code: null }) });
+    await sbFetch(`/rest/v1/profiles?gvbb_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ gvbb_staff_code: null }) });
+    // 4. Clear check_hapja
+    await sbFetch(`/rest/v1/check_hapja?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
+    await sbFetch(`/rest/v1/check_hapja?approved_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ approved_by: null }) });
+    // 5. Clear consultation_sessions
+    await sbFetch(`/rest/v1/consultation_sessions?tvv_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ tvv_staff_code: null }) });
+    // 6. Clear calendar_events + priority_tasks
+    await sbFetch(`/rest/v1/calendar_events?staff_code=eq.${sc}`, { method:'DELETE' });
+    await sbFetch(`/rest/v1/priority_tasks?staff_code=eq.${sc}`, { method:'DELETE' });
+    // 7. Clear notifications + preferences
+    await sbFetch(`/rest/v1/notifications?recipient_staff_code=eq.${sc}`, { method:'DELETE' });
+    await sbFetch(`/rest/v1/notifications?source_staff_code=eq.${sc}`, { method:'DELETE' });
+    await sbFetch(`/rest/v1/notification_preferences?staff_code=eq.${sc}`, { method:'DELETE' });
+    // 8. Delete staff record (return=representation to verify)
+    const res = await sbFetch(`/rest/v1/staff?staff_code=eq.${sc}`, { method:'DELETE', headers: { 'Prefer': 'return=representation' } });
+    const deleted = await res.json();
+    if (!Array.isArray(deleted) || deleted.length === 0) {
+      throw new Error('Không xoá được — có thể còn ràng buộc dữ liệu khác. Mở Console (F12) xem chi tiết.');
     }
     showToast('✅ Đã xóa TĐ ' + staffCode);
-    await loadStaff();
+    allStaff = allStaff.filter(s => s.staff_code !== staffCode);
+    renderStaff(allStaff);
     await loadStructure();
   } catch(e) { showToast('❌ Lỗi xoá: ' + (e.message||'')); console.error('deleteStaffFromList:', e); }
 }
