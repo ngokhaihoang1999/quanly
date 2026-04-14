@@ -855,66 +855,44 @@ function getSemesterFilter() {
   return currentSemesterId ? `&semester_id=eq.${currentSemesterId}` : '';
 }
 // ============ DESKTOP WINDOW CONTROLS ============
-// Inject — / □ / × buttons for desktop Telegram Mini App
 let _isFullscreen = true;
 function _injectWindowControls() {
   if (document.getElementById('winCtrlBar')) return;
+  console.log('[WinCtrl] injecting controls, tg.platform=', tg?.platform, 'innerWidth=', window.innerWidth);
   const bar = document.createElement('div');
   bar.id = 'winCtrlBar';
-  bar.innerHTML = `
-    <button id="winBtnMin" title="Thu nhỏ">─</button>
-    <button id="winBtnMax" title="Phóng to / Thu nhỏ">☐</button>
-    <button id="winBtnClose" title="Đóng">✕</button>`;
-  Object.assign(bar.style, {
-    position:'fixed', top:'6px', right:'50px', zIndex:'99999',
-    display:'flex', gap:'2px', padding:'2px 4px',
-    background:'rgba(0,0,0,0.35)', backdropFilter:'blur(12px)',
-    borderRadius:'8px', transition:'opacity 0.3s',
-    opacity:'1', pointerEvents:'auto'
-  });
-  const btnStyle = {
-    width:'28px', height:'22px', border:'none', borderRadius:'5px',
-    background:'transparent', color:'#fff', fontSize:'12px',
-    cursor:'pointer', display:'flex', alignItems:'center',
-    justifyContent:'center', transition:'background 0.15s', fontFamily:'system-ui'
+  bar.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99999;display:flex;gap:1px;padding:3px;background:rgba(30,30,30,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:10px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+  const mkBtn = (id, icon, title, hoverBg) => {
+    const b = document.createElement('button');
+    b.id = id; b.title = title; b.textContent = icon;
+    b.style.cssText = 'width:32px;height:26px;border:none;border-radius:6px;background:transparent;color:#ddd;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:system-ui;line-height:1;';
+    b.onmouseenter = () => { b.style.background = hoverBg || 'rgba(255,255,255,0.15)'; b.style.color = '#fff'; };
+    b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = '#ddd'; };
+    return b;
   };
+  const btnMin = mkBtn('winBtnMin', '\u2500', 'Thu nho', 'rgba(255,255,255,0.15)');
+  const btnMax = mkBtn('winBtnMax', '\u25A1', 'Phong to', 'rgba(255,255,255,0.15)');
+  const btnClose = mkBtn('winBtnClose', '\u2715', 'Dong', '#e53e3e');
+  bar.appendChild(btnMin);
+  bar.appendChild(btnMax);
+  bar.appendChild(btnClose);
   document.body.appendChild(bar);
-  const btns = bar.querySelectorAll('button');
-  btns.forEach(b => {
-    Object.entries(btnStyle).forEach(([k,v]) => b.style[k] = v);
-    b.addEventListener('mouseenter', () => b.style.background = 'rgba(255,255,255,0.18)');
-    b.addEventListener('mouseleave', () => b.style.background = 'transparent');
-  });
-  // Close button: red hover
-  const closeBtn = document.getElementById('winBtnClose');
-  closeBtn.addEventListener('mouseenter', () => closeBtn.style.background = '#e53e3e');
-  closeBtn.addEventListener('mouseleave', () => closeBtn.style.background = 'transparent');
+  console.log('[WinCtrl] bar appended to body');
 
   // Actions
-  document.getElementById('winBtnMin').onclick = () => {
-    try { if (tg?.minimize) tg.minimize(); } catch(_){}
-  };
-  document.getElementById('winBtnMax').onclick = () => {
+  btnMin.onclick = () => { try { if (tg && tg.minimize) tg.minimize(); } catch(e){ console.log('[WinCtrl] minimize err:', e); } };
+  btnMax.onclick = () => {
     try {
-      if (_isFullscreen && tg?.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; }
-      else if (tg?.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; }
-    } catch(_){}
+      if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
+      else if (tg && tg.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
+    } catch(e){ console.log('[WinCtrl] fullscreen err:', e); }
   };
-  document.getElementById('winBtnClose').onclick = () => {
-    try { if (tg?.close) tg.close(); } catch(_){ window.close(); }
-  };
+  btnClose.onclick = () => { try { if (tg && tg.close) tg.close(); else window.close(); } catch(e){ console.log('[WinCtrl] close err:', e); } };
 
-  // Auto-hide after 3s, show on mouse near top
-  let hideTimer = setTimeout(() => bar.style.opacity = '0.15', 3000);
-  document.addEventListener('mousemove', e => {
-    if (e.clientY < 50) {
-      bar.style.opacity = '1';
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => bar.style.opacity = '0.15', 3000);
-    }
-  });
-  bar.addEventListener('mouseenter', () => { bar.style.opacity = '1'; clearTimeout(hideTimer); });
-  bar.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => bar.style.opacity = '0.15', 2000); });
+  // Auto-hide after 4s, show on hover
+  let ht = setTimeout(() => { bar.style.opacity = '0.25'; }, 4000);
+  bar.onmouseenter = () => { bar.style.opacity = '1'; clearTimeout(ht); };
+  bar.onmouseleave = () => { ht = setTimeout(() => { bar.style.opacity = '0.25'; }, 2000); };
 }
 
 // ============ INIT ============
@@ -922,13 +900,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tg) {
     tg.ready();
     tg.expand();
-    // On desktop: request fullscreen + inject window controls (Bot API 8.0+)
-    const plt = (tg.platform || '').toLowerCase();
-    const isDesktop = ['tdesktop','macos','linux','windows','web'].includes(plt) || window.innerWidth > 600;
-    if (isDesktop) {
-      try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
-      _injectWindowControls();
-    }
+    console.log('[Init] tg.platform=', tg.platform, 'width=', window.innerWidth);
+    // Always try fullscreen + inject controls (no desktop guard)
+    try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
+    _injectWindowControls();
   }
   // PIN lock check — show overlay BEFORE any data loads
   _showPinLock();
