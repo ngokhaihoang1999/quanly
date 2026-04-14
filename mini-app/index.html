@@ -51,7 +51,10 @@
   </div>
 </div>
 
-<div class="content" id="mainContent">
+<div id="desktopPanelsWrapper" class="desktop-layout">
+  <div id="panelLeft" class="desktop-panel"></div>
+  <div id="panelCenter" class="desktop-panel">
+    <div class="content" id="mainContent">
 
   <!-- ĐƠN VỊ -->
   <div id="tab-unit">
@@ -266,7 +269,7 @@
             <button class="ai-chat-fs-btn" onclick="event.stopPropagation();toggleFullscreen('aiChatCard')" title="Toàn màn hình">⛶</button>
           </div>
           <div id="aiChatBody" class="ai-chat-body" style="display:none;">
-            <div class="ai-chat-msgs" id="aiChatMessages">
+      <div class="ai-chat-msgs" id="aiChatMessages">
               <div class="ai-msg ai-msg-system">Trợ lý AI cho hồ sơ này. Mọi người cùng thấy.</div>
             </div>
             <div class="ai-chat-input-area">
@@ -282,8 +285,11 @@
   <!-- FAB -->
   <button class="fab" id="fabBtn" onclick="openCreateHapjaModal()" style="display:none;">＋</button>
 
-</div>
+    </div>
+  </div>
 
+  <div id="panelRight" class="desktop-panel"></div>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>

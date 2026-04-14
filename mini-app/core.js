@@ -900,6 +900,77 @@ function _injectWindowControls() {
   bar.onmouseleave = () => { ht = setTimeout(() => { bar.style.opacity = '0.2'; }, 2000); };
 }
 
+// ============ DESKTOP PANEL ENGINE (PHASE 3) ============
+let desktopConfig = null;
+try { desktopConfig = JSON.parse(localStorage.getItem('cj_desktop_config')); } catch(e) {}
+if (!desktopConfig) {
+  // Config mặc định nếu user chưa tự chỉnh
+  desktopConfig = { left: ['unit'], right: ['notes', 'priority'] };
+}
+
+let _isDesktopApplied = false;
+
+function _isTabPinned(tabId) {
+  if (!_isDesktopApplied) return false;
+  return desktopConfig.left.includes(tabId) || desktopConfig.right.includes(tabId);
+}
+
+function applyDesktopLayout() {
+  if (window.innerWidth >= 1024) {
+    if (_isDesktopApplied) return;
+    _isDesktopApplied = true;
+    
+    ['left', 'right'].forEach(side => {
+      const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
+      if (!panel) return;
+      desktopConfig[side].forEach(tabId => {
+        const el = document.getElementById('tab-' + tabId);
+        if (el) {
+          el.classList.add('desktop-pinned');
+          panel.appendChild(el);
+          const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
+          if (tabBtn) tabBtn.style.display = 'none';
+        }
+      });
+      panel.style.display = panel.children.length > 0 ? 'flex' : 'none';
+    });
+    
+    // Nếu tab ở giữa (center) vô tình bị trùng với các tab đã bị mang đi chỗ khác, thì chọn đại một tab khác để hiên
+    const activeTabObj = document.querySelector('#mainTabBar .tab.active');
+    const activeTab = activeTabObj ? activeTabObj.dataset.tab : null;
+    if (activeTab && _isTabPinned(activeTab)) {
+      const firstAvail = Array.from(document.querySelectorAll('#mainTabBar .tab')).find(t => t.style.display !== 'none');
+      if (firstAvail) firstAvail.click();
+    }
+  } else {
+    // Mobile mode
+    if (!_isDesktopApplied) return;
+    _isDesktopApplied = false;
+    
+    const center = document.getElementById('mainContent');
+    if (!center) return;
+    
+    ['left', 'right'].forEach(side => {
+      desktopConfig[side].forEach(tabId => {
+        const el = document.getElementById('tab-' + tabId);
+        if (el) {
+          el.classList.remove('desktop-pinned');
+          center.appendChild(el);
+          const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
+          if (tabBtn) tabBtn.style.display = ''; 
+        }
+      });
+      const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
+      if (panel) panel.style.display = 'none';
+    });
+    
+    // Force reset permissions to fix visibility
+    if (typeof applyPermissions === 'function') applyPermissions();
+  }
+}
+
+window.addEventListener('resize', applyDesktopLayout);
+
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) {
@@ -943,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.allSettled([loadDashboard(), loadStaff()]);
     // Deep link: auto-open profile after data is ready
     _handleDeepLink();
+    applyDesktopLayout(); // Phase 3: Setup Panels immediately on init
   } catch(e) {
     console.error('Init error:', e);
     _clearLoadingStates();
@@ -1105,8 +1177,16 @@ function _clearLoadingStates() {
 // ============ NAVIGATION ============
 function backToList() {
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
-  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t=>document.getElementById(t).style.display='none');
-  document.getElementById('tab-'+activeTab).style.display = 'block';
+  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t=>{
+    const elT = document.getElementById(t);
+    if (elT && (typeof _isTabPinned !== 'function' || !_isTabPinned(t.replace('tab-','')))) {
+      elT.style.display='none';
+    }
+  });
+  const tTab = document.getElementById('tab-'+activeTab);
+  if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(activeTab))) {
+    tTab.style.display = 'block';
+  }
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (activeTab==='unit'||activeTab==='personal')?'flex':'none';
   currentProfileId = null;
@@ -1120,9 +1200,19 @@ function switchFormTab(el, cardId) {
   }
 }
 function switchMainTab(el, tab) {
+  if (typeof _isTabPinned === 'function' && _isTabPinned(tab) && window.innerWidth >= 1024) return;
+  
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t=>document.getElementById(t).style.display='none');
-  document.getElementById('tab-'+tab).style.display = 'block';
+  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t=>{
+    const elT = document.getElementById(t);
+    if (elT && (typeof _isTabPinned !== 'function' || !_isTabPinned(t.replace('tab-','')))) {
+      elT.style.display='none';
+    }
+  });
+  const tTab = document.getElementById('tab-'+tab);
+  if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(tab))) {
+    tTab.style.display = 'block';
+  }
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
   // Only re-fetch if data is stale (>30s old). Writes invalidate cache automatically.
@@ -1242,7 +1332,7 @@ function resetViewAs() {
 function applyPermissions() {
   // Tab Cơ cấu: visible for all
   const structTab = document.querySelector('[data-tab="structure"]');
-  if (structTab) structTab.style.display = '';
+  if (structTab) structTab.style.display = _isTabPinned('structure') ? 'none' : '';
   // "+ Khu vực" button: only manage_structure permission
   const btnAddArea = document.getElementById('btnAddArea');
   if (btnAddArea) btnAddArea.style.display = hasPermission('manage_structure') ? '' : 'none';
@@ -1259,16 +1349,18 @@ function applyPermissions() {
   const fabBtn = document.getElementById('fabBtn');
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'dashboard';
   if (fabBtn) fabBtn.style.display = (hasPermission('create_hapja') && (activeTab==='unit'||activeTab==='personal')) ? 'flex' : 'none';
+  
   // Tab TĐ: only visible for admin (manage_positions permission)
   const tabStaffBtn = document.getElementById('tabStaffBtn');
-  if (tabStaffBtn) tabStaffBtn.style.display = hasPermission('manage_positions') ? '' : 'none';
+  if (tabStaffBtn) tabStaffBtn.style.display = hasPermission('manage_positions') && !_isTabPinned('staff') ? '' : 'none';
+  
   // Tab Báo cáo: visible for GYJN+ (anyone with team scope or higher)
   const tabReportsBtn = document.getElementById('tabReportsBtn');
   if (tabReportsBtn) {
     const scope = getScope();
     const pos = getCurrentPosition();
     const showReports = ['team','group','area','system'].includes(scope) || ['gyjn','bgyjn','tjn','yjyn','admin'].includes(pos);
-    tabReportsBtn.style.display = showReports ? '' : 'none';
+    tabReportsBtn.style.display = showReports && !_isTabPinned('reports') ? '' : 'none';
   }
   // Reload structure tree to update inline add buttons
   if (document.getElementById('tab-structure').style.display !== 'none') loadStructure();

@@ -1172,6 +1172,62 @@
   }
 }
 
+/* ═══════════════ PHASE 3: DESKTOP SPLIT VIEW ═══════════════ */
+.desktop-panel {
+  display: none;
+}
+#panelCenter {
+  display: block; /* Mặc định hiện trên mobile */
+}
+
+@media (min-width: 1024px) {
+  .desktop-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  
+  #panelCenter {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  /* Ẩn nút back khi ở desktop vì không cần thiết nữa */
+  #detailView .back-btn {
+    display: none !important;
+  }
+
+  .desktop-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  /* Cột trái / phải trên desktop, ẩn đi nếu ko có content thông qua JS, nhưng mặc định bật */
+  #panelLeft, #panelRight {
+    width: 340px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    background: var(--surface2);
+  }
+  
+  /* Các tab được pin vào panelLeft hoặc panelRight sẽ ép hiển thị */
+  .desktop-pinned {
+    display: block !important;
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  /* Ẩn navigation bottom bar nếu không cần thiết? Tab bar hiện tại ở .header-top hay trong mobile layout */
+  /* Tuỳ chỉnh tab-bar: Nếu muốn ẩn tab bar trên bản PC (có sidebar) thì uncomment: */
+  /* .tab-bar { display: none; } */
+}
+
 @keyframes zoomIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
