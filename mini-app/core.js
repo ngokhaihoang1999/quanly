@@ -966,6 +966,7 @@ function applyDesktopLayout() {
 
     // Restore saved widths
     _restorePanelWidths();
+    _updateTabBarMode();
 
     // Trigger data loading for pinned tabs that otherwise never get switchMainTab called
     if (_isTabPinned('notes') && typeof initNotesTab === 'function') initNotesTab();
@@ -1078,6 +1079,7 @@ function _setupDivider(dividerId, panelId, side) {
       const maxW = window.innerWidth - otherW - CENTER_MIN_W - dividerW;
       const newW = Math.max(PANEL_MIN_W, Math.min(startW + delta, maxW));
       panel.style.width = newW + 'px';
+      _updateTabBarMode();
     };
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
@@ -1100,6 +1102,19 @@ function _savePanelWidths() {
     if (r && r.style.width) w.right = parseInt(r.style.width);
     localStorage.setItem('cj_panel_widths', JSON.stringify(w));
   } catch(e) {}
+}
+
+// Toggle tab labels based on center panel width
+function _updateTabBarMode() {
+  const tabBar = document.getElementById('mainTabBar');
+  const center = document.getElementById('panelCenter');
+  if (!tabBar || !center) return;
+  const w = center.getBoundingClientRect().width;
+  if (w > 500) {
+    tabBar.classList.add('tab-bar--wide');
+  } else {
+    tabBar.classList.remove('tab-bar--wide');
+  }
 }
 
 function _restorePanelWidths() {
