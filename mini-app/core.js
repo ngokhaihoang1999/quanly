@@ -293,63 +293,70 @@ function renderProfileCard(p, opts = {}) {
   const statusLabel = _fs === 'dropout' ? 'Drop-out' : _fs === 'pause' ? 'Pause' : 'Alive';
   const statusBg = _fs === 'dropout' ? 'rgba(248,113,113,0.15)' : _fs === 'pause' ? 'rgba(156,163,175,0.15)' : 'rgba(52,211,153,0.15)';
   const statusBorder = _fs === 'dropout' ? 'rgba(248,113,113,0.3)' : _fs === 'pause' ? 'rgba(156,163,175,0.3)' : 'rgba(52,211,153,0.3)';
-  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder};margin-left:4px;white-space:nowrap;vertical-align:middle;"><span style="background:${statusColor};width:6px;height:6px;border-radius:50%;margin-right:4px;display:inline-block;"></span>${statusLabel}</span>`;
+  const statusBadge = `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder};white-space:nowrap;"><span style="background:${statusColor};width:6px;height:6px;border-radius:50%;margin-right:3px;display:inline-block;"></span>${statusLabel}</span>`;
 
   const ph = p.phase || 'chakki';
   const showPhase = opts.showPhase !== false && ph && ph !== 'new';
   const phaseBadge = showPhase
-    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${(typeof PHASE_COLORS!=='undefined'?PHASE_COLORS[ph]:{})||'#f59e0b'};color:white;margin-left:4px;white-space:nowrap;vertical-align:middle;">${(typeof PHASE_LABELS!=='undefined'?PHASE_LABELS[ph]:ph)||ph}</span>`
+    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${(typeof PHASE_COLORS!=='undefined'?PHASE_COLORS[ph]:{})||'#f59e0b'};color:white;white-space:nowrap;">${(typeof PHASE_LABELS!=='undefined'?PHASE_LABELS[ph]:ph)||ph}</span>`
     : '';
 
   const showKT = ['bb','center','completed'].includes(ph);
   const ktBadge = showKT
-    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${p.is_kt_opened?'var(--green)':'#f59e0b'};color:white;margin-left:4px;white-space:nowrap;vertical-align:middle;">${p.is_kt_opened?'📖 KT':'📕 KT'}</span>`
+    ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${p.is_kt_opened?'var(--green)':'#f59e0b'};color:white;white-space:nowrap;">${p.is_kt_opened?'📖 KT':'📕 KT'}</span>`
     : '';
 
   const extraBadges = opts.extraBadges || '';
   const resolvedId = p.id || opts.profileId || '';
   const clickFn = opts.clickFn || `openProfileById('${resolvedId}')`;
 
-  // Birth year or dropout reason — shown inline on row 1 after name
+  // Birth year
   const birthYear = !isInactive && p.birth_year ? p.birth_year : '';
-  const yearTag = birthYear ? `<span style="font-size:12px;color:var(--text2);margin-left:4px;vertical-align:middle;">(${birthYear})</span>` : '';
+  const yearTag = birthYear ? `<span style="font-size:12px;color:var(--text3);font-weight:400;"> · ${birthYear}</span>` : '';
 
-  // Data fields for rows below
+  // Data fields
   const nddStr = opts.ndd || p.ndd_staff_code || '';
   const tvvStr = opts.tvv || '';
   const gvbbStr = opts.gvbb || '';
   const latestStr = opts.latestActivity || '';
 
-  // Build detail rows
-  let detailsHtml = '';
-  const hasRow2 = nddStr || tvvStr;
-  const hasRow3 = gvbbStr || latestStr || opts.extraMeta;
+  // ── Row 1: Name + year (left) — Status badge (right) ──
+  const row1 = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    <div style="font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.full_name}${yearTag}</div>
+    <div style="flex-shrink:0;">${statusBadge}</div>
+  </div>`;
 
-  if (hasRow2 || hasRow3) {
-    detailsHtml += '<div style="margin-top:6px;font-size:11.5px;color:var(--text2);line-height:1.6;">';
-    if (hasRow2) {
-      detailsHtml += `<div style="display:flex;gap:16px;"><span><b style="opacity:0.7;">NDD:</b> ${nddStr || '—'}</span>${tvvStr ? `<span><b style="opacity:0.7;">TVV:</b> ${tvvStr}</span>` : ''}</div>`;
-    }
-    if (hasRow3) {
-      const rightText = opts.extraMeta || (latestStr ? `<span style="color:var(--accent2);">⏱ ${latestStr}</span>` : '');
-      if (gvbbStr) {
-        detailsHtml += `<div style="display:flex;justify-content:space-between;"><span><b style="opacity:0.7;">GVBB:</b> ${gvbbStr}</span>${rightText ? `<span>${rightText}</span>` : ''}</div>`;
-      } else if (rightText) {
-        detailsHtml += `<div style="display:flex;justify-content:${hasRow2?'flex-end':'flex-start'};"><span>${rightText}</span></div>`;
-      }
-    }
-    detailsHtml += '</div>';
-  }
+  // ── Row 2: Phase + KT badges (only if exists) ──
+  const hasBadges = phaseBadge || ktBadge || extraBadges;
+  const row2 = hasBadges ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${phaseBadge}${ktBadge}${extraBadges}</div>` : '';
 
-  // Dropout reason as a small note under name
+  // ── Dropout note ──
   const dropoutNote = isInactive && p.dropout_reason ? `<div style="font-size:11px;color:${_fs==='pause'?'#9ca3af':'var(--red)'};margin-top:4px;">Lý do: ${p.dropout_reason}</div>` : '';
 
+  // ── Row 3: Roles (NDD / TVV / GVBB) — compact single line ──
+  const roleParts = [];
+  if (nddStr) roleParts.push(`<span><b style="opacity:0.5;">NDD</b> ${nddStr}</span>`);
+  if (tvvStr) roleParts.push(`<span><b style="opacity:0.5;">TVV</b> ${tvvStr}</span>`);
+  if (gvbbStr) roleParts.push(`<span><b style="opacity:0.5;">GVBB</b> ${gvbbStr}</span>`);
+  const rolesRow = roleParts.length > 0
+    ? `<div style="display:flex;gap:4px;font-size:11px;color:var(--text2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${roleParts.join('<span style="opacity:0.3;"> · </span>')}</div>`
+    : '';
+
+  // ── Row 4: Latest activity — own dedicated row ──
+  const activityContent = opts.extraMeta || (latestStr ? `⏱ ${latestStr}` : '');
+  const activityRow = activityContent
+    ? `<div style="font-size:11px;color:var(--accent);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${activityContent}</div>`
+    : '';
+
+  // ── Bottom section (roles + activity) with separator ──
+  const hasBottom = rolesRow || activityRow;
+  const bottomHtml = hasBottom
+    ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px;">${rolesRow}${activityRow}</div>`
+    : '';
+
   return `<div class="profile-card" onclick="${clickFn}" style="padding:12px 14px;">
-    <div class="profile-info" style="width:100%;">
-      <div class="profile-name" style="margin-bottom:0;line-height:1.5;">
-        <span style="font-size:14px;">${p.full_name}</span>${yearTag} ${statusBadge}${phaseBadge}${ktBadge}${extraBadges}
-      </div>
-      ${dropoutNote}${detailsHtml}
+    <div class="profile-info" style="width:100%;min-width:0;">
+      ${row1}${row2}${dropoutNote}${bottomHtml}
     </div>
     <div class="profile-arrow" style="margin-left:6px;align-self:center;">›</div>
   </div>`;
