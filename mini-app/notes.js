@@ -24,17 +24,30 @@ async function loadPersonalNotes() {
     const res1 = await sbFetch(`/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(sc)}&order=pinned.desc,updated_at.desc`);
     _allMyNotes = res1.ok ? await res1.json() : [];
 
-    // Fetch notes shared with me — 2-step (avoids PostgREST FK join issues)
-    const res2 = await sbFetch(`/rest/v1/note_shares?shared_with=eq.${encodeURIComponent(sc)}&select=*`);
+    // Fetch ALL share records involving me (either shared WITH me or shared BY me)
+    const encodedSc = encodeURIComponent(sc);
+    const res2 = await sbFetch(`/rest/v1/note_shares?or=(shared_with.eq.${encodedSc},shared_by.eq.${encodedSc})&select=*`);
     const shares = res2.ok ? await res2.json() : [];
+    
+    // Separate shares
+    const sharesWithMe = shares.filter(s => s.shared_with === sc);
+    const sharesByMe = shares.filter(s => s.shared_by === sc);
+
+    // Tag my own notes that I've shared
+    const mySharedNoteIds = new Set(sharesByMe.map(s => s.note_id));
+    _allMyNotes.forEach(n => {
+      n._isSharedByMe = mySharedNoteIds.has(n.id);
+    });
+
     _sharedWithMeNotes = [];
-    if (shares.length > 0) {
-      const noteIds = shares.map(s => s.note_id).filter(Boolean);
+    if (sharesWithMe.length > 0) {
+      const noteIds = sharesWithMe.map(s => s.note_id).filter(Boolean);
       const res3 = await sbFetch(`/rest/v1/personal_notes?id=in.(${noteIds.join(',')})&select=*`);
       const sharedNotes = res3.ok ? await res3.json() : [];
       const noteMap = {};
       sharedNotes.forEach(n => noteMap[n.id] = n);
-      _sharedWithMeNotes = shares
+      
+      _sharedWithMeNotes = sharesWithMe
         .filter(s => noteMap[s.note_id])
         .map(s => ({
           ...noteMap[s.note_id],
@@ -61,7 +74,10 @@ function renderNotes() {
   if (_notesFilter === 'pinned') {
     notes = _allMyNotes.filter(n => n.pinned);
   } else if (_notesFilter === 'shared') {
-    notes = _sharedWithMeNotes;
+    const myShared = _allMyNotes.filter(n => n._isSharedByMe);
+    const setIds = new Set(myShared.map(n => n.id));
+    // Combine notes shared BY me + notes shared WITH me
+    notes = [...myShared, ..._sharedWithMeNotes.filter(n => !setIds.has(n.id))];
   } else {
     // All = my notes + shared notes, deduplicated
     const myIds = new Set(_allMyNotes.map(n => n.id));
@@ -108,11 +124,10 @@ function renderNoteCard(note) {
     sharedBadge = `<span style="font-size:10px;background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:8px;color:${c.dateTxt};">📤 ${escHtml(sharer?.full_name || note._sharedBy)}</span>`;
   }
 
-  // Shares count (for my own notes)
+  // Shares count/badge (for my own notes)
   let shareCount = '';
-  if (!isShared) {
-    // We'll show share icon; actual count loaded lazily
-    shareCount = '';
+  if (!isShared && note._isSharedByMe) {
+    shareCount = `<span style="font-size:10px;background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:8px;color:${c.dateTxt};" title="Bạn đã share note này">📤 Đã share</span>`;
   }
 
   const title = note.title ? escHtml(note.title) : escHtml(note.content.substring(0, 40)) + (note.content.length > 40 ? '...' : '');
@@ -132,7 +147,7 @@ function renderNoteCard(note) {
       <div class="pnote-full" style="display:none;">${escHtml(note.content)}</div>
     </div>
     <div class="pnote-footer">
-      <div class="pnote-badges">${linkedBadge}${sharedBadge}</div>
+      <div class="pnote-badges">${linkedBadge}${sharedBadge}${shareCount}</div>
       ${canEdit ? `
       <div class="pnote-actions">
         <button onclick="event.stopPropagation();toggleNotePin('${note.id}',${!note.pinned})" title="${note.pinned ? 'Bỏ ghim' : 'Ghim'}" style="color:${c.dateTxt};">${note.pinned ? '📌' : '📍'}</button>
