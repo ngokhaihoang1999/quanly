@@ -857,7 +857,12 @@ function getSemesterFilter() {
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
-  if (tg) { tg.ready(); tg.expand(); }
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    // On desktop: request fullscreen if supported (Bot API 8.0+)
+    try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
+  }
   // PIN lock check — show overlay BEFORE any data loads
   _showPinLock();
   // Wait for PIN unlock before proceeding (poll every 200ms, max 5 min)
