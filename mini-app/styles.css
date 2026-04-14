@@ -1043,3 +1043,55 @@
   color: var(--text) !important;
   appearance: none; -webkit-appearance: none; -moz-appearance: none;
 }
+
+/* ═══════════════ PERSONAL NOTES ═══════════════ */
+.pnote-card {
+  border-radius: 8px; padding: 0; margin-bottom: 10px;
+  box-shadow: 2px 3px 10px rgba(0,0,0,0.07);
+  border: 1px solid; position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer; overflow: hidden;
+}
+.pnote-card:hover { transform: translateY(-1px); box-shadow: 2px 4px 14px rgba(0,0,0,0.12); }
+.pnote-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; gap: 8px;
+}
+.pnote-title-row { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.pnote-title {
+  font-weight: 700; font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pnote-time { font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+.pnote-body {
+  padding: 0 12px 8px; font-size: 12px;
+  line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.pnote-preview { max-height: 60px; overflow: hidden; }
+.pnote-full { max-height: 400px; overflow-y: auto; }
+.pnote-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px 8px; gap: 6px;
+}
+.pnote-badges { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.pnote-actions {
+  display: flex; gap: 2px; flex-shrink: 0;
+  opacity: 0; transition: opacity 0.2s;
+}
+.pnote-card:hover .pnote-actions { opacity: 1; }
+.pnote-actions button {
+  width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.06); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.pnote-actions button:hover { background: rgba(0,0,0,0.12); transform: scale(1.1); }
+
+/* Color picker in modal */
+.pnote-color-opt { transition: transform 0.15s, border-color 0.15s; }
+.pnote-color-opt:hover { transform: scale(1.15); }
+.pnote-color-opt.selected { border-color: var(--accent) !important; transform: scale(1.1); box-shadow: 0 0 0 2px rgba(124,106,247,0.3); }
+
+/* Guest mode: hide note write actions */
+.guest-mode .pnote-actions,
+.guest-mode #notesFilterChips button { display: none !important; }

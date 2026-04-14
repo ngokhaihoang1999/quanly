@@ -1121,7 +1121,7 @@ function switchFormTab(el, cardId) {
 }
 function switchMainTab(el, tab) {
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports'].forEach(t=>document.getElementById(t).style.display='none');
+  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t=>document.getElementById(t).style.display='none');
   document.getElementById('tab-'+tab).style.display = 'block';
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
@@ -1133,6 +1133,9 @@ function switchMainTab(el, tab) {
   if (tab==='calendar' && typeof loadCalendar === 'function') { if (!isFresh('calendar')) loadCalendar(); }
   if (tab==='priority' && typeof loadPriority === 'function') { if (!isFresh('priority')) loadPriority(); }
   if (tab==='reports' && typeof loadReports === 'function') { if (!isFresh('reports')) loadReports(); }
+  if (tab==='notes' && typeof initNotesTab === 'function') { initNotesTab(); }
+  // Stop notes poll when leaving notes tab
+  if (tab !== 'notes' && typeof stopNotesPoll === 'function') stopNotesPoll();
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============
