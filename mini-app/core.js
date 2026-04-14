@@ -957,6 +957,13 @@ function applyDesktopLayout() {
     // Setup vertical dividers
     _initVerticalDividers();
 
+    // Move tab bar into center panel so it resizes with center
+    const tabBar = document.getElementById('mainTabBar');
+    const centerPanel = document.getElementById('panelCenter');
+    if (tabBar && centerPanel) {
+      centerPanel.insertBefore(tabBar, centerPanel.firstChild);
+    }
+
     // Restore saved widths
     _restorePanelWidths();
 
@@ -988,6 +995,13 @@ function applyDesktopLayout() {
 
     const center = document.getElementById('mainContent');
     if (!center) return;
+
+    // Move tab bar back to header
+    const tabBar = document.getElementById('mainTabBar');
+    const header = document.querySelector('.header');
+    if (tabBar && header) {
+      header.appendChild(tabBar);
+    }
 
     ['left', 'right'].forEach(side => {
       const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');

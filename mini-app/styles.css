@@ -1348,12 +1348,19 @@
 }
 
 @media (min-width: 1024px) {
-  /* ── Main tabs: stretch to fill width evenly ── */
-  .tab-bar {
+  /* ── Main tabs: inside panelCenter on desktop ── */
+  #panelCenter > .tab-bar {
+    flex-shrink: 0;
+    padding: 8px 12px 6px;
     gap: 4px;
-    padding: 0 8px 4px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
-  .tab-bar .tab {
+  #panelCenter > .tab-bar::-webkit-scrollbar { display: none; }
+  #panelCenter > .tab-bar .tab {
     flex: 1 1 0;
     text-align: center;
     justify-content: center;
