@@ -1388,6 +1388,12 @@
   }
   #panelCenter > .tab-bar.tab-bar--wide .tab {
     padding: 8px 8px;
+    white-space: nowrap;
+  }
+  #panelCenter > .tab-bar.tab-bar--wide .tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   #panelCenter > .tab-bar.tab-bar--wide .tab-icon {
     font-size: 13px;
@@ -1511,13 +1517,23 @@
 
   /* ── Pinned tab content: scrollable within panel ── */
   .desktop-pinned {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column;
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 14px 12px;
     min-height: 0;            /* allow flex shrink */
     word-break: break-word;   /* prevent text overflow */
+  }
+  /* Notes board fills remaining height in panel */
+  .desktop-pinned #notesPanelList {
+    flex: 1;
+    min-height: 200px;
+  }
+  .desktop-pinned #notesPanelList.notes-board {
+    min-height: 0;
+    height: auto;
   }
 
   /* ── Drag-to-resize dividers ── */
