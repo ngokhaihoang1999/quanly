@@ -923,7 +923,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     tg.ready();
     tg.expand();
     // On desktop: request fullscreen + inject window controls (Bot API 8.0+)
-    const isDesktop = !('ontouchstart' in window) && window.innerWidth > 600;
+    const plt = (tg.platform || '').toLowerCase();
+    const isDesktop = ['tdesktop','macos','linux','windows','web'].includes(plt) || window.innerWidth > 600;
     if (isDesktop) {
       try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
       _injectWindowControls();
