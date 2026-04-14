@@ -271,6 +271,7 @@
       position: relative;
       max-width: 600px;
       margin: 0 auto;
+      width: 100%;
     }
     /* Single continuous vertical line — 1 pseudo-element thay vì border-right từng row */
     .tl-container::before {
@@ -278,7 +279,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      left: calc(42% - 1px);
+      left: calc(35% - 1px);
       width: 3px;
       background: var(--accent);
       z-index: 2;
@@ -294,9 +295,9 @@
     .tl-item:last-child { border-bottom: none; }
     .tl-item:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
     .tl-left {
-      flex: 0 0 42%;
-      width: 42%;
-      max-width: 42%;
+      flex: 0 0 35%;
+      width: 35%;
+      max-width: 35%;
       min-width: 0;
       display: flex;
       align-items: center;
@@ -1264,7 +1265,7 @@
     transition: max-width 0.3s;
   }
   
-  /* 2-col layout for lists without changing JS */
+  /* 2-col layout for lists without changing JS — uses auto-fill so narrow containers get 1 col */
   #profileList, 
   #staffList, 
   #notesPanelList, 
@@ -1272,11 +1273,14 @@
   #dashHapjaList,
   #tvList,
   #bbList,
-  #timelineList,
   #calEventList {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 12px;
+  }
+  /* Timeline is NOT a card grid — keep single column */
+  #timelineList {
+    display: block;
   }
   
   /* Reset margins for cards inside grids */
@@ -1383,6 +1387,46 @@
   /* Ẩn nút back khi ở desktop vì không cần thiết nữa */
   #detailView .back-btn {
     display: none !important;
+  }
+
+  /* ── Center panel: grids must respond to container width, not viewport ── */
+  #panelCenter #profileList,
+  #panelCenter #staffList,
+  #panelCenter #dashMyList,
+  #panelCenter #dashHapjaList,
+  #panelCenter #tvList,
+  #panelCenter #bbList,
+  #panelCenter #calEventList {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  }
+  /* Timeline inside center: single-column, centered */
+  #panelCenter #timelineList {
+    display: block;
+  }
+
+  /* Form tabs in detail view: scroll horizontally, never clip */
+  #panelCenter .form-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #panelCenter .form-tabs::-webkit-scrollbar { display: none; }
+
+  /* Prevent text content inside center from overflowing */
+  #panelCenter .content {
+    overflow-x: hidden;
+  }
+  #panelCenter img, 
+  #panelCenter canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Detail view content: word break to prevent overflow */
+  #detailView {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   /* ── Side panels ── */
