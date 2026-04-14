@@ -948,6 +948,12 @@ function applyDesktopLayout() {
     // Restore saved widths
     _restorePanelWidths();
 
+    // Trigger data loading for pinned tabs that otherwise never get switchMainTab called
+    if (_isTabPinned('notes') && typeof initNotesTab === 'function') initNotesTab();
+    if (_isTabPinned('priority') && typeof loadPriority === 'function' && !isFresh('priority')) loadPriority();
+    if (_isTabPinned('unit') && typeof loadDashboard === 'function' && !isFresh('dashboard')) { loadDashboard(); loadProfiles(); }
+    if (_isTabPinned('calendar') && typeof loadCalendar === 'function' && !isFresh('calendar')) loadCalendar();
+
     // If active tab was pinned, switch to another available one
     const activeTabObj = document.querySelector('#mainTabBar .tab.active');
     const activeTab = activeTabObj ? activeTabObj.dataset.tab : null;

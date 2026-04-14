@@ -1303,6 +1303,7 @@
   }
   .header {
     flex-shrink: 0; /* header never shrinks */
+    padding-right: 90px; /* Clear space for Telegram Mini App close/settings buttons */
   }
 }
 
