@@ -904,7 +904,6 @@ function _injectWindowControls() {
 let desktopConfig = null;
 try { desktopConfig = JSON.parse(localStorage.getItem('cj_desktop_config')); } catch(e) {}
 if (!desktopConfig) {
-  // Config mặc định nếu user chưa tự chỉnh
   desktopConfig = { left: ['unit'], right: ['notes', 'priority'] };
 }
 
@@ -915,11 +914,22 @@ function _isTabPinned(tabId) {
   return desktopConfig.left.includes(tabId) || desktopConfig.right.includes(tabId);
 }
 
+function _updatePanelVisibility(side) {
+  const panelId = side === 'left' ? 'panelLeft' : 'panelRight';
+  const dividerId = side === 'left' ? 'dividerLeft' : 'dividerRight';
+  const panel = document.getElementById(panelId);
+  const divider = document.getElementById(dividerId);
+  if (!panel) return;
+  const hasContent = panel.children.length > 0;
+  panel.style.display = hasContent ? 'flex' : 'none';
+  if (divider) divider.style.display = hasContent ? 'block' : 'none';
+}
+
 function applyDesktopLayout() {
   if (window.innerWidth >= 1024) {
     if (_isDesktopApplied) return;
     _isDesktopApplied = true;
-    
+
     ['left', 'right'].forEach(side => {
       const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
       if (!panel) return;
@@ -932,24 +942,30 @@ function applyDesktopLayout() {
           if (tabBtn) tabBtn.style.display = 'none';
         }
       });
-      panel.style.display = panel.children.length > 0 ? 'flex' : 'none';
+      _updatePanelVisibility(side);
     });
-    
-    // Nếu tab ở giữa (center) vô tình bị trùng với các tab đã bị mang đi chỗ khác, thì chọn đại một tab khác để hiên
+
+    // Restore saved widths
+    _restorePanelWidths();
+
+    // If active tab was pinned, switch to another available one
     const activeTabObj = document.querySelector('#mainTabBar .tab.active');
     const activeTab = activeTabObj ? activeTabObj.dataset.tab : null;
     if (activeTab && _isTabPinned(activeTab)) {
       const firstAvail = Array.from(document.querySelectorAll('#mainTabBar .tab')).find(t => t.style.display !== 'none');
       if (firstAvail) firstAvail.click();
     }
+
+    // Init resize dividers
+    _initPanelDividers();
   } else {
     // Mobile mode
     if (!_isDesktopApplied) return;
     _isDesktopApplied = false;
-    
+
     const center = document.getElementById('mainContent');
     if (!center) return;
-    
+
     ['left', 'right'].forEach(side => {
       desktopConfig[side].forEach(tabId => {
         const el = document.getElementById('tab-' + tabId);
@@ -957,16 +973,80 @@ function applyDesktopLayout() {
           el.classList.remove('desktop-pinned');
           center.appendChild(el);
           const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
-          if (tabBtn) tabBtn.style.display = ''; 
+          if (tabBtn) tabBtn.style.display = '';
         }
       });
       const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
-      if (panel) panel.style.display = 'none';
+      if (panel) { panel.style.display = 'none'; panel.style.width = ''; }
+      const divider = document.getElementById(side === 'left' ? 'dividerLeft' : 'dividerRight');
+      if (divider) divider.style.display = 'none';
     });
-    
-    // Force reset permissions to fix visibility
+
     if (typeof applyPermissions === 'function') applyPermissions();
   }
+}
+
+// ── Drag-to-resize ──
+function _initPanelDividers() {
+  _setupDivider('dividerLeft', 'panelLeft', 'left');
+  _setupDivider('dividerRight', 'panelRight', 'right');
+}
+
+function _setupDivider(dividerId, panelId, side) {
+  const divider = document.getElementById(dividerId);
+  const panel = document.getElementById(panelId);
+  if (!divider || !panel) return;
+
+  // Remove old listeners by cloning
+  const fresh = divider.cloneNode(true);
+  divider.parentNode.replaceChild(fresh, divider);
+
+  let startX, startW;
+
+  fresh.addEventListener('mousedown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    fresh.classList.add('dragging');
+    document.body.classList.add('panel-resizing');
+
+    const onMove = ev => {
+      const delta = side === 'left' ? (ev.clientX - startX) : (startX - ev.clientX);
+      const newW = Math.max(220, Math.min(startW + delta, window.innerWidth * 0.5));
+      panel.style.width = newW + 'px';
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      fresh.classList.remove('dragging');
+      document.body.classList.remove('panel-resizing');
+      _savePanelWidths();
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+function _savePanelWidths() {
+  try {
+    const l = document.getElementById('panelLeft');
+    const r = document.getElementById('panelRight');
+    const w = {};
+    if (l && l.style.width) w.left = parseInt(l.style.width);
+    if (r && r.style.width) w.right = parseInt(r.style.width);
+    localStorage.setItem('cj_panel_widths', JSON.stringify(w));
+  } catch(e) {}
+}
+
+function _restorePanelWidths() {
+  try {
+    const w = JSON.parse(localStorage.getItem('cj_panel_widths'));
+    if (!w) return;
+    const l = document.getElementById('panelLeft');
+    const r = document.getElementById('panelRight');
+    if (w.left && l && l.style.display !== 'none') l.style.width = w.left + 'px';
+    if (w.right && r && r.style.display !== 'none') r.style.width = w.right + 'px';
+  } catch(e) {}
 }
 
 window.addEventListener('resize', applyDesktopLayout);

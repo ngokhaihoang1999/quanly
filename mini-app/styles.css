@@ -1179,22 +1179,46 @@
 #panelCenter {
   display: block; /* Mặc định hiện trên mobile */
 }
+/* Resize dividers – hidden on mobile */
+.panel-divider {
+  display: none;
+}
 
 @media (min-width: 1024px) {
+  /* ── Wrapper: fills remaining height after header ── */
   .desktop-layout {
     display: flex;
-    height: 100vh;
+    flex: 1;
+    min-height: 0;           /* crucial so flex children can shrink */
     overflow: hidden;
     background: var(--bg);
   }
-  
+
+  /* ── Center: scrollable content area ── */
   #panelCenter {
     flex: 1;
-    min-width: 0;
-    position: relative;
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: var(--bg);
+  }
+
+  /* Content inside center panel must scroll */
+  #panelCenter > .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-width: none !important;  /* Override the 900px/600px limit inside panels */
+    padding: 20px 24px;
+  }
+
+  /* detailView also needs to scroll when inside center */
+  #detailView {
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 100%;
+    padding-bottom: 24px;
   }
 
   /* Ẩn nút back khi ở desktop vì không cần thiết nữa */
@@ -1202,30 +1226,84 @@
     display: none !important;
   }
 
+  /* ── Side panels ── */
   .desktop-panel {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 0;            /* allow flex shrink */
   }
-  
-  /* Cột trái / phải trên desktop, ẩn đi nếu ko có content thông qua JS, nhưng mặc định bật */
+
   #panelLeft, #panelRight {
-    width: 340px;
+    width: 320px;
+    min-width: 220px;
+    max-width: 50vw;
     flex-shrink: 0;
-    overflow-y: auto;
+    overflow: hidden;         /* children scroll, not the panel itself */
     background: var(--surface2);
+    border: none;
   }
-  
-  /* Các tab được pin vào panelLeft hoặc panelRight sẽ ép hiển thị */
+  #panelLeft {
+    border-right: 1px solid var(--border);
+  }
+  #panelRight {
+    border-left: 1px solid var(--border);
+  }
+
+  /* ── Pinned tab content: scrollable within panel ── */
   .desktop-pinned {
     display: block !important;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
+    padding: 14px 12px;
+    min-height: 0;            /* allow flex shrink */
   }
-  
-  /* Ẩn navigation bottom bar nếu không cần thiết? Tab bar hiện tại ở .header-top hay trong mobile layout */
-  /* Tuỳ chỉnh tab-bar: Nếu muốn ẩn tab bar trên bản PC (có sidebar) thì uncomment: */
-  /* .tab-bar { display: none; } */
+
+  /* ── Drag-to-resize dividers ── */
+  .panel-divider {
+    display: block;
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+    transition: background 0.2s;
+  }
+  .panel-divider:hover,
+  .panel-divider.dragging {
+    background: var(--accent);
+    opacity: 0.5;
+  }
+  .panel-divider::after {
+    content: '';
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    top: 0;
+    bottom: 0;  /* invisible wider hit area */
+  }
+
+  /* ── Prevent text selection while dragging ── */
+  body.panel-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+  body.panel-resizing * {
+    cursor: col-resize !important;
+  }
+
+  /* Header must be a flex container parent so body stacks header + panels */
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .header {
+    flex-shrink: 0; /* header never shrinks */
+  }
 }
 
 @keyframes zoomIn {
