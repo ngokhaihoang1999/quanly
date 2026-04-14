@@ -1366,10 +1366,21 @@
     padding: 8px 4px;
     font-size: 12px;
     overflow: hidden;
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  #panelCenter > .tab-bar .tab:hover:not(.active) {
+    background: var(--surface);
+    border-color: var(--accent);
+    color: var(--accent);
   }
   /* When panel is narrow: hide label, show only icon */
   #panelCenter > .tab-bar .tab-label {
     display: none;
+  }
+  #panelCenter > .tab-bar .tab-icon {
+    font-size: 16px;
   }
   /* When panel is wide enough: show label */
   #panelCenter > .tab-bar.tab-bar--wide .tab-label {
@@ -1378,13 +1389,16 @@
   #panelCenter > .tab-bar.tab-bar--wide .tab {
     padding: 8px 8px;
   }
+  #panelCenter > .tab-bar.tab-bar--wide .tab-icon {
+    font-size: 13px;
+  }
   /* Icon-only mode: compact tabs, centered in bar */
   #panelCenter > .tab-bar:not(.tab-bar--wide) {
     justify-content: center;
   }
   #panelCenter > .tab-bar:not(.tab-bar--wide) .tab {
     flex: 0 0 auto;
-    padding: 8px 10px;
+    padding: 8px 12px;
   }
 
   /* ── Wrapper: fills remaining height after header ── */
@@ -1485,6 +1499,8 @@
     overflow: hidden;         /* children scroll, not the panel itself */
     background: var(--surface2);
     border: none;
+    display: flex;
+    flex-direction: column;
   }
   #panelLeft {
     border-right: 1px solid var(--border);
