@@ -114,11 +114,15 @@ async function deleteStaffFromList(staffCode) {
     // 3. Clear profiles
     await sbFetch(`/rest/v1/profiles?ndd_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ ndd_staff_code: null }) });
     await sbFetch(`/rest/v1/profiles?gvbb_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ gvbb_staff_code: null }) });
-    // 4. Clear check_hapja
-    await sbFetch(`/rest/v1/check_hapja?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
+    // 4. Clear check_hapja (created_by is NOT NULL FK — must DELETE, not PATCH null)
+    await sbFetch(`/rest/v1/check_hapja?created_by=eq.${sc}`, { method:'DELETE' });
     await sbFetch(`/rest/v1/check_hapja?approved_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ approved_by: null }) });
-    // 5. Clear consultation_sessions
+    await sbFetch(`/rest/v1/check_hapja?feedback_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ feedback_by: null }) });
+    // 5. Clear consultation_sessions (tvv_staff_code FK + created_by text)
     await sbFetch(`/rest/v1/consultation_sessions?tvv_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ tvv_staff_code: null }) });
+    await sbFetch(`/rest/v1/consultation_sessions?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
+    // 5b. Clear records.created_by (text field, no FK but still references)
+    await sbFetch(`/rest/v1/records?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
     // 6. Clear calendar_events + priority_tasks
     await sbFetch(`/rest/v1/calendar_events?staff_code=eq.${sc}`, { method:'DELETE' });
     await sbFetch(`/rest/v1/priority_tasks?staff_code=eq.${sc}`, { method:'DELETE' });
@@ -126,10 +130,14 @@ async function deleteStaffFromList(staffCode) {
     await sbFetch(`/rest/v1/notifications?recipient_staff_code=eq.${sc}`, { method:'DELETE' });
     await sbFetch(`/rest/v1/notifications?source_staff_code=eq.${sc}`, { method:'DELETE' });
     await sbFetch(`/rest/v1/notification_preferences?staff_code=eq.${sc}`, { method:'DELETE' });
-    // 8. Delete staff record (return=representation to verify)
+    // 8. Detach from team
+    await sbFetch(`/rest/v1/staff?staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ team_id: null }) });
+    // 9. Delete staff record
     const res = await sbFetch(`/rest/v1/staff?staff_code=eq.${sc}`, { method:'DELETE', headers: { 'Prefer': 'return=representation' } });
     const deleted = await res.json();
     if (!Array.isArray(deleted) || deleted.length === 0) {
+      // Try to get the actual error from Supabase
+      console.error('Delete staff response:', deleted);
       throw new Error('Không xoá được — có thể còn ràng buộc dữ liệu khác. Mở Console (F12) xem chi tiết.');
     }
     showToast('✅ Đã xóa TĐ ' + staffCode);
