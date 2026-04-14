@@ -855,19 +855,19 @@ function getSemesterFilter() {
   return currentSemesterId ? `&semester_id=eq.${currentSemesterId}` : '';
 }
 // ============ DESKTOP WINDOW CONTROLS ============
-let _isFullscreen = true;
+let _isFullscreen = false;
 function _injectWindowControls() {
   if (document.getElementById('winCtrlBar')) return;
-  console.log('[WinCtrl] injecting controls, tg.platform=', tg?.platform, 'innerWidth=', window.innerWidth);
   const bar = document.createElement('div');
   bar.id = 'winCtrlBar';
-  bar.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99999;display:flex;gap:1px;padding:3px;background:rgba(30,30,30,0.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:10px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+  // Vertical bar, middle-right edge, pill shape
+  bar.style.cssText = 'position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:99999;display:flex;flex-direction:column;gap:1px;padding:4px 3px;background:rgba(30,30,30,0.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:10px 0 0 10px;border:1px solid rgba(255,255,255,0.08);border-right:none;box-shadow:-2px 0 12px rgba(0,0,0,0.25);transition:opacity 0.3s;';
   const mkBtn = (id, icon, title, hoverBg) => {
     const b = document.createElement('button');
     b.id = id; b.title = title; b.textContent = icon;
-    b.style.cssText = 'width:32px;height:26px;border:none;border-radius:6px;background:transparent;color:#ddd;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:system-ui;line-height:1;';
+    b.style.cssText = 'width:26px;height:28px;border:none;border-radius:5px;background:transparent;color:#bbb;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:system-ui;line-height:1;padding:0;';
     b.onmouseenter = () => { b.style.background = hoverBg || 'rgba(255,255,255,0.15)'; b.style.color = '#fff'; };
-    b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = '#ddd'; };
+    b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = '#bbb'; };
     return b;
   };
   const btnMin = mkBtn('winBtnMin', '\u2500', 'Thu nho', 'rgba(255,255,255,0.15)');
@@ -877,22 +877,27 @@ function _injectWindowControls() {
   bar.appendChild(btnMax);
   bar.appendChild(btnClose);
   document.body.appendChild(bar);
-  console.log('[WinCtrl] bar appended to body');
 
   // Actions
-  btnMin.onclick = () => { try { if (tg && tg.minimize) tg.minimize(); } catch(e){ console.log('[WinCtrl] minimize err:', e); } };
+  btnMin.onclick = () => {
+    // tg.minimize() requires Bot API 8.0+; fallback: exit fullscreen as a "minimize" feel
+    try {
+      if (tg && typeof tg.minimize === 'function') { tg.minimize(); return; }
+      if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
+    } catch(e){ console.log('[WinCtrl] minimize err:', e); }
+  };
   btnMax.onclick = () => {
     try {
       if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
       else if (tg && tg.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
     } catch(e){ console.log('[WinCtrl] fullscreen err:', e); }
   };
-  btnClose.onclick = () => { try { if (tg && tg.close) tg.close(); else window.close(); } catch(e){ console.log('[WinCtrl] close err:', e); } };
+  btnClose.onclick = () => { try { if (tg && tg.close) tg.close(); else window.close(); } catch(e){} };
 
-  // Auto-hide after 4s, show on hover
-  let ht = setTimeout(() => { bar.style.opacity = '0.25'; }, 4000);
+  // Auto-hide after 3s, show on hover
+  let ht = setTimeout(() => { bar.style.opacity = '0.2'; }, 3000);
   bar.onmouseenter = () => { bar.style.opacity = '1'; clearTimeout(ht); };
-  bar.onmouseleave = () => { ht = setTimeout(() => { bar.style.opacity = '0.25'; }, 2000); };
+  bar.onmouseleave = () => { ht = setTimeout(() => { bar.style.opacity = '0.2'; }, 2000); };
 }
 
 // ============ INIT ============
@@ -900,9 +905,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tg) {
     tg.ready();
     tg.expand();
-    console.log('[Init] tg.platform=', tg.platform, 'width=', window.innerWidth);
-    // Always try fullscreen + inject controls (no desktop guard)
-    try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
+    // Do NOT auto-fullscreen — let user control via window buttons
     _injectWindowControls();
   }
   // PIN lock check — show overlay BEFORE any data loads
