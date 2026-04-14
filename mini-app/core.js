@@ -2251,6 +2251,58 @@ function openPersonalizationPanel() {
         </div>
         <!-- Buttons -->
         <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+        <!-- ═══ DESKTOP LAYOUT ═══ -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">🖥️ BỐ CỤC DESKTOP <span style="font-weight:400;color:var(--text3);">(chỉ hiện khi mở rộng)</span></div>
+        <div style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:16px;">
+          <!-- Visual preview -->
+          <div id="desktopLayoutPreview" style="display:flex;gap:4px;height:60px;margin-bottom:14px;border-radius:8px;overflow:hidden;border:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text2);">
+            <div id="dlpLeft" style="flex:0 0 28%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-right:2px solid var(--accent);"></div>
+            <div style="flex:1;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:9px;">CENTER</div>
+            <div id="dlpRight" style="flex:0 0 28%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-left:2px solid var(--accent);"></div>
+          </div>
+          <!-- Left panel config -->
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">◀ Panel Trái</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div>
+                <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Trên</div>
+                <select id="dl_left_top" onchange="_updateDesktopLayoutPreview()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+                  ${_renderPanelTabOptions('left_top')}
+                </select>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Dưới</div>
+                <select id="dl_left_bottom" onchange="_updateDesktopLayoutPreview()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+                  ${_renderPanelTabOptions('left_bottom')}
+                </select>
+              </div>
+            </div>
+          </div>
+          <!-- Right panel config -->
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">▶ Panel Phải</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div>
+                <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Trên</div>
+                <select id="dl_right_top" onchange="_updateDesktopLayoutPreview()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+                  ${_renderPanelTabOptions('right_top')}
+                </select>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Dưới</div>
+                <select id="dl_right_bottom" onchange="_updateDesktopLayoutPreview()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;">
+                  ${_renderPanelTabOptions('right_bottom')}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="_applyDesktopConfig()" style="flex:1;padding:10px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;">✅ Áp dụng</button>
+            <button onclick="_resetDesktopConfig()" style="padding:10px 14px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:10px;font-size:12px;cursor:pointer;">↩ Reset</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">💡 Bố cục chỉ hiện khi dùng màn hình rộng (≥1024px)</div>
+        </div>
+        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
         <!-- ═══ HỒ SƠ TĐ ═══ -->
         <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">👤 HỒ SƠ CÁ NHÂN TĐ</div>
         <div style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">
@@ -2338,9 +2390,160 @@ function openPersonalizationPanel() {
   }
   // Initialize PIN toggle after DOM is ready
   _refreshPinToggle();
+
+  // Set initial values for desktop layout dropdowns
+  setTimeout(() => {
+    const lt = document.getElementById('dl_left_top');
+    const lb = document.getElementById('dl_left_bottom');
+    const rt = document.getElementById('dl_right_top');
+    const rb = document.getElementById('dl_right_bottom');
+    if (lt) lt.value = desktopConfig.left[0] || '';
+    if (lb) lb.value = desktopConfig.left[1] || '';
+    if (rt) rt.value = desktopConfig.right[0] || '';
+    if (rb) rb.value = desktopConfig.right[1] || '';
+    _updateDesktopLayoutPreview();
+  }, 50);
 }
 
-// ============ EMOJI PICKER (full categories) ============
+// ============ DESKTOP LAYOUT CONFIG HELPERS ============
+const _DL_TAB_MAP = {
+  unit: '🏢 Đơn vị',
+  personal: '👤 Cá nhân',
+  priority: '⚡ Ưu tiên',
+  calendar: '📅 Lịch',
+  notes: '📝 Notes',
+  staff: '👥 TĐ',
+  structure: '🏗️ Cơ cấu',
+  reports: '📊 Báo cáo'
+};
+const _DL_ASSIGNABLE = ['unit','personal','priority','calendar','notes','staff'];
+
+function _renderPanelTabOptions(slot) {
+  let html = '<option value="">— Không —</option>';
+  _DL_ASSIGNABLE.forEach(key => {
+    html += `<option value="${key}">${_DL_TAB_MAP[key]}</option>`;
+  });
+  return html;
+}
+
+function _updateDesktopLayoutPreview() {
+  const lt = document.getElementById('dl_left_top')?.value || '';
+  const lb = document.getElementById('dl_left_bottom')?.value || '';
+  const rt = document.getElementById('dl_right_top')?.value || '';
+  const rb = document.getElementById('dl_right_bottom')?.value || '';
+
+  const leftEl = document.getElementById('dlpLeft');
+  const rightEl = document.getElementById('dlpRight');
+  if (!leftEl || !rightEl) return;
+
+  const renderPanel = (top, bot) => {
+    if (!top && !bot) return '<span style="font-size:9px;color:var(--text3);">Ẩn</span>';
+    let h = '';
+    if (top) h += `<div style="font-size:10px;">${_DL_TAB_MAP[top]?.split(' ')[0] || ''} ${_DL_TAB_MAP[top]?.split(' ').slice(1).join(' ') || ''}</div>`;
+    if (top && bot) h += '<div style="width:80%;height:1px;background:var(--border);"></div>';
+    if (bot) h += `<div style="font-size:10px;">${_DL_TAB_MAP[bot]?.split(' ')[0] || ''} ${_DL_TAB_MAP[bot]?.split(' ').slice(1).join(' ') || ''}</div>`;
+    return h;
+  };
+
+  leftEl.innerHTML = renderPanel(lt, lb);
+  rightEl.innerHTML = renderPanel(rt, rb);
+
+  // Gray out panel if no tabs
+  leftEl.style.opacity = (!lt && !lb) ? '0.4' : '1';
+  rightEl.style.opacity = (!rt && !rb) ? '0.4' : '1';
+}
+
+function _applyDesktopConfig() {
+  const lt = document.getElementById('dl_left_top')?.value || '';
+  const lb = document.getElementById('dl_left_bottom')?.value || '';
+  const rt = document.getElementById('dl_right_top')?.value || '';
+  const rb = document.getElementById('dl_right_bottom')?.value || '';
+
+  const left = [lt, lb].filter(Boolean);
+  const right = [rt, rb].filter(Boolean);
+
+  // Check for duplicates
+  const all = [...left, ...right];
+  const unique = new Set(all);
+  if (all.length !== unique.size) {
+    showToast('⚠️ Không thể gán cùng 1 tab cho nhiều vị trí!');
+    return;
+  }
+
+  // First: restore all currently pinned tabs back to center
+  const center = document.getElementById('mainContent');
+  if (center) {
+    ['left', 'right'].forEach(side => {
+      const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
+      if (panel) panel.querySelectorAll('.panel-vdivider').forEach(v => v.remove());
+      desktopConfig[side].forEach(tabId => {
+        const el = document.getElementById('tab-' + tabId);
+        if (el) {
+          el.classList.remove('desktop-pinned');
+          el.style.flex = '';
+          el.style.height = '';
+          center.appendChild(el);
+          const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
+          if (tabBtn) tabBtn.style.display = '';
+        }
+      });
+    });
+  }
+
+  // Update config
+  desktopConfig = { left, right };
+  try { localStorage.setItem('cj_desktop_config', JSON.stringify(desktopConfig)); } catch(e) {}
+
+  // Force re-apply desktop layout
+  _isDesktopApplied = false;
+  applyDesktopLayout();
+  
+  showToast('✅ Đã cập nhật bố cục desktop!');
+  const modal = document.getElementById('personalizationModal');
+  if (modal) modal.remove();
+}
+
+function _resetDesktopConfig() {
+  // First: restore all currently pinned tabs back to center
+  const center = document.getElementById('mainContent');
+  if (center) {
+    ['left', 'right'].forEach(side => {
+      const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
+      if (panel) panel.querySelectorAll('.panel-vdivider').forEach(v => v.remove());
+      desktopConfig[side].forEach(tabId => {
+        const el = document.getElementById('tab-' + tabId);
+        if (el) {
+          el.classList.remove('desktop-pinned');
+          el.style.flex = '';
+          el.style.height = '';
+          center.appendChild(el);
+          const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
+          if (tabBtn) tabBtn.style.display = '';
+        }
+      });
+    });
+  }
+
+  desktopConfig = { left: ['unit'], right: ['notes', 'priority'] };
+  try { localStorage.setItem('cj_desktop_config', JSON.stringify(desktopConfig)); } catch(e) {}
+
+  // Update UI
+  const lt = document.getElementById('dl_left_top');
+  const lb = document.getElementById('dl_left_bottom');
+  const rt = document.getElementById('dl_right_top');
+  const rb = document.getElementById('dl_right_bottom');
+  if (lt) lt.value = 'unit';
+  if (lb) lb.value = '';
+  if (rt) rt.value = 'notes';
+  if (rb) rb.value = 'priority';
+  _updateDesktopLayoutPreview();
+
+  // Force re-apply
+  _isDesktopApplied = false;
+  applyDesktopLayout();
+  
+  showToast('↩ Đã reset bố cục về mặc định!');
+}
 const _EMOJI_CATS = {
   '😀': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
   '👋': ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵'],
