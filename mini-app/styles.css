@@ -1378,6 +1378,14 @@
   #panelCenter > .tab-bar.tab-bar--wide .tab {
     padding: 8px 8px;
   }
+  /* Icon-only mode: compact tabs, centered in bar */
+  #panelCenter > .tab-bar:not(.tab-bar--wide) {
+    justify-content: center;
+  }
+  #panelCenter > .tab-bar:not(.tab-bar--wide) .tab {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+  }
 
   /* ── Wrapper: fills remaining height after header ── */
   .desktop-layout {
@@ -1391,7 +1399,7 @@
   /* ── Center: scrollable content area ── */
   #panelCenter {
     flex: 1;
-    min-width: 280px;
+    min-width: 200px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1404,7 +1412,10 @@
     overflow-y: auto;
     overflow-x: hidden;
     max-width: none !important;  /* Override the 900px/600px limit inside panels */
-    padding: 20px 24px;
+    margin: 0 !important;       /* Override auto centering from base .content */
+    padding: 16px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   /* detailView also needs to scroll when inside center */
@@ -1469,7 +1480,7 @@
 
   #panelLeft, #panelRight {
     width: 320px;
-    min-width: 200px;
+    min-width: 120px;
     flex-shrink: 0;
     overflow: hidden;         /* children scroll, not the panel itself */
     background: var(--surface2);

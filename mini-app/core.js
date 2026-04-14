@@ -1039,19 +1039,13 @@ function applyDesktopLayout() {
 }
 
 // ── Drag-to-resize ──
-const PANEL_MIN_W = 200;
-const CENTER_MIN_W = 320;
+const PANEL_MIN_W = 120;
+const CENTER_MIN_W = 200;
 const PANEL_COLLAPSE_W = 140; // snap-collapse threshold
 
 function _initPanelDividers() {
   _setupDivider('dividerLeft', 'panelLeft', 'left');
   _setupDivider('dividerRight', 'panelRight', 'right');
-}
-
-function _getOtherPanelWidth(side) {
-  const other = document.getElementById(side === 'left' ? 'panelRight' : 'panelLeft');
-  if (!other || other.style.display === 'none') return 0;
-  return other.getBoundingClientRect().width;
 }
 
 function _setupDivider(dividerId, panelId, side) {
@@ -1063,22 +1057,46 @@ function _setupDivider(dividerId, panelId, side) {
   const fresh = divider.cloneNode(true);
   divider.parentNode.replaceChild(fresh, divider);
 
-  let startX, startW;
+  let startX, startW, otherStartW;
 
   fresh.addEventListener('mousedown', e => {
     e.preventDefault();
     startX = e.clientX;
     startW = panel.getBoundingClientRect().width;
+    const otherPanel = document.getElementById(side === 'left' ? 'panelRight' : 'panelLeft');
+    otherStartW = (otherPanel && otherPanel.style.display !== 'none') ? otherPanel.getBoundingClientRect().width : 0;
     fresh.classList.add('dragging');
     document.body.classList.add('panel-resizing');
 
     const onMove = ev => {
       const delta = side === 'left' ? (ev.clientX - startX) : (startX - ev.clientX);
-      const otherW = _getOtherPanelWidth(side);
-      const dividerW = 10; // both dividers
-      const maxW = window.innerWidth - otherW - CENTER_MIN_W - dividerW;
-      const newW = Math.max(PANEL_MIN_W, Math.min(startW + delta, maxW));
+      const dividerW = 10;
+      const totalAvail = window.innerWidth - dividerW;
+
+      // Desired width for dragged panel
+      let newW = Math.max(PANEL_MIN_W, startW + delta);
+
+      // Space for center + other panel
+      let remain = totalAvail - newW;
+      let otherW = otherStartW;
+      let centerW = remain - otherW;
+
+      if (centerW < CENTER_MIN_W) {
+        // Center hit min → shrink other panel
+        centerW = CENTER_MIN_W;
+        otherW = remain - centerW;
+        if (otherW < PANEL_MIN_W) {
+          otherW = PANEL_MIN_W;
+          // Cap dragged panel
+          newW = totalAvail - CENTER_MIN_W - PANEL_MIN_W;
+        }
+      }
+
       panel.style.width = newW + 'px';
+      const otherPanel = document.getElementById(side === 'left' ? 'panelRight' : 'panelLeft');
+      if (otherPanel && otherPanel.style.display !== 'none') {
+        otherPanel.style.width = otherW + 'px';
+      }
       _updateTabBarMode();
     };
     const onUp = () => {
