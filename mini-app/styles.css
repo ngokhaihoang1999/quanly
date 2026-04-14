@@ -1106,16 +1106,15 @@
 .board-note {
   position: absolute;
   border: 1.5px solid;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   box-shadow: 1px 2px 8px rgba(0,0,0,0.10);
-  transition: box-shadow 0.2s;
   cursor: default;
 }
 .board-note:hover {
-  box-shadow: 2px 4px 16px rgba(0,0,0,0.18);
+  box-shadow: 2px 4px 14px rgba(0,0,0,0.16);
 }
 .board-note-dragging {
   box-shadow: 4px 8px 24px rgba(0,0,0,0.25) !important;
@@ -1133,6 +1132,7 @@
   gap: 4px;
   user-select: none;
   border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
 }
 .board-note-dragging .board-note-header { cursor: grabbing; }
 .board-note-title {
@@ -1153,26 +1153,61 @@
   flex: 1;
   padding: 6px 8px;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.5;
   overflow: hidden;
   cursor: pointer;
   word-break: break-word;
+  min-height: 0;
 }
-.board-note-preview { white-space: pre-wrap; }
-.board-note-full { white-space: pre-wrap; overflow-y: auto; max-height: 400px; }
+.board-note-content {
+  white-space: pre-wrap;
+}
+
+/* Footer: badges + actions */
+.board-note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 6px 4px;
+  flex-shrink: 0;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.board-note-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.board-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.06);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+.board-badge-link {
+  cursor: pointer;
+  text-decoration: underline;
+}
+.board-badge-link:hover {
+  background: rgba(0,0,0,0.12);
+}
 
 .board-note-actions {
   display: flex;
   gap: 2px;
-  padding: 2px 6px 4px;
-  justify-content: flex-end;
+  flex-shrink: 0;
 }
 .board-note-actions button {
   background: none;
   border: none;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 3px;
   border-radius: 4px;
   transition: background 0.15s;
 }
@@ -1185,13 +1220,37 @@
   width: 14px; height: 14px;
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.15) 50%);
-  border-radius: 0 0 5px 0;
+  border-radius: 0 0 6px 0;
 }
 
 /* Expanded note */
 .board-note-expanded {
   z-index: 100;
   box-shadow: 4px 8px 30px rgba(0,0,0,0.3);
+  transition: width 0.25s ease, height 0.25s ease, min-height 0.25s ease;
+}
+.board-note-expanded .board-note-body {
+  overflow-y: auto;
+}
+
+/* Collapse animation */
+.board-note-collapsing {
+  transition: width 0.25s ease, height 0.25s ease, min-height 0.25s ease;
+}
+
+/* ── Vertical divider for stacked tabs in same panel ── */
+.panel-vdivider {
+  height: 5px;
+  cursor: row-resize;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.2s;
+}
+.panel-vdivider:hover,
+.panel-vdivider.dragging {
+  background: var(--accent);
+  opacity: 0.5;
 }
 
 /* ═══════════════ PHASE 2: DESKTOP & WIDE CONTENT ═══════════════ */
@@ -1390,6 +1449,48 @@
   }
   body.panel-resizing * {
     cursor: col-resize !important;
+  }
+
+  /* ── Components in side panels: responsive when narrow ── */
+  #panelLeft .desktop-pinned,
+  #panelRight .desktop-pinned {
+    /* Force single-column grids for narrow panels */
+  }
+  #panelLeft #profileList,
+  #panelRight #profileList,
+  #panelLeft #staffList,
+  #panelRight #staffList,
+  #panelLeft #notesPanelList:not(.notes-board),
+  #panelRight #notesPanelList:not(.notes-board),
+  #panelLeft .priority-group,
+  #panelRight .priority-group {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  /* Dashboard stats: wrap to fit narrow space */
+  #panelLeft .dash-stat,
+  #panelRight .dash-stat {
+    font-size: 11px;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  /* Profile cards: tighter in narrow panels */
+  #panelLeft .profile-card,
+  #panelRight .profile-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  /* Section headers: allow wrapping */
+  #panelLeft .section-header,
+  #panelRight .section-header {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  /* Filter chips: scroll instead of overflow */  
+  #panelLeft .chip,
+  #panelRight .chip {
+    font-size: 10px;
+    padding: 5px 8px;
   }
 
   /* Header must be a flex container parent so body stacks header + panels */

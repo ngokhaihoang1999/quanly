@@ -933,17 +933,29 @@ function applyDesktopLayout() {
     ['left', 'right'].forEach(side => {
       const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
       if (!panel) return;
-      desktopConfig[side].forEach(tabId => {
+      const tabIds = desktopConfig[side].filter(tabId => document.getElementById('tab-' + tabId));
+      tabIds.forEach((tabId, i) => {
         const el = document.getElementById('tab-' + tabId);
         if (el) {
           el.classList.add('desktop-pinned');
           panel.appendChild(el);
           const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
           if (tabBtn) tabBtn.style.display = 'none';
+          // Insert vertical divider between tabs (not after the last one)
+          if (i < tabIds.length - 1) {
+            const vdiv = document.createElement('div');
+            vdiv.className = 'panel-vdivider';
+            vdiv.dataset.above = 'tab-' + tabId;
+            vdiv.dataset.below = 'tab-' + tabIds[i + 1];
+            panel.appendChild(vdiv);
+          }
         }
       });
       _updatePanelVisibility(side);
     });
+
+    // Setup vertical dividers
+    _initVerticalDividers();
 
     // Restore saved widths
     _restorePanelWidths();
@@ -973,20 +985,29 @@ function applyDesktopLayout() {
     if (!center) return;
 
     ['left', 'right'].forEach(side => {
+      const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
+      // Remove vertical dividers first
+      if (panel) panel.querySelectorAll('.panel-vdivider').forEach(v => v.remove());
+      
       desktopConfig[side].forEach(tabId => {
         const el = document.getElementById('tab-' + tabId);
         if (el) {
           el.classList.remove('desktop-pinned');
+          el.style.flex = '';
+          el.style.height = '';
           center.appendChild(el);
           const tabBtn = document.querySelector(`#mainTabBar .tab[data-tab="${tabId}"]`);
           if (tabBtn) tabBtn.style.display = '';
         }
       });
-      const panel = document.getElementById(side === 'left' ? 'panelLeft' : 'panelRight');
       if (panel) { panel.style.display = 'none'; panel.style.width = ''; }
       const divider = document.getElementById(side === 'left' ? 'dividerLeft' : 'dividerRight');
       if (divider) divider.style.display = 'none';
     });
+
+    // Hide auto-arrange button
+    const arrangeBtn = document.getElementById('btnAutoArrange');
+    if (arrangeBtn) arrangeBtn.style.display = 'none';
 
     if (typeof applyPermissions === 'function') applyPermissions();
   }
@@ -1072,6 +1093,46 @@ function _restorePanelWidths() {
     if (w.left && l && l.style.display !== 'none') l.style.width = lw + 'px';
     if (w.right && r && r.style.display !== 'none') r.style.width = rw + 'px';
   } catch(e) {}
+}
+
+// ── Vertical resize between stacked tabs ──
+function _initVerticalDividers() {
+  document.querySelectorAll('.panel-vdivider').forEach(div => {
+    const above = document.getElementById(div.dataset.above);
+    const below = document.getElementById(div.dataset.below);
+    if (!above || !below) return;
+
+    div.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const startY = e.clientY;
+      const aboveH = above.getBoundingClientRect().height;
+      const belowH = below.getBoundingClientRect().height;
+      div.classList.add('dragging');
+      document.body.classList.add('panel-resizing');
+
+      // Switch from flex:1 to explicit heights for both
+      above.style.flex = 'none';
+      below.style.flex = 'none';
+      above.style.height = aboveH + 'px';
+      below.style.height = belowH + 'px';
+
+      const onMove = ev => {
+        const delta = ev.clientY - startY;
+        const newAbove = Math.max(80, aboveH + delta);
+        const newBelow = Math.max(80, belowH - delta);
+        above.style.height = newAbove + 'px';
+        below.style.height = newBelow + 'px';
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        div.classList.remove('dragging');
+        document.body.classList.remove('panel-resizing');
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 window.addEventListener('resize', applyDesktopLayout);

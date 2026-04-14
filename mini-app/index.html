@@ -127,9 +127,9 @@
     <div class="section-header"><div class="section-title">📝 Ghi chú cá nhân</div><div class="section-count" id="notesCount">--</div></div>
     <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;" id="notesFilterChips">
       <div class="chip selected" onclick="setNotesFilter('all',this)">🗂️ Tất cả</div>
-      <div class="chip" onclick="setNotesFilter('pinned',this)">📌 Ghim</div>
       <div class="chip" onclick="setNotesFilter('shared',this)">📤 Shared</div>
       <span style="flex:1;"></span>
+      <button id="btnAutoArrange" onclick="autoArrangeNotes()" title="Sắp xếp gọn" style="padding:6px 10px;background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:20px;font-size:13px;cursor:pointer;display:none;">🔲</button>
       <button onclick="openCreateNoteModal()" style="padding:6px 14px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">+ Tạo</button>
     </div>
     <div id="notesPanelList"><div class="empty-state"><div class="empty-icon">📝</div><div class="empty-sub">Đang tải...</div></div></div>

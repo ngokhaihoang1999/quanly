@@ -181,62 +181,102 @@ function renderBoardNoteCard(note, idx) {
   const isShared = note._shared;
   const canEdit = !isShared || note._canEdit;
   const timeAgo = getTimeAgo(note.updated_at);
-  const title = note.title ? escHtml(note.title) : escHtml(note.content.substring(0, 30)) + (note.content.length > 30 ? '…' : '');
-  const preview = note.content.length > 80 ? note.content.substring(0, 80) + '…' : note.content;
+  const title = note.title ? escHtml(note.title) : escHtml(note.content.substring(0, 40)) + (note.content.length > 40 ? '…' : '');
 
   // Restore saved layout or use grid positions
   const saved = _notesBoardLayouts[note.id];
-  const col = idx % 3;
-  const row = Math.floor(idx / 3);
-  const x = saved?.x ?? (col * 170);
-  const y = saved?.y ?? (row * 160);
-  const w = saved?.w ?? 160;
-  const h = saved?.h ?? 140;
+  const containerEl = document.getElementById('notesPanelList');
+  const cw = containerEl ? containerEl.offsetWidth : 500;
+  const cols = Math.max(2, Math.floor(cw / 180));
+  const cardW = Math.floor((cw - (cols + 1) * 8) / cols);
+  const col = idx % cols;
+  const row = Math.floor(idx / cols);
+  const x = saved?.x ?? (8 + col * (cardW + 8));
+  const y = saved?.y ?? (8 + row * 170);
+  const w = saved?.w ?? cardW;
+  const h = saved?.h ?? 155;
 
-  let badges = '';
-  if (note.pinned) badges += '📌 ';
-  if (isShared) badges += '📤 ';
-  if (note.linked_profile_id) badges += '🔗 ';
+  // Linked profile badge
+  let linkedBadge = '';
+  if (note.linked_profile_id) {
+    const p = allProfiles.find(p => p.id === note.linked_profile_id);
+    if (p) {
+      linkedBadge = `<span class="board-badge board-badge-link" onclick="event.stopPropagation();openProfileById('${note.linked_profile_id}')" title="Xem hồ sơ">🔗 ${escHtml(p.full_name || '?')}</span>`;
+    }
+  }
+
+  // Shared badge
+  let sharedBadge = '';
+  if (isShared) {
+    const sharer = allStaff.find(s => s.staff_code === note._sharedBy);
+    sharedBadge = `<span class="board-badge">📤 ${escHtml(sharer?.full_name || note._sharedBy)}</span>`;
+  } else if (note._isSharedByMe) {
+    sharedBadge = `<span class="board-badge">📤 Đã share</span>`;
+  }
 
   const actionBtns = canEdit ? `
     <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa">✏️</button>
-    <button onclick="event.stopPropagation();toggleNotePin('${note.id}',${!note.pinned})" title="${note.pinned ? 'Bỏ ghim' : 'Ghim'}">${note.pinned ? '📌' : '📍'}</button>
-    <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share">📤</button>` : '';
+    <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share">📤</button>
+    <button onclick="event.stopPropagation();deletePersonalNote('${note.id}')" title="Xoá" style="color:#dc2626;">🗑️</button>` : '';
 
   return `<div class="board-note" data-note-id="${note.id}" 
     style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${c.bg};border-color:${c.border};">
     <div class="board-note-header" style="background:${c.headerBg};color:${c.text};">
-      <span class="board-note-title">${badges}${title}</span>
+      <span class="board-note-title">${note.pinned ? '📌 ' : ''}${title}</span>
       <span class="board-note-time" style="color:${c.dateTxt};">${timeAgo}</span>
     </div>
     <div class="board-note-body" style="color:${c.text};">
-      <div class="board-note-preview">${escHtml(preview)}</div>
-      <div class="board-note-full" style="display:none;">${escHtml(note.content)}</div>
+      <div class="board-note-content">${escHtml(note.content)}</div>
     </div>
-    <div class="board-note-actions" style="color:${c.dateTxt};">${actionBtns}</div>
+    <div class="board-note-footer">
+      <div class="board-note-badges">${linkedBadge}${sharedBadge}</div>
+      <div class="board-note-actions" style="color:${c.dateTxt};">${actionBtns}</div>
+    </div>
     <div class="board-note-resize"></div>
   </div>`;
 }
 
 // ── Board Interactions ──
+let _boardClickOutHandler = null;
+
 function _initBoardNotes(container) {
+  // Show auto-arrange button
+  const arrangeBtn = document.getElementById('btnAutoArrange');
+  if (arrangeBtn) arrangeBtn.style.display = '';
+
+  // Remove old click-outside handler
+  if (_boardClickOutHandler) document.removeEventListener('mousedown', _boardClickOutHandler);
+
+  // Click outside any expanded note → collapse it
+  _boardClickOutHandler = (e) => {
+    const expanded = container.querySelector('.board-note-expanded');
+    if (!expanded) return;
+    if (!expanded.contains(e.target)) {
+      _collapseNote(expanded);
+    }
+  };
+  document.addEventListener('mousedown', _boardClickOutHandler);
+
   container.querySelectorAll('.board-note').forEach(el => {
     const header = el.querySelector('.board-note-header');
     const resizeHandle = el.querySelector('.board-note-resize');
-    const noteId = el.dataset.noteId;
 
     // ─ Drag ─
     let dragState = null;
+    let wasDragged = false;
     header.addEventListener('mousedown', e => {
-      if (e.target.tagName === 'BUTTON') return;
+      if (e.target.tagName === 'BUTTON' || e.target.closest('.board-badge-link')) return;
       e.preventDefault();
+      wasDragged = false;
       const rect = el.getBoundingClientRect();
       const parentRect = container.getBoundingClientRect();
       dragState = { 
         offX: e.clientX - rect.left, 
         offY: e.clientY - rect.top,
         parentLeft: parentRect.left,
-        parentTop: parentRect.top
+        parentTop: parentRect.top,
+        startX: e.clientX,
+        startY: e.clientY
       };
       el.style.zIndex = ++_boardZIndex;
       el.classList.add('board-note-dragging');
@@ -244,6 +284,9 @@ function _initBoardNotes(container) {
 
       const onMove = ev => {
         if (!dragState) return;
+        if (Math.abs(ev.clientX - dragState.startX) > 3 || Math.abs(ev.clientY - dragState.startY) > 3) {
+          wasDragged = true;
+        }
         const x = Math.max(0, ev.clientX - dragState.parentLeft - dragState.offX);
         const y = Math.max(0, ev.clientY - dragState.parentTop - dragState.offY);
         el.style.left = x + 'px';
@@ -268,6 +311,7 @@ function _initBoardNotes(container) {
       const startX = e.clientX, startY = e.clientY;
       const startW = el.offsetWidth, startH = el.offsetHeight;
       el.style.zIndex = ++_boardZIndex;
+      document.body.classList.add('panel-resizing');
 
       const onMove = ev => {
         const newW = Math.max(120, startW + (ev.clientX - startX));
@@ -278,47 +322,57 @@ function _initBoardNotes(container) {
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('panel-resizing');
         _saveBoardLayout(container);
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
 
-    // ─ Click to expand/collapse ─
-    el.querySelector('.board-note-body').addEventListener('click', e => {
-      if (e.target.tagName === 'BUTTON') return;
-      const pre = el.querySelector('.board-note-preview');
-      const full = el.querySelector('.board-note-full');
-      const isExpanded = el.classList.toggle('board-note-expanded');
-      if (isExpanded) {
-        // Save original size before expanding
-        el.dataset.origW = el.style.width;
-        el.dataset.origH = el.style.height;
-        el.style.width = 'auto';
-        el.style.height = 'auto';
-        el.style.minWidth = '250px';
-        el.style.minHeight = '180px';
-        el.style.maxWidth = (container.offsetWidth - 20) + 'px';
-        el.style.zIndex = ++_boardZIndex;
-        pre.style.display = 'none';
-        full.style.display = 'block';
+    // ─ Click to expand ─
+    el.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('.board-badge-link') || e.target.closest('.board-note-resize')) return;
+      if (wasDragged) { wasDragged = false; return; }
+      if (el.classList.contains('board-note-expanded')) {
+        _collapseNote(el);
       } else {
-        el.style.width = el.dataset.origW || '160px';
-        el.style.height = el.dataset.origH || '140px';
-        el.style.minWidth = '';
-        el.style.minHeight = '';
-        el.style.maxWidth = '';
-        pre.style.display = 'block';
-        full.style.display = 'none';
+        // Collapse any other expanded note first
+        const prev = container.querySelector('.board-note-expanded');
+        if (prev) _collapseNote(prev);
+        _expandNote(el, container);
       }
     });
   });
 }
 
+function _expandNote(el, container) {
+  el.dataset.origW = el.style.width;
+  el.dataset.origH = el.style.height;
+  el.classList.add('board-note-expanded');
+  el.style.width = Math.min(380, container.offsetWidth - 20) + 'px';
+  el.style.height = 'auto';
+  el.style.minHeight = '180px';
+  el.style.maxHeight = (container.offsetHeight - 40) + 'px';
+  el.style.zIndex = ++_boardZIndex;
+}
+
+function _collapseNote(el) {
+  el.classList.remove('board-note-expanded');
+  el.classList.add('board-note-collapsing');
+  el.style.width = el.dataset.origW || '160px';
+  el.style.height = el.dataset.origH || '155px';
+  el.style.minHeight = '';
+  el.style.maxHeight = '';
+  setTimeout(() => el.classList.remove('board-note-collapsing'), 300);
+}
+
 let _boardZIndex = 10;
 
 function _saveBoardLayout(container) {
+  if (!container) container = document.getElementById('notesPanelList');
+  if (!container) return;
   container.querySelectorAll('.board-note').forEach(el => {
+    if (el.classList.contains('board-note-expanded')) return; // don't save expanded size
     _notesBoardLayouts[el.dataset.noteId] = {
       x: parseInt(el.style.left) || 0,
       y: parseInt(el.style.top) || 0,
@@ -327,6 +381,36 @@ function _saveBoardLayout(container) {
     };
   });
   try { localStorage.setItem('cj_notes_board', JSON.stringify(_notesBoardLayouts)); } catch(e) {}
+}
+
+// ── Auto-arrange: reset notes to a tidy grid ──
+function autoArrangeNotes() {
+  const container = document.getElementById('notesPanelList');
+  if (!container) return;
+  const cards = container.querySelectorAll('.board-note');
+  if (cards.length === 0) return;
+  const cw = container.offsetWidth;
+  const cols = Math.max(2, Math.floor(cw / 180));
+  const cardW = Math.floor((cw - (cols + 1) * 8) / cols);
+  cards.forEach((el, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    // Collapse if expanded
+    if (el.classList.contains('board-note-expanded')) _collapseNote(el);
+    el.style.transition = 'left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease';
+    el.style.left = (8 + col * (cardW + 8)) + 'px';
+    el.style.top = (8 + row * 170) + 'px';
+    el.style.width = cardW + 'px';
+    el.style.height = '155px';
+  });
+  // Clear saved layouts
+  _notesBoardLayouts = {};
+  try { localStorage.removeItem('cj_notes_board'); } catch(e) {}
+  // Remove transition after animation
+  setTimeout(() => {
+    cards.forEach(el => el.style.transition = '');
+    _saveBoardLayout(container);
+  }, 400);
 }
 
 // ── UI Interactions (list mode) ──
