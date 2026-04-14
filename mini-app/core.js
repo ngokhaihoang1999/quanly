@@ -904,7 +904,7 @@ function _injectWindowControls() {
 let desktopConfig = null;
 try { desktopConfig = JSON.parse(localStorage.getItem('cj_desktop_config')); } catch(e) {}
 if (!desktopConfig) {
-  desktopConfig = { left: ['unit'], right: ['notes', 'priority'] };
+  desktopConfig = { left: [], right: ['notes', 'priority'] };
 }
 
 let _isDesktopApplied = false;
@@ -1129,16 +1129,54 @@ function _updateTabBarMode() {
   if (!tabBar || !center) return;
   const w = center.getBoundingClientRect().width;
   // Count how many tabs are visible
-  const visibleTabs = tabBar.querySelectorAll('.tab');
-  let count = 0;
-  visibleTabs.forEach(t => { if (t.style.display !== 'none') count++; });
-  // Each tab needs ~90px to show icon+label comfortably
-  const threshold = count * 90;
-  if (w > threshold) {
+  const visibleTabs = Array.from(tabBar.querySelectorAll('.tab')).filter(t => t.style.display !== 'none');
+  const count = visibleTabs.length;
+  if (count === 0) return;
+
+  // Thresholds
+  const wideThreshold = count * 90;   // icon + text
+  const iconThreshold = count * 44;    // icon only
+
+  // Remove all mode classes first
+  tabBar.classList.remove('tab-bar--wide', 'tab-bar--dropdown');
+
+  if (w > wideThreshold) {
     tabBar.classList.add('tab-bar--wide');
+    _removeTabDropdown(tabBar);
+  } else if (w > iconThreshold) {
+    // Icon-only mode (default)
+    _removeTabDropdown(tabBar);
   } else {
-    tabBar.classList.remove('tab-bar--wide');
+    // Dropdown mode
+    tabBar.classList.add('tab-bar--dropdown');
+    _ensureTabDropdown(tabBar, visibleTabs);
   }
+}
+
+function _removeTabDropdown(tabBar) {
+  const existing = tabBar.querySelector('.tab-dropdown');
+  if (existing) existing.remove();
+}
+
+function _ensureTabDropdown(tabBar, visibleTabs) {
+  let sel = tabBar.querySelector('.tab-dropdown');
+  if (!sel) {
+    sel = document.createElement('select');
+    sel.className = 'tab-dropdown';
+    sel.onchange = function() {
+      const tab = tabBar.querySelector(`.tab[data-tab="${this.value}"]`);
+      if (tab) tab.click();
+    };
+    tabBar.appendChild(sel);
+  }
+  // Rebuild options
+  const activeTab = tabBar.querySelector('.tab.active');
+  const activeVal = activeTab ? activeTab.dataset.tab : '';
+  sel.innerHTML = visibleTabs.map(t => {
+    const icon = t.querySelector('.tab-icon')?.textContent || '';
+    const label = t.querySelector('.tab-label')?.textContent || t.dataset.tab;
+    return `<option value="${t.dataset.tab}" ${t.dataset.tab === activeVal ? 'selected' : ''}>${icon} ${label}</option>`;
+  }).join('');
 }
 
 function _restorePanelWidths() {
@@ -1455,6 +1493,9 @@ function switchMainTab(el, tab) {
   if (tab==='notes' && typeof initNotesTab === 'function') { initNotesTab(); }
   // Stop notes poll when leaving notes tab
   if (tab !== 'notes' && typeof stopNotesPoll === 'function') stopNotesPoll();
+  // Sync dropdown if in dropdown mode
+  const dd = document.querySelector('#mainTabBar .tab-dropdown');
+  if (dd) dd.value = tab;
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============
@@ -2416,7 +2457,7 @@ const _DL_TAB_MAP = {
   structure: '🏗️ Cơ cấu',
   reports: '📊 Báo cáo'
 };
-const _DL_ASSIGNABLE = ['unit','personal','priority','calendar','notes','staff'];
+const _DL_ASSIGNABLE = ['personal','priority','calendar','notes','staff'];
 
 function _renderPanelTabOptions(slot) {
   let html = '<option value="">— Không —</option>';
@@ -2524,7 +2565,7 @@ function _resetDesktopConfig() {
     });
   }
 
-  desktopConfig = { left: ['unit'], right: ['notes', 'priority'] };
+  desktopConfig = { left: [], right: ['notes', 'priority'] };
   try { localStorage.setItem('cj_desktop_config', JSON.stringify(desktopConfig)); } catch(e) {}
 
   // Update UI
@@ -2532,7 +2573,7 @@ function _resetDesktopConfig() {
   const lb = document.getElementById('dl_left_bottom');
   const rt = document.getElementById('dl_right_top');
   const rb = document.getElementById('dl_right_bottom');
-  if (lt) lt.value = 'unit';
+  if (lt) lt.value = '';
   if (lb) lb.value = '';
   if (rt) rt.value = 'notes';
   if (rb) rb.value = 'priority';

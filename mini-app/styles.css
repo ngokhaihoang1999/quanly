@@ -1406,6 +1406,32 @@
     flex: 0 0 auto;
     padding: 8px 12px;
   }
+  /* Dropdown mode: hide tabs, show select */
+  #panelCenter > .tab-bar.tab-bar--dropdown .tab {
+    display: none;
+  }
+  #panelCenter > .tab-bar.tab-bar--dropdown {
+    padding: 6px 8px;
+    justify-content: stretch;
+  }
+  .tab-dropdown {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--accent);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    outline: none;
+    appearance: auto;
+  }
+  .tab-dropdown:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+  }
 
   /* ── Wrapper: fills remaining height after header ── */
   .desktop-layout {
