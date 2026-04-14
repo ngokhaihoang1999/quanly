@@ -24,18 +24,26 @@ async function loadPersonalNotes() {
     const res1 = await sbFetch(`/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(sc)}&order=pinned.desc,updated_at.desc`);
     _allMyNotes = res1.ok ? await res1.json() : [];
 
-    // Fetch notes shared with me (join with personal_notes via FK hint)
-    const res2 = await sbFetch(`/rest/v1/note_shares?shared_with=eq.${encodeURIComponent(sc)}&select=*,personal_notes!note_id(*)`);
+    // Fetch notes shared with me — 2-step (avoids PostgREST FK join issues)
+    const res2 = await sbFetch(`/rest/v1/note_shares?shared_with=eq.${encodeURIComponent(sc)}&select=*`);
     const shares = res2.ok ? await res2.json() : [];
-    _sharedWithMeNotes = shares
-      .filter(s => s.personal_notes) // ensure note exists
-      .map(s => ({
-        ...s.personal_notes,
-        _shared: true,
-        _sharedBy: s.shared_by,
-        _canEdit: s.can_edit,
-        _shareId: s.id
-      }));
+    _sharedWithMeNotes = [];
+    if (shares.length > 0) {
+      const noteIds = shares.map(s => s.note_id).filter(Boolean);
+      const res3 = await sbFetch(`/rest/v1/personal_notes?id=in.(${noteIds.join(',')})&select=*`);
+      const sharedNotes = res3.ok ? await res3.json() : [];
+      const noteMap = {};
+      sharedNotes.forEach(n => noteMap[n.id] = n);
+      _sharedWithMeNotes = shares
+        .filter(s => noteMap[s.note_id])
+        .map(s => ({
+          ...noteMap[s.note_id],
+          _shared: true,
+          _sharedBy: s.shared_by,
+          _canEdit: s.can_edit,
+          _shareId: s.id
+        }));
+    }
 
     _dataCache['notes'] = Date.now();
     renderNotes();
