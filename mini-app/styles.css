@@ -1096,6 +1096,104 @@
 .guest-mode .pnote-actions,
 .guest-mode #notesFilterChips button { display: none !important; }
 
+/* ═══════════════ NOTES BOARD (Desktop sticky board) ═══════════════ */
+.notes-board {
+  position: relative;
+  min-height: 500px;
+  overflow: auto;
+}
+
+.board-note {
+  position: absolute;
+  border: 1.5px solid;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 1px 2px 8px rgba(0,0,0,0.10);
+  transition: box-shadow 0.2s;
+  cursor: default;
+}
+.board-note:hover {
+  box-shadow: 2px 4px 16px rgba(0,0,0,0.18);
+}
+.board-note-dragging {
+  box-shadow: 4px 8px 24px rgba(0,0,0,0.25) !important;
+  opacity: 0.92;
+}
+
+.board-note-header {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: grab;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.board-note-dragging .board-note-header { cursor: grabbing; }
+.board-note-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-note-time {
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.board-note-body {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow: hidden;
+  cursor: pointer;
+  word-break: break-word;
+}
+.board-note-preview { white-space: pre-wrap; }
+.board-note-full { white-space: pre-wrap; overflow-y: auto; max-height: 400px; }
+
+.board-note-actions {
+  display: flex;
+  gap: 2px;
+  padding: 2px 6px 4px;
+  justify-content: flex-end;
+}
+.board-note-actions button {
+  background: none;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.board-note-actions button:hover { background: rgba(0,0,0,0.1); }
+
+/* Resize handle */
+.board-note-resize {
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 14px; height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.15) 50%);
+  border-radius: 0 0 5px 0;
+}
+
+/* Expanded note */
+.board-note-expanded {
+  z-index: 100;
+  box-shadow: 4px 8px 30px rgba(0,0,0,0.3);
+}
+
 /* ═══════════════ PHASE 2: DESKTOP & WIDE CONTENT ═══════════════ */
 @media (min-width: 640px) {
   /* Wider content limit */
@@ -1235,8 +1333,7 @@
 
   #panelLeft, #panelRight {
     width: 320px;
-    min-width: 220px;
-    max-width: 50vw;
+    min-width: 200px;
     flex-shrink: 0;
     overflow: hidden;         /* children scroll, not the panel itself */
     background: var(--surface2);
@@ -1257,6 +1354,7 @@
     overflow-x: hidden;
     padding: 14px 12px;
     min-height: 0;            /* allow flex shrink */
+    word-break: break-word;   /* prevent text overflow */
   }
 
   /* ── Drag-to-resize dividers ── */

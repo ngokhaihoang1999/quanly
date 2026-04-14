@@ -993,9 +993,19 @@ function applyDesktopLayout() {
 }
 
 // ── Drag-to-resize ──
+const PANEL_MIN_W = 200;
+const CENTER_MIN_W = 320;
+const PANEL_COLLAPSE_W = 140; // snap-collapse threshold
+
 function _initPanelDividers() {
   _setupDivider('dividerLeft', 'panelLeft', 'left');
   _setupDivider('dividerRight', 'panelRight', 'right');
+}
+
+function _getOtherPanelWidth(side) {
+  const other = document.getElementById(side === 'left' ? 'panelRight' : 'panelLeft');
+  if (!other || other.style.display === 'none') return 0;
+  return other.getBoundingClientRect().width;
 }
 
 function _setupDivider(dividerId, panelId, side) {
@@ -1018,7 +1028,10 @@ function _setupDivider(dividerId, panelId, side) {
 
     const onMove = ev => {
       const delta = side === 'left' ? (ev.clientX - startX) : (startX - ev.clientX);
-      const newW = Math.max(220, Math.min(startW + delta, window.innerWidth * 0.5));
+      const otherW = _getOtherPanelWidth(side);
+      const dividerW = 10; // both dividers
+      const maxW = window.innerWidth - otherW - CENTER_MIN_W - dividerW;
+      const newW = Math.max(PANEL_MIN_W, Math.min(startW + delta, maxW));
       panel.style.width = newW + 'px';
     };
     const onUp = () => {
@@ -1050,8 +1063,14 @@ function _restorePanelWidths() {
     if (!w) return;
     const l = document.getElementById('panelLeft');
     const r = document.getElementById('panelRight');
-    if (w.left && l && l.style.display !== 'none') l.style.width = w.left + 'px';
-    if (w.right && r && r.style.display !== 'none') r.style.width = w.right + 'px';
+    const divW = 10;
+    const total = window.innerWidth;
+    const lw = w.left || 320;
+    const rw = w.right || 320;
+    // Validate: both panels + center must fit
+    if (lw + rw + CENTER_MIN_W + divW > total) return; // skip restore, use defaults
+    if (w.left && l && l.style.display !== 'none') l.style.width = lw + 'px';
+    if (w.right && r && r.style.display !== 'none') r.style.width = rw + 'px';
   } catch(e) {}
 }
 
