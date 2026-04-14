@@ -1095,3 +1095,84 @@
 /* Guest mode: hide note write actions */
 .guest-mode .pnote-actions,
 .guest-mode #notesFilterChips button { display: none !important; }
+
+/* ═══════════════ PHASE 2: DESKTOP & WIDE CONTENT ═══════════════ */
+@media (min-width: 640px) {
+  /* Wider content limit */
+  .content { 
+    max-width: 900px !important; 
+    padding: 24px; 
+    transition: max-width 0.3s;
+  }
+  
+  /* 2-col layout for lists without changing JS */
+  #profileList, 
+  #staffList, 
+  #notesPanelList, 
+  #dashMyList, 
+  #dashHapjaList,
+  #tvList,
+  #bbList,
+  #timelineList,
+  #calEventList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  /* Reset margins for cards inside grids */
+  #profileList .profile-card,
+  #staffList .staff-card,
+  #notesPanelList .pnote-card,
+  #dashMyList .profile-card,
+  #dashHapjaList .pnote-card {
+    margin-bottom: 0;
+  }
+
+  /* Priority list handling */
+  .priority-group {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    column-gap: 12px;
+    padding: 0 12px 12px 12px;
+  }
+  .priority-group-header {
+    grid-column: 1 / -1;
+    margin: 0 -12px 10px -12px;
+  }
+  .priority-item {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+  }
+  .priority-item:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Center modals for large desktop */
+  .modal-overlay {
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  
+  .modal {
+    border-radius: 20px; /* Full border radius instead of just top */
+    max-width: 600px;
+    max-height: 85vh;
+    margin: auto;
+    animation: zoomIn 0.3s ease-out;
+  }
+  
+  .modal-handle {
+    display: none; /* Hide drag handle on desktop */
+  }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
