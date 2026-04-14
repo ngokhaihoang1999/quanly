@@ -88,7 +88,7 @@ async function openProfileById(id) {
 }
 async function openProfile(p) {
   currentProfileId = p.id;
-  ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority'].forEach(t=>{ const el=document.getElementById(t); if(el) el.style.display='none'; });
+  ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority','tab-notes'].forEach(t=>{ const el=document.getElementById(t); if(el) el.style.display='none'; });
   document.getElementById('detailView').style.display = 'block';
   document.getElementById('fabBtn').style.display = 'none';
 

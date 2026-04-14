@@ -89,7 +89,7 @@ function renderNoteCard(note) {
   if (note.linked_profile_id) {
     const p = allProfiles.find(p => p.id === note.linked_profile_id);
     if (p) {
-      linkedBadge = `<span onclick="event.stopPropagation();openProfile('${note.linked_profile_id}')" style="font-size:10px;background:rgba(0,0,0,0.08);padding:1px 6px;border-radius:8px;cursor:pointer;color:${c.text};" title="Xem hồ sơ">🔗 ${escHtml(p.full_name || '?')}</span>`;
+      linkedBadge = `<span onclick="event.stopPropagation();openProfileById('${note.linked_profile_id}')" style="font-size:10px;background:rgba(0,0,0,0.08);padding:1px 6px;border-radius:8px;cursor:pointer;color:${c.text};" title="Xem hồ sơ">🔗 ${escHtml(p.full_name || '?')}</span>`;
     }
   }
 
