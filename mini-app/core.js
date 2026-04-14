@@ -854,14 +854,80 @@ function openSemesterManager() {
 function getSemesterFilter() {
   return currentSemesterId ? `&semester_id=eq.${currentSemesterId}` : '';
 }
+// ============ DESKTOP WINDOW CONTROLS ============
+// Inject — / □ / × buttons for desktop Telegram Mini App
+let _isFullscreen = true;
+function _injectWindowControls() {
+  if (document.getElementById('winCtrlBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'winCtrlBar';
+  bar.innerHTML = `
+    <button id="winBtnMin" title="Thu nhỏ">─</button>
+    <button id="winBtnMax" title="Phóng to / Thu nhỏ">☐</button>
+    <button id="winBtnClose" title="Đóng">✕</button>`;
+  Object.assign(bar.style, {
+    position:'fixed', top:'6px', right:'50px', zIndex:'99999',
+    display:'flex', gap:'2px', padding:'2px 4px',
+    background:'rgba(0,0,0,0.35)', backdropFilter:'blur(12px)',
+    borderRadius:'8px', transition:'opacity 0.3s',
+    opacity:'1', pointerEvents:'auto'
+  });
+  const btnStyle = {
+    width:'28px', height:'22px', border:'none', borderRadius:'5px',
+    background:'transparent', color:'#fff', fontSize:'12px',
+    cursor:'pointer', display:'flex', alignItems:'center',
+    justifyContent:'center', transition:'background 0.15s', fontFamily:'system-ui'
+  };
+  document.body.appendChild(bar);
+  const btns = bar.querySelectorAll('button');
+  btns.forEach(b => {
+    Object.entries(btnStyle).forEach(([k,v]) => b.style[k] = v);
+    b.addEventListener('mouseenter', () => b.style.background = 'rgba(255,255,255,0.18)');
+    b.addEventListener('mouseleave', () => b.style.background = 'transparent');
+  });
+  // Close button: red hover
+  const closeBtn = document.getElementById('winBtnClose');
+  closeBtn.addEventListener('mouseenter', () => closeBtn.style.background = '#e53e3e');
+  closeBtn.addEventListener('mouseleave', () => closeBtn.style.background = 'transparent');
+
+  // Actions
+  document.getElementById('winBtnMin').onclick = () => {
+    try { if (tg?.minimize) tg.minimize(); } catch(_){}
+  };
+  document.getElementById('winBtnMax').onclick = () => {
+    try {
+      if (_isFullscreen && tg?.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; }
+      else if (tg?.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; }
+    } catch(_){}
+  };
+  document.getElementById('winBtnClose').onclick = () => {
+    try { if (tg?.close) tg.close(); } catch(_){ window.close(); }
+  };
+
+  // Auto-hide after 3s, show on mouse near top
+  let hideTimer = setTimeout(() => bar.style.opacity = '0.15', 3000);
+  document.addEventListener('mousemove', e => {
+    if (e.clientY < 50) {
+      bar.style.opacity = '1';
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => bar.style.opacity = '0.15', 3000);
+    }
+  });
+  bar.addEventListener('mouseenter', () => { bar.style.opacity = '1'; clearTimeout(hideTimer); });
+  bar.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => bar.style.opacity = '0.15', 2000); });
+}
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) {
     tg.ready();
     tg.expand();
-    // On desktop: request fullscreen if supported (Bot API 8.0+)
-    try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
+    // On desktop: request fullscreen + inject window controls (Bot API 8.0+)
+    const isDesktop = !('ontouchstart' in window) && window.innerWidth > 600;
+    if (isDesktop) {
+      try { if (tg.requestFullscreen) tg.requestFullscreen(); } catch(_){}
+      _injectWindowControls();
+    }
   }
   // PIN lock check — show overlay BEFORE any data loads
   _showPinLock();
