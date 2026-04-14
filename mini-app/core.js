@@ -1104,13 +1104,19 @@ function _savePanelWidths() {
   } catch(e) {}
 }
 
-// Toggle tab labels based on center panel width
+// Toggle tab labels based on center panel width vs actual tab count
 function _updateTabBarMode() {
   const tabBar = document.getElementById('mainTabBar');
   const center = document.getElementById('panelCenter');
   if (!tabBar || !center) return;
   const w = center.getBoundingClientRect().width;
-  if (w > 500) {
+  // Count how many tabs are visible
+  const visibleTabs = tabBar.querySelectorAll('.tab');
+  let count = 0;
+  visibleTabs.forEach(t => { if (t.style.display !== 'none') count++; });
+  // Each tab needs ~90px to show icon+label comfortably
+  const threshold = count * 90;
+  if (w > threshold) {
     tabBar.classList.add('tab-bar--wide');
   } else {
     tabBar.classList.remove('tab-bar--wide');
