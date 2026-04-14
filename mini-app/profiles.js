@@ -88,7 +88,8 @@ async function openProfileById(id) {
 }
 async function openProfile(p) {
   currentProfileId = p.id;
-  ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority'].forEach(t=>{ 
+  // Hide ALL center tabs (including reports, unit, etc.) — not just the static list
+  ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority','tab-reports','tab-notes'].forEach(t=>{ 
     const el = document.getElementById(t); 
     if (el && (typeof _isTabPinned !== 'function' || !_isTabPinned(t.replace('tab-','')))) {
       el.style.display = 'none'; 

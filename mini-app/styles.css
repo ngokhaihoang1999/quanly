@@ -269,6 +269,8 @@
       overflow: hidden;
       border: 1px solid var(--border);
       position: relative;
+      max-width: 600px;
+      margin: 0 auto;
     }
     /* Single continuous vertical line — 1 pseudo-element thay vì border-right từng row */
     .tl-container::before {
@@ -1491,6 +1493,47 @@
   #panelRight .chip {
     font-size: 10px;
     padding: 5px 8px;
+  }
+
+  /* All panel children: prevent overflow */
+  #panelLeft *,
+  #panelRight * {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  /* Dashboard funnel & stat grids: stack vertically */
+  #panelLeft .dash-grid,
+  #panelRight .dash-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  /* Profile cards inner: allow wrapping */
+  #panelLeft .profile-card .badges,
+  #panelRight .profile-card .badges {
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  /* Sub-tabs in profiles: allow wrapping */
+  #panelLeft .form-tabs,
+  #panelRight .form-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  #panelLeft .form-tab,
+  #panelRight .form-tab {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+  /* Stat numbers: smaller in panel */
+  #panelLeft .stat-number,
+  #panelRight .stat-number {
+    font-size: 22px;
+  }
+  /* Notes filter bar: wrap */
+  #panelLeft #notesFilterChips,
+  #panelRight #notesFilterChips {
+    flex-wrap: wrap;
   }
 
   /* Header must be a flex container parent so body stacks header + panels */

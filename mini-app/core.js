@@ -976,6 +976,11 @@ function applyDesktopLayout() {
 
     // Init resize dividers
     _initPanelDividers();
+
+    // Re-render notes in board mode (they may have been in list mode from mobile)
+    if (_isTabPinned('notes') && typeof renderNotes === 'function') {
+      setTimeout(() => renderNotes(), 100);
+    }
   } else {
     // Mobile mode
     if (!_isDesktopApplied) return;
@@ -1008,6 +1013,11 @@ function applyDesktopLayout() {
     // Hide auto-arrange button
     const arrangeBtn = document.getElementById('btnAutoArrange');
     if (arrangeBtn) arrangeBtn.style.display = 'none';
+
+    // Re-render notes in list mode
+    if (typeof renderNotes === 'function') {
+      setTimeout(() => renderNotes(), 100);
+    }
 
     if (typeof applyPermissions === 'function') applyPermissions();
   }
