@@ -1348,6 +1348,20 @@
 }
 
 @media (min-width: 1024px) {
+  /* ── Main tabs: stretch to fill width evenly ── */
+  .tab-bar {
+    gap: 4px;
+    padding: 0 8px 4px;
+  }
+  .tab-bar .tab {
+    flex: 1 1 0;
+    text-align: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
   /* ── Wrapper: fills remaining height after header ── */
   .desktop-layout {
     display: flex;
