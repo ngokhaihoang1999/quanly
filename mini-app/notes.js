@@ -24,13 +24,13 @@ async function loadPersonalNotes() {
     const res1 = await sbFetch(`/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(sc)}&order=pinned.desc,updated_at.desc`);
     _allMyNotes = res1.ok ? await res1.json() : [];
 
-    // Fetch notes shared with me (join with personal_notes)
-    const res2 = await sbFetch(`/rest/v1/note_shares?shared_with=eq.${encodeURIComponent(sc)}&select=*,note:personal_notes(*)`);
+    // Fetch notes shared with me (join with personal_notes via FK hint)
+    const res2 = await sbFetch(`/rest/v1/note_shares?shared_with=eq.${encodeURIComponent(sc)}&select=*,personal_notes!note_id(*)`);
     const shares = res2.ok ? await res2.json() : [];
     _sharedWithMeNotes = shares
-      .filter(s => s.note) // ensure note exists
+      .filter(s => s.personal_notes) // ensure note exists
       .map(s => ({
-        ...s.note,
+        ...s.personal_notes,
         _shared: true,
         _sharedBy: s.shared_by,
         _canEdit: s.can_edit,
