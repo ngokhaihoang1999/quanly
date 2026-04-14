@@ -60,26 +60,49 @@ function isoToShinInput(iso) {
   return `${sy}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// ── Time-ago utility: human-readable elapsed time ───────────────────────────
+// <1 phút → "vừa xong", <1h → "X phút", <24h → "X giờ", >=24h → "X ngày"
+function timeAgo(dateInput) {
+  if (!dateInput) return '';
+  const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+  if (isNaN(d)) return '';
+  const now = new Date();
+  const diffMs = now - d;
+  if (diffMs < 0) return 'vừa xong';
+  const mins  = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+  const days  = Math.floor(diffMs / 86400000);
+  if (mins < 1)    return 'vừa xong';
+  if (mins < 60)   return `${mins} phút`;
+  if (hours < 24)  return `${hours} giờ`;
+  return `${days} ngày`;
+}
+
 // ── Shared utility: label for the latest activity of a profile ──────────────
 // rec = latest record row, sess = latest consultation_session row (either can be null)
 function latestActivityLabel(rec, sess) {
   const recTime = rec ? new Date(rec.created_at).getTime() : 0;
   const sessTime = sess ? new Date(sess.created_at).getTime() : 0;
   if (!rec && !sess) return '';
+  let label, actDate;
   if (recTime >= sessTime) {
     const { record_type: rt, content: c } = rec;
-    if (rt === 'tu_van')      return `Báo cáo TV lần ${c?.lan_thu||''}`;
-    if (rt === 'bien_ban')    return `Báo cáo BB buổi ${c?.buoi_thu||''}`;
-    if (rt === 'chot_bb')     return '🎓 Chốt BB';
-    if (rt === 'chot_center') return '🏛️ Chốt Center';
-    if (rt === 'mo_kt')       return '📖 Đã mở KT';
-    if (rt === 'drop_out')    return '🔴 Drop-out';
-    if (rt === 'pause')        return '⏸️ Pause';
-    if (rt === 'alive')       return '🟢 Khôi phục Alive';
-    return rt;
+    actDate = rec.created_at;
+    if (rt === 'tu_van')      label = `Báo cáo TV lần ${c?.lan_thu||''}`;
+    else if (rt === 'bien_ban')    label = `Báo cáo BB buổi ${c?.buoi_thu||''}`;
+    else if (rt === 'chot_bb')     label = '🎓 Chốt BB';
+    else if (rt === 'chot_center') label = '🏛️ Chốt Center';
+    else if (rt === 'mo_kt')       label = '📖 Đã mở KT';
+    else if (rt === 'drop_out')    label = '🔴 Drop-out';
+    else if (rt === 'pause')       label = '⏸️ Pause';
+    else if (rt === 'alive')       label = '🟢 Khôi phục Alive';
+    else label = rt;
   } else {
-    return `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
+    actDate = sess.created_at;
+    label = `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
   }
+  const ago = timeAgo(actDate);
+  return ago ? `${label} · ${ago}` : label;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
