@@ -315,7 +315,7 @@ function _renderReports(el, subUnitIdx) {
   }
 
   // ═══════════════════════════════════════════════════
-  // MODULE 2: PHỄU CHUYỂN ĐỔI
+  // MODULE 2: PHỄU CHUYỂN ĐỔI (clickable bars)
   // ═══════════════════════════════════════════════════
   html += `<div class="rpt-section">
     <div class="rpt-title" onclick="this.nextElementSibling.classList.toggle('rpt-hidden')">🔄 PHỄU CHUYỂN ĐỔI</div>
@@ -324,40 +324,45 @@ function _renderReports(el, subUnitIdx) {
   if (total === 0) {
     html += '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
   } else {
+    // Pre-build profile lists per phase for click-to-view
+    const _funnelProfiles = {};
+    PHASES_ORDER.forEach((phase, i) => {
+      _funnelProfiles[i] = {
+        passed: alive.filter(p => !([PHASES_ORDER.length-1] === i) && phaseIdx(p.phase) > i),
+        staying: alive.filter(p => phaseIdx(p.phase) === i),
+        dropped: [...dropouts, ...paused].filter(p => phaseIdx(p.phase) === i)
+      };
+    });
+    // Store for click handler
+    window._funnelProfiles = _funnelProfiles;
+
     PHASES_ORDER.forEach((phase, i) => {
       const isLast = i === PHASES_ORDER.length - 1;
-      // Everyone who reached at least this phase
       const aliveReached = alive.filter(p => phaseIdx(p.phase) >= i).length;
       const dropReached = [...dropouts, ...paused].filter(p => phaseIdx(p.phase) >= i).length;
       const phaseTotal = aliveReached + dropReached;
 
-      // Split alive into: passed (moved beyond) vs staying (at exactly this phase)
       const alivePassed = isLast ? 0 : alive.filter(p => phaseIdx(p.phase) > i).length;
       const aliveStaying = alive.filter(p => phaseIdx(p.phase) === i).length;
-      // Dropout at exactly this phase
       const dropHere = [...dropouts, ...paused].filter(p => phaseIdx(p.phase) === i).length;
-      // Dropout that passed through (reached higher phases before dropping)
       const dropPassed = dropReached - dropHere;
 
-      // Green = passed (alive + dropout that moved beyond)
       const greenCount = alivePassed + dropPassed;
-      // Yellow = alive staying at this phase
-      const yellowCount = aliveStaying;
-      // Red = dropped out at exactly this phase
-      const redCount = dropHere;
+      const yellowCount2 = aliveStaying;
+      const redCount2 = dropHere;
 
       const greenPct = phaseTotal > 0 ? Math.round(greenCount / phaseTotal * 100) : 0;
-      const yellowPct = phaseTotal > 0 ? Math.round(yellowCount / phaseTotal * 100) : 0;
-      const redPct = phaseTotal > 0 ? Math.round(redCount / phaseTotal * 100) : 0;
+      const yellowPct = phaseTotal > 0 ? Math.round(yellowCount2 / phaseTotal * 100) : 0;
+      const redPct2 = phaseTotal > 0 ? Math.round(redCount2 / phaseTotal * 100) : 0;
       const barWidthPct = total > 0 ? Math.max(Math.round(phaseTotal / total * 100), phaseTotal > 0 ? 8 : 0) : 0;
 
       html += `<div class="rpt-funnel-row">
         <div class="rpt-funnel-label">${funnelLabels[i]}</div>
         <div class="rpt-funnel-bar-wrap">
           <div class="rpt-funnel-split" style="width:${barWidthPct}%;">
-            ${greenCount > 0 ? `<div class="rpt-funnel-passed" style="width:${greenPct}%;"><span>${greenCount}</span></div>` : ''}
-            ${yellowCount > 0 ? `<div class="rpt-funnel-current" style="width:${yellowPct}%;"><span>${yellowCount}</span></div>` : ''}
-            ${redCount > 0 ? `<div class="rpt-funnel-drop" style="width:${redPct}%;"><span>${redCount}</span></div>` : ''}
+            ${greenCount > 0 ? `<div class="rpt-funnel-passed" style="width:${greenPct}%;cursor:pointer;" onclick="_showFunnelList(${i},'passed')" title="Đã chuyển tiếp: ${greenCount}"><span>${greenCount}</span></div>` : ''}
+            ${yellowCount2 > 0 ? `<div class="rpt-funnel-current" style="width:${yellowPct}%;cursor:pointer;" onclick="_showFunnelList(${i},'staying')" title="Đang ở đây: ${yellowCount2}"><span>${yellowCount2}</span></div>` : ''}
+            ${redCount2 > 0 ? `<div class="rpt-funnel-drop" style="width:${redPct2}%;cursor:pointer;" onclick="_showFunnelList(${i},'dropped')" title="Drop-out: ${redCount2}"><span>${redCount2}</span></div>` : ''}
           </div>
         </div>
         <div class="rpt-funnel-num">${phaseTotal}</div>
@@ -367,33 +372,39 @@ function _renderReports(el, subUnitIdx) {
       <span style="display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span> Đã chuyển tiếp</span>
       <span style="display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span> Đang ở GĐ này</span>
       <span style="display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></span> Drop-out tại GĐ này</span>
-    </div>`;
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px;">💡 Bấm vào mảng màu để xem danh sách hồ sơ</div>`;
   }
   html += '</div></div>';
 
   // ═══════════════════════════════════════════════════
-  // MODULE 3: XU HƯỚNG THEO KỲ
+  // MODULE 3: XU HƯỚNG THEO KỲ (fixed data + clean chart)
   // ═══════════════════════════════════════════════════
   const semesters = (allSemesters || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   const semIds = semesters.map(s => s.id);
   const semLabels = semesters.map(s => s.name || '?');
 
-  // Count profiles per semester that reached each phase
-  function countBySem(minIdx) {
+  // Count ALL profiles (across semesters) per semester that reached each phase
+  // Use allProfiles (full dataset) not profiles (current-semester filtered)
+  function countAllBySem(minIdx) {
     return semIds.map(sid => {
-      return profiles.filter(p => {
-        const pFull = allProfiles.find(x => x.id === p.id);
-        return (pFull?.semester_id === sid) && phaseIdx(p.phase) >= minIdx;
-      }).length;
+      const semProfiles = (allProfiles || []).filter(p => p.semester_id === sid);
+      // Filter by scope if not system
+      const scopeFiltered = activeCodes
+        ? semProfiles.filter(p => activeCodes.includes(p.ndd_staff_code))
+        : (allScopeCodes.length > 0
+          ? semProfiles.filter(p => allScopeCodes.includes(p.ndd_staff_code))
+          : semProfiles);
+      return scopeFiltered.filter(p => phaseIdx(p.phase || 'chakki') >= minIdx).length;
     });
   }
 
   const trendLines = [
-    { label: 'Hapja', data: countBySem(0), color: '#f59e0b' },
-    { label: 'TV Hình', data: countBySem(1), color: '#ef4444' },
-    { label: 'TV', data: countBySem(2), color: '#6366f1' },
-    { label: 'BB', data: countBySem(3), color: '#22c55e' },
-    { label: 'Center', data: countBySem(4), color: '#8b5cf6' },
+    { label: 'Hapja', data: countAllBySem(0), color: '#f59e0b' },
+    { label: 'TV Hình', data: countAllBySem(1), color: '#ef4444' },
+    { label: 'TV', data: countAllBySem(2), color: '#6366f1' },
+    { label: 'BB', data: countAllBySem(3), color: '#22c55e' },
+    { label: 'Center', data: countAllBySem(4), color: '#8b5cf6' },
   ];
 
   html += `<div class="rpt-section">
@@ -403,7 +414,8 @@ function _renderReports(el, subUnitIdx) {
   if (semesters.length === 0) {
     html += '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Chưa có kỳ khai giảng</div>';
   } else {
-    const W = 300, H = 150, PAD_L = 30, PAD_R = 10, PAD_T = 20, PAD_B = 28;
+    // Bigger chart with proper spacing
+    const W = 360, H = 200, PAD_L = 36, PAD_R = 20, PAD_T = 24, PAD_B = 44;
     const chartW = W - PAD_L - PAD_R;
     const chartH = H - PAD_T - PAD_B;
     const maxVal = Math.max(...trendLines.flatMap(l => l.data), 1);
@@ -413,51 +425,68 @@ function _renderReports(el, subUnitIdx) {
     function getY(v) { return PAD_T + chartH - (v / maxVal) * chartH; }
 
     let svg = '';
-    // Grid
-    for (let g = 0; g <= 4; g++) {
-      const y = PAD_T + (g / 4) * chartH;
-      const val = Math.round(maxVal * (1 - g / 4));
-      svg += `<line x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="3,3"/>`;
-      svg += `<text x="${PAD_L - 4}" y="${y + 3}" text-anchor="end" fill="var(--text3)" font-size="8" font-weight="600">${val}</text>`;
+
+    // Background
+    svg += `<rect x="${PAD_L}" y="${PAD_T}" width="${chartW}" height="${chartH}" fill="var(--surface2)" rx="4" opacity="0.3"/>`;
+
+    // Grid lines + Y labels
+    const gridLines = Math.min(maxVal, 5);
+    for (let g = 0; g <= gridLines; g++) {
+      const y = PAD_T + (g / gridLines) * chartH;
+      const val = Math.round(maxVal * (1 - g / gridLines));
+      svg += `<line x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" stroke="var(--border)" stroke-width="0.5" stroke-dasharray="4,3"/>`;
+      svg += `<text x="${PAD_L - 6}" y="${y + 3}" text-anchor="end" fill="var(--text3)" font-size="9" font-weight="600">${val}</text>`;
     }
-    // X labels
+
+    // Vertical grid + X labels
     semLabels.forEach((lbl, i) => {
-      svg += `<text x="${getX(i)}" y="${H - 4}" text-anchor="middle" fill="var(--text2)" font-size="8" font-weight="700">${lbl}</text>`;
+      const x = getX(i);
+      svg += `<line x1="${x}" y1="${PAD_T}" x2="${x}" y2="${PAD_T + chartH}" stroke="var(--border)" stroke-width="0.3" stroke-dasharray="2,4"/>`;
+      // Multi-line label if long
+      const parts = lbl.split('/');
+      if (parts.length === 2) {
+        svg += `<text x="${x}" y="${H - PAD_B + 16}" text-anchor="middle" fill="var(--text2)" font-size="9" font-weight="700">${parts[0]}/</text>`;
+        svg += `<text x="${x}" y="${H - PAD_B + 27}" text-anchor="middle" fill="var(--text2)" font-size="9" font-weight="700">${parts[1]}</text>`;
+      } else {
+        svg += `<text x="${x}" y="${H - PAD_B + 18}" text-anchor="middle" fill="var(--text2)" font-size="9" font-weight="700">${lbl}</text>`;
+      }
     });
-    // Build collision map to offset overlapping dots
-    const dotPositions = {}; // key = `semIdx_value` => count
+
+    // Build collision map for overlapping dots
+    const dotMap = {};
     trendLines.forEach((line, li) => {
       line.data.forEach((v, si) => {
         const key = `${si}_${v}`;
-        if (!dotPositions[key]) dotPositions[key] = [];
-        dotPositions[key].push(li);
+        if (!dotMap[key]) dotMap[key] = [];
+        dotMap[key].push(li);
       });
     });
 
-    // Lines + dots
+    // Lines + dots with offset for overlapping values
     trendLines.forEach((line, li) => {
-      if (n === 1) {
-        const key = `0_${line.data[0]}`;
-        const group = dotPositions[key];
-        const offsetIdx = group.indexOf(li);
-        const offsetY = group.length > 1 ? (offsetIdx - (group.length - 1) / 2) * 10 : 0;
-        const cx = getX(0);
-        const cy = getY(line.data[0]) + offsetY;
-        svg += `<circle cx="${cx}" cy="${cy}" r="4" fill="${line.color}" opacity="0.9"/>`;
-        if (line.data[0] > 0) svg += `<text x="${cx + 8}" y="${cy + 3}" fill="${line.color}" font-size="8" font-weight="700">${line.data[0]}</text>`;
-      } else {
+      // Draw polyline
+      if (n > 1) {
         const points = line.data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
-        svg += `<polyline points="${points}" fill="none" stroke="${line.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
-        line.data.forEach((v, i) => {
-          const key = `${i}_${v}`;
-          const group = dotPositions[key];
-          const offsetIdx = group.indexOf(li);
-          const offsetY = group.length > 1 ? (offsetIdx - (group.length - 1) / 2) * 8 : 0;
-          const cy = getY(v) + offsetY;
-          svg += `<circle cx="${getX(i)}" cy="${cy}" r="3" fill="${line.color}"/>`;
-          if (v > 0) svg += `<text x="${getX(i)}" y="${cy - 5}" text-anchor="middle" fill="${line.color}" font-size="7" font-weight="700">${v}</text>`;
-        });
+        svg += `<polyline points="${points}" fill="none" stroke="${line.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
       }
+
+      // Draw dots + labels
+      line.data.forEach((v, si) => {
+        const key = `${si}_${v}`;
+        const group = dotMap[key];
+        const offsetIdx = group.indexOf(li);
+        // Offset overlapping dots horizontally instead of vertically for clarity
+        const offsetX = group.length > 1 ? (offsetIdx - (group.length - 1) / 2) * 9 : 0;
+        const cx = getX(si) + offsetX;
+        const cy = getY(v);
+
+        svg += `<circle cx="${cx}" cy="${cy}" r="4" fill="${line.color}" stroke="white" stroke-width="1.5"/>`;
+        if (v > 0) {
+          // Label above dot, offset if multiple
+          const labelY = cy - 7 - (group.length > 1 ? offsetIdx * 0 : 0);
+          svg += `<text x="${cx}" y="${labelY}" text-anchor="middle" fill="${line.color}" font-size="8" font-weight="800">${v}</text>`;
+        }
+      });
     });
 
     html += `<div class="rpt-trend-card">
@@ -465,9 +494,11 @@ function _renderReports(el, subUnitIdx) {
       <div class="rpt-legend">
         ${trendLines.map(l => `<span class="rpt-legend-item"><span class="rpt-legend-dot" style="background:${l.color};"></span>${l.label}</span>`).join('')}
       </div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:4px;">Mỗi kỳ: số hồ sơ đạt đến giai đoạn tương ứng</div>
     </div>`;
   }
   html += '</div></div>';
+
 
   // ═══════════════════════════════════════════════════
   // MODULE 4: HOẠT ĐỘNG NDD
@@ -613,4 +644,46 @@ function _renderReports(el, subUnitIdx) {
   }
 
   el.innerHTML = html;
+}
+
+// ── Funnel click-to-view profile list ──
+const FUNNEL_PHASE_LABELS = ['Hapja/Chakki', 'TV Hình+', 'Group TV+', 'BB+', 'Center'];
+const FUNNEL_TYPE_LABELS = { passed: '✅ Đã chuyển tiếp', staying: '🟡 Đang ở giai đoạn', dropped: '🔴 Drop-out/Pause' };
+
+function _showFunnelList(phaseIdx, type) {
+  const fp = window._funnelProfiles;
+  if (!fp || !fp[phaseIdx]) return;
+  const profiles = fp[phaseIdx][type] || [];
+  const title = `${FUNNEL_PHASE_LABELS[phaseIdx]} — ${FUNNEL_TYPE_LABELS[type] || type}`;
+
+  if (profiles.length === 0) {
+    showToast('Không có hồ sơ');
+    return;
+  }
+
+  // Use recordModal to show the list
+  document.getElementById('recordModalTitle').textContent = `📋 ${title} (${profiles.length})`;
+  let listHtml = '<div style="display:flex;flex-direction:column;gap:6px;">';
+  profiles.forEach(p => {
+    const status = p.fruit_status === 'dropout' ? '🔴' : p.fruit_status === 'pause' ? '⏸️' : '🟢';
+    const phase = (typeof PHASE_LABELS !== 'undefined' && PHASE_LABELS[p.phase]) || p.phase || 'chakki';
+    const ndd = p.ndd || p.ndd_staff_code || '';
+    const nddLabel = ndd ? (() => { const s = allStaff.find(x => x.staff_code === ndd); return s ? (s.nickname || s.full_name || ndd) : ndd; })() : '';
+    listHtml += `<div onclick="closeModal('addRecordModal');openProfileById('${p.id}')"
+      style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface2);border-radius:10px;cursor:pointer;border:1px solid var(--border);transition:background 0.15s;"
+      onmouseover="this.style.background='var(--chip-bg)'" onmouseout="this.style.background='var(--surface2)'">
+      <span style="font-size:14px;">${status}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.full_name || '?'}</div>
+        <div style="font-size:10px;color:var(--text3);">${phase}${nddLabel ? ` · NDD: ${nddLabel}` : ''}</div>
+      </div>
+      <span style="font-size:11px;color:var(--text3);">›</span>
+    </div>`;
+  });
+  listHtml += '</div>';
+
+  document.getElementById('recordModalBody').innerHTML = listHtml;
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) saveBtn.style.display = 'none';
+  document.getElementById('addRecordModal').classList.add('open');
 }
