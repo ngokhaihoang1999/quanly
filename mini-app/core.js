@@ -804,9 +804,30 @@ async function switchSemester(id) {
   if (id === currentSemesterId) return;
   currentSemesterId = id || null;
   localStorage.setItem('cj_semester_id', currentSemesterId || '');
-  // Load profiles first so allProfiles is ready for dashboard semester filtering
+
+  // Invalidate ALL data caches so every tab reloads fresh
+  invalidateCache();
+  // Also clear reports cache
+  _rptCache = null;
+
+  // Load core data first (profiles drives everything)
   await loadProfiles();
-  await loadDashboard();
+
+  // Reload whatever tab is currently active
+  const activeTab = document.querySelector('.tab-bar .tab.active')?.dataset?.tab;
+  const reloaders = {
+    unit:      () => { loadDashboard(); },
+    personal:  () => { loadDashboard(); },
+    staff:     () => { if (typeof loadStaff === 'function') loadStaff(); },
+    structure: () => { if (typeof loadStructure === 'function') loadStructure(); },
+    calendar:  () => { if (typeof loadCalendar === 'function') loadCalendar(); },
+    priority:  () => { if (typeof loadPriority === 'function') loadPriority(); },
+    reports:   () => { if (typeof loadReports === 'function') loadReports(); },
+    notes:     () => { if (typeof loadNotes === 'function') loadNotes(); },
+  };
+  if (reloaders[activeTab]) reloaders[activeTab]();
+  else loadDashboard(); // fallback
+
   showToast('📂 Đã chuyển Khai Giảng');
 }
 
