@@ -93,17 +93,17 @@ async function loadCalendar() {
 // Fetch TV & BB records and merge as virtual calendar events
 async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
   try {
-    // Fetch BB records with buoi_tiep in content (bien_ban type)
-    const bbRes = await sbFetch(`/rest/v1/records?record_type=eq.bien_ban&select=id,profile_id,content,created_at&order=created_at.asc`);
+    // Fetch BB records (buoi_tiep in content) AND TV sessions (scheduled_at column) in parallel
+    const [bbRes, tvRes] = await Promise.all([
+      sbFetch(`/rest/v1/records?record_type=eq.bien_ban&select=id,profile_id,content,created_at&order=created_at.asc`),
+      sbFetch(`/rest/v1/consultation_sessions?scheduled_at=not.is.null&select=id,profile_id,session_number,tool,scheduled_at,tvv_staff_code&order=scheduled_at.asc`)
+    ]);
     const bbRecords = bbRes.ok ? await bbRes.json() : [];
-
-    // Fetch TV records (tu_van type) — they have scheduled_at in content
-    const tvRes = await sbFetch(`/rest/v1/records?record_type=eq.tu_van&select=id,profile_id,content,created_at&order=created_at.asc`);
-    const tvRecords = tvRes.ok ? await tvRes.json() : [];
+    const tvSessions = tvRes.ok ? await tvRes.json() : [];
 
     const start = new Date(startStr), end = new Date(endStr);
 
-    // Process BB records — extract buoi_tiep dates
+    // Process BB records — extract buoi_tiep dates from content JSON
     bbRecords.forEach(rec => {
       const c = typeof rec.content === 'string' ? JSON.parse(rec.content) : rec.content;
       if (!c || !c.buoi_tiep) return;
@@ -133,26 +133,25 @@ async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
       });
     });
 
-    // Process TV records — extract scheduled_at dates
-    tvRecords.forEach(rec => {
-      const c = typeof rec.content === 'string' ? JSON.parse(rec.content) : rec.content;
-      if (!c || !c.scheduled_at) return;
-      const p = allProfiles.find(x => x.id === rec.profile_id);
+    // Process TV sessions — scheduled_at is a DB column, not content JSON
+    tvSessions.forEach(sess => {
+      if (!sess.scheduled_at) return;
+      const p = allProfiles.find(x => x.id === sess.profile_id);
       if (!p) return;
       if (scope !== 'system' && p.ndd_staff_code !== myCode && p.tvv_staff_code !== myCode) return;
 
-      const d = new Date(c.scheduled_at);
+      const d = new Date(sess.scheduled_at);
       if (isNaN(d.getTime()) || d < start || d > end) return;
       const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
       if (calEvents.find(e => e.event_type === 'chot_tv' && e.profile_id === p.id && e.event_date === dateStr)) return;
 
-      const sessNum = c.lan_thu || '?';
+      const sessNum = sess.session_number || '?';
       calEvents.push({
-        id: `vtv_${rec.id}`,
+        id: `vtv_${sess.id}`,
         event_type: 'chot_tv',
-        title: `Chốt TV lần ${sessNum} — ${p.full_name || '?'}`,
+        title: `Lịch TV lần ${sessNum} (${sess.tool || '?'}) — ${p.full_name || '?'}`,
         event_date: dateStr,
         event_time: timeStr,
         profile_id: p.id,
