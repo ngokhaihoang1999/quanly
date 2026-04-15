@@ -392,7 +392,10 @@
     </div>
     <div class="field-group" style="margin-top:10px;margin-bottom:0;">
       <label style="color:rgba(255,255,255,0.8);">Thời gian</label>
-      <input type="text" id="stv_datetime" placeholder="yy.mm.dd hh:mm (VD: 43.04.12 09:26)" inputmode="numeric" autocomplete="off" maxlength="14" style="padding:10px 8px;font-size:14px;letter-spacing:0.5px;" oninput="formatDateTimeInput(this)" />
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:3px;">Ngày</div><input type="date" id="stv_date" style="width:100%;padding:10px 8px;font-size:14px;" /></div>
+        <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:3px;">Giờ</div><input type="time" id="stv_time" style="width:100%;padding:10px 8px;font-size:14px;" /></div>
+      </div>
       <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px;">💡 Bạn có thể thay đổi thời gian này sau đó</div>
     </div>
   </div>
@@ -675,7 +678,7 @@
 <script src="dashboard.js?v=2026041307"></script>
 <script src="profiles.js?v=2026041510"></script>
 <script src="hapja.js?v=2026041300"></script>
-<script src="records.js?v=2026041420"></script>
+<script src="records.js?v=2026041514"></script>
 <script src="staff.js?v=2026041420"></script>
 <script src="structure.js?v=2026041106"></script>
 <script src="calendar.js?v=2026041514"></script>

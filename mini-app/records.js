@@ -682,10 +682,14 @@ async function openScheduleTVModal(existingSession) {
     editingSessionId = existingSession.id;
     if (el('stv_session_num')) el('stv_session_num').value = existingSession.session_number || 1;
     if (el('stv_tool')) el('stv_tool').value = existingSession.tool || '';
-    if (el('stv_datetime')) {
-      // Format dd/mm/yy hh:mm
+    if (el('stv_date') && el('stv_time')) {
       const dt = existingSession.scheduled_at || existingSession.created_at;
-      el('stv_datetime').value = isoToShinInput(dt);
+      if (dt) {
+        const d = new Date(dt);
+        const pad = n => String(n).padStart(2,'0');
+        el('stv_date').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+        el('stv_time').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
     }
     if (el('stv_tvv')) el('stv_tvv').value = existingSession.tvv_staff_code || '';
     const subtitleEl = el('stv_subtitle');
@@ -716,7 +720,8 @@ async function openScheduleTVModal(existingSession) {
     }
     if (el('stv_session_num')) el('stv_session_num').value = nextNum;
     if (el('stv_tool')) el('stv_tool').value = '';
-    if (el('stv_datetime')) el('stv_datetime').value = '';
+    if (el('stv_date')) el('stv_date').value = '';
+    if (el('stv_time')) el('stv_time').value = '';
     if (el('stv_tvv')) el('stv_tvv').value = '';
     const subtitleEl = el('stv_subtitle');
     if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Lần ${nextNum}` : `Lần ${nextNum}`;
@@ -740,9 +745,13 @@ async function saveScheduleTV() {
 
   const num = parseInt(document.getElementById('stv_session_num').value) || 1;
   const tool = document.getElementById('stv_tool').value.trim();
-  const dtRaw = document.getElementById('stv_datetime').value.trim();
-  const dt = parseShinInput(dtRaw) || '';
-  if (dtRaw && !dt) { showToast('\u26a0\ufe0f Sai \u0111\u1ecbnh d\u1ea1ng (VD: 43.04.12 09:26)'); if (btn) { btn.disabled = false; btn.textContent = editingSessionId ? '\ud83d\udcbe C\u1eadp nh\u1eadt' : '\u2705 Ch\u1ed1t T\u01b0 V\u1ea5n'; } return; }
+  const dtDate = document.getElementById('stv_date')?.value; // YYYY-MM-DD
+  const dtTime = document.getElementById('stv_time')?.value; // HH:mm
+  let dt = '';
+  if (dtDate) {
+    const timeVal = dtTime || '00:00';
+    dt = new Date(`${dtDate}T${timeVal}:00`).toISOString();
+  }
   const tvv = getStaffCodeFromInput('stv_tvv');
 
   if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
