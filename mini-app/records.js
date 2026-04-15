@@ -62,7 +62,7 @@ async function loadJourney(profileId, currentPhase) {
     } else if (cp === 'tu_van') {
       // (Báo cáo BB được thêm ở tab BB, nút Mở KT nằm trên Báo cáo BB)
     } else if (cp === 'bb') {
-      btnHtml = `<button class="add-record-btn" onclick="chotCenter()" style="flex:1;background:#8b5cf6;color:white;">🏛️ Chốt Center</button>`;
+      // BB milestones + conditional Chốt Center — rendered after records fetch
     }
     // Undo button — visible for any phase past Chakki
     if (!['new','chakki','completed'].includes(cp)) {
@@ -144,11 +144,45 @@ async function loadJourney(profileId, currentPhase) {
       if (btn && hasBcTv2) btn.style.display = '';
     }
 
+    // === BB Milestones: detect status & render buttons ===
+    if (cp === 'bb' && !isDropout) {
+      const BB_MS = [
+        { type: 'bai_dac_biet', icon: '⭐', label: 'Bài đặc biệt' },
+        { type: 'pv_gvbb',      icon: '🎤', label: 'PV GVBB' },
+        { type: 'dky_center',   icon: '📝', label: 'ĐKý Center' },
+        { type: 'pv_hs',        icon: '🎓', label: 'PV HS' }
+      ];
+      const msRecs = recs.filter(r => BB_MS.some(m => m.type === r.record_type));
+      const msDone = new Set(msRecs.map(r => r.record_type));
+
+      let msHtml = BB_MS.map(m => {
+        const done = msDone.has(m.type);
+        return `<button onclick="toggleBBMilestone('${m.type}',${done})" class="add-record-btn"
+          style="flex:1 1 45%;min-width:110px;font-size:12px;padding:8px 6px;
+          ${done ? 'background:var(--green);color:white;' : 'background:var(--surface2);color:var(--text1);border:1px dashed var(--border);'}">
+          ${done ? '✅' : '⬜'} ${m.icon} ${m.label}
+        </button>`;
+      }).join('');
+
+      if (msDone.has('pv_hs')) {
+        msHtml += `<button class="add-record-btn" onclick="chotCenter()"
+          style="flex:1 1 100%;background:#8b5cf6;color:white;margin-top:2px;">
+          🏛️ Chốt Center
+        </button>`;
+      }
+
+      // Prepend milestone buttons before the undo button
+      const undoBtn = phBtnEl.innerHTML;
+      phBtnEl.innerHTML = msHtml + undoBtn;
+    }
+
     let events = [];
 
-    // Separate mo_kt records for lookup
+    // Separate mo_kt and bai_dac_biet records for lookup
     const moKtRecords = recs.filter(r => r.record_type === 'mo_kt');
     const matchedMoKtIds = new Set();
+    const bdbRecords = recs.filter(r => r.record_type === 'bai_dac_biet');
+    const matchedBdbIds = new Set();
 
     // 1. Chakki — ALWAYS at bottom (oldest anchor)
     if (hapjas.length > 0) {
@@ -182,6 +216,10 @@ async function loadJourney(profileId, currentPhase) {
       }
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Lập Group TV - BB'; isMajor = true; }
       else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
+      else if (r.record_type === 'bai_dac_biet') { return; } // handled via split-row on bien_ban
+      else if (r.record_type === 'pv_gvbb')     { icon='🎤'; text='PV GVBB'; isMajor = true; }
+      else if (r.record_type === 'dky_center')   { icon='📝'; text='ĐKý Center'; isMajor = true; }
+      else if (r.record_type === 'pv_hs')        { icon='🎓'; text='PV HS'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; }
       else if (r.record_type === 'note')        { return; }
       else if (r.record_type === 'phase_change') { return; }
@@ -201,10 +239,21 @@ async function loadJourney(profileId, currentPhase) {
         }
       }
 
+      // Check if this bien_ban has a matching Bài đặc biệt
+      let hasBDB = false, bdbRecordId = null;
+      if (r.record_type === 'bien_ban' && _buoiThu != null) {
+        const bdbMatch = bdbRecords.find(m => Number(m.content?.buoi_thu) === Number(_buoiThu));
+        if (bdbMatch) {
+          hasBDB = true;
+          bdbRecordId = bdbMatch.id;
+          matchedBdbIds.add(bdbMatch.id);
+        }
+      }
+
       events.push({
         date: r.created_at, icon, text, sortDate: new Date(r.created_at).getTime(),
         deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type,
-        isMajor, _buoiThu, hasKT, ktRecordId
+        isMajor, _buoiThu, hasKT, ktRecordId, hasBDB, bdbRecordId
       });
     });
 
@@ -282,17 +331,34 @@ async function loadJourney(profileId, currentPhase) {
           editBtn = `<button onclick="event.stopPropagation();editRecord('${e._id}','${e._rtype}')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>`;
         }
 
-        if (e.hasKT) {
-          // ── SPLIT ROW: "Đã mở KT" left + BB report right ──
-          const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
-          html += `<div class="tl-item tl-kt" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
-            <div class="tl-left">
+        if (e.hasKT || e.hasBDB) {
+          // ── SPLIT ROW: milestone(s) left + BB report right ──
+          let leftHtml = '';
+          if (e.hasKT) {
+            const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
+            leftHtml += `<div style="display:flex;align-items:center;gap:6px;">
               <span class="tl-icon">📖</span>
               <div class="tl-left-info">
                 <span class="tl-label tl-label-kt">Đã mở KT</span>
                 ${d ? `<span class="tl-date">${d}</span>` : ''}
               </div>
               ${ktDel}
+            </div>`;
+          }
+          if (e.hasBDB) {
+            const bdbDel = `<button onclick="event.stopPropagation();deleteBBMilestone('${e.bdbRecordId}')" title="Hủy Bài đặc biệt" class="tl-del-btn">🗑</button>`;
+            leftHtml += `<div style="display:flex;align-items:center;gap:6px;">
+              <span class="tl-icon">⭐</span>
+              <div class="tl-left-info">
+                <span class="tl-label" style="color:#f59e0b;font-weight:600;">Bài đặc biệt</span>
+                ${d ? `<span class="tl-date">${d}</span>` : ''}
+              </div>
+              ${bdbDel}
+            </div>`;
+          }
+          html += `<div class="tl-item tl-kt" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+            <div class="tl-left"${(e.hasKT && e.hasBDB) ? ' style="flex-direction:column;gap:8px;"' : ''}>
+              ${leftHtml}
             </div>
             <div class="tl-right tl-clickable" ${viewAttr}>
               <span class="tl-icon" style="flex-shrink:0">${e.icon}</span>
@@ -1346,4 +1412,134 @@ function showKTSessionPicker(unconfirmed, confirmedSessions, allSessions) {
       if (e.target === overlay) { overlay.remove(); resolve([]); }
     });
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BB MILESTONES — Toggle & Session Picker
+// ══════════════════════════════════════════════════════════════════════════════
+
+const BB_MS_LABELS = {
+  bai_dac_biet: 'Bài đặc biệt',
+  pv_gvbb:      'PV GVBB',
+  dky_center:   'ĐKý Center',
+  pv_hs:        'PV HS'
+};
+
+async function toggleBBMilestone(type, isDone) {
+  if (!currentProfileId) return;
+
+  if (isDone) {
+    // Undo — delete the milestone record
+    if (!await showConfirmAsync(`Hủy "${BB_MS_LABELS[type]}"?`)) return;
+    try {
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.${type}`, { method: 'DELETE' });
+      showToast('↩️ Đã hủy');
+      await _refreshCurrentProfile();
+    } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+    return;
+  }
+
+  // Create milestone
+  if (type === 'bai_dac_biet') {
+    await pickBaiDacBiet();
+  } else {
+    const label = BB_MS_LABELS[type];
+    if (!await showConfirmAsync(`Xác nhận "${label}" đã hoàn thành?`)) return;
+    try {
+      await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
+        profile_id: currentProfileId, record_type: type,
+        content: { label }
+      })});
+      showToast(`✅ ${label} — Đã hoàn thành!`);
+      await _refreshCurrentProfile();
+    } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+  }
+}
+
+async function pickBaiDacBiet() {
+  if (!currentProfileId) return;
+  try {
+    // Fetch BB reports
+    const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
+    const bbRecords = await bbRes.json();
+    if (!bbRecords || bbRecords.length === 0) {
+      showToast('⚠️ Chưa có báo cáo BB nào.'); return;
+    }
+    // Fetch existing bai_dac_biet
+    const bdRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bai_dac_biet&select=id,content`);
+    const bdRecords = await bdRes.json();
+    const doneSessions = new Set((bdRecords||[]).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
+    const allSessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
+    const available = allSessions.filter(n => !doneSessions.has(n));
+
+    if (available.length === 0) {
+      showToast('✅ Tất cả buổi BB đã có Bài đặc biệt.'); return;
+    }
+
+    // Show picker
+    const picked = await showBDBSessionPicker(available, doneSessions, allSessions);
+    if (!picked) return;
+
+    await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
+      profile_id: currentProfileId, record_type: 'bai_dac_biet',
+      content: { label: `Bài đặc biệt (buổi BB ${picked})`, buoi_thu: picked }
+    })});
+    showToast(`⭐ Bài đặc biệt buổi BB ${picked} — Đã ghi nhận!`);
+    await _refreshCurrentProfile();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
+
+function showBDBSessionPicker(available, doneSessions, allSessions) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--card);border-radius:var(--radius);padding:20px;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
+    let html = `<div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text1);">⭐ Chọn buổi BB cho Bài đặc biệt</div>`;
+    html += `<div style="display:flex;flex-direction:column;gap:8px;">`;
+    allSessions.forEach(n => {
+      const done = doneSessions.has(n);
+      const avail = available.includes(n);
+      if (done) {
+        html += `<div style="padding:10px 14px;border-radius:10px;background:var(--green,#22c55e);color:white;font-size:13px;font-weight:600;opacity:0.7;">
+          ⭐ Buổi ${n} — Đã có Bài đặc biệt</div>`;
+      } else if (avail) {
+        html += `<button class="bdb-pick-btn" data-session="${n}" style="padding:10px 14px;border-radius:10px;background:#fef3c7;border:2px solid #fcd34d;color:#92400e;font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.2s;">
+          📋 Buổi ${n} — Chọn buổi này</button>`;
+      }
+    });
+    html += `</div>`;
+    html += `<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">`;
+    html += `<button id="bdbPickCancel" style="padding:8px 16px;border-radius:10px;background:var(--bg2,#f5f5f5);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:12px;font-weight:600;cursor:pointer;">Hủy</button>`;
+    html += `</div>`;
+    card.innerHTML = html;
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // Click a session button to pick it
+    card.querySelectorAll('.bdb-pick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const n = Number(btn.dataset.session);
+        overlay.remove();
+        resolve(n);
+      });
+    });
+
+    card.querySelector('#bdbPickCancel').addEventListener('click', () => {
+      overlay.remove();
+      resolve(null);
+    });
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) { overlay.remove(); resolve(null); }
+    });
+  });
+}
+
+async function deleteBBMilestone(recordId) {
+  if (!await showConfirmAsync('Hủy sự kiện này?')) return;
+  try {
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
+    showToast('🗑️ Đã hủy');
+    await _refreshCurrentProfile();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
