@@ -723,13 +723,7 @@ function stopNotesPoll() {
   if (_notesPollTimer) { clearInterval(_notesPollTimer); _notesPollTimer = null; }
 }
 
-// ── escHtml helper (safe to redefine — notification.js doesn't have this) ──
-function escHtml(s) {
-  if (!s) return '';
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
+// escHtml() → moved to utils.js
 
 // ── Init (called when tab opens) ──
 function initNotesTab() {

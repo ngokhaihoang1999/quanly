@@ -155,17 +155,8 @@ function getNotifIcon(type) {
   return m[type] || '🔔';
 }
 
-function getTimeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'Vừa xong';
-  if (m < 60) return `${m} phút trước`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} giờ trước`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d} ngày trước`;
-  return shinDate(dateStr);
-}
+// getTimeAgo() → moved to utils.js
+
 
 // ─── SCOPE HELPERS ────────────────────────────────────────────────────────────
 // Get all managers (GYJN→TJN→YJYN) above a staff member
