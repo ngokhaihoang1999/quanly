@@ -1168,6 +1168,14 @@ function _updateTabBarMode() {
   // Remove all mode classes first
   tabBar.classList.remove('tab-bar--wide', 'tab-bar--dropdown');
 
+  // Mobile < 768px: luôn dropdown (tab bar ngang quá chật cho 7-8 tab)
+  const isMobile = w < 768;
+  if (isMobile) {
+    tabBar.classList.add('tab-bar--dropdown');
+    _ensureTabDropdown(tabBar, visibleTabs);
+    return;
+  }
+
   if (w > wideThreshold) {
     tabBar.classList.add('tab-bar--wide');
     _removeTabDropdown(tabBar);
@@ -2169,6 +2177,8 @@ const ACCENT_PRESETS = [
 ];
 
 const ALL_TABS_DEF = [
+  { key: 'notes',     label: '📝 Notes' },
+  { key: 'reports',   label: '📊 Báo cáo' },
   { key: 'unit',      label: '🏢 Đơn vị' },
   { key: 'personal',  label: '👤 Cá nhân' },
   { key: 'priority',  label: '⚡ Ưu tiên' },

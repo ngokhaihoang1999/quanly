@@ -247,17 +247,6 @@ async function openProfile(p) {
         <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>` : `<b>${gvbbDisplay||'---'}</b>`}</div>
         ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
       </div>
-      ${hasRealBBGroup && ['tu_van','bb','center','completed'].includes(ph) ? `
-      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:15px;">💬</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${realGroupTitle}</div>
-        </div>
-        <button onclick="openBBGroup(this)"
-           data-gid="${realGroupId}"
-           data-link="${(realGroupInviteLink||'').replace(/"/g,'&quot;')}"
-           style="padding:5px 14px;border-radius:20px;background:var(--green);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;">Mở Group →</button>
-      </div>` : ''}
       </div>
     </div>`;
 
