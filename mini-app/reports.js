@@ -113,19 +113,27 @@ async function loadReports() {
     const sessMap = {};
     allSessions.forEach(s => { if (!sessMap[s.profile_id]) sessMap[s.profile_id] = []; sessMap[s.profile_id].push(s); });
 
-    // Build full profile map from roles
+    // Build full profile map directly from allProfiles (ground truth)
+    // This ensures ALL profiles are counted, not just those with NDD role assignments
     const profileMap = new Map();
-    allRoles.forEach(r => {
-      if (r.role_type !== 'ndd') return;
-      const p = r.fruit_groups?.profiles;
-      const pid = r.fruit_groups?.profile_id;
-      if (!p || !pid) return;
-      if (currentSemesterId) {
-        const pFull = allProfiles.find(x => x.id === pid);
-        if (pFull && pFull.semester_id !== currentSemesterId) return;
-      }
-      if (!profileMap.has(pid)) {
-        profileMap.set(pid, { ...p, id: pid, ndd: r.staff_code });
+    const codeSet = new Set(allScopeCodes);
+    (allProfiles || []).forEach(p => {
+      // Semester filter
+      if (currentSemesterId && p.semester_id !== currentSemesterId) return;
+      // Scope filter: profile's NDD must be in our scope codes
+      if (codeSet.size > 0 && !codeSet.has(p.ndd_staff_code)) return;
+      if (!profileMap.has(p.id)) {
+        profileMap.set(p.id, {
+          ...p,
+          id: p.id,
+          ndd: p.ndd_staff_code,
+          full_name: p.full_name,
+          phase: p.phase || 'chakki',
+          fruit_status: p.fruit_status || 'alive',
+          created_at: p.created_at,
+          is_kt_opened: p.is_kt_opened,
+          dropout_reason: p.dropout_reason
+        });
       }
     });
 
