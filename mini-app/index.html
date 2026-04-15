@@ -670,9 +670,9 @@
 <script src="webhook.js?v=2026041307"></script>
 <script src="avatar.js?v=2026041017"></script>
 <script src="reports.js?v=2026041307"></script>
-<script src="core.js?v=2026041508"></script>
+<script src="core.js?v=2026041509"></script>
 <script src="dashboard.js?v=2026041307"></script>
-<script src="profiles.js?v=2026041508"></script>
+<script src="profiles.js?v=2026041509"></script>
 <script src="hapja.js?v=2026041300"></script>
 <script src="records.js?v=2026041420"></script>
 <script src="staff.js?v=2026041420"></script>
@@ -681,12 +681,24 @@
 <script src="notification.js?v=2026041307"></script>
 <script src="priority.js?v=2026041307"></script>
 <script src="notes.js?v=2026041508"></script>
-<script>
-  window.markmap = { autoLoader: { manual: true, toolbar: true } };
-</script>
-<script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@latest"></script>
 <script src="lacie.js?v=2026041307"></script>
 <script src="mindmap.js?v=2026041307"></script>
+<script>
+// Lazy-load markmap CDN — chỉ load khi mở tab Tư Dưy lần đầu tiên
+window._markmapLoaded = false;
+window._lazyMarkmap = function() {
+  if (window._markmapLoaded) return Promise.resolve();
+  window._markmapLoaded = 'loading';
+  return new Promise(function(resolve) {
+    window.markmap = { autoLoader: { manual: true, toolbar: true } };
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@latest';
+    s.onload = function() { window._markmapLoaded = true; resolve(); };
+    s.onerror = function() { window._markmapLoaded = false; resolve(); };
+    document.head.appendChild(s);
+  });
+};
+</script>
 <!-- Deep link logic moved to core.js -->
 </body>
 </html>

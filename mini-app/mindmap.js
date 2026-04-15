@@ -21,7 +21,11 @@ function renderMindmap() {
   else renderCollectMM(container, p);
 }
 
-function renderMarkmap(container, md) {
+async function renderMarkmap(container, md) {
+  // Lazy-load markmap CDN chỉ khi cần (không block startup)
+  if (typeof window._lazyMarkmap === 'function') {
+    await window._lazyMarkmap();
+  }
   container.style.height = '420px';
   container.style.overflow = 'hidden';
   container.innerHTML = '<div class="markmap" style="width:100%;height:100%;"><script type="text/template">' + md + '<\/script></div>';

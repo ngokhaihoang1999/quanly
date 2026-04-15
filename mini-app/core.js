@@ -6,6 +6,7 @@ let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
 let allPositions = [];
 let _pendingPrefs = {}; // live personalization edits not yet saved
 let _pinUnlocked = false; // session flag — once unlocked, stays unlocked until full reload
+let _authChecked = false; // set true sau khi loadStaffInfo() xong — dùng bởi security guard
 
 // ============ PIN LOCK SYSTEM ============
 const PIN_HASH_KEY = 'cj_pin_hash';
@@ -241,10 +242,23 @@ function _onPinToggle(checked) {
 
 // ============ DATA CACHE (prevents redundant re-fetches on tab switch) ============
 const _dataCache = { profiles: 0, dashboard: 0, staff: 0, structure: 0, calendar: 0, priority: 0 };
-const CACHE_TTL = 30000; // 30s — data won't re-fetch if younger than this
+const CACHE_TTL = 90000; // 90s — tăng từ 30s để giảm áp lực Supabase Free tier
 function isFresh(key) { return Date.now() - (_dataCache[key] || 0) < CACHE_TTL; }
 function markFresh(key) { _dataCache[key] = Date.now(); }
 function invalidateCache(key) { if (key) _dataCache[key] = 0; else Object.keys(_dataCache).forEach(k => _dataCache[k] = 0); }
+
+// ============ IN-FLIGHT DEDUPLICATION ============
+// Nếu 2 lần gọi cùng GET URL xảy ra đồng thời, chỉ 1 request thật sự đi,
+// cả 2 caller đều nhận cùng kết quả → tránh double-fetch khi click tab nhanh.
+const _inflight = new Map(); // url → Promise<Response clone>
+async function sbFetchDedup(path, opts = {}) {
+  const isGet = !opts.method || opts.method === 'GET';
+  if (!isGet) return sbFetch(path, opts); // Writes đi thẳng, không dedup
+  if (_inflight.has(path)) return (await _inflight.get(path)).clone();
+  const p = sbFetch(path, opts).then(res => { _inflight.delete(path); return res; }).catch(e => { _inflight.delete(path); throw e; });
+  _inflight.set(path, p);
+  return (await p).clone();
+}
 
 // ============ SEMESTER (KHAI GIẢNG) ============
 let allSemesters = [];
@@ -730,13 +744,23 @@ function attachAutocomplete(input) {
 async function sbFetch(path, opts={}) {
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...opts.headers };
   if (opts.method === 'POST' && !headers['Prefer']) headers['Prefer'] = 'return=representation';
-  // Timeout: 25s for reads, 60s for writes — prevents infinite hangs when network/Supabase is slow
+  // Timeout: 20s for reads, 60s for writes — prevents infinite hangs when network/Supabase is slow
   const isWrite = opts.method && opts.method !== 'GET';
-  const timeoutMs = isWrite ? 60000 : 25000;
+  // ── Security guard: chặn write khi không có Telegram auth và không phải guest ──
+  // myStaff = null + isGuestMode = false + isWrite = true → khả năng bị tamper
+  if (isWrite && !window.isGuestMode && myStaff === null && typeof _authChecked !== 'undefined' && _authChecked) {
+    console.error('[Security] Write blocked — no authenticated staff');
+    throw new Error('Not authenticated');
+  }
+  const timeoutMs = isWrite ? 60000 : 20000;
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
+    if (!res.ok && isWrite) {
+      // Log write errors rõ ràng để debug dễ hơn
+      console.warn(`[sbFetch] ${opts.method} ${path} → ${res.status}`);
+    }
     return res;
   } finally {
     clearTimeout(tid);
@@ -1267,10 +1291,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   initCustomAutocomplete();
   try {
-    await loadPositions();
-    const ok = await loadStaffInfo();
-    if (!ok) return; // Access denied — stop here, don't proceed to load data
-    
+    // ── Bước 1: Song song — positions + staffInfo (không phụ thuộc nhau) ──
+    const [, ok] = await Promise.all([loadPositions(), loadStaffInfo()]);
+    if (!ok) return; // Access denied — stop here
+
     if (window.isGuestMode) {
       const header = document.querySelector('.header');
       if (header) header.style.display = 'none';
@@ -1278,18 +1302,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       await openGuestProfile(pid);
       return; // Stop standard app loading
     }
-    
-    await loadSemesters();
-    // Load structure FIRST so structureData is available for dashboard unit-scope calculation
-    try { await loadStructure(); } catch(e) { console.warn('loadStructure init error:', e); }
-    // Load profiles FIRST — dashboard depends on allProfiles for counting metrics
-    try { await loadProfiles(); } catch(e) { console.warn('loadProfiles init error:', e); }
-    // Now load dashboard + staff in parallel (both can use allProfiles safely)
-    await Promise.allSettled([loadDashboard(), loadStaff()]);
-    // Deep link: auto-open profile after data is ready
+
+    // ── Bước 2: Song song — semesters + structure ──
+    // structure cần xong trước profiles/dashboard để tính unit scope
+    await Promise.allSettled([loadSemesters(), loadStructure()]);
+
+    // ── Bước 3: Song song — profiles + staff ──
+    // profiles cần xong trước dashboard (dashboard đọc allProfiles)
+    await Promise.allSettled([loadProfiles(), loadStaff()]);
+
+    // ── Bước 4: Dashboard (đọc allProfiles đã load ở bước 3) ──
+    await loadDashboard();
+
+    // Deep link + layout
     _handleDeepLink();
-    applyDesktopLayout(); // Phase 3: Setup Panels immediately on init
-    _updateTabBarMode();  // Phase 3.5: Set tab mode (wide/icon/dropdown)
+    applyDesktopLayout();
+    _updateTabBarMode();
   } catch(e) {
     console.error('Init error:', e);
     _clearLoadingStates();
@@ -1437,6 +1465,7 @@ async function loadStaffInfo() {
     }
   }
   applyPermissions();
+  _authChecked = true; // Security flag: cho phép security guard trong sbFetch hoạt động
   return true;
 }
 

@@ -107,16 +107,21 @@ async function openProfile(p) {
   const myCode2 = getEffectiveStaffCode();
   const pos2 = getCurrentPosition();
 
-  // Fetch roles + check real BB group
+  // Fetch roles + latest activity cùng 1 lần (giảm từ 2 round-trips xuống 1)
   let rolesInfo = {ndd:'', tvv:[], gvbb:''};
   let hasRealBBGroup = false;
   let realGroupId = null;
   let realGroupTitle = '';
   let realGroupInviteLink = '';
+  let latestInfo = '';
   try {
-    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type,display_name)`);
+    const [fgRes, rRes, sRes] = await Promise.all([
+      sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type,display_name)`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`)
+    ]);
+    // ── Parse fruit_groups ──
     const fgs = await fgRes.json();
-    // Sort: real groups (telegram_group_id > -1e12) first → their roles take priority
     const sortedFGs = (fgs||[]).sort((a, b) => {
       const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
       const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
@@ -139,7 +144,11 @@ async function openProfile(p) {
         }
       });
     });
+    // ── Parse latest activity ──
+    latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
   } catch(e) {}
+
+
   const nddCode    = p.ndd_staff_code || rolesInfo.ndd || null;
   const tvvCode    = rolesInfo.tvv.length ? rolesInfo.tvv[0] : null; // primary TVV
   const gvbbCode   = rolesInfo.gvbb || null;
@@ -169,17 +178,8 @@ async function openProfile(p) {
         ⚠️ Chưa kết nối Group <span style="opacity:0.5;font-size:12px;">›</span>
        </div>` : '';
 
-  // Latest activity
-  let latestInfo = '';
-  try {
-    const [rRes, sRes] = await Promise.all([
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
-      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`)
-    ]);
-    latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
-  } catch(e) {}
 
-    const canToggleStatus = hasFullEdit || isProfileNDD;
+  const canToggleStatus = hasFullEdit || isProfileNDD;
   const statusBtn = canToggleStatus
     ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`
     : `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
@@ -380,8 +380,13 @@ function clearFormFields() {
 // Info sheet (Phiếu Thông tin - stored in form_hanh_chinh)
 async function loadInfoSheet(profileId) {
   try {
-    const res = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=*`);
-    const data = await res.json();
+    // Fetch form_hanh_chinh + hapja cùng lúc — không cần đợi nhau
+    const [infoRes, hjRes] = await Promise.all([
+      sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=*`),
+      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&status=eq.approved&select=data&limit=1`)
+    ]);
+    const data = await infoRes.json();
+    const hjRows = await hjRes.json();
     const d = (data.length > 0 && data[0].data) ? data[0].data : {};
     // Store for mindmap use
     window._currentInfoSheet = {
@@ -399,32 +404,20 @@ async function loadInfoSheet(profileId) {
     if (d.t2_quan_he_ndd) setChipValues('chips_quan_he_ndd', d.t2_quan_he_ndd);
     if (d.t2_khong_gian_song) setChipValues('chips_khong_gian_song', d.t2_khong_gian_song);
 
-    // Pre-fill fields 19, 21, 22 from Hapja/profile if empty
+    // Pre-fill fields 19, 21, 22 từ Hapja/profile nếu chưa có
     const p = allProfiles.find(x => x.id === profileId);
-    try {
-      // Field 22: NDD phụ trách — from profile
-      if (!d.t2_ndd && p?.ndd_staff_code) {
-        const nddEl = document.getElementById('t2_ndd');
-        if (nddEl) nddEl.value = typeof getStaffLabel === 'function' ? getStaffLabel(p.ndd_staff_code) : p.ndd_staff_code;
-      }
-      // Fetch Hapja for fields 19, 21
-      const hjRes = await sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&status=eq.approved&select=data&limit=1`);
-      const hjRows = await hjRes.json();
-      if (hjRows.length > 0) {
-        const hd = hjRows[0].data || {};
-        // Field 19: Hình thức tiếp cận
-        if (!d.t2_hinh_thuc && hd.hinh_thuc) {
-          const htEl = document.getElementById('t2_hinh_thuc');
-          if (htEl) htEl.value = hd.hinh_thuc;
-        }
-        // Field 21: Ngày Chakki
-        if (!d.t2_ngay_chakki && hd.ngay_chakki) {
-          const ckEl = document.getElementById('t2_ngay_chakki');
-          if (ckEl) ckEl.value = hd.ngay_chakki;
-        }
-      }
-    } catch(e) { console.warn('Pre-fill from hapja:', e); }
-  } catch {}
+    // Field 22: NDD phụ trách — from profile
+    if (!d.t2_ndd && p?.ndd_staff_code) {
+      const nddEl = document.getElementById('t2_ndd');
+      if (nddEl) nddEl.value = typeof getStaffLabel === 'function' ? getStaffLabel(p.ndd_staff_code) : p.ndd_staff_code;
+    }
+    // Pre-fill fields 19, 21 từ hjRows đã fetch song song ở trên
+    if (hjRows.length > 0) {
+      const hd = hjRows[0].data || {};
+      if (!d.t2_hinh_thuc && hd.hinh_thuc) { const htEl = document.getElementById('t2_hinh_thuc'); if (htEl) htEl.value = hd.hinh_thuc; }
+      if (!d.t2_ngay_chakki && hd.ngay_chakki) { const ckEl = document.getElementById('t2_ngay_chakki'); if (ckEl) ckEl.value = hd.ngay_chakki; }
+    }
+  } catch(e) { console.warn('loadInfoSheet:', e); }
 }
 async function saveInfoSheet() {
   const data = {};
