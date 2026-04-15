@@ -1672,28 +1672,28 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-/* ═══ DROPDOWN TAB MODE (global — all screen sizes) ═══ */
-.tab-bar.tab-bar--dropdown .tab {
-  display: none !important;
+/* ═══ COMPACT TAB MODE (mobile & narrow screens) ═══ */
+.tab-bar.tab-bar--compact {
+  flex-wrap: wrap;
+  padding: 4px 6px;
+  gap: 3px;
+  justify-content: center;
 }
-.tab-bar.tab-bar--dropdown {
-  padding: 6px 8px;
+.tab-bar.tab-bar--compact .tab {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  font-size: 11px;
+  gap: 3px;
+  min-width: 0;
+  white-space: nowrap;
 }
-.tab-dropdown {
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--accent);
-  background: var(--surface);
-  color: var(--text);
+.tab-bar.tab-bar--compact .tab-icon {
   font-size: 13px;
-  font-weight: 600;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  outline: none;
-  appearance: auto;
 }
-.tab-dropdown:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+.tab-bar.tab-bar--compact .tab-label {
+  display: inline;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 48px;
 }

@@ -3,7 +3,7 @@
 
 let _allMyNotes = [];
 let _sharedWithMeNotes = [];
-let _notesFilter = 'all'; // all | pinned | shared
+let _notesFilter = 'all'; // all | shared
 let _notesPollTimer = null;
 let _editingNoteId = null;
 
@@ -21,7 +21,7 @@ async function loadPersonalNotes() {
   if (!sc) return;
   try {
     // Fetch my own notes
-    const res1 = await sbFetch(`/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(sc)}&order=pinned.desc,updated_at.desc`);
+    const res1 = await sbFetch(`/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(sc)}&order=updated_at.desc`);
     _allMyNotes = res1.ok ? await res1.json() : [];
 
     // Fetch ALL share records involving me (either shared WITH me or shared BY me)
@@ -79,9 +79,7 @@ function renderNotes() {
   if (!container) return;
 
   let notes = [];
-  if (_notesFilter === 'pinned') {
-    notes = _allMyNotes.filter(n => n.pinned);
-  } else if (_notesFilter === 'shared') {
+  if (_notesFilter === 'shared') {
     const myShared = _allMyNotes.filter(n => n._isSharedByMe);
     const setIds = new Set(myShared.map(n => n.id));
     notes = [...myShared, ..._sharedWithMeNotes.filter(n => !setIds.has(n.id))];
@@ -90,11 +88,7 @@ function renderNotes() {
     notes = [..._allMyNotes, ..._sharedWithMeNotes.filter(n => !myIds.has(n.id))];
   }
 
-  notes.sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-    return new Date(b.updated_at) - new Date(a.updated_at);
-  });
+  notes.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   const countEl = document.getElementById('notesCount');
   if (countEl) countEl.textContent = notes.length;
@@ -132,6 +126,11 @@ function renderNoteCard(note) {
     }
   }
 
+  let calBadge = '';
+  if (note.cal_date) {
+    calBadge = `<span style="font-size:10px;background:rgba(249,115,22,0.15);padding:1px 6px;border-radius:8px;color:#ea580c;">📅 ${note.cal_date.split('-').reverse().join('/')}</span>`;
+  }
+
   let sharedBadge = '';
   if (isShared) {
     const sharer = allStaff.find(s => s.staff_code === note._sharedBy);
@@ -150,7 +149,6 @@ function renderNoteCard(note) {
   <div class="pnote-card" data-note-id="${note.id}" style="background:${c.bg};border-color:${c.border};" onclick="toggleNoteExpand(this)">
     <div class="pnote-header" style="background:${c.headerBg};">
       <div class="pnote-title-row">
-        ${note.pinned ? '<span style="font-size:12px;" title="Đã ghim">📌</span>' : ''}
         <span class="pnote-title" style="color:${c.text};">${title}</span>
       </div>
       <span class="pnote-time" style="color:${c.dateTxt};">${timeAgo}</span>
@@ -160,10 +158,9 @@ function renderNoteCard(note) {
       <div class="pnote-full" style="display:none;">${escHtml(note.content)}</div>
     </div>
     <div class="pnote-footer">
-      <div class="pnote-badges">${linkedBadge}${sharedBadge}${shareCount}</div>
+      <div class="pnote-badges">${linkedBadge}${calBadge}${sharedBadge}${shareCount}</div>
       ${canEdit ? `
       <div class="pnote-actions">
-        <button onclick="event.stopPropagation();toggleNotePin('${note.id}',${!note.pinned})" title="${note.pinned ? 'Bỏ ghim' : 'Ghim'}" style="color:${c.dateTxt};">${note.pinned ? '📌' : '📍'}</button>
         <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share" style="color:${c.dateTxt};">📤</button>
         <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa" style="color:${c.dateTxt};">✏️</button>
         <button onclick="event.stopPropagation();deletePersonalNote('${note.id}')" title="Xoá" style="color:#dc2626;">🗑️</button>
@@ -222,7 +219,7 @@ function renderBoardNoteCard(note, idx) {
   return `<div class="board-note" data-note-id="${note.id}" 
     style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${c.bg};border-color:${c.border};">
     <div class="board-note-header" style="background:${c.headerBg};color:${c.text};">
-      <span class="board-note-title">${note.pinned ? '📌 ' : ''}${title}</span>
+      <span class="board-note-title">${title}</span>
       <span class="board-note-time" style="color:${c.dateTxt};">${timeAgo}</span>
     </div>
     <div class="board-note-body" style="color:${c.text};">
@@ -437,6 +434,7 @@ function openCreateNoteModal() {
   document.getElementById('pnote_title').value = '';
   document.getElementById('pnote_content').value = '';
   document.getElementById('pnote_link_profile').value = '';
+  document.getElementById('pnote_cal_date').value = '';
   // Reset color selection
   document.querySelectorAll('#pnoteColorPicker .pnote-color-opt').forEach(c => c.classList.remove('selected'));
   const defaultColor = document.querySelector('#pnoteColorPicker .pnote-color-opt[data-color="yellow"]');
@@ -469,6 +467,10 @@ function openEditNoteModal(noteId) {
   const colorEl = document.querySelector(`#pnoteColorPicker .pnote-color-opt[data-color="${note.color || 'yellow'}"]`);
   if (colorEl) colorEl.classList.add('selected');
 
+  // Set cal_date
+  const calDateInput = document.getElementById('pnote_cal_date');
+  if (calDateInput) calDateInput.value = note.cal_date || '';
+
   document.getElementById('pnoteDeleteBtn').style.display = 'block';
   document.getElementById('createNoteModal').classList.add('open');
 }
@@ -496,11 +498,14 @@ async function savePersonalNote() {
 
   if (!content) { showToast('Vui lòng nhập nội dung'); return; }
 
+  const calDate = document.getElementById('pnote_cal_date')?.value || null;
+
   const body = {
     title: title || null,
     content,
     color,
     linked_profile_id: linkedProfileId,
+    cal_date: calDate || null,
     updated_at: new Date().toISOString()
   };
 
@@ -550,18 +555,7 @@ async function deletePersonalNote(noteId) {
   }
 }
 
-async function toggleNotePin(noteId, pinned) {
-  try {
-    await sbFetch(`/rest/v1/personal_notes?id=eq.${noteId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ pinned, updated_at: new Date().toISOString() })
-    });
-    showToast(pinned ? '📌 Đã ghim' : '📍 Đã bỏ ghim');
-    await loadPersonalNotes();
-  } catch(e) {
-    console.error('[Notes] pin error:', e);
-  }
-}
+// Pin function removed — no longer used
 
 function copyNoteContent(noteId) {
   const note = _allMyNotes.find(n => n.id === noteId) || _sharedWithMeNotes.find(n => n.id === noteId);

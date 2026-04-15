@@ -1152,68 +1152,27 @@ function _savePanelWidths() {
 function _updateTabBarMode() {
   const tabBar = document.getElementById('mainTabBar');
   if (!tabBar) return;
-  // Use the tab bar's parent container width (works in both header and panelCenter)
   const parent = tabBar.parentElement;
   if (!parent) return;
   const w = parent.getBoundingClientRect().width;
-  // Count how many tabs are visible
   const visibleTabs = Array.from(tabBar.querySelectorAll('.tab')).filter(t => t.style.display !== 'none');
   const count = visibleTabs.length;
   if (count === 0) return;
 
+  // Remove old mode classes + dropdown
+  tabBar.classList.remove('tab-bar--wide', 'tab-bar--dropdown', 'tab-bar--compact');
+  const existingDropdown = tabBar.querySelector('.tab-dropdown');
+  if (existingDropdown) existingDropdown.remove();
+
   // Thresholds
-  const wideThreshold = count * 90;   // icon + text
-  const iconThreshold = count * 44;    // icon only
-
-  // Remove all mode classes first
-  tabBar.classList.remove('tab-bar--wide', 'tab-bar--dropdown');
-
-  // Mobile < 768px: luôn dropdown (tab bar ngang quá chật cho 7-8 tab)
-  const isMobile = w < 768;
-  if (isMobile) {
-    tabBar.classList.add('tab-bar--dropdown');
-    _ensureTabDropdown(tabBar, visibleTabs);
-    return;
-  }
+  const wideThreshold = count * 90;   // icon + full text label
 
   if (w > wideThreshold) {
     tabBar.classList.add('tab-bar--wide');
-    _removeTabDropdown(tabBar);
-  } else if (w > iconThreshold) {
-    // Icon-only mode (default)
-    _removeTabDropdown(tabBar);
   } else {
-    // Dropdown mode
-    tabBar.classList.add('tab-bar--dropdown');
-    _ensureTabDropdown(tabBar, visibleTabs);
+    // Compact mode: icon + short label, flex-wrap to fit all tabs
+    tabBar.classList.add('tab-bar--compact');
   }
-}
-
-function _removeTabDropdown(tabBar) {
-  const existing = tabBar.querySelector('.tab-dropdown');
-  if (existing) existing.remove();
-}
-
-function _ensureTabDropdown(tabBar, visibleTabs) {
-  let sel = tabBar.querySelector('.tab-dropdown');
-  if (!sel) {
-    sel = document.createElement('select');
-    sel.className = 'tab-dropdown';
-    sel.onchange = function() {
-      const tab = tabBar.querySelector(`.tab[data-tab="${this.value}"]`);
-      if (tab) tab.click();
-    };
-    tabBar.appendChild(sel);
-  }
-  // Rebuild options — use ALL_TABS_DEF for reliable icon+label lookup
-  const activeTab = tabBar.querySelector('.tab.active');
-  const activeVal = activeTab ? activeTab.dataset.tab : '';
-  sel.innerHTML = visibleTabs.map(t => {
-    const key = t.dataset.tab;
-    const def = (typeof ALL_TABS_DEF !== 'undefined') && ALL_TABS_DEF.find(d => d.key === key);
-    const label = def ? def.label : (t.querySelector('.tab-label')?.textContent || key);
-    return `<option value="${key}" ${key === activeVal ? 'selected' : ''}>${label}</option>`;
-  }).join('');
 }
 
 function _restorePanelWidths() {
