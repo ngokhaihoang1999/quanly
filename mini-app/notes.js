@@ -211,6 +211,12 @@ function renderBoardNoteCard(note, idx) {
     sharedBadge = `<span class="board-badge">📤 Đã share</span>`;
   }
 
+  // Calendar date badge
+  let calBadge = '';
+  if (note.cal_date) {
+    calBadge = `<span class="board-badge" style="color:#ea580c;background:rgba(249,115,22,0.15);">📅 ${note.cal_date.split('-').reverse().join('/')}</span>`;
+  }
+
   const actionBtns = canEdit ? `
     <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa">✏️</button>
     <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share">📤</button>
@@ -226,7 +232,7 @@ function renderBoardNoteCard(note, idx) {
       <div class="board-note-content">${escHtml(note.content)}</div>
     </div>
     <div class="board-note-footer">
-      <div class="board-note-badges">${linkedBadge}${sharedBadge}</div>
+      <div class="board-note-badges">${linkedBadge}${calBadge}${sharedBadge}</div>
       <div class="board-note-actions" style="color:${c.dateTxt};">${actionBtns}</div>
     </div>
     <div class="board-note-resize"></div>

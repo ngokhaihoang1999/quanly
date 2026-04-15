@@ -247,6 +247,39 @@ function isFresh(key) { return Date.now() - (_dataCache[key] || 0) < CACHE_TTL; 
 function markFresh(key) { _dataCache[key] = Date.now(); }
 function invalidateCache(key) { if (key) _dataCache[key] = 0; else Object.keys(_dataCache).forEach(k => _dataCache[k] = 0); }
 
+// ── Smart refresh: only reload the active tab's data ──
+async function refreshCurrentTab() {
+  const btn = document.getElementById('refreshTabBtn');
+  if (btn) { btn.style.transform = 'rotate(360deg)'; btn.disabled = true; }
+  const activeTab = document.querySelector('.tab-bar .tab.active')?.dataset?.tab;
+
+  // Map tab → cache keys to invalidate + loader function
+  const tabMap = {
+    unit:      { keys: ['profiles','dashboard'], load: async () => { await loadProfiles(); loadDashboard(); } },
+    personal:  { keys: ['profiles','dashboard'], load: async () => { await loadProfiles(); loadDashboard(); } },
+    staff:     { keys: ['staff'],     load: () => typeof loadStaff === 'function' && loadStaff() },
+    structure: { keys: ['structure'], load: () => typeof loadStructure === 'function' && loadStructure() },
+    calendar:  { keys: ['calendar'],  load: () => typeof loadCalendar === 'function' && loadCalendar() },
+    priority:  { keys: ['priority'],  load: () => typeof loadPriority === 'function' && loadPriority() },
+    reports:   { keys: ['profiles'],  load: async () => { _rptCache = null; await loadProfiles(); loadReports(); } },
+    notes:     { keys: [],            load: () => typeof loadNotes === 'function' && loadNotes() },
+  };
+
+  const entry = tabMap[activeTab];
+  if (entry) {
+    entry.keys.forEach(k => invalidateCache(k));
+    try { await entry.load(); } catch(e) { console.warn('Refresh error:', e); }
+  } else {
+    // Fallback: reload everything
+    invalidateCache();
+    await loadProfiles();
+    loadDashboard();
+  }
+
+  showToast('✅ Đã tải lại dữ liệu');
+  if (btn) { setTimeout(() => { btn.style.transform = ''; btn.disabled = false; }, 400); }
+}
+
 // ============ IN-FLIGHT DEDUPLICATION ============
 // Nếu 2 lần gọi cùng GET URL xảy ra đồng thời, chỉ 1 request thật sự đi,
 // cả 2 caller đều nhận cùng kết quả → tránh double-fetch khi click tab nhanh.

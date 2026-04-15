@@ -38,6 +38,7 @@
     <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap;">📅 Kỳ:</span>
     <select id="semesterSelect" onchange="switchSemester(this.value)" style="flex:1;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text1);"></select>
     <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙️ Quản lý</button>
+    <button id="refreshTabBtn" onclick="refreshCurrentTab()" title="Tải lại dữ liệu tab hiện tại" style="font-size:14px;padding:2px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--text2);cursor:pointer;line-height:1;transition:transform 0.3s;">🔄</button>
   </div>
   <div class="tab-bar tab-bar--compact" id="mainTabBar">
     <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')"><span class="tab-icon">🏢</span><span class="tab-label">Đơn vị</span></div>
@@ -674,7 +675,7 @@
 <script src="webhook.js?v=2026041307"></script>
 <script src="avatar.js?v=2026041017"></script>
 <script src="reports.js?v=2026041516"></script>
-<script src="core.js?v=2026041515"></script>
+<script src="core.js?v=2026041516"></script>
 <script src="dashboard.js?v=2026041307"></script>
 <script src="profiles.js?v=2026041510"></script>
 <script src="hapja.js?v=2026041300"></script>
@@ -684,7 +685,7 @@
 <script src="calendar.js?v=2026041514"></script>
 <script src="notification.js?v=2026041307"></script>
 <script src="priority.js?v=2026041307"></script>
-<script src="notes.js?v=2026041512"></script>
+<script src="notes.js?v=2026041516"></script>
 <script src="lacie.js?v=2026041307"></script>
 <script src="mindmap.js?v=2026041510"></script>
 <script>
