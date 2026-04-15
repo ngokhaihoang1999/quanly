@@ -1678,22 +1678,24 @@
   padding: 4px 6px;
   gap: 3px;
   justify-content: center;
+  overflow-x: hidden;
 }
 .tab-bar.tab-bar--compact .tab {
-  flex: 0 0 auto;
-  padding: 5px 8px;
-  font-size: 11px;
+  flex: 0 1 auto;
+  padding: 5px 7px;
+  font-size: 10px;
   gap: 3px;
   min-width: 0;
   white-space: nowrap;
+  border-radius: 16px;
 }
 .tab-bar.tab-bar--compact .tab-icon {
-  font-size: 13px;
+  font-size: 12px;
 }
 .tab-bar.tab-bar--compact .tab-label {
   display: inline;
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 48px;
+  max-width: 50px;
 }

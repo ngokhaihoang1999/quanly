@@ -1498,9 +1498,7 @@ function switchMainTab(el, tab) {
   if (tab==='notes' && typeof initNotesTab === 'function') { initNotesTab(); }
   // Stop notes poll when leaving notes tab
   if (tab !== 'notes' && typeof stopNotesPoll === 'function') stopNotesPoll();
-  // Sync dropdown if in dropdown mode
-  const dd = document.querySelector('#mainTabBar .tab-dropdown');
-  if (dd) dd.value = tab;
+
 }
 
 // ============ MODAL CLOSE ON OVERLAY CLICK ============
@@ -2204,13 +2202,24 @@ function _applyTabOrder(order, hidden = []) {
   const bar = document.getElementById('mainTabBar');
   if (!bar) return;
   const hiddenSet = new Set(hidden);
-  order.forEach(key => {
+
+  // Merge: if saved order is missing some ALL_TABS_DEF keys, append them
+  const allKeys = ALL_TABS_DEF.map(t => t.key);
+  const mergedOrder = [...order];
+  allKeys.forEach(k => {
+    if (!mergedOrder.includes(k)) mergedOrder.push(k);
+  });
+
+  mergedOrder.forEach(key => {
     const tab = bar.querySelector(`[data-tab="${key}"]`);
     if (!tab) return;
     bar.appendChild(tab);  // reorder
     if (key === 'staff') return; // staff tab visibility controlled by applyPermissions
+    if (key === 'reports') return; // reports visibility controlled by applyPermissions
     tab.style.display = hiddenSet.has(key) ? 'none' : '';
   });
+  // Refresh compact styling after reorder
+  _updateTabBarMode();
 }
 
 // ── Open Panel ──
@@ -2220,7 +2229,11 @@ function openPersonalizationPanel() {
   const hex0 = /^#[0-9a-fA-F]{6}$/.test(currentAccent) ? currentAccent : '#7c6af7';
   const [h0,s0,l0] = _hexToHsl(hex0);
   const [r0,g0,b0] = _hexToRgb(hex0);
-  const currentOrder = prefs.tab_order || ALL_TABS_DEF.map(t=>t.key);
+  // Build currentOrder: merge saved preferences with ALL_TABS_DEF (append new tabs)
+  const savedOrder = prefs.tab_order || [];
+  const allKeys = ALL_TABS_DEF.map(t => t.key);
+  const currentOrder = [...savedOrder];
+  allKeys.forEach(k => { if (!currentOrder.includes(k)) currentOrder.push(k); });
   const hiddenSet = new Set(prefs.tab_hidden || []);
 
   const presetHtml = ACCENT_PRESETS.map(p =>

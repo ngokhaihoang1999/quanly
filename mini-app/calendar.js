@@ -53,10 +53,12 @@ async function loadCalendar() {
     // Fetch calendar events + linked notes in parallel
     const [evRes, noteRes] = await Promise.all([
       sbFetch(`/rest/v1/calendar_events?event_date=gte.${startStr}&event_date=lte.${endStr}&select=*&order=event_date.asc,event_time.asc`),
-      sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,cal_date,color,staff_code&order=cal_date.asc`)
+      sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,cal_date,color,owner_staff_code&order=cal_date.asc`).catch(() => null)
     ]);
     const allEvents = await evRes.json();
-    _calLinkedNotes = (await noteRes.json()).filter(n => n.staff_code === myCode || scope === 'system');
+    try {
+      _calLinkedNotes = noteRes && noteRes.ok ? (await noteRes.json()).filter(n => n.owner_staff_code === myCode || scope === 'system') : [];
+    } catch(e2) { _calLinkedNotes = []; }
     
     // Filter: system events by scope, personal events by owner
     calEvents = allEvents.filter(ev => {
@@ -72,6 +74,9 @@ async function loadCalendar() {
     _calLinkedNotes = [];
   }
   
+  // After DB events, merge virtual events from allProfiles milestones
+  _mergeProfileMilestones(startStr, endStr, myCode, scope);
+
   renderCalendarGrid();
   // Auto-select today or keep selected date
   const today = new Date();
@@ -83,6 +88,84 @@ async function loadCalendar() {
     }
   }
   renderCalendarDayEvents(calSelectedDate);
+}
+
+// Generate virtual events from profile phase milestones
+function _mergeProfileMilestones(startStr, endStr, myCode, scope) {
+  if (!allProfiles || !allProfiles.length) return;
+  const start = new Date(startStr), end = new Date(endStr);
+
+  allProfiles.forEach(p => {
+    // Skip if not in scope
+    if (scope !== 'system' && p.ndd_staff_code !== myCode && p.tvv_staff_code !== myCode && p.gvbb_staff_code !== myCode) return;
+
+    const pName = p.full_name || '?';
+
+    // --- TV milestones: tv_sessions array ---
+    if (p.tv_sessions && Array.isArray(p.tv_sessions)) {
+      p.tv_sessions.forEach((sess, idx) => {
+        if (!sess.scheduled_at) return;
+        const d = new Date(sess.scheduled_at);
+        if (d < start || d > end) return;
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        // Check if already exists in calEvents (from calendar_events table)
+        if (calEvents.find(e => e.event_type === 'chot_tv' && e.profile_id === p.id && e.event_date === dateStr)) return;
+        calEvents.push({
+          id: `vtv_${p.id}_${idx}`,
+          event_type: 'chot_tv',
+          title: `Chốt TV lần ${idx + 1} — ${pName}`,
+          event_date: dateStr,
+          event_time: timeStr,
+          profile_id: p.id,
+          is_auto: true,
+          _virtual: true
+        });
+      });
+    }
+
+    // --- BB milestones: bb_reports with buoi_tiep ---
+    if (p.bb_reports && Array.isArray(p.bb_reports)) {
+      p.bb_reports.forEach((rpt, idx) => {
+        if (!rpt.buoi_tiep) return;
+        const d = new Date(rpt.buoi_tiep);
+        if (isNaN(d.getTime()) || d < start || d > end) return;
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        if (calEvents.find(e => e.event_type === 'hoc_bb' && e.profile_id === p.id && e.event_date === dateStr)) return;
+        calEvents.push({
+          id: `vbb_${p.id}_${idx}`,
+          event_type: 'hoc_bb',
+          title: `Học BB buổi ${idx + 2} — ${pName}`,
+          event_date: dateStr,
+          event_time: timeStr,
+          profile_id: p.id,
+          is_auto: true,
+          _virtual: true
+        });
+      });
+    }
+
+    // --- Profile creation date (first contact) ---
+    if (p.created_at) {
+      const d = new Date(p.created_at);
+      if (d >= start && d <= end) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (!calEvents.find(e => e.id === `vcr_${p.id}`)) {
+          calEvents.push({
+            id: `vcr_${p.id}`,
+            event_type: 'custom',
+            title: `📋 Tạo hồ sơ: ${pName}`,
+            event_date: dateStr,
+            profile_id: p.id,
+            is_auto: true,
+            _virtual: true,
+            description: `Phase: ${p.phase || 'chakki'}`
+          });
+        }
+      }
+    }
+  });
 }
 
 
