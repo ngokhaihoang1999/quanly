@@ -1205,13 +1205,14 @@ function _ensureTabDropdown(tabBar, visibleTabs) {
     };
     tabBar.appendChild(sel);
   }
-  // Rebuild options
+  // Rebuild options — use ALL_TABS_DEF for reliable icon+label lookup
   const activeTab = tabBar.querySelector('.tab.active');
   const activeVal = activeTab ? activeTab.dataset.tab : '';
   sel.innerHTML = visibleTabs.map(t => {
-    const icon = t.querySelector('.tab-icon')?.textContent || '';
-    const label = t.querySelector('.tab-label')?.textContent || t.dataset.tab;
-    return `<option value="${t.dataset.tab}" ${t.dataset.tab === activeVal ? 'selected' : ''}>${icon} ${label}</option>`;
+    const key = t.dataset.tab;
+    const def = (typeof ALL_TABS_DEF !== 'undefined') && ALL_TABS_DEF.find(d => d.key === key);
+    const label = def ? def.label : (t.querySelector('.tab-label')?.textContent || key);
+    return `<option value="${key}" ${key === activeVal ? 'selected' : ''}>${label}</option>`;
   }).join('');
 }
 

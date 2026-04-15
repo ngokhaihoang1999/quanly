@@ -7,14 +7,21 @@ const CAL_COLORS = {
   chot_tv:       '#8b5cf6',   // purple
   hoc_bb:        '#22c55e',   // green
   lap_group_tv_bb: '#f59e0b', // amber
-  custom:        '#3b82f6'    // blue
+  custom:        '#3b82f6',   // blue
+  semester:      '#ec4899',   // pink — khai giảng milestone
+  note:          '#f97316'    // orange — linked notes
 };
 const CAL_LABELS = {
   chot_tv:       'Lịch TV',
   hoc_bb:        'Học BB',
   lap_group_tv_bb: 'Lập Group TV-BB',
-  custom:        'Cá nhân'
+  custom:        'Cá nhân',
+  semester:      'Khai giảng',
+  note:          'Ghi chú'
 };
+
+// Notes linked to calendar dates (keyed by YYYY-MM-DD)
+let _calLinkedNotes = [];
 
 function initCalendar() {
   const now = new Date();
@@ -45,24 +52,30 @@ async function loadCalendar() {
   if (label) label.textContent = `Shin ${calYear - 1983} — Tháng ${calMonth + 1}`;
   
   try {
-    // Fetch events for this month
-    const res = await sbFetch(`/rest/v1/calendar_events?event_date=gte.${startStr}&event_date=lte.${endStr}&select=*&order=event_date.asc,event_time.asc`);
-    const allEvents = await res.json();
+    // Fetch calendar events + linked notes in parallel
+    const [evRes, noteRes] = await Promise.all([
+      sbFetch(`/rest/v1/calendar_events?event_date=gte.${startStr}&event_date=lte.${endStr}&select=*&order=event_date.asc,event_time.asc`),
+      sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,cal_date,color,staff_code&order=cal_date.asc`)
+    ]);
+    const allEvents = await evRes.json();
+    _calLinkedNotes = (await noteRes.json()).filter(n => n.staff_code === myCode || scope === 'system');
     
     // Filter: system events by scope, personal events by owner
     calEvents = allEvents.filter(ev => {
       if (ev.is_system) {
-        // System events: visible based on scope
         return isEventInScope(ev, myCode, scope);
       } else {
-        // Personal events: only the creator sees them
         return ev.staff_code === myCode;
       }
     });
   } catch(e) {
     console.error('loadCalendar:', e);
     calEvents = [];
+    _calLinkedNotes = [];
   }
+  
+  // Merge semester milestones as virtual events
+  _mergeSemesterEvents();
   
   renderCalendarGrid();
   // Auto-select today or keep selected date
@@ -75,6 +88,32 @@ async function loadCalendar() {
     }
   }
   renderCalendarDayEvents(calSelectedDate);
+}
+
+// Generate virtual "semester" events from allSemesters created_at dates
+function _mergeSemesterEvents() {
+  if (!allSemesters || !allSemesters.length) return;
+  allSemesters.forEach(s => {
+    if (!s.created_at) return;
+    const d = new Date(s.created_at);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    // Only add if within current month view
+    const mm = calMonth + 1;
+    if (d.getFullYear() !== calYear || (d.getMonth()+1) !== mm) return;
+    // Don't duplicate if already exists
+    if (calEvents.find(e => e.event_type === 'semester' && e.title === s.name)) return;
+    calEvents.push({
+      id: 'sem_' + s.id,
+      event_type: 'semester',
+      title: '🎓 Khai giảng: ' + s.name,
+      description: s.description || (s.is_active ? '🟢 Kỳ đang hoạt động' : ''),
+      event_date: dateStr,
+      event_time: null,
+      is_auto: true,
+      is_system: true,
+      _virtual: true // flag to prevent delete
+    });
+  });
 }
 
 function isEventInScope(ev, myCode, scope) {
@@ -125,6 +164,12 @@ function renderCalendarGrid() {
     if (!eventsByDate[ev.event_date]) eventsByDate[ev.event_date] = [];
     eventsByDate[ev.event_date].push(ev);
   });
+  // Group linked notes by date
+  const notesByDate = {};
+  _calLinkedNotes.forEach(n => {
+    if (!notesByDate[n.cal_date]) notesByDate[n.cal_date] = [];
+    notesByDate[n.cal_date].push(n);
+  });
   
   let html = '<div class="cal-grid">';
   // Headers
@@ -143,31 +188,35 @@ function renderCalendarGrid() {
     const isToday = dateStr === todayStr;
     const isSelected = calSelectedDate && calSelectedDate.getDate() === d && calSelectedDate.getMonth() === calMonth;
     const dayEvents = eventsByDate[dateStr] || [];
+    const dayNotes = notesByDate[dateStr] || [];
     
     let cls = 'cal-cell';
     if (isToday) cls += ' cal-today';
     if (isSelected) cls += ' cal-selected';
     
-    let labels = '';
-    if (dayEvents.length > 0) {
-      // Count: only chot_tv for TV sessions, only hoc_bb for BB sessions
-      const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv').length;
-      const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb').length;
-      const customEvents = dayEvents.filter(e => e.event_type === 'custom');
-
-      const parts = [];
-      if (tvCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#8b5cf6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tvCount} ca TV</span>`);
-      if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
-      customEvents.slice(0, 2).forEach(e => {
-        const short = (e.title || '').substring(0, 10) + (e.title?.length > 10 ? '…' : '');
-        parts.push(`<span style="display:block;font-size:9px;color:#3b82f6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${short}</span>`);
-      });
-
-      if (parts.length) labels = `<div style="width:100%;overflow:hidden;">${parts.join('')}</div>`;
+    const parts = [];
+    // Semester events (pink)
+    const semEvents = dayEvents.filter(e => e.event_type === 'semester');
+    if (semEvents.length) parts.push(`<span style="display:block;font-size:9px;font-weight:700;color:#ec4899;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎓 KG</span>`);
+    // TV sessions
+    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv').length;
+    if (tvCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#8b5cf6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tvCount} ca TV</span>`);
+    // BB sessions
+    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb').length;
+    if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
+    // Custom events
+    const customEvents = dayEvents.filter(e => e.event_type === 'custom');
+    customEvents.slice(0, 2).forEach(e => {
+      const short = (e.title || '').substring(0, 10) + (e.title?.length > 10 ? '…' : '');
+      parts.push(`<span style="display:block;font-size:9px;color:#3b82f6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${short}</span>`);
+    });
+    // Linked notes (orange)
+    if (dayNotes.length > 0) {
+      parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#f97316;line-height:1.3;">📝 ${dayNotes.length}</span>`);
     }
 
+    const labels = parts.length ? `<div style="width:100%;overflow:hidden;">${parts.join('')}</div>` : '';
     html += `<div class="${cls}" onclick="calSelectDay(${d})"><span class="cal-day-num">${d}</span>${labels}</div>`;
-
   }
   
   html += '</div>';
@@ -191,46 +240,155 @@ function renderCalendarDayEvents(date) {
   titleEl.textContent = `📅 ${dayLabel}`;
   
   const dayEvents = calEvents.filter(e => e.event_date === dateStr);
+  const dayNotes = _calLinkedNotes.filter(n => n.cal_date === dateStr);
   
-  if (dayEvents.length === 0) {
-    listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">Không có sự kiện</div>';
+  let html = '';
+
+  // Events section
+  if (dayEvents.length > 0) {
+    html += dayEvents.map(ev => {
+      const color = CAL_COLORS[ev.event_type] || '#6b7280';
+      const time = ev.event_time ? ev.event_time.substring(0, 5) : '';
+      const typeLabel = CAL_LABELS[ev.event_type] || ev.event_type;
+      const profile = ev.profile_id ? allProfiles.find(p => p.id === ev.profile_id) : null;
+      const completedCls = ev.is_completed ? 'style="opacity:0.5;text-decoration:line-through;"' : '';
+      
+      let metaHtml = `<span class="cal-event-type" style="color:${color}">${typeLabel}</span>`;
+      if (time) metaHtml += `<span>\u23f0 ${time}</span>`;
+      if (profile && ev.event_type === 'chot_tv') {
+          const ndd = typeof getStaffLabel === 'function' ? getStaffLabel(profile.ndd_staff_code) : (profile.ndd_staff_code || '?');
+          const tvv = typeof getStaffLabel === 'function' ? getStaffLabel(profile.tvv_staff_code) : (profile.tvv_staff_code || '?');
+          metaHtml += `<span>NDD: ${ndd}</span><span>TVV: ${tvv}</span>`;
+      } else if (profile && ev.event_type === 'hoc_bb') {
+          const ndd = typeof getStaffLabel === 'function' ? getStaffLabel(profile.ndd_staff_code) : (profile.ndd_staff_code || '?');
+          const gvbb = typeof getStaffLabel === 'function' ? getStaffLabel(profile.gvbb_staff_code) : (profile.gvbb_staff_code || '?');
+          metaHtml += `<span>NDD: ${ndd}</span><span>GVBB: ${gvbb}</span>`;
+      } else if (profile) {
+          metaHtml += `<span>\ud83d\udc64 ${profile.full_name}</span>`;
+      }
+      
+      // Don't allow deleting virtual semester events
+      const canDelete = !ev.is_auto && !ev._virtual;
+      
+      return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
+        <div class="cal-event-bar" style="background:${color}"></div>
+        <div class="cal-event-body">
+          <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px;">${ev.title}</div>
+          <div class="cal-event-meta" style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text3);align-items:center;">
+            ${metaHtml}
+          </div>
+          ${ev.description ? `<div class="cal-event-desc" style="margin-top:8px;font-size:13px;color:var(--text2);">${ev.description}</div>` : ''}
+        </div>
+        ${canDelete ? `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">🗑</button>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // Linked notes section
+  if (dayNotes.length > 0) {
+    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📝 Ghi chú gắn ngày này (${dayNotes.length})</div>`;
+    html += dayNotes.map(n => {
+      const noteColor = n.color || '#fef08a';
+      return `<div onclick="openNoteFromCal('${n.id}')" style="padding:8px 12px;margin-bottom:6px;background:${noteColor};border-radius:8px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);transition:transform 0.15s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:13px;font-weight:600;color:#333;">${n.title || 'Không tiêu đề'}</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+          <button onclick="event.stopPropagation();unlinkNoteFromCal('${n.id}','${dateStr}')" style="font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#666;cursor:pointer;" title="Bỏ gắn">✕ Bỏ gắn</button>
+        </div>
+      </div>`;
+    }).join('');
+    html += '</div>';
+  }
+
+  // Action buttons row
+  if (!window.isGuestMode) {
+    html += `<div style="display:flex;gap:8px;margin-top:12px;justify-content:center;">
+      <button onclick="openLinkNoteToDate('${dateStr}')" style="padding:6px 14px;font-size:11px;border-radius:20px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-weight:600;">📝 Gắn note vào ngày</button>
+    </div>`;
+  }
+
+  if (!html) {
+    html = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">Không có sự kiện</div>';
+    if (!window.isGuestMode) {
+      html += `<div style="text-align:center;margin-top:8px;">
+        <button onclick="openLinkNoteToDate('${dateStr}')" style="padding:6px 14px;font-size:11px;border-radius:20px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-weight:600;">📝 Gắn note vào ngày</button>
+      </div>`;
+    }
+  }
+
+  listEl.innerHTML = html;
+}
+
+// ── Link/Unlink notes to calendar dates ──
+async function openLinkNoteToDate(dateStr) {
+  // Show a simple picker from existing personal notes
+  if (typeof _allNotes === 'undefined' || !_allNotes || !_allNotes.length) {
+    showToast('📝 Chưa có ghi chú nào. Tạo ghi chú trước!');
+    return;
+  }
+  const myCode = getEffectiveStaffCode();
+  const myNotes = _allNotes.filter(n => n.staff_code === myCode && !n.cal_date);
+  if (!myNotes.length) {
+    showToast('📝 Tất cả ghi chú đã được gắn hoặc chưa có ghi chú.');
     return;
   }
   
-  listEl.innerHTML = dayEvents.map(ev => {
-    const color = CAL_COLORS[ev.event_type] || '#6b7280';
-    const time = ev.event_time ? ev.event_time.substring(0, 5) : '';
-    const typeLabel = CAL_LABELS[ev.event_type] || ev.event_type;
-    const profile = ev.profile_id ? allProfiles.find(p => p.id === ev.profile_id) : null;
-    const completedCls = ev.is_completed ? 'style="opacity:0.5;text-decoration:line-through;"' : '';
-    
-    let metaHtml = `<span class="cal-event-type" style="color:${color}">${typeLabel}</span>`;
-    if (time) metaHtml += `<span>\u23f0 ${time}</span>`;
-    if (profile && ev.event_type === 'chot_tv') {
-        const ndd = profile.ndd_staff_code || '?';
-        const tvv = profile.tvv_staff_code || '?';
-        metaHtml += `<span>NDD: ${ndd}</span><span>TVV: ${tvv}</span>`;
-    } else if (profile && ev.event_type === 'hoc_bb') {
-        const ndd = profile.ndd_staff_code || '?';
-        const gvbb = profile.gvbb_staff_code || '?';
-        metaHtml += `<span>NDD: ${ndd}</span><span>GVBB: ${gvbb}</span>`;
-    } else if (profile) {
-        // Fallback for custom events with profile assigned
-        metaHtml += `<span>\ud83d\udc64 ${profile.full_name}</span>`;
-    }
-    
-    return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
-      <div class="cal-event-bar" style="background:${color}"></div>
-      <div class="cal-event-body">
-        <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px;">${ev.title}</div>
-        <div class="cal-event-meta" style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text3);align-items:center;">
-          ${metaHtml}
-        </div>
-        ${ev.description ? `<div class="cal-event-desc" style="margin-top:8px;font-size:13px;color:var(--text2);">${ev.description}</div>` : ''}
-      </div>
-      ${!ev.is_auto ? `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">ÁE/button>` : ''}
+  // Build quick picker modal
+  const items = myNotes.slice(0, 20).map(n => {
+    const c = n.color || '#fef08a';
+    const title = n.title || 'Không tiêu đề';
+    return `<div onclick="linkNoteToCal('${n.id}','${dateStr}')" style="padding:10px 14px;margin-bottom:6px;background:${c};border-radius:10px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
+      <div style="font-size:13px;font-weight:600;color:#333;">${title}</div>
+      <div style="font-size:10px;color:#666;margin-top:2px;">${n.created_at ? shinDate(n.created_at) : ''}</div>
     </div>`;
   }).join('');
+
+  document.getElementById('recordModalTitle').textContent = `📝 Gắn ghi chú vào ngày ${dateStr.split('-').reverse().join('/')}`;
+  document.getElementById('recordModalBody').innerHTML = `
+    <div style="max-height:400px;overflow-y:auto;padding:4px 0;">
+      ${items}
+    </div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;">Chọn ghi chú để gắn vào ngày này</div>`;
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) saveBtn.style.display = 'none';
+  document.getElementById('addRecordModal').classList.add('open');
+}
+
+async function linkNoteToCal(noteId, dateStr) {
+  try {
+    await sbFetch(`/rest/v1/personal_notes?id=eq.${noteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ cal_date: dateStr })
+    });
+    closeModal('addRecordModal');
+    const saveBtn = document.querySelector('#addRecordModal .save-btn');
+    if (saveBtn) { saveBtn.style.display = ''; saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = typeof saveRecord === 'function' ? saveRecord : null; }
+    showToast('✅ Đã gắn ghi chú vào lịch');
+    loadCalendar();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
+
+async function unlinkNoteFromCal(noteId, dateStr) {
+  try {
+    await sbFetch(`/rest/v1/personal_notes?id=eq.${noteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ cal_date: null })
+    });
+    showToast('✅ Đã bỏ gắn');
+    loadCalendar();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
+
+function openNoteFromCal(noteId) {
+  // Switch to Notes tab and open the note
+  const notesTab = document.querySelector('[data-tab="notes"]');
+  if (notesTab) notesTab.click();
+  // Try to open the note after tab switch
+  setTimeout(() => {
+    if (typeof openNoteDetail === 'function') openNoteDetail(noteId);
+  }, 300);
 }
 
 // ============ CREATE EVENT ============
