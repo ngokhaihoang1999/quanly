@@ -118,6 +118,12 @@
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: var(--radius-sm); }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Top loading bar ── */
+    .top-loading-bar { position: fixed; top: 0; left: 0; width: 0; height: 3px; background: linear-gradient(90deg, var(--accent), #22d3ee, var(--accent)); z-index: 99999; transition: width 0.3s ease; pointer-events: none; border-radius: 0 2px 2px 0; box-shadow: 0 0 8px rgba(56,189,248,0.4); }
+    .top-loading-bar.loading { width: 70%; animation: loadPulse 1.5s ease-in-out infinite; }
+    .top-loading-bar.done { width: 100%; opacity: 0; transition: width 0.2s ease, opacity 0.4s ease 0.2s; }
+    @keyframes loadPulse { 0%,100% { width: 70%; } 50% { width: 85%; } }
     .empty-state { text-align: center; padding: 48px 20px; }
     .empty-icon { font-size: 56px; margin-bottom: 12px; }
     .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }

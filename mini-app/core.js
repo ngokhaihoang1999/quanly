@@ -266,16 +266,17 @@ async function refreshCurrentTab() {
   };
 
   const entry = tabMap[activeTab];
+  showLoading();
   if (entry) {
     entry.keys.forEach(k => invalidateCache(k));
-    try { await entry.load(); } catch(e) { console.warn('Refresh error:', e); }
+    try { await entry.load(); } catch(e) { console.warn('Refresh error:', e); showToast('⚠️ Tải lại bị lỗi'); }
   } else {
-    // Fallback: reload everything
     invalidateCache();
     await loadProfiles();
     loadDashboard();
   }
 
+  hideLoading();
   showToast('✅ Đã tải lại dữ liệu');
   if (btn) { setTimeout(() => { btn.style.transform = ''; btn.disabled = false; }, 400); }
 }
@@ -577,6 +578,16 @@ function toggleChip(el) { el.classList.toggle('selected'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
 
+// ── Top loading bar ──
+function showLoading() {
+  const bar = document.getElementById('topLoadBar');
+  if (bar) { bar.className = 'top-loading-bar loading'; }
+}
+function hideLoading() {
+  const bar = document.getElementById('topLoadBar');
+  if (bar) { bar.className = 'top-loading-bar done'; setTimeout(() => { bar.className = 'top-loading-bar'; }, 600); }
+}
+
 // ── Copy text to clipboard with toast feedback ──
 async function copyToClipboard(text) {
   try {
@@ -791,6 +802,7 @@ async function sbFetch(path, opts={}) {
       const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
       if (!res.ok && isWrite) {
         console.warn(`[sbFetch] ${opts.method} ${path} → ${res.status}`);
+        if (typeof showToast === 'function') showToast(`⚠️ Lỗi lưu dữ liệu (${res.status})`);
       }
       return res;
     } finally {
@@ -838,14 +850,18 @@ function renderSemesterSelector() {
   if (mgr) mgr.style.display = hasPermission('manage_semester') ? '' : 'none';
 }
 
+let _semSwitching = false;
 async function switchSemester(id) {
   if (id === currentSemesterId) return;
+  if (_semSwitching) return; // Prevent double-fire from rapid clicks
+  _semSwitching = true;
   currentSemesterId = id || null;
   localStorage.setItem('cj_semester_id', currentSemesterId || '');
 
+  showLoading();
+
   // Invalidate ALL data caches so every tab reloads fresh
   invalidateCache();
-  // Also clear reports cache
   _rptCache = null;
 
   // Load core data first (profiles drives everything)
@@ -864,9 +880,11 @@ async function switchSemester(id) {
     notes:     () => { if (typeof loadNotes === 'function') loadNotes(); },
   };
   if (reloaders[activeTab]) reloaders[activeTab]();
-  else loadDashboard(); // fallback
+  else loadDashboard();
 
+  hideLoading();
   showToast('📂 Đã chuyển Khai Giảng');
+  _semSwitching = false;
 }
 
 async function createSemester() {
