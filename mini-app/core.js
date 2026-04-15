@@ -281,17 +281,9 @@ async function refreshCurrentTab() {
 }
 
 // ============ IN-FLIGHT DEDUPLICATION ============
-// Nếu 2 lần gọi cùng GET URL xảy ra đồng thời, chỉ 1 request thật sự đi,
-// cả 2 caller đều nhận cùng kết quả → tránh double-fetch khi click tab nhanh.
-const _inflight = new Map(); // url → Promise<Response clone>
-async function sbFetchDedup(path, opts = {}) {
-  const isGet = !opts.method || opts.method === 'GET';
-  if (!isGet) return sbFetch(path, opts); // Writes đi thẳng, không dedup
-  if (_inflight.has(path)) return (await _inflight.get(path)).clone();
-  const p = sbFetch(path, opts).then(res => { _inflight.delete(path); return res; }).catch(e => { _inflight.delete(path); throw e; });
-  _inflight.set(path, p);
-  return (await p).clone();
-}
+// Built into sbFetch() — if 2 identical GET requests fire simultaneously,
+// only 1 actual network call is made; both callers receive the same result.
+const _inflight = new Map();
 
 // ============ SEMESTER (KHAI GIẢNG) ============
 let allSemesters = [];
@@ -777,28 +769,41 @@ function attachAutocomplete(input) {
 async function sbFetch(path, opts={}) {
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...opts.headers };
   if (opts.method === 'POST' && !headers['Prefer']) headers['Prefer'] = 'return=representation';
-  // Timeout: 20s for reads, 60s for writes — prevents infinite hangs when network/Supabase is slow
   const isWrite = opts.method && opts.method !== 'GET';
+
   // ── Security guard: chặn write khi không có Telegram auth và không phải guest ──
-  // myStaff = null + isGuestMode = false + isWrite = true → khả năng bị tamper
   if (isWrite && !window.isGuestMode && myStaff === null && typeof _authChecked !== 'undefined' && _authChecked) {
     console.error('[Security] Write blocked — no authenticated staff');
     throw new Error('Not authenticated');
   }
+
+  // ── In-flight dedup for GET: if same path is already loading, reuse it ──
+  if (!isWrite && _inflight.has(path)) {
+    return (await _inflight.get(path)).clone();
+  }
+
   const timeoutMs = isWrite ? 60000 : 20000;
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
-    if (!res.ok && isWrite) {
-      // Log write errors rõ ràng để debug dễ hơn
-      console.warn(`[sbFetch] ${opts.method} ${path} → ${res.status}`);
+
+  const promise = (async () => {
+    try {
+      const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
+      if (!res.ok && isWrite) {
+        console.warn(`[sbFetch] ${opts.method} ${path} → ${res.status}`);
+      }
+      return res;
+    } finally {
+      clearTimeout(tid);
+      _inflight.delete(path);
     }
-    return res;
-  } finally {
-    clearTimeout(tid);
-  }
+  })();
+
+  if (!isWrite) _inflight.set(path, promise);
+  const res = await promise;
+  return !isWrite ? res.clone() : res;
 }
+
 
 // ============ SEMESTER LOGIC ============
 async function loadSemesters() {
@@ -1810,91 +1815,6 @@ const AVATAR_GRADIENT_PRESETS = [
   { label: 'Rừng Xanh',  val: 'linear-gradient(135deg,#166534,#15803d)' },
 ];
 
-function openAvatarGradientPicker(profileId, encodedCurrent) {
-  const current = decodeURIComponent(encodedCurrent);
-  // Parse current gradient to pre-fill custom pickers
-  const colorMatch = current.match(/#([0-9a-fA-F]{6})/g) || [];
-  const c1 = colorMatch[0] || '#6366f1';
-  const c2 = colorMatch[1] || '#ec4899';
-  const angleMatch = current.match(/(\d+)deg/);
-  const angle = angleMatch ? angleMatch[1] : '135';
-
-  // Build modal HTML
-  const presetHtml = AVATAR_GRADIENT_PRESETS.map(g =>
-    `<div onclick="previewAvatarGradient('${g.val}')" title="${g.label}"
-       style="width:36px;height:36px;border-radius:10px;cursor:pointer;background:${g.val};
-              border:2px solid transparent;transition:transform 0.15s,border-color 0.15s;flex-shrink:0;"
-       onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''"></div>`
-  ).join('');
-
-  const modal = document.createElement('div');
-  modal.id = 'avatarColorModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.5);';
-  modal.innerHTML = `
-    <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;box-shadow:0 -8px 40px rgba(0,0,0,0.25);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="font-weight:700;font-size:15px;">🎨 Chọn màu Avatar</div>
-        <button onclick="document.getElementById('avatarColorModal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">✕</button>
-      </div>
-
-      <!-- Preview -->
-      <div style="display:flex;justify-content:center;margin-bottom:18px;">
-        <div id="avatarColorPreview" style="width:72px;height:72px;border-radius:20px;background:${current};
-          display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;color:white;
-          box-shadow:0 4px 20px rgba(0,0,0,0.25);transition:background 0.4s ease;">
-          ${(document.querySelector('#profileSummaryCard .profile-name')?.textContent||'A')[0]}
-        </div>
-      </div>
-
-      <!-- Presets -->
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">⚡ BỘ MÀU SẴN</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">${presetHtml}</div>
-
-      <!-- Custom -->
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">🖌 TÙY CHỈNH</div>
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
-        <div style="flex:1;text-align:center;">
-          <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Màu 1</div>
-          <input type="color" id="avatarC1" value="${c1}" oninput="updateCustomAvatarGradient()" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;">
-        </div>
-        <div style="font-size:20px;color:var(--text3);">→</div>
-        <div style="flex:1;text-align:center;">
-          <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Màu 2</div>
-          <input type="color" id="avatarC2" value="${c2}" oninput="updateCustomAvatarGradient()" style="width:100%;height:36px;border:none;border-radius:8px;cursor:pointer;">
-        </div>
-      </div>
-      <div style="margin-bottom:16px;">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Góc chuyển màu: <b id="avatarAngleLabel">${angle}°</b></div>
-        <input type="range" id="avatarAngle" min="0" max="360" value="${angle}" oninput="document.getElementById('avatarAngleLabel').textContent=this.value+'°';updateCustomAvatarGradient()" style="width:100%;accent-color:var(--accent);">
-      </div>
-
-      <!-- Save -->
-      <button onclick="saveAvatarGradient('${profileId}')" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">✅ Lưu màu nền</button>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-}
-
-let _pendingAvatarGradient = null;
-function previewAvatarGradient(gradient) {
-  _pendingAvatarGradient = gradient;
-  const prev = document.getElementById('avatarColorPreview');
-  if (prev) prev.style.background = gradient;
-}
-function updateCustomAvatarGradient() {
-  const c1 = document.getElementById('avatarC1')?.value || '#6366f1';
-  const c2 = document.getElementById('avatarC2')?.value || '#ec4899';
-  const angle = document.getElementById('avatarAngle')?.value || '135';
-  const gradient = `linear-gradient(${angle}deg,${c1},${c2})`;
-  previewAvatarGradient(gradient);
-}
-async function saveAvatarGradient(profileId) {
-  const gradient = _pendingAvatarGradient || document.getElementById('avatarColorPreview')?.style.background;
-  if (!gradient) return;
-  await changeAvatarColor(profileId, gradient);
-  document.getElementById('avatarColorModal')?.remove();
-  _pendingAvatarGradient = null;
-}
 
 async function changeAvatarColor(profileId, gradient) {
   try {
@@ -2658,78 +2578,6 @@ function _resetDesktopConfig() {
   applyDesktopLayout();
   
   showToast('↩ Đã reset bố cục về mặc định!');
-}
-const _EMOJI_CATS = {
-  '😀': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
-  '👋': ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵'],
-  '🐶': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'],
-  '🍎': ['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🫘','🥜','🌰','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🍶','🍾','🍷','🍸','🍹','🍺','🍻','🥂','🥃','🫗','🥤','🧋','🧃','🧉','🧊'],
-  '⚽': ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤺','🤸','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎪','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️','🧩','🪩'],
-  '🚗': ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','🛞','⛽','🛞','🚨','🚥','🚦','🛑','🚧','⚓','🛟','⛵','🛶','🚤','🛳️','⛴️','🛥️','🚢','✈️','🛩️','🛫','🛬','🪂','💺','🚁','🚟','🚠','🚡','🛰️','🚀','🛸'],
-  '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚻','🚼','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','🟰','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢'],
-  '🌍': ['🌍','🌎','🌏','🌐','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏕️','🏖️','🏜️','🏝️','🏞️','🏟️','🏛️','🏗️','🧱','🪨','🪵','🛖','🏘️','🏚️','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🕋','⛲','⛺','🌁','🌃','🏙️','🌄','🌅','🌆','🌇','🌉','♨️','🎠','🛝','🎡','🎢','💈','🎪','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋','🚌','🚍','🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘','🌙','🌚','🌛','🌜','🌡️','☀️','🌝','🌞','🪐','⭐','🌟','🌠','🌌','☁️','⛅','⛈️','🌤️','🌥️','🌦️','🌧️','🌨️','🌩️','🌪️','🌫️','🌬️','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','☃️','⛄','☄️','🔥','💧','🌊','🎄','🎋','🎍','🎎','🎏','🎐','🎑','🧧','🎀','🎁','🎆','🎇','🧨','✨','🎈','🎉','🎊','🎃','👑','💍','💎','🔮','🧿','🪬','📿','⚗️','🔭','🔬','🕳️','🩹','🩺','🩻','🩼','💊','💉','🩸','🧬','🦠','🧫','🧪','🌡️','🧹','🪠','🧺','🧻','🪣','🧼','🫧','🪥','🧽','🧯','🛒','🚬','⚰️','🪦','⚱️','🗿','🪧','🪪']
-};
-const _EMOJI_CAT_ICONS = ['😀','👋','🐶','🍎','⚽','🚗','❤️','🌍'];
-let _allEmojiFlat = [];
-Object.values(_EMOJI_CATS).forEach(arr => _allEmojiFlat.push(...arr));
-
-function toggleEmojiPicker() {
-  const box = document.getElementById('emojiPickerBox');
-  if (!box) return;
-  const show = box.style.display === 'none';
-  box.style.display = show ? 'block' : 'none';
-  if (show) _renderEmojiCats();
-}
-
-function _renderEmojiCats(catKey) {
-  const bar = document.getElementById('emojiCatBar');
-  const grid = document.getElementById('emojiGrid');
-  if (!bar || !grid) return;
-  const activeKey = catKey || _EMOJI_CAT_ICONS[0];
-  bar.innerHTML = _EMOJI_CAT_ICONS.map(k => 
-    `<span onclick="_renderEmojiCats('${k}')" style="font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px;${k===activeKey?'background:var(--accent);':''}">${k}</span>`
-  ).join('');
-  const emojis = _EMOJI_CATS[activeKey] || [];
-  grid.innerHTML = emojis.map(e => 
-    `<span onclick="selectEmoji('${e}')" style="font-size:22px;cursor:pointer;padding:3px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${e}</span>`
-  ).join('');
-}
-
-function _filterEmoji(q) {
-  const grid = document.getElementById('emojiGrid');
-  if (!grid) return;
-  if (!q.trim()) { _renderEmojiCats(); return; }
-  // Show all matching
-  const emojis = _allEmojiFlat.filter(e => e.includes(q));
-  grid.innerHTML = (emojis.length ? emojis : _allEmojiFlat.slice(0, 60)).map(e => 
-    `<span onclick="selectEmoji('${e}')" style="font-size:22px;cursor:pointer;padding:3px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${e}</span>`
-  ).join('');
-}
-
-function selectEmoji(emoji) {
-  const display = document.getElementById('prof_emoji_display');
-  const input   = document.getElementById('prof_avatar_emoji');
-  if (display) display.textContent = emoji;
-  if (input)   input.value = emoji;
-  const box = document.getElementById('emojiPickerBox');
-  if (box) box.style.display = 'none';
-}
-
-function _pickStaffAvatarColor(gradient) {
-  const display = document.getElementById('prof_emoji_display');
-  const input = document.getElementById('prof_staff_avatar_color');
-  if (display) display.style.background = gradient;
-  if (input) input.value = gradient;
-  // Update preset borders
-  document.querySelectorAll('#staffAvatarColorPicker > div').forEach(d => {
-    d.style.borderColor = d.style.background === gradient ? 'var(--accent)' : 'transparent';
-  });
-}
-
-function _customStaffAvatarColor() {
-  const c1 = document.getElementById('staffAvatarC1')?.value || '#7c6af7';
-  const c2 = document.getElementById('staffAvatarC2')?.value || '#ec4899';
-  _pickStaffAvatarColor(`linear-gradient(135deg,${c1},${c2})`);
 }
 
 let _prefTabOrder = null;
