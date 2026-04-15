@@ -28,38 +28,6 @@ function shinTime(dateInput) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Auto-mask input for Shin yy.mm.dd hh:mm (e.g. "43.04.12 09:26")
-function formatDateTimeInput(el) {
-  let v = el.value.replace(/[^\d]/g, '');
-  let out = '';
-  if (v.length > 0) out += v.substring(0, Math.min(2, v.length));       // yy
-  if (v.length > 2) out += '.' + v.substring(2, Math.min(4, v.length));  // .mm
-  if (v.length > 4) out += '.' + v.substring(4, Math.min(6, v.length));  // .dd
-  if (v.length > 6) out += ' ' + v.substring(6, Math.min(8, v.length));  // hh
-  if (v.length > 8) out += ':' + v.substring(8, Math.min(10, v.length)); // :mm
-  if (out !== el.value) { const pos = out.length; el.value = out; el.setSelectionRange(pos, pos); }
-}
-
-// Parse "43.04.12 09:26" → ISO "2026-04-12T09:26"
-function parseShinInput(str) {
-  if (!str) return null;
-  const m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const [,sy,mm,dd,hh,mi] = m;
-  const year = parseInt(sy) + SHIN_OFFSET;
-  return `${year}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}T${hh.padStart(2,'0')}:${mi}`;
-}
-
-// ISO → "43.04.12 09:26" (for input field display, no "Shin" prefix)
-function isoToShinInput(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  const pad = n => String(n).padStart(2,'0');
-  const sy = d.getFullYear() - SHIN_OFFSET;
-  return `${sy}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 // ── Time-ago utility: human-readable elapsed time ───────────────────────────
 // <1 phút → "vừa xong", <1h → "X phút", <24h → "X giờ", >=24h → "X ngày"
 function timeAgo(dateInput) {

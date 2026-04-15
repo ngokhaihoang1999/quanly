@@ -1368,7 +1368,7 @@ function _handleDeepLink() {
   var pid = _getDeepLinkProfileId();
   if (!pid || _deepLinkHandled) return;
   _deepLinkHandled = true;
-  console.log('[DeepLink] Opening profile:', pid);
+  // Deep link: opening profile
   if (typeof openProfileById === 'function' && allProfiles && allProfiles.length > 0) {
     openProfileById(pid);
   }
@@ -2126,7 +2126,7 @@ async function executeKTToggle(profileId, newState, buoiThu) {
          })
       });
       const postData = await postRes.text();
-      console.log('[KT TOGGLE] POST mo_kt response:', postRes.status, postData);
+      // mo_kt record created
       if (!postRes.ok) {
         showToast('❌ Lỗi tạo sự kiện Mở KT: ' + postData);
         return;
@@ -2138,7 +2138,7 @@ async function executeKTToggle(profileId, newState, buoiThu) {
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({ is_kt_opened: true })
       });
-      console.log('[KT TOGGLE] PATCH profile response:', patchRes.status);
+      // profile is_kt_opened updated
       
       showToast('✅ Đã xác nhận Mở KT!');
     } else {
