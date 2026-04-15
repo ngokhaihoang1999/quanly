@@ -74,8 +74,8 @@ async function loadCalendar() {
     _calLinkedNotes = [];
   }
   
-  // After DB events, merge virtual events from allProfiles milestones
-  _mergeProfileMilestones(startStr, endStr, myCode, scope);
+  // Also fetch TV/BB records with scheduled dates to merge as virtual events
+  await _mergeRecordMilestones(startStr, endStr, myCode, scope);
 
   renderCalendarGrid();
   // Auto-select today or keep selected date
@@ -90,82 +90,79 @@ async function loadCalendar() {
   renderCalendarDayEvents(calSelectedDate);
 }
 
-// Generate virtual events from profile phase milestones
-function _mergeProfileMilestones(startStr, endStr, myCode, scope) {
-  if (!allProfiles || !allProfiles.length) return;
-  const start = new Date(startStr), end = new Date(endStr);
+// Fetch TV & BB records and merge as virtual calendar events
+async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
+  try {
+    // Fetch BB records with buoi_tiep in content (bien_ban type)
+    const bbRes = await sbFetch(`/rest/v1/records?record_type=eq.bien_ban&select=id,profile_id,content,created_at&order=created_at.asc`);
+    const bbRecords = bbRes.ok ? await bbRes.json() : [];
 
-  allProfiles.forEach(p => {
-    // Skip if not in scope
-    if (scope !== 'system' && p.ndd_staff_code !== myCode && p.tvv_staff_code !== myCode && p.gvbb_staff_code !== myCode) return;
+    // Fetch TV records (tu_van type) — they have scheduled_at in content
+    const tvRes = await sbFetch(`/rest/v1/records?record_type=eq.tu_van&select=id,profile_id,content,created_at&order=created_at.asc`);
+    const tvRecords = tvRes.ok ? await tvRes.json() : [];
 
-    const pName = p.full_name || '?';
+    const start = new Date(startStr), end = new Date(endStr);
 
-    // --- TV milestones: tv_sessions array ---
-    if (p.tv_sessions && Array.isArray(p.tv_sessions)) {
-      p.tv_sessions.forEach((sess, idx) => {
-        if (!sess.scheduled_at) return;
-        const d = new Date(sess.scheduled_at);
-        if (d < start || d > end) return;
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        // Check if already exists in calEvents (from calendar_events table)
-        if (calEvents.find(e => e.event_type === 'chot_tv' && e.profile_id === p.id && e.event_date === dateStr)) return;
-        calEvents.push({
-          id: `vtv_${p.id}_${idx}`,
-          event_type: 'chot_tv',
-          title: `Chốt TV lần ${idx + 1} — ${pName}`,
-          event_date: dateStr,
-          event_time: timeStr,
-          profile_id: p.id,
-          is_auto: true,
-          _virtual: true
-        });
+    // Process BB records — extract buoi_tiep dates
+    bbRecords.forEach(rec => {
+      const c = typeof rec.content === 'string' ? JSON.parse(rec.content) : rec.content;
+      if (!c || !c.buoi_tiep) return;
+      const p = allProfiles.find(x => x.id === rec.profile_id);
+      if (!p) return;
+      // Scope check
+      if (scope !== 'system' && p.ndd_staff_code !== myCode && p.tvv_staff_code !== myCode && p.gvbb_staff_code !== myCode) return;
+
+      const d = new Date(c.buoi_tiep);
+      if (isNaN(d.getTime()) || d < start || d > end) return;
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+      // Don't duplicate if already in calEvents from calendar_events table
+      if (calEvents.find(e => e.event_type === 'hoc_bb' && e.profile_id === p.id && e.event_date === dateStr)) return;
+
+      const buoiNum = c.buoi_thu || c.lan_thu || '?';
+      calEvents.push({
+        id: `vbb_${rec.id}`,
+        event_type: 'hoc_bb',
+        title: `Học BB buổi ${buoiNum} — ${p.full_name || '?'}`,
+        event_date: dateStr,
+        event_time: timeStr,
+        profile_id: p.id,
+        is_auto: true,
+        _virtual: true
       });
-    }
+    });
 
-    // --- BB milestones: bb_reports with buoi_tiep ---
-    if (p.bb_reports && Array.isArray(p.bb_reports)) {
-      p.bb_reports.forEach((rpt, idx) => {
-        if (!rpt.buoi_tiep) return;
-        const d = new Date(rpt.buoi_tiep);
-        if (isNaN(d.getTime()) || d < start || d > end) return;
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        if (calEvents.find(e => e.event_type === 'hoc_bb' && e.profile_id === p.id && e.event_date === dateStr)) return;
-        calEvents.push({
-          id: `vbb_${p.id}_${idx}`,
-          event_type: 'hoc_bb',
-          title: `Học BB buổi ${idx + 2} — ${pName}`,
-          event_date: dateStr,
-          event_time: timeStr,
-          profile_id: p.id,
-          is_auto: true,
-          _virtual: true
-        });
+    // Process TV records — extract scheduled_at dates
+    tvRecords.forEach(rec => {
+      const c = typeof rec.content === 'string' ? JSON.parse(rec.content) : rec.content;
+      if (!c || !c.scheduled_at) return;
+      const p = allProfiles.find(x => x.id === rec.profile_id);
+      if (!p) return;
+      if (scope !== 'system' && p.ndd_staff_code !== myCode && p.tvv_staff_code !== myCode) return;
+
+      const d = new Date(c.scheduled_at);
+      if (isNaN(d.getTime()) || d < start || d > end) return;
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+      if (calEvents.find(e => e.event_type === 'chot_tv' && e.profile_id === p.id && e.event_date === dateStr)) return;
+
+      const sessNum = c.lan_thu || '?';
+      calEvents.push({
+        id: `vtv_${rec.id}`,
+        event_type: 'chot_tv',
+        title: `Chốt TV lần ${sessNum} — ${p.full_name || '?'}`,
+        event_date: dateStr,
+        event_time: timeStr,
+        profile_id: p.id,
+        is_auto: true,
+        _virtual: true
       });
-    }
-
-    // --- Profile creation date (first contact) ---
-    if (p.created_at) {
-      const d = new Date(p.created_at);
-      if (d >= start && d <= end) {
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (!calEvents.find(e => e.id === `vcr_${p.id}`)) {
-          calEvents.push({
-            id: `vcr_${p.id}`,
-            event_type: 'custom',
-            title: `📋 Tạo hồ sơ: ${pName}`,
-            event_date: dateStr,
-            profile_id: p.id,
-            is_auto: true,
-            _virtual: true,
-            description: `Phase: ${p.phase || 'chakki'}`
-          });
-        }
-      }
-    }
-  });
+    });
+  } catch(e) {
+    console.warn('_mergeRecordMilestones:', e);
+  }
 }
 
 
@@ -374,12 +371,32 @@ async function unlinkNoteFromCal(noteId, dateStr) {
 }
 
 function openNoteFromCal(noteId) {
-  // Switch to Notes tab and open the note
-  const notesTab = document.querySelector('[data-tab="notes"]');
-  if (notesTab) notesTab.click();
-  setTimeout(() => {
-    if (typeof openEditNoteModal === 'function') openEditNoteModal(noteId);
-  }, 300);
+  // Find note data
+  const note = (typeof _allMyNotes !== 'undefined' ? _allMyNotes : []).find(n => n.id === noteId)
+    || (typeof _sharedWithMeNotes !== 'undefined' ? _sharedWithMeNotes : []).find(n => n.id === noteId)
+    || _calLinkedNotes.find(n => n.id === noteId);
+  if (!note) {
+    showToast('Không tìm thấy ghi chú');
+    return;
+  }
+  const c = (typeof NOTE_COLORS !== 'undefined' && NOTE_COLORS[note.color]) || { bg: '#fef9c3', text: '#92400e', headerBg: '#fde68a' };
+  const title = note.title || 'Không tiêu đề';
+  const content = note.content || '';
+  const timeStr = note.updated_at ? getTimeAgo(note.updated_at) : '';
+
+  // Show read-only popup using recordModal
+  document.getElementById('recordModalTitle').textContent = `📝 ${title}`;
+  document.getElementById('recordModalBody').innerHTML = `
+    <div style="background:${c.bg};border-radius:12px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(0,0,0,0.08);">
+      <div style="white-space:pre-wrap;font-size:13px;color:${c.text};line-height:1.6;">${typeof escHtml === 'function' ? escHtml(content) : content}</div>
+      ${timeStr ? `<div style="margin-top:10px;font-size:10px;color:${c.text};opacity:0.6;">Cập nhật: ${timeStr}</div>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button onclick="closeModal('addRecordModal');openEditNoteModal('${noteId}')" style="padding:6px 14px;font-size:11px;border-radius:20px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-weight:600;">✏️ Sửa</button>
+    </div>`;
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) saveBtn.style.display = 'none';
+  document.getElementById('addRecordModal').classList.add('open');
 }
 
 // ============ CREATE EVENT ============
