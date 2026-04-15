@@ -1035,6 +1035,8 @@ function applyDesktopLayout() {
     }
 
     if (typeof applyPermissions === 'function') applyPermissions();
+    // Re-evaluate tab bar mode after restoring to header
+    setTimeout(() => _updateTabBarMode(), 50);
   }
 }
 
@@ -1122,12 +1124,14 @@ function _savePanelWidths() {
   } catch(e) {}
 }
 
-// Toggle tab labels based on center panel width vs actual tab count
+// Toggle tab labels based on tab bar container width vs actual tab count
 function _updateTabBarMode() {
   const tabBar = document.getElementById('mainTabBar');
-  const center = document.getElementById('panelCenter');
-  if (!tabBar || !center) return;
-  const w = center.getBoundingClientRect().width;
+  if (!tabBar) return;
+  // Use the tab bar's parent container width (works in both header and panelCenter)
+  const parent = tabBar.parentElement;
+  if (!parent) return;
+  const w = parent.getBoundingClientRect().width;
   // Count how many tabs are visible
   const visibleTabs = Array.from(tabBar.querySelectorAll('.tab')).filter(t => t.style.display !== 'none');
   const count = visibleTabs.length;
@@ -1236,7 +1240,10 @@ function _initVerticalDividers() {
   });
 }
 
-window.addEventListener('resize', applyDesktopLayout);
+window.addEventListener('resize', () => {
+  applyDesktopLayout();
+  _updateTabBarMode();
+});
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1282,6 +1289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Deep link: auto-open profile after data is ready
     _handleDeepLink();
     applyDesktopLayout(); // Phase 3: Setup Panels immediately on init
+    _updateTabBarMode();  // Phase 3.5: Set tab mode (wide/icon/dropdown)
   } catch(e) {
     console.error('Init error:', e);
     _clearLoadingStates();
