@@ -95,17 +95,20 @@ async function loadReports() {
 
     // ── Fetch data in parallel ──
     const codeFilter = allScopeCodes.length > 0 ? allScopeCodes.map(c => `"${c}"`).join(',') : '';
-    const [rolesRes, hapjaRes, recordsRes, sessionsRes] = await Promise.all([
+    const [rolesRes, hapjaRes, recordsRes, sessionsRes, allProfXSemRes] = await Promise.all([
       codeFilter ? sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=staff_code,role_type,fruit_groups(profile_id,profiles(full_name,phase,fruit_status,is_kt_opened,created_at,ndd_staff_code,dropout_reason))`) : Promise.resolve({ json: () => [] }),
       codeFilter ? sbFetch(`/rest/v1/check_hapja?created_by=in.(${codeFilter})&select=id,status,created_at,created_by${semF}`) : Promise.resolve({ json: () => [] }),
       codeFilter ? sbFetch(`/rest/v1/records?select=profile_id,record_type,created_at&record_type=in.(tu_van,bien_ban,mo_kt,chot_bb,chot_center)&order=created_at.desc`) : Promise.resolve({ json: () => [] }),
       codeFilter ? sbFetch(`/rest/v1/consultation_sessions?select=profile_id,session_number,created_at&order=created_at.desc`) : Promise.resolve({ json: () => [] }),
+      // Lightweight fetch of ALL profiles across ALL semesters (for trend chart)
+      sbFetch('/rest/v1/profiles?select=id,phase,fruit_status,semester_id,ndd_staff_code&order=created_at.desc'),
     ]);
 
     const allRoles = codeFilter ? await rolesRes.json() : [];
     const allHapja = codeFilter ? await hapjaRes.json() : [];
     const allRecords = codeFilter ? await recordsRes.json() : [];
     const allSessions = codeFilter ? await sessionsRes.json() : [];
+    const allProfilesXSem = allProfXSemRes.ok ? await allProfXSemRes.json() : [];
 
     // Build records/sessions maps
     const recMap = {};
@@ -138,7 +141,7 @@ async function loadReports() {
     });
 
     // Cache data
-    _rptCache = { allRoles, allHapja, recMap, sessMap, profileMap, scopeLabel, scopeUnits, allScopeCodes };
+    _rptCache = { allRoles, allHapja, recMap, sessMap, profileMap, scopeLabel, scopeUnits, allScopeCodes, allProfilesXSem };
 
     // Render with all codes (no sub-filter)
     _renderReports(el, null);
@@ -167,7 +170,7 @@ function _switchReportUnit(val) {
 
 function _renderReports(el, subUnitIdx) {
   if (!_rptCache) return;
-  const { allRoles, allHapja, recMap, sessMap, profileMap, scopeLabel, scopeUnits, allScopeCodes } = _rptCache;
+  const { allRoles, allHapja, recMap, sessMap, profileMap, scopeLabel, scopeUnits, allScopeCodes, allProfilesXSem } = _rptCache;
 
   // Determine which codes to use
   let activeCodes = null; // null = all
@@ -393,10 +396,10 @@ function _renderReports(el, subUnitIdx) {
   const semLabels = semesters.map(s => s.name || '?');
 
   // Count ALL profiles (across semesters) per semester that reached each phase
-  // Use allProfiles (full dataset) not profiles (current-semester filtered)
+  // Use allProfilesXSem (fetched without semester filter) so trend is consistent
   function countAllBySem(minIdx) {
     return semIds.map(sid => {
-      const semProfiles = (allProfiles || []).filter(p => p.semester_id === sid);
+      const semProfiles = (allProfilesXSem || []).filter(p => p.semester_id === sid);
       // Filter by scope if not system
       const scopeFiltered = activeCodes
         ? semProfiles.filter(p => activeCodes.includes(p.ndd_staff_code))
