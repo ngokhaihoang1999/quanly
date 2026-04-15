@@ -23,7 +23,7 @@ function latestActivityLabel(rec, sess) {
     actDate = sess.created_at;
     label = `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
   }
-  const ago = timeAgo(actDate);
+  const ago = getTimeAgo(actDate);
   return ago ? `${label} · ${ago}` : label;
 }
 
