@@ -190,15 +190,19 @@ async function _autoFillSinka(profileId, p) {
     if (el && !el.value) el.value = val;
   };
 
-  // Date
-  fill('sk_ngay_ghi_chep', new Date().toISOString().split('T')[0]);
+  // Date — Shin format (43.04.13)
+  const today = new Date();
+  const shinYear = today.getFullYear() - 1983;
+  const shinDateStr = `${shinYear}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+  fill('sk_ngay_ghi_chep', shinDateStr);
 
   // Section 1: NDD
   const nddUnit = nddCode ? getStaffUnit(nddCode) : '';
   const nddPhone = nddStaff?.phone || '';
   const nddInfo = [nddStaff?.full_name, nddUnit, nddPhone].filter(Boolean).join(' / ');
   fill('sk_ndd_ten_bo_kv_sdt', nddInfo);
-  fill('sk_ndd_ma_dinh_danh', nddCode);
+  // Mã SCJ: lấy từ staff.scj_code (user tự nhập trong Cá nhân hoá)
+  fill('sk_ndd_ma_dinh_danh', nddStaff?.scj_code || '');
   fill('sk_hinh_thuc_truyen_dao', t2_values.hinh_thuc);
   fill('sk_moi_quan_he', t2_values.ket_noi);
   fill('sk_concept_thuoc_the', t2_values.cong_cu);
@@ -230,7 +234,8 @@ async function _autoFillSinka(profileId, p) {
     const gvbbUnit = getStaffUnit(gvbbCode);
     const gvbbPhone = gvbbStaff.phone || '';
     fill('sk_gvbb_ten', [gvbbStaff.full_name, gvbbUnit, gvbbPhone].filter(Boolean).join(' / '));
-    fill('sk_gvbb_ma_dinh_danh', gvbbCode);
+    // Mã SCJ GVBB: từ staff.scj_code
+    fill('sk_gvbb_ma_dinh_danh', gvbbStaff?.scj_code || '');
   } else if (gvbbCode && gvbbCode.startsWith('tg:')) {
     // Unregistered GVBB — show display name from roles
     const display = window._rolesDisplay?.gvbb || gvbbCode;
@@ -375,7 +380,7 @@ Ngày ghi chép: ${v('sk_ngay_ghi_chep')}
 }
 
 // ── Export Sinka to Word (.doc) ──
-function exportSinkaWord() {
+async function exportSinkaWord() {
   const v = id => document.getElementById(id)?.value?.trim() || '';
   const p = allProfiles.find(x => x.id === currentProfileId);
   if (!p) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
@@ -488,14 +493,36 @@ function exportSinkaWord() {
 <body>${htmlBody}</body>
 </html>`;
 
-  // Create blob and trigger download
+  // Create blob and trigger download — with Telegram WebApp fallback
   const blob = new Blob(['\ufeff' + fullHtml], { type: 'application/msword;charset=utf-8' });
+
+  // Method 1: navigator.share() — works on mobile Telegram WebApp
+  if (navigator.canShare) {
+    try {
+      const file = new File([blob], fileName, { type: 'application/msword' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Giấy Sinka' });
+        showToast('📄 Đã chia sẻ: ' + fileName);
+        return;
+      }
+    } catch(e) { console.warn('Share failed, trying download:', e); }
+  }
+
+  // Method 2: <a download> — works on desktop browsers
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+
+  // Method 3: If in Telegram WebApp, also open in external browser
+  if (window.Telegram?.WebApp) {
+    setTimeout(() => {
+      try { window.open(url, '_blank'); } catch(e) {}
+    }, 300);
+  }
+
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 5000);
   showToast('📄 Đã xuất: ' + fileName);
 }
