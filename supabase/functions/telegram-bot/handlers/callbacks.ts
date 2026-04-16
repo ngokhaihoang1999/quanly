@@ -377,9 +377,10 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ── Sinka: xuất tin nhắn (auto-fill from profiles + staff + form_hanh_chinh) ──
   if (cbData === 'view_sinka_text') {
-    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name, gender, birth_year, phone_number, ndd_staff_code, gvbb_staff_code)').eq('telegram_group_id', chatId).single();
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
     if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
-    const p: any = (fg as any).profiles || {};
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', fg.profile_id).single();
+    const p: any = profile || {};
     const name = p.full_name || '';
 
     // Load form_hanh_chinh (saved sk_* + t2_* data)
@@ -450,12 +451,13 @@ ${ln('Người trao đổi', v('sk_nguoi_trao_doi'))}${ln('XN center', v('sk_xac
 
   // ── Sinka: xuất file Word (.docx) — static import, no dynamic import issues ──
   if (cbData === 'view_sinka_docx') {
-    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
     if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
-    const { data: fhc } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
-    const d: any = fhc?.data || {};
+    const { data: fhcDoc } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
+    const d: any = fhcDoc?.data || {};
     const v = (key: string) => d[key] || '—';
-    const name = (fg as any).profiles?.full_name || '';
+    const { data: profDoc } = await supabase.from('profiles').select('full_name').eq('id', fg.profile_id).single();
+    const name = profDoc?.full_name || '';
 
     await editMessageText(chatId, messageId, `⏳ Đang tạo file Word...`, []);
 
