@@ -480,7 +480,7 @@ Lá khác: ${v('sk_la_khac')}
 
     try {
       // Use docx library from npm (Deno can import from npm:)
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('npm:docx@9.6.1');
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('https://esm.sh/docx@9.6.1');
 
       const field = (num: string, label: string, value: string) => new Paragraph({
         spacing: { after: 80 },
