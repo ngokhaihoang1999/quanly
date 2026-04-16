@@ -379,33 +379,26 @@ Ngày ghi chép: ${v('sk_ngay_ghi_chep')}
   copyToClipboard(text);
 }
 
-// ── Lazy-load docx library ──
-let _docxLoaded = false;
-function _lazyDocx() {
-  if (_docxLoaded) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/docx@9.1.1/build/index.umd.min.js';
-    s.onload = () => { _docxLoaded = true; resolve(); };
-    s.onerror = () => reject(new Error('Failed to load docx library'));
-    document.head.appendChild(s);
-  });
-}
-
 // ── Export Sinka to Word (.docx) ──
 async function exportSinkaWord() {
   const v = id => document.getElementById(id)?.value?.trim() || '';
   const p = allProfiles.find(x => x.id === currentProfileId);
   if (!p) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
 
-  showToast('⏳ Đang tạo file...');
-  try { await _lazyDocx(); } catch(e) {
+  showToast('⏳ Đang tải thư viện docx...');
+  let docx;
+  try {
+    docx = await import('https://cdn.jsdelivr.net/npm/docx@9.6.1/+esm');
+  } catch (e) {
+    console.error('Docx load error:', e);
     showToast('❌ Không thể tải thư viện docx');
     return;
   }
+  
+  showToast('⏳ Đang tạo file...');
 
   const fileName = _buildSinkaFileName();
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = window.docx;
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
 
   // Helper: labeled field → Paragraph
   const field = (num, label, value) => new Paragraph({
