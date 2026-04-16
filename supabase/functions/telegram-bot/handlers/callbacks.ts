@@ -382,7 +382,59 @@ export async function handleCallback(update: any, staffData: any) {
     const p: any = profile || {};
     const { data: fhc } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
     const d: any = fhc?.data || {};
-    const v = (key: string) => d[key] || '\u2014';
+
+    // Auto-fill pipeline (same as Mini App _autoFillSinka)
+    let nddInfo = '', nddScj = '';
+    if (p.ndd_staff_code) {
+      const { data: ndd } = await supabase.from('staff').select('full_name, phone, scj_code').eq('staff_code', p.ndd_staff_code).single();
+      if (ndd) { nddInfo = [ndd.full_name, ndd.phone].filter(Boolean).join(' / '); nddScj = ndd.scj_code || ''; }
+    }
+    let gvbbInfo = '', gvbbScj = '';
+    if (p.gvbb_staff_code && !p.gvbb_staff_code.startsWith('tg:')) {
+      const { data: gvbb } = await supabase.from('staff').select('full_name, phone, scj_code').eq('staff_code', p.gvbb_staff_code).single();
+      if (gvbb) { gvbbInfo = [gvbb.full_name, gvbb.phone].filter(Boolean).join(' / '); gvbbScj = gvbb.scj_code || ''; }
+    }
+    let laInfo = '';
+    try {
+      const { data: fgs } = await supabase.from('fruit_groups').select('fruit_roles(staff_code,role_type)').eq('profile_id', fg.profile_id);
+      const laCode = (fgs || []).flatMap((f: any) => (f.fruit_roles || []).filter((r: any) => r.role_type === 'la').map((r: any) => r.staff_code))[0];
+      if (laCode) {
+        const { data: la } = await supabase.from('staff').select('full_name, phone').eq('staff_code', laCode).single();
+        if (la) laInfo = [la.full_name, la.phone].filter(Boolean).join(' / ');
+      }
+    } catch {}
+    const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban');
+
+    const today = new Date();
+    const shinYear = today.getFullYear() - 1983;
+    const shinDate = `${shinYear}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+
+    // Auto-fill map: sk_key -> fallback
+    const af: Record<string, string> = {};
+    af['sk_ngay_ghi_chep'] = shinDate;
+    af['sk_ndd_ten_bo_kv_sdt'] = nddInfo;
+    af['sk_ndd_ma_dinh_danh'] = nddScj;
+    af['sk_hinh_thuc_truyen_dao'] = d.t2_hinh_thuc || '';
+    af['sk_moi_quan_he'] = d.t2_ket_noi || '';
+    af['sk_concept_thuoc_the'] = d.t2_cong_cu || '';
+    af['sk_ten_gt_tuoi'] = [p.full_name, p.gender, p.birth_year].filter(Boolean).join(' / ');
+    af['sk_quoc_tich'] = 'Vi\u1ec7t Nam';
+    af['sk_so_thich_sdt'] = [d.t2_so_thich, p.phone_number].filter(Boolean).join(' / ');
+    af['sk_ngay_sinh'] = p.birth_year || '';
+    af['sk_dia_chi'] = d.t2_dia_chi || '';
+    af['sk_noi_lam_viec'] = d.t2_nghe_nghiep || '';
+    af['sk_lich_trinh'] = d.t2_khung_ranh || '';
+    af['sk_hon_nhan'] = d.t2_hon_nhan || '';
+    af['sk_thanh_vien_gd'] = d.t2_nguoi_than || '';
+    af['sk_enneagram_mbti'] = d.t2_tinh_cach || '';
+    af['sk_ton_giao'] = d.t2_ton_giao || '';
+    af['sk_gvbb_ten'] = gvbbInfo;
+    af['sk_gvbb_ma_dinh_danh'] = gvbbScj;
+    af['sk_la_ten'] = laInfo;
+    af['sk_so_lan_bb'] = bbCount ? String(bbCount) : '';
+
+    // v(key): saved sk_* data wins, then auto-fill, then dash
+    const v = (key: string) => d[key] || af[key] || '\u2014';
 
     const msg = `\u2b1c\ufe0f Gi\u1ea5y Sinka\nNg\u00e0y ghi ch\u00e9p: ${v('sk_ngay_ghi_chep')}\n\n1. Ng\u01b0\u1eddi d\u1eabn d\u1eaft:\n\n1) T\u00ean/B\u1ed9/Khu v\u1ef1c/S\u1ed1 li\u00ean l\u1ea1c: ${v('sk_ndd_ten_bo_kv_sdt')}\n2) \u2757\ufe0fM\u00e3 \u0111\u1ecbnh danh trong SCJ: ${v('sk_ndd_ma_dinh_danh')}\n3) H\u00ecnh th\u1ee9c truy\u1ec1n \u0111\u1ea1o: ${v('sk_hinh_thuc_truyen_dao')}\n4) M\u1ed1i quan h\u1ec7 v\u1edbi tr\u00e1i qu\u1ea3: ${v('sk_moi_quan_he')}\n5) Concept thu\u1ed9c th\u1ec3: ${v('sk_concept_thuoc_the')}\n6) Concept thu\u1ed9c linh: ${v('sk_concept_thuoc_linh')}\n\n2. Th\u00f4ng tin c\u01a1 b\u1ea3n c\u1ee7a h\u1ecdc vi\u00ean\n\n1) T\u00ean/Gi\u1edbi t\u00ednh/Tu\u1ed5i: ${v('sk_ten_gt_tuoi')}\n2) Qu\u1ed1c t\u1ecbch: ${v('sk_quoc_tich')}\n3) S\u1edf th\u00edch/S\u1edf tr\u01b0\u1eddng/S\u1ed1 li\u00ean l\u1ea1c: ${v('sk_so_thich_sdt')}\n4) Ng\u00e0y th\u00e1ng n\u0103m sinh: ${v('sk_ngay_sinh')}\n5) \u0110\u1ecba ch\u1ec9 nh\u00e0 (\u0110\u1ecba ch\u1ec9 \u0111ang s\u1ed1ng): ${v('sk_dia_chi')}\n6) N\u01a1i l\u00e0m vi\u1ec7c (C\u00f4ng vi\u1ec7c, V\u1ecb tr\u00ed): ${v('sk_noi_lam_viec')}\n7) L\u1ecbch tr\u00ecnh: ${v('sk_lich_trinh')}\n8) T\u00ecnh tr\u1ea1ng h\u00f4n nh\u00e2n: ${v('sk_hon_nhan')}\n9) C\u00f3 b\u1ea1n kh\u00e1c gi\u1edbi kh\u00f4ng / Th\u1eddi gian ch\u01a1i: ${v('sk_ban_khac_gioi')}\n10) C\u00f3 h\u1ecdc l\u1ea1i hay kh\u00f4ng?: ${v('sk_hoc_lai')}\n\n3. Gia \u0111\u00ecnh/B\u1ed1i c\u1ea3nh tr\u01b0\u1edfng th\u00e0nh:\n1) C\u00e1c th\u00e0nh vi\u00ean trong gia \u0111\u00ecnh: ${v('sk_thanh_vien_gd')}\n2) Qu\u00e1 tr\u00ecnh tr\u01b0\u1edfng th\u00e0nh, ho\u00e0n c\u1ea3nh gia \u0111\u00ecnh: ${v('sk_qua_trinh_truong_thanh')}\n3) M\u1ee9c \u0111\u1ed9 gia \u0111\u00ecnh can thi\u1ec7p \u0111\u1ebfn h\u1ecdc vi\u00ean: ${v('sk_muc_do_gd_can_thiep')}\n\n4. T\u00ednh c\u00e1ch:\n1) Khuynh h\u01b0\u1edbng (Enneagram, MBTI): ${v('sk_enneagram_mbti')}\n2) Khuynh h\u01b0\u1edbng s\u1ebd ph\u00f9 h\u1ee3p v\u1edbi t\u00ednh c\u00e1ch: ${v('sk_phu_hop_tinh_cach')}\n3) Nh\u1eefng y\u1ebfu t\u1ed1 c\u00f3 th\u1ec3 mua \u0111\u01b0\u1ee3c t\u1ea5m l\u00f2ng: ${v('sk_mua_tam_long')}\n4) M\u1ed1i quan t\u00e2m v\u00e0 lo l\u1eafng thu\u1ed9c th\u1ec3: ${v('sk_quan_tam_thuoc_the')}\n5) M\u1ed1i quan t\u00e2m v\u00e0 lo l\u1eafng thu\u1ed9c linh: ${v('sk_quan_tam_thuoc_linh')}\n\n5. T\u00e2m h\u01b0\u1edbng Th\u1ea7n\n1) T\u00f4n gi\u00e1o: ${v('sk_ton_giao')}\n2) Gi\u00e1o ph\u00e1i/t\u00ean nh\u00e0 th\u1edd/th\u1eddi gian theo \u0111\u1ea1o/ch\u1ee9c tr\u00e1ch: ${v('sk_giao_phai')}\n3) L\u00fd do b\u1eaft \u0111\u1ea7u theo \u0111\u1ea1o: ${v('sk_ly_do_theo_dao')}\n4) C\u00f3 tin v\u00e0o s\u1ef1 t\u1ed3n t\u1ea1i c\u1ee7a th\u1ea7n linh hay kh\u00f4ng?: ${v('sk_tin_than_linh')}\n5) Nh\u1eadn th\u1ee9c v\u1ec1 t\u00edn ng\u01b0\u1ee1ng, C\u01a1 \u0111\u1ed1c gi\u00e1o, t\u00f4n gi\u00e1o: ${v('sk_nhan_thuc_tin_nguong')}\n6) M\u1ee9c \u0111\u1ed9 quan t\u00e2m \u0111\u1ebfn Kinh Th\u00e1nh: ${v('sk_muc_do_quan_tam_kt')}\n\n\ud83d\udd38 H\u1ea1ng m\u1ee5c ghi ch\u00e9p b\u1ed5 sung khi ph\u1ecfng v\u1ea5n GVBB, NDD, L\u00e1\n\n1. Ng\u01b0\u1eddi s\u1ebd trao \u0111\u1ed5i v\u1edbi \u0111\u1ed9i ng\u0169 khai gi\u1ea3ng: ${v('sk_nguoi_trao_doi')}\n\u0110\u00e3 x\u00e1c nh\u1eadn h\u1ecdc center ch\u01b0a?: ${v('sk_xac_nhan_center')}\n\n2. Th\u00f4ng tin GVBB\n1) T\u00ean/B\u1ed9/Khu v\u1ef1c/S\u1ed1 li\u00ean l\u1ea1c: ${v('sk_gvbb_ten')}\n2) Concept thu\u1ed9c th\u1ec3: ${v('sk_gvbb_concept_the')}\n3) Concept thu\u1ed9c linh: ${v('sk_gvbb_concept_linh')}\n4) \u2757\ufe0fM\u00e3 s\u1ed1 \u0111\u1ecbnh danh t\u1ea1i SCJ: ${v('sk_gvbb_ma_dinh_danh')}\n5) Ph\u01b0\u01a1ng ph\u00e1p k\u1ebft n\u1ed1i: ${v('sk_gvbb_ket_noi')}\n6) Th\u1eddi \u0111i\u1ec3m l\u1ea7n \u0111\u1ea7u g\u1eb7p: ${v('sk_gvbb_lan_dau')}\n\n3. L\u00e1\n1) T\u00ean/B\u1ed9/Khu v\u1ef1c/S\u1ed1 li\u00ean l\u1ea1c: ${v('sk_la_ten')}\n2) Concept thu\u1ed9c th\u1ec3: ${v('sk_la_concept_the')}\n3) Concept thu\u1ed9c linh: ${v('sk_la_concept_linh')}\n4) Ph\u01b0\u01a1ng ph\u00e1p k\u1ebft n\u1ed1i: ${v('sk_la_ket_noi')}\n5) Th\u1eddi \u0111i\u1ec3m l\u1ea7n \u0111\u1ea7u g\u1eb7p: ${v('sk_la_lan_dau')}\n\n4. L\u00e1 kh\u00e1c: ${v('sk_la_khac')}\n\n5. Th\u00f4ng tin x\u00e1c nh\u1eadn\n1) S\u1ed1 l\u1ea7n BB (T\u00ean b\u00e0i h\u1ecdc g\u1ea7n nh\u1ea5t): ${v('sk_so_lan_bb')}\n2) L\u00fd do mong mu\u1ed1n h\u1ecdc center (\u0110i\u1ec3m h\u00e1i tr\u00e1i): ${v('sk_ly_do_center')}\n3) \u0110\u1ec1 c\u1eadp qu\u00e1 tr\u00ecnh h\u1ecdc k\u00e9o d\u00e0i 8~9 th\u00e1ng: ${v('sk_8_9_thang')}\n4) Th\u1ee9 v\u00e0 th\u1eddi gian s\u1ebd h\u1ecdc: ${v('sk_thu_gio_hoc')}\n5) B\u1ea3o an \u2014 ai \u0111\u00e3 bi\u1ebft: ${v('sk_bao_an_ai_biet')}\n6) Chi\u1ebfn l\u01b0\u1ee3c concept v\u1edbi ng\u01b0\u1eddi xung quanh: ${v('sk_chien_luoc_concept')}\n7) \u0110\u1ecba \u0111i\u1ec3m s\u1ebd h\u1ecdc qua Zoom: ${v('sk_dia_diem_zoom')}\n8) \u0110\u00e3 t\u1eebng h\u1ecdc tr\u00ean Zoom ch\u01b0a: ${v('sk_da_hoc_zoom')}\n9) D\u1ef1 ki\u1ebfn ng\u00e0y nh\u1eadp ng\u0169: ${v('sk_du_kien_nhap_ngu')}\n10) M\u1ed1i nguy hi\u1ec3m l\u1edbn nh\u1ea5t: ${v('sk_moi_nguy_hiem')}`;
 
