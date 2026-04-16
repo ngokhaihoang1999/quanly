@@ -371,8 +371,10 @@ export async function handleGroupChat(update: any) {
       // Xem báo cáo
       const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'tu_van');
       const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'bien_ban');
-      if ((tvCount || 0) > 0 || (bbCount || 0) > 0) {
-        keyboard.push([{ text: `📋 Xem báo cáo (${tvCount || 0} TV · ${bbCount || 0} BB)`, callback_data: 'menu_view_report' }]);
+      const { data: skChk } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', linkedProfileId).single();
+      const hasSk = skChk?.data && Object.keys(skChk.data).some((k: string) => k.startsWith('sk_'));
+      if ((tvCount || 0) > 0 || (bbCount || 0) > 0 || hasSk) {
+        keyboard.push([{ text: `📋 Xem BC TV/BB/Sinka`, callback_data: 'menu_view_report' }]);
       }
 
       // Thêm báo cáo BB

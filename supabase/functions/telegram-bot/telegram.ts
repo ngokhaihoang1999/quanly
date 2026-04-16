@@ -66,6 +66,18 @@ export async function exportChatInviteLink(chatId: number): Promise<string | nul
   } catch { return null; }
 }
 
+export async function sendDocument(chatId: number, documentUrl: string, fileName: string, caption: string = '') {
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      document: documentUrl,
+      caption,
+      parse_mode: "Markdown",
+    })
+  });
+}
+
 // ============ DATA HELPERS ============
 
 export async function getAdminTelegramId(): Promise<number | null> {

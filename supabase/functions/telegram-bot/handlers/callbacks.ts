@@ -1,6 +1,6 @@
-import { supabase, BOT_TOKEN, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
+import { supabase, BOT_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
-import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getChatMember, getStaffByTelegramId, exportChatInviteLink } from "../telegram.ts";
+import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getChatMember, getStaffByTelegramId, exportChatInviteLink, sendDocument } from "../telegram.ts";
 import { sendBBFormTemplate } from "./group.ts";
 
 // Shin Calendar: 2026 = Shin 43
@@ -121,8 +121,11 @@ export async function handleCallback(update: any, staffData: any) {
       const ph = prof?.phase || 'chakki';
       const { count: tvC } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgm.profile_id).eq('record_type', 'tu_van');
       const { count: bbC } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgm.profile_id).eq('record_type', 'bien_ban');
-      if ((tvC || 0) > 0 || (bbC || 0) > 0) {
-        keyboard.push([{ text: `📋 Xem báo cáo (${tvC || 0} TV · ${bbC || 0} BB)`, callback_data: 'menu_view_report' }]);
+      // Check if Sinka data exists
+      const { data: skCheck } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgm.profile_id).single();
+      const hasSinka = skCheck?.data && Object.keys(skCheck.data).some((k: string) => k.startsWith('sk_'));
+      if ((tvC || 0) > 0 || (bbC || 0) > 0 || hasSinka) {
+        keyboard.push([{ text: `📋 Xem BC TV/BB/Sinka`, callback_data: 'menu_view_report' }]);
       }
       if (['tu_van', 'bb', 'center'].includes(ph)) {
         keyboard.push([{ text: '✏️ Thêm báo cáo BB', callback_data: 'menu_add_report' }]);
@@ -258,15 +261,18 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // ── Xem báo cáo: show sub-menu with TV/BB counts ──
+  // ── Xem báo cáo: show sub-menu with TV/BB/Sinka ──
   if (cbData === 'menu_view_report') {
     const { data: fg } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
     if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
     const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'tu_van');
     const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban');
+    const { data: skData } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
+    const hasSinka = skData?.data && Object.keys(skData.data).some((k: string) => k.startsWith('sk_'));
     const kb: any[] = [];
     if ((tvCount || 0) > 0) kb.push([{ text: `📝 Báo cáo TV (${tvCount} phiếu)`, callback_data: 'view_report_list_tv' }]);
     if ((bbCount || 0) > 0) kb.push([{ text: `📖 Báo cáo BB (${bbCount} phiếu)`, callback_data: 'view_report_list_bb' }]);
+    if (hasSinka) kb.push([{ text: `📜 Giấy Sinka`, callback_data: 'view_sinka' }]);
     kb.push([{ text: '← Quay lại', callback_data: 'menu_back' }]);
     await editMessageText(chatId, messageId, `📋 *Chọn loại báo cáo:*`, kb);
     return;
@@ -357,6 +363,250 @@ export async function handleCallback(update: any, staffData: any) {
     if (c.noi_dung_tiep) msg += `📝 *Nội dung tiếp:* ${c.noi_dung_tiep}\n`;
     const backKb = [[{ text: '← Quay lại danh sách', callback_data: 'view_report_list_bb' }]];
     await editMessageText(chatId, messageId, msg.trim(), backKb);
+    return;
+  }
+
+  // ── Sinka: sub-menu with 2 options ──
+  if (cbData === 'view_sinka') {
+    await editMessageText(chatId, messageId, `📜 *Giấy Sinka*\nChọn cách xuất:`, [
+      [{ text: '💬 Xuất tin nhắn', callback_data: 'view_sinka_text' }],
+      [{ text: '📄 Xuất file Word (.docx)', callback_data: 'view_sinka_docx' }],
+      [{ text: '← Quay lại', callback_data: 'menu_view_report' }]
+    ]);
+    return;
+  }
+
+  // ── Sinka: xuất tin nhắn ──
+  if (cbData === 'view_sinka_text') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const { data: fhc } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
+    const d: any = fhc?.data || {};
+    const v = (key: string) => d[key] || '—';
+    const name = fg.profiles?.full_name || '';
+
+    // Build message parts (Telegram has 4096 char limit, so send in 2 messages)
+    const msg1 = `📜 *Giấy Sinka — ${name}*
+━━━━━━━━━━━━━━━━━━━━━
+📅 Ngày ghi chép: ${v('sk_ngay_ghi_chep')}
+
+*1. Người dẫn dắt*
+1) Tên/Bộ/KV/SĐT: ${v('sk_ndd_ten_bo_kv_sdt')}
+2) Mã SCJ: ${v('sk_ndd_ma_dinh_danh')}
+3) Hình thức: ${v('sk_hinh_thuc_truyen_dao')}
+4) Mối quan hệ: ${v('sk_moi_quan_he')}
+5) Concept thể: ${v('sk_concept_thuoc_the')}
+6) Concept linh: ${v('sk_concept_thuoc_linh')}
+
+*2. Thông tin HS*
+1) Tên/GT/Tuổi: ${v('sk_ten_gt_tuoi')}
+2) Quốc tịch: ${v('sk_quoc_tich')}
+3) Sở thích/SĐT: ${v('sk_so_thich_sdt')}
+4) Ngày sinh: ${v('sk_ngay_sinh')}
+5) Địa chỉ: ${v('sk_dia_chi')}
+6) Nơi LV: ${v('sk_noi_lam_viec')}
+7) Lịch trình: ${v('sk_lich_trinh')}
+8) Hôn nhân: ${v('sk_hon_nhan')}
+9) Bạn khác giới: ${v('sk_ban_khac_gioi')}
+10) Học lại: ${v('sk_hoc_lai')}
+
+*3. Gia đình*
+1) Thành viên GĐ: ${v('sk_thanh_vien_gd')}
+2) Trưởng thành: ${v('sk_qua_trinh_truong_thanh')}
+3) Mức can thiệp: ${v('sk_muc_do_gd_can_thiep')}
+
+*4. Tính cách*
+1) Ennea/MBTI: ${v('sk_enneagram_mbti')}
+2) Phù hợp: ${v('sk_phu_hop_tinh_cach')}
+3) Mua tấm lòng: ${v('sk_mua_tam_long')}
+4) QT thuộc thể: ${v('sk_quan_tam_thuoc_the')}
+5) QT thuộc linh: ${v('sk_quan_tam_thuoc_linh')}`;
+
+    const msg2 = `*5. Tâm hướng Thần*
+1) Tôn giáo: ${v('sk_ton_giao')}
+2) Giáo phái: ${v('sk_giao_phai')}
+3) Lý do theo đạo: ${v('sk_ly_do_theo_dao')}
+4) Tin thần linh: ${v('sk_tin_than_linh')}
+5) Nhận thức: ${v('sk_nhan_thuc_tin_nguong')}
+6) QT đến KT: ${v('sk_muc_do_quan_tam_kt')}
+
+🔸 *Bổ sung*
+1) Người trao đổi: ${v('sk_nguoi_trao_doi')}
+   Xác nhận center: ${v('sk_xac_nhan_center')}
+
+*GVBB:* ${v('sk_gvbb_ten')}
+  Concept thể: ${v('sk_gvbb_concept_the')}
+  Concept linh: ${v('sk_gvbb_concept_linh')}
+  Mã SCJ: ${v('sk_gvbb_ma_dinh_danh')}
+  Kết nối: ${v('sk_gvbb_ket_noi')}
+  Lần đầu: ${v('sk_gvbb_lan_dau')}
+
+*Lá:* ${v('sk_la_ten')}
+  Concept thể: ${v('sk_la_concept_the')}
+  Concept linh: ${v('sk_la_concept_linh')}
+  Kết nối: ${v('sk_la_ket_noi')}
+  Lần đầu: ${v('sk_la_lan_dau')}
+
+Lá khác: ${v('sk_la_khac')}
+
+*Xác nhận*
+1) Số lần BB: ${v('sk_so_lan_bb')}
+2) Lý do center: ${v('sk_ly_do_center')}
+3) 8~9 tháng: ${v('sk_8_9_thang')}
+4) Thứ/giờ học: ${v('sk_thu_gio_hoc')}
+5) Bảo an: ${v('sk_bao_an_ai_biet')}
+6) CL concept: ${v('sk_chien_luoc_concept')}
+7) Địa điểm Zoom: ${v('sk_dia_diem_zoom')}
+8) Đã học Zoom: ${v('sk_da_hoc_zoom')}
+9) Nhập ngũ: ${v('sk_du_kien_nhap_ngu')}
+10) Nguy hiểm: ${v('sk_moi_nguy_hiem')}`;
+
+    await sendText(chatId, msg1);
+    const backKb = [[{ text: '← Quay lại', callback_data: 'view_sinka' }]];
+    await editMessageText(chatId, messageId, msg2, backKb);
+    return;
+  }
+
+  // ── Sinka: xuất file Word (.docx) ──
+  if (cbData === 'view_sinka_docx') {
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const { data: fhc } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
+    const d: any = fhc?.data || {};
+    const v = (key: string) => d[key] || '—';
+    const name = fg.profiles?.full_name || '';
+
+    await editMessageText(chatId, messageId, `⏳ Đang tạo file Word...`, []);
+
+    try {
+      // Use docx library from npm (Deno can import from npm:)
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('npm:docx@9.6.1');
+
+      const field = (num: string, label: string, value: string) => new Paragraph({
+        spacing: { after: 80 },
+        children: [
+          new TextRun({ text: `${num}) `, bold: true, size: 24, font: 'Times New Roman' }),
+          new TextRun({ text: `${label}: `, bold: true, size: 24, font: 'Times New Roman' }),
+          new TextRun({ text: value || '—', size: 24, font: 'Times New Roman' }),
+        ]
+      });
+      const sectionHeader = (text: string) => new Paragraph({
+        spacing: { before: 300, after: 150 }, heading: HeadingLevel.HEADING_2,
+        children: [new TextRun({ text, bold: true, size: 28, font: 'Times New Roman' })]
+      });
+      const subHeader = (text: string) => new Paragraph({
+        spacing: { before: 200, after: 100 }, heading: HeadingLevel.HEADING_3,
+        children: [new TextRun({ text, bold: true, size: 26, font: 'Times New Roman' })]
+      });
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 },
+              children: [new TextRun({ text: '⬜️ Giấy Sinka', bold: true, size: 36, font: 'Times New Roman' })] }),
+            new Paragraph({ spacing: { after: 200 }, children: [
+              new TextRun({ text: 'Ngày ghi chép: ', bold: true, size: 24, font: 'Times New Roman' }),
+              new TextRun({ text: v('sk_ngay_ghi_chep'), size: 24, font: 'Times New Roman' }) ] }),
+            sectionHeader('1. Người dẫn dắt'),
+            field('1', 'Tên/Bộ/Khu vực/Số liên lạc', v('sk_ndd_ten_bo_kv_sdt')),
+            field('2', '❗Mã định danh trong SCJ', v('sk_ndd_ma_dinh_danh')),
+            field('3', 'Hình thức truyền đạo', v('sk_hinh_thuc_truyen_dao')),
+            field('4', 'Mối quan hệ với trái quả', v('sk_moi_quan_he')),
+            field('5', 'Concept thuộc thể', v('sk_concept_thuoc_the')),
+            field('6', 'Concept thuộc linh', v('sk_concept_thuoc_linh')),
+            sectionHeader('2. Thông tin cơ bản của học viên'),
+            field('1', 'Tên/Giới tính/Tuổi', v('sk_ten_gt_tuoi')),
+            field('2', 'Quốc tịch', v('sk_quoc_tich')),
+            field('3', 'Sở thích/Sở trường/Số liên lạc', v('sk_so_thich_sdt')),
+            field('4', 'Ngày tháng năm sinh', v('sk_ngay_sinh')),
+            field('5', 'Địa chỉ nhà', v('sk_dia_chi')),
+            field('6', 'Nơi làm việc', v('sk_noi_lam_viec')),
+            field('7', 'Lịch trình', v('sk_lich_trinh')),
+            field('8', 'Hôn nhân', v('sk_hon_nhan')),
+            field('9', 'Bạn khác giới', v('sk_ban_khac_gioi')),
+            field('10', 'Học lại', v('sk_hoc_lai')),
+            sectionHeader('3. Gia đình/Bối cảnh trưởng thành'),
+            field('1', 'Thành viên gia đình', v('sk_thanh_vien_gd')),
+            field('2', 'Quá trình trưởng thành', v('sk_qua_trinh_truong_thanh')),
+            field('3', 'Mức độ GĐ can thiệp', v('sk_muc_do_gd_can_thiep')),
+            sectionHeader('4. Tính cách'),
+            field('1', 'Enneagram/MBTI', v('sk_enneagram_mbti')),
+            field('2', 'Phù hợp tính cách', v('sk_phu_hop_tinh_cach')),
+            field('3', 'Mua tấm lòng', v('sk_mua_tam_long')),
+            field('4', 'Quan tâm thuộc thể', v('sk_quan_tam_thuoc_the')),
+            field('5', 'Quan tâm thuộc linh', v('sk_quan_tam_thuoc_linh')),
+            sectionHeader('5. Tâm hướng Thần'),
+            field('1', 'Tôn giáo', v('sk_ton_giao')),
+            field('2', 'Giáo phái/nhà thờ', v('sk_giao_phai')),
+            field('3', 'Lý do theo đạo', v('sk_ly_do_theo_dao')),
+            field('4', 'Tin thần linh', v('sk_tin_than_linh')),
+            field('5', 'Nhận thức tín ngưỡng', v('sk_nhan_thuc_tin_nguong')),
+            field('6', 'Quan tâm KT', v('sk_muc_do_quan_tam_kt')),
+            sectionHeader('🔸 Hạng mục bổ sung'),
+            subHeader('1. Người trao đổi KG'),
+            field('', 'Tên/Bộ/SĐT', v('sk_nguoi_trao_doi')),
+            field('', 'Xác nhận center', v('sk_xac_nhan_center')),
+            subHeader('2. GVBB'),
+            field('1', 'Tên/Bộ/KV/SĐT', v('sk_gvbb_ten')),
+            field('2', 'Concept thể', v('sk_gvbb_concept_the')),
+            field('3', 'Concept linh', v('sk_gvbb_concept_linh')),
+            field('4', 'Mã SCJ', v('sk_gvbb_ma_dinh_danh')),
+            field('5', 'Kết nối', v('sk_gvbb_ket_noi')),
+            field('6', 'Lần đầu gặp', v('sk_gvbb_lan_dau')),
+            subHeader('3. Lá'),
+            field('1', 'Tên/Bộ/KV/SĐT', v('sk_la_ten')),
+            field('2', 'Concept thể', v('sk_la_concept_the')),
+            field('3', 'Concept linh', v('sk_la_concept_linh')),
+            field('4', 'Kết nối', v('sk_la_ket_noi')),
+            field('5', 'Lần đầu gặp', v('sk_la_lan_dau')),
+            subHeader('4. Lá khác'),
+            new Paragraph({ children: [new TextRun({ text: v('sk_la_khac'), size: 24, font: 'Times New Roman' })] }),
+            subHeader('5. Thông tin xác nhận'),
+            field('1', 'Số lần BB', v('sk_so_lan_bb')),
+            field('2', 'Lý do center', v('sk_ly_do_center')),
+            field('3', '8~9 tháng', v('sk_8_9_thang')),
+            field('4', 'Thứ/giờ học', v('sk_thu_gio_hoc')),
+            field('5', 'Bảo an', v('sk_bao_an_ai_biet')),
+            field('6', 'CL concept', v('sk_chien_luoc_concept')),
+            field('7', 'Địa điểm Zoom', v('sk_dia_diem_zoom')),
+            field('8', 'Đã học Zoom', v('sk_da_hoc_zoom')),
+            field('9', 'Nhập ngũ', v('sk_du_kien_nhap_ngu')),
+            field('10', 'Nguy hiểm', v('sk_moi_nguy_hiem')),
+          ]
+        }]
+      });
+
+      // Generate Buffer
+      const buffer = await Packer.toBuffer(doc);
+      const fileName = `Sinka_${name.replace(/[^\w]/g, '_')}.docx`;
+
+      // Upload to Supabase Storage
+      const storagePath = `exports/${fg.profile_id}_${Date.now()}.docx`;
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sinka-exports/${storagePath}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_SERVICE_ROLE_KEY,
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'x-upsert': 'true'
+        },
+        body: buffer
+      });
+      if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/sinka-exports/${storagePath}`;
+
+      // Send as Telegram document
+      await sendDocument(chatId, publicUrl, fileName, `📜 Giấy Sinka — ${name}`);
+      await editMessageText(chatId, messageId, `✅ Đã xuất file Word *Giấy Sinka — ${name}*`, [
+        [{ text: '← Quay lại', callback_data: 'view_sinka' }]
+      ]);
+    } catch (e: any) {
+      console.error('Sinka docx export error:', e);
+      await editMessageText(chatId, messageId, `❌ Lỗi xuất file: ${String(e.message || e).substring(0, 200)}`, [
+        [{ text: '← Quay lại', callback_data: 'view_sinka' }]
+      ]);
+    }
     return;
   }
 
