@@ -515,14 +515,12 @@ async function exportSinkaWord() {
   a.download = fileName;
   document.body.appendChild(a);
   a.click();
-
-  // Method 3: If in Telegram WebApp, also open in external browser
-  if (window.Telegram?.WebApp) {
-    setTimeout(() => {
-      try { window.open(url, '_blank'); } catch(e) {}
-    }, 300);
-  }
-
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 5000);
-  showToast('📄 Đã xuất: ' + fileName);
+
+  // In Telegram WebApp, <a download> may silently fail
+  if (window.Telegram?.WebApp) {
+    showToast('💡 Nếu không thấy file, hãy mở Mini App trên trình duyệt ngoài (⋮ → Open in browser)');
+  } else {
+    showToast('📄 Đã xuất: ' + fileName);
+  }
 }
