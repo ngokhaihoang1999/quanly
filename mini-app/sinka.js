@@ -493,22 +493,60 @@ async function exportSinkaWord() {
 <body>${htmlBody}</body>
 </html>`;
 
-  // Create blob and trigger download — with Telegram WebApp fallback
+  // Create blob
   const blob = new Blob(['\ufeff' + fullHtml], { type: 'application/msword;charset=utf-8' });
 
-  // Method 1: navigator.share() — works on mobile Telegram WebApp
-  if (navigator.canShare) {
+  // ── Telegram WebApp: upload to Supabase Storage → open link ──
+  if (window.Telegram?.WebApp) {
     try {
-      const file = new File([blob], fileName, { type: 'application/msword' });
-      if (navigator.canShare({ files: [file] })) {
+      showToast('⏳ Đang tạo file...');
+      // Upload to Supabase Storage (sinka-exports bucket)
+      const storagePath = `exports/${currentProfileId}_${Date.now()}.doc`;
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sinka-exports/${storagePath}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/msword',
+          'x-upsert': 'true'
+        },
+        body: blob
+      });
+      if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
+
+      // Get public URL
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/sinka-exports/${storagePath}`;
+
+      // Try Telegram downloadFile API (v8.0+)
+      if (Telegram.WebApp.downloadFile) {
+        try {
+          Telegram.WebApp.downloadFile({ url: publicUrl, file_name: fileName });
+          showToast('📄 Đang tải: ' + fileName);
+          return;
+        } catch(e) { console.warn('TG downloadFile failed:', e); }
+      }
+
+      // Fallback: open in external browser (will auto-download)
+      Telegram.WebApp.openLink(publicUrl);
+      showToast('📄 Đã mở link tải file');
+      return;
+    } catch(e) {
+      console.warn('Storage upload failed, trying share:', e);
+      // Fallback to navigator.share
+      try {
+        const file = new File([blob], fileName, { type: 'application/msword' });
         await navigator.share({ files: [file], title: 'Giấy Sinka' });
         showToast('📄 Đã chia sẻ: ' + fileName);
         return;
+      } catch(e2) {
+        console.warn('Share also failed:', e2);
+        showToast('⚠️ Không thể tải file. Hãy dùng nút 📋 Copy rồi paste vào Word.');
+        return;
       }
-    } catch(e) { console.warn('Share failed, trying download:', e); }
+    }
   }
 
-  // Method 2: <a download> — works on desktop browsers
+  // ── Desktop: <a download> ──
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -516,11 +554,5 @@ async function exportSinkaWord() {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 5000);
-
-  // In Telegram WebApp, <a download> may silently fail
-  if (window.Telegram?.WebApp) {
-    showToast('💡 Nếu không thấy file, hãy mở Mini App trên trình duyệt ngoài (⋮ → Open in browser)');
-  } else {
-    showToast('📄 Đã xuất: ' + fileName);
-  }
+  showToast('📄 Đã xuất: ' + fileName);
 }
