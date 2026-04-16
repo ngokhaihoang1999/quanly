@@ -375,94 +375,76 @@ export async function handleCallback(update: any, staffData: any) {
     return;
   }
 
-  // ── Sinka: xuất tin nhắn ──
+  // ── Sinka: xuất tin nhắn (auto-fill from profiles + staff + form_hanh_chinh) ──
   if (cbData === 'view_sinka_text') {
-    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name)').eq('telegram_group_id', chatId).single();
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(full_name, gender, birth_year, phone_number, ndd_staff_code, gvbb_staff_code)').eq('telegram_group_id', chatId).single();
     if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
+    const p: any = (fg as any).profiles || {};
+    const name = p.full_name || '';
+
+    // Load form_hanh_chinh (saved sk_* + t2_* data)
     const { data: fhc } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
     const d: any = fhc?.data || {};
-    const v = (key: string) => d[key] || '—';
-    const name = fg.profiles?.full_name || '';
 
-    // Build message parts (Telegram has 4096 char limit, so send in 2 messages)
-    const msg1 = `📜 *Giấy Sinka — ${name}*
-━━━━━━━━━━━━━━━━━━━━━
-📅 Ngày ghi chép: ${v('sk_ngay_ghi_chep')}
+    // Load NDD staff info
+    let nddInfo = '', nddScj = '';
+    if (p.ndd_staff_code) {
+      const { data: ndd } = await supabase.from('staff').select('full_name, phone, scj_code').eq('staff_code', p.ndd_staff_code).single();
+      if (ndd) { nddInfo = [ndd.full_name, ndd.phone].filter(Boolean).join(' / '); nddScj = ndd.scj_code || ''; }
+    }
+    // Load GVBB staff info
+    let gvbbInfo = '', gvbbScj = '';
+    if (p.gvbb_staff_code && !p.gvbb_staff_code.startsWith('tg:')) {
+      const { data: gvbb } = await supabase.from('staff').select('full_name, phone, scj_code').eq('staff_code', p.gvbb_staff_code).single();
+      if (gvbb) { gvbbInfo = [gvbb.full_name, gvbb.phone].filter(Boolean).join(' / '); gvbbScj = gvbb.scj_code || ''; }
+    }
+    // Load Lá staff info
+    let laInfo = '';
+    try {
+      const { data: fgs } = await supabase.from('fruit_groups').select('fruit_roles(staff_code,role_type)').eq('profile_id', fg.profile_id);
+      const laCode = (fgs || []).flatMap((f: any) => (f.fruit_roles || []).filter((r: any) => r.role_type === 'la').map((r: any) => r.staff_code))[0];
+      if (laCode) {
+        const { data: la } = await supabase.from('staff').select('full_name, phone').eq('staff_code', laCode).single();
+        if (la) laInfo = [la.full_name, la.phone].filter(Boolean).join(' / ');
+      }
+    } catch {}
+    // BB count
+    const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban');
 
-*1. Người dẫn dắt*
-1) Tên/Bộ/KV/SĐT: ${v('sk_ndd_ten_bo_kv_sdt')}
-2) Mã SCJ: ${v('sk_ndd_ma_dinh_danh')}
-3) Hình thức: ${v('sk_hinh_thuc_truyen_dao')}
-4) Mối quan hệ: ${v('sk_moi_quan_he')}
-5) Concept thể: ${v('sk_concept_thuoc_the')}
-6) Concept linh: ${v('sk_concept_thuoc_linh')}
+    // Build auto-filled values (sk_* saved data overrides auto-fill)
+    const v = (key: string, fallback?: string) => d[key] || fallback || '';
+    const tenGtTuoi = v('sk_ten_gt_tuoi', [name, p.gender, p.birth_year].filter(Boolean).join(' / '));
+    const soThichSdt = v('sk_so_thich_sdt', [d.t2_so_thich, p.phone_number].filter(Boolean).join(' / '));
 
-*2. Thông tin HS*
-1) Tên/GT/Tuổi: ${v('sk_ten_gt_tuoi')}
-2) Quốc tịch: ${v('sk_quoc_tich')}
-3) Sở thích/SĐT: ${v('sk_so_thich_sdt')}
-4) Ngày sinh: ${v('sk_ngay_sinh')}
-5) Địa chỉ: ${v('sk_dia_chi')}
-6) Nơi LV: ${v('sk_noi_lam_viec')}
-7) Lịch trình: ${v('sk_lich_trinh')}
-8) Hôn nhân: ${v('sk_hon_nhan')}
-9) Bạn khác giới: ${v('sk_ban_khac_gioi')}
-10) Học lại: ${v('sk_hoc_lai')}
+    // Shin date
+    const today = new Date();
+    const shinYear = today.getFullYear() - 1983;
+    const shinDate = `${shinYear}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
 
+    // Helper: only show non-empty lines
+    const ln = (label: string, val: string) => val && val !== '—' ? `${label}: ${val}\n` : '';
+
+    const msg = `📜 *Giấy Sinka — ${name}*
+━━━━━━━━━━━━━━━━━━
+📅 ${v('sk_ngay_ghi_chep', shinDate)}
+
+*1. NDD*
+${ln('Tên/Bộ/SĐT', v('sk_ndd_ten_bo_kv_sdt', nddInfo))}${ln('Mã SCJ', v('sk_ndd_ma_dinh_danh', nddScj))}${ln('Hình thức', v('sk_hinh_thuc_truyen_dao', d.t2_hinh_thuc))}${ln('Quan hệ', v('sk_moi_quan_he', d.t2_ket_noi))}${ln('Concept thể', v('sk_concept_thuoc_the', d.t2_cong_cu))}${ln('Concept linh', v('sk_concept_thuoc_linh'))}
+*2. Học viên*
+${ln('Tên/GT/Tuổi', tenGtTuoi)}${ln('Quốc tịch', v('sk_quoc_tich', 'Việt Nam'))}${ln('Sở thích/SĐT', soThichSdt)}${ln('Ngày sinh', v('sk_ngay_sinh', p.birth_year))}${ln('Địa chỉ', v('sk_dia_chi', d.t2_dia_chi))}${ln('Nơi LV', v('sk_noi_lam_viec', d.t2_nghe_nghiep))}${ln('Lịch trình', v('sk_lich_trinh', d.t2_khung_ranh))}${ln('Hôn nhân', v('sk_hon_nhan'))}${ln('Bạn khác giới', v('sk_ban_khac_gioi'))}${ln('Học lại', v('sk_hoc_lai'))}
 *3. Gia đình*
-1) Thành viên GĐ: ${v('sk_thanh_vien_gd')}
-2) Trưởng thành: ${v('sk_qua_trinh_truong_thanh')}
-3) Mức can thiệp: ${v('sk_muc_do_gd_can_thiep')}
-
+${ln('Thành viên', v('sk_thanh_vien_gd', d.t2_nguoi_than))}${ln('Trưởng thành', v('sk_qua_trinh_truong_thanh'))}${ln('GĐ can thiệp', v('sk_muc_do_gd_can_thiep'))}
 *4. Tính cách*
-1) Ennea/MBTI: ${v('sk_enneagram_mbti')}
-2) Phù hợp: ${v('sk_phu_hop_tinh_cach')}
-3) Mua tấm lòng: ${v('sk_mua_tam_long')}
-4) QT thuộc thể: ${v('sk_quan_tam_thuoc_the')}
-5) QT thuộc linh: ${v('sk_quan_tam_thuoc_linh')}`;
-
-    const msg2 = `*5. Tâm hướng Thần*
-1) Tôn giáo: ${v('sk_ton_giao')}
-2) Giáo phái: ${v('sk_giao_phai')}
-3) Lý do theo đạo: ${v('sk_ly_do_theo_dao')}
-4) Tin thần linh: ${v('sk_tin_than_linh')}
-5) Nhận thức: ${v('sk_nhan_thuc_tin_nguong')}
-6) QT đến KT: ${v('sk_muc_do_quan_tam_kt')}
-
+${ln('Ennea/MBTI', v('sk_enneagram_mbti', d.t2_tinh_cach))}${ln('Phù hợp', v('sk_phu_hop_tinh_cach'))}${ln('Mua tấm lòng', v('sk_mua_tam_long'))}${ln('QT thể', v('sk_quan_tam_thuoc_the'))}${ln('QT linh', v('sk_quan_tam_thuoc_linh'))}
+*5. Tâm hướng*
+${ln('Tôn giáo', v('sk_ton_giao'))}${ln('Giáo phái', v('sk_giao_phai'))}${ln('Lý do', v('sk_ly_do_theo_dao'))}${ln('Tin thần linh', v('sk_tin_than_linh'))}${ln('Nhận thức', v('sk_nhan_thuc_tin_nguong'))}${ln('QT đến KT', v('sk_muc_do_quan_tam_kt'))}
 🔸 *Bổ sung*
-1) Người trao đổi: ${v('sk_nguoi_trao_doi')}
-   Xác nhận center: ${v('sk_xac_nhan_center')}
+${ln('Người trao đổi', v('sk_nguoi_trao_doi'))}${ln('XN center', v('sk_xac_nhan_center'))}${ln('GVBB', v('sk_gvbb_ten', gvbbInfo))}${ln('GVBB Mã SCJ', v('sk_gvbb_ma_dinh_danh', gvbbScj))}${ln('Lá', v('sk_la_ten', laInfo))}${ln('Số lần BB', v('sk_so_lan_bb', String(bbCount || 0)))}${ln('Lý do center', v('sk_ly_do_center'))}${ln('Thứ/giờ', v('sk_thu_gio_hoc'))}${ln('Bảo an', v('sk_bao_an_ai_biet'))}${ln('Nguy hiểm', v('sk_moi_nguy_hiem'))}`.replace(/\n{3,}/g, '\n\n').trim();
 
-*GVBB:* ${v('sk_gvbb_ten')}
-  Concept thể: ${v('sk_gvbb_concept_the')}
-  Concept linh: ${v('sk_gvbb_concept_linh')}
-  Mã SCJ: ${v('sk_gvbb_ma_dinh_danh')}
-  Kết nối: ${v('sk_gvbb_ket_noi')}
-  Lần đầu: ${v('sk_gvbb_lan_dau')}
-
-*Lá:* ${v('sk_la_ten')}
-  Concept thể: ${v('sk_la_concept_the')}
-  Concept linh: ${v('sk_la_concept_linh')}
-  Kết nối: ${v('sk_la_ket_noi')}
-  Lần đầu: ${v('sk_la_lan_dau')}
-
-Lá khác: ${v('sk_la_khac')}
-
-*Xác nhận*
-1) Số lần BB: ${v('sk_so_lan_bb')}
-2) Lý do center: ${v('sk_ly_do_center')}
-3) 8~9 tháng: ${v('sk_8_9_thang')}
-4) Thứ/giờ học: ${v('sk_thu_gio_hoc')}
-5) Bảo an: ${v('sk_bao_an_ai_biet')}
-6) CL concept: ${v('sk_chien_luoc_concept')}
-7) Địa điểm Zoom: ${v('sk_dia_diem_zoom')}
-8) Đã học Zoom: ${v('sk_da_hoc_zoom')}
-9) Nhập ngũ: ${v('sk_du_kien_nhap_ngu')}
-10) Nguy hiểm: ${v('sk_moi_nguy_hiem')}`;
-
-    await sendText(chatId, msg1);
-    const backKb = [[{ text: '← Quay lại', callback_data: 'view_sinka' }]];
-    await editMessageText(chatId, messageId, msg2, backKb);
+    await sendText(chatId, msg);
+    await editMessageText(chatId, messageId, `✅ Đã gửi báo cáo Sinka — ${name}`, [
+      [{ text: '← Quay lại', callback_data: 'view_sinka' }]
+    ]);
     return;
   }
 
