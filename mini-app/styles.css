@@ -790,11 +790,19 @@
 }
 .cal-cell:hover { background: var(--surface2); }
 .cal-empty { background: var(--surface2); opacity: 0.3; cursor: default; }
+.cal-today {
+  background: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+  border: 2px solid var(--accent) !important;
+  border-radius: 8px;
+  z-index: 1;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent);
+}
 .cal-today .cal-day-num {
   background: var(--accent); color: white !important;
-  border-radius: 50%; width: 22px; height: 22px;
+  border-radius: 50%; width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700;
+  font-weight: 800; font-size: 13px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .cal-selected { background: color-mix(in srgb, var(--accent) 12%, transparent) !important; }
 .cal-day-num { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; flex-shrink: 0; }
