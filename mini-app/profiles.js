@@ -258,12 +258,17 @@ async function openProfile(p) {
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
+  // Sinka tab: hiện khi phase bb/center và user có quyền edit
+  const tabSinka = document.getElementById('tabSinka');
+  const canAccessSinka = (hasFullEdit || isProfileGVBB || isProfileNDD) && ['bb','center','completed'].includes(ph);
+  if (tabSinka) tabSinka.style.display = canAccessSinka ? '' : 'none';
   clearFormFields();
   loadInfoSheet(p.id);
   loadJourney(p.id, ph);
   loadRecords(p.id, 'tu_van', 'tvList', 'tvCount');
   loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount');
   loadNotes(p.id);
+  // Sinka: lazy-load khi mở tab (trigger trong switchFormTab)
 
   // ── Smart default tab theo phase ──────────────────────────────────────────
   // Phase tu_van_hinh hoặc chakki mà đã có TVV → mở tab TV để viết BC
@@ -363,6 +368,8 @@ async function refreshProfileInPlace() {
 function clearFormFields() {
   ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   ['chips_ton_giao','chips_hon_nhan','chips_quan_he_ndd','chips_khong_gian_song'].forEach(clearChips);
+  // Clear Sinka fields
+  if (typeof SINKA_FIELDS !== 'undefined') SINKA_FIELDS.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
 }
 
 
@@ -416,7 +423,18 @@ async function saveInfoSheet() {
   data.t2_quan_he_ndd = getChipValues('chips_quan_he_ndd');
   data.t2_khong_gian_song = getChipValues('chips_khong_gian_song');
   try {
-    // 1. Save info sheet
+    // 0. Preserve existing sk_* (Sinka) keys — fetch current data and merge
+    let existingData = {};
+    try {
+      const exRes = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${currentProfileId}&select=data`);
+      const exRows = await exRes.json();
+      existingData = exRows?.[0]?.data || {};
+    } catch(e) {}
+    // Keep all sk_* keys from existing data
+    Object.keys(existingData).forEach(k => {
+      if (k.startsWith('sk_') && !(k in data)) data[k] = existingData[k];
+    });
+    // 1. Save info sheet (with sk_* preserved)
     await sbFetch('/rest/v1/form_hanh_chinh', { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ profile_id: currentProfileId, data: data }) });
 
     // 2. Sync key fields to profiles table (name, birth_year, gender, phone)

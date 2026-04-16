@@ -1547,6 +1547,19 @@ function switchFormTab(el, cardId) {
   if (cardId === 'mindmapTab' && typeof renderMindmap === 'function') {
     setTimeout(renderMindmap, 50);
   }
+  // Trigger Sinka load when tab is opened (lazy-load)
+  if (cardId === 'sinkaTab' && typeof loadSinka === 'function' && currentProfileId) {
+    if (!_sinkaLoaded) loadSinka(currentProfileId);
+    // Toggle "học lại" reason field visibility
+    const hocLaiEl = document.getElementById('sk_hoc_lai');
+    if (hocLaiEl && !hocLaiEl.dataset.listenerAdded) {
+      hocLaiEl.dataset.listenerAdded = '1';
+      hocLaiEl.addEventListener('change', () => {
+        const wrap = document.getElementById('sk_hoc_lai_lydo_wrap');
+        if (wrap) wrap.style.display = (hocLaiEl.value && hocLaiEl.value !== 'Nhập học mới') ? '' : 'none';
+      });
+    }
+  }
 }
 function switchMainTab(el, tab) {
   if (typeof _isTabPinned === 'function' && _isTabPinned(tab) && window.innerWidth >= 1024) return;

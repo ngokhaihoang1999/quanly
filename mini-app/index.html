@@ -165,6 +165,7 @@
       <div class="form-tab" onclick="switchFormTab(this,'tuVan')" id="tabTV" style="display:none;">💬 TV</div>
       <div class="form-tab" onclick="switchFormTab(this,'bienBan')" id="tabBB" style="display:none;">📖 BB</div>
       <div class="form-tab" onclick="switchFormTab(this,'notesTab')">🗒️ Ghi chú</div>
+      <div class="form-tab" onclick="switchFormTab(this,'sinkaTab')" id="tabSinka" style="display:none;">📜 Sinka</div>
       <div class="form-tab" onclick="switchFormTab(this,'mindmapTab')" id="tabMindmap" style="display:none;">📚 Tư Duy</div>
     </div>
 
@@ -244,6 +245,105 @@
           <div class="field-group"><label>Nội dung</label><textarea id="note_body" placeholder="Ghi chú..." style="resize:vertical;min-height:80px;"></textarea></div>
           <button class="save-btn" id="noteSaveBtn" onclick="saveNote()" style="margin-top:4px;">📌 Thêm ghi chú</button>
         </div>
+      </div>
+    </div>
+
+    <!-- SINKA TAB -->
+    <div class="form-card" id="sinkaTab">
+      <div class="form-card-header">
+        <div class="form-card-title">📜 GIẤY SINKA</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button onclick="copySinka()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Copy Giấy Sinka">📋</button>
+          <button onclick="exportSinkaWord()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Xuất file Word">📄 Word</button>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="field-group"><label>📅 Ngày ghi chép</label><input type="date" id="sk_ngay_ghi_chep" /></div>
+
+        <!-- SECTION 1: NDD -->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border-radius:var(--radius-sm);">1. Người dẫn dắt</div>
+        <div class="field-group"><label>1) Tên/Bộ/Khu vực/Số liên lạc</label><input type="text" id="sk_ndd_ten_bo_kv_sdt" placeholder="Tên / Bộ / Khu vực / SĐT..." /></div>
+        <div class="field-group"><label>2) ❗️Mã định danh trong SCJ</label><input type="text" id="sk_ndd_ma_dinh_danh" placeholder="Mã JD..." /></div>
+        <div class="field-group"><label>3) Hình thức truyền đạo</label><input type="text" id="sk_hinh_thuc_truyen_dao" placeholder="gia đình/người quen/offline/CLB/online..." /></div>
+        <div class="field-group"><label>4) Mối quan hệ với trái quả</label><input type="text" id="sk_moi_quan_he" placeholder="Thời điểm gặp lần đầu..." /></div>
+        <div class="field-group"><label>5) Concept thuộc thể</label><input type="text" id="sk_concept_thuoc_the" placeholder="..." /></div>
+        <div class="field-group"><label>6) Concept thuộc linh</label><input type="text" id="sk_concept_thuoc_linh" placeholder="..." /></div>
+
+        <!-- SECTION 2: HS -->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#22c55e,#14b8a6);color:white;border-radius:var(--radius-sm);">2. Thông tin cơ bản của học viên</div>
+        <div class="field-group"><label>1) Tên/Giới tính/Tuổi</label><input type="text" id="sk_ten_gt_tuoi" placeholder="Họ tên / Nam-Nữ / Năm sinh..." /></div>
+        <div class="field-group"><label>2) Quốc tịch</label><input type="text" id="sk_quoc_tich" value="Việt Nam" /></div>
+        <div class="field-group"><label>3) Sở thích/Sở trường/Số liên lạc</label><input type="text" id="sk_so_thich_sdt" placeholder="..." /></div>
+        <div class="field-group"><label>4) Ngày tháng năm sinh</label><input type="text" id="sk_ngay_sinh" placeholder="DD/MM/YYYY hoặc năm sinh..." /></div>
+        <div class="field-group"><label>5) Địa chỉ nhà (Địa chỉ đang sống)</label><input type="text" id="sk_dia_chi" placeholder="..." /></div>
+        <div class="field-group"><label>6) Nơi làm việc (Công việc, Vị trí)</label><input type="text" id="sk_noi_lam_viec" placeholder="..." /></div>
+        <div class="field-group"><label>7) Lịch trình</label><input type="text" id="sk_lich_trinh" placeholder="..." /></div>
+        <div class="field-group"><label>8) Tình trạng hôn nhân</label><input type="text" id="sk_hon_nhan" placeholder="Độc thân/kết hôn/ly hôn/tái hôn/ở góa..." /></div>
+        <div class="field-group"><label>9) Có bạn khác giới không / Thời gian chơi</label><input type="text" id="sk_ban_khac_gioi" placeholder="..." /></div>
+        <div class="field-group"><label>10) Có học lại hay không?</label><select id="sk_hoc_lai"><option value="">Chọn...</option><option value="Nhập học mới">Nhập học mới</option><option value="Học lại - Sơ">Học lại — Sơ</option><option value="Học lại - Trung">Học lại — Trung</option><option value="Học lại - Cao">Học lại — Cao</option><option value="Rớt không được vào nhà thờ">Rớt không được vào nhà thờ</option></select></div>
+        <div class="field-group" id="sk_hoc_lai_lydo_wrap" style="display:none;"><label>↳ Lý do rớt / chi tiết học lại</label><input type="text" id="sk_hoc_lai_lydo" placeholder="Lý do..." /></div>
+
+        <!-- SECTION 3: GIA ĐÌNH -->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#f59e0b,#f97316);color:white;border-radius:var(--radius-sm);">3. Gia đình/Bối cảnh trưởng thành</div>
+        <div class="field-group"><label>1) Các thành viên trong gia đình</label><textarea id="sk_thanh_vien_gd" placeholder="Sống cùng GĐ hay không, có theo đạo không?..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>2) Quá trình trưởng thành, hoàn cảnh gia đình</label><textarea id="sk_qua_trinh_truong_thanh" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>3) Mức độ gia đình can thiệp đến học viên</label><input type="text" id="sk_muc_do_gd_can_thiep" placeholder="..." /></div>
+
+        <!-- SECTION 4: TÍNH CÁCH -->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#8b5cf6,#a855f7);color:white;border-radius:var(--radius-sm);">4. Tính cách</div>
+        <div class="field-group"><label>1) Khuynh hướng (Enneagram, MBTI)</label><input type="text" id="sk_enneagram_mbti" placeholder="..." /></div>
+        <div class="field-group"><label>2) Khuynh hướng sẽ phù hợp với tính cách</label><input type="text" id="sk_phu_hop_tinh_cach" placeholder="..." /></div>
+        <div class="field-group"><label>3) Những yếu tố có thể mua được tấm lòng</label><textarea id="sk_mua_tam_long" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>4) Mối quan tâm và lo lắng thuộc thể</label><textarea id="sk_quan_tam_thuoc_the" placeholder="Các công cụ đã tư vấn..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>5) Mối quan tâm và lo lắng thuộc linh</label><textarea id="sk_quan_tam_thuoc_linh" placeholder="Có tư vấn hay không?..." style="resize:vertical;min-height:60px;"></textarea></div>
+
+        <!-- SECTION 5: TÂM HƯỚNG THẦN -->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:white;border-radius:var(--radius-sm);">5. Tâm hướng Thần</div>
+        <div class="field-group"><label>1) Tôn giáo</label><input type="text" id="sk_ton_giao" placeholder="..." /></div>
+        <div class="field-group"><label>2) Giáo phái/tên nhà thờ/thời gian theo đạo/chức trách</label><textarea id="sk_giao_phai" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>3) Lý do bắt đầu theo đạo</label><input type="text" id="sk_ly_do_theo_dao" placeholder="..." /></div>
+        <div class="field-group"><label>4) Có tin vào sự tồn tại của thần linh hay không?</label><input type="text" id="sk_tin_than_linh" placeholder="..." /></div>
+        <div class="field-group"><label>5) Nhận thức về tín ngưỡng, Cơ đốc giáo, tôn giáo</label><textarea id="sk_nhan_thuc_tin_nguong" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>6) Mức độ quan tâm đến Kinh Thánh</label><select id="sk_muc_do_quan_tam_kt"><option value="">Chọn...</option><option value="Cao">Cao</option><option value="Trung bình">Trung bình</option><option value="Thấp">Thấp</option></select></div>
+
+        <!-- SUPPLEMENT: GVBB / NDD / LÁ -->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#ef4444,#f97316);color:white;border-radius:var(--radius-sm);">🔸 Hạng mục ghi chép bổ sung</div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">1. Người sẽ trao đổi với đội ngũ khai giảng</div>
+        <div class="field-group"><label>Tên/Bộ/Số liên lạc</label><input type="text" id="sk_nguoi_trao_doi" placeholder="..." /></div>
+        <div class="field-group"><label>Đã xác nhận học center chưa?</label><select id="sk_xac_nhan_center"><option value="">Chọn...</option><option value="Đã xác nhận">Đã xác nhận</option><option value="Chưa xác nhận">Chưa xác nhận</option></select></div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">2. Thông tin GVBB</div>
+        <div class="field-group"><label>1) Tên/Bộ/Khu vực/Số liên lạc</label><input type="text" id="sk_gvbb_ten" placeholder="..." /></div>
+        <div class="field-group"><label>2) Concept thuộc thể</label><input type="text" id="sk_gvbb_concept_the" placeholder="..." /></div>
+        <div class="field-group"><label>3) Concept thuộc linh</label><input type="text" id="sk_gvbb_concept_linh" placeholder="..." /></div>
+        <div class="field-group"><label>4) ❗️Mã số định danh tại SCJ</label><input type="text" id="sk_gvbb_ma_dinh_danh" placeholder="Mã JD..." /></div>
+        <div class="field-group"><label>5) Phương pháp kết nối</label><input type="text" id="sk_gvbb_ket_noi" placeholder="..." /></div>
+        <div class="field-group"><label>6) Thời điểm lần đầu gặp</label><input type="text" id="sk_gvbb_lan_dau" placeholder="..." /></div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">3. Lá</div>
+        <div class="field-group"><label>1) Tên/Bộ/Khu vực/Số liên lạc</label><input type="text" id="sk_la_ten" placeholder="..." /></div>
+        <div class="field-group"><label>2) Concept thuộc thể</label><input type="text" id="sk_la_concept_the" placeholder="..." /></div>
+        <div class="field-group"><label>3) Concept thuộc linh</label><input type="text" id="sk_la_concept_linh" placeholder="..." /></div>
+        <div class="field-group"><label>4) Phương pháp kết nối</label><input type="text" id="sk_la_ket_noi" placeholder="..." /></div>
+        <div class="field-group"><label>5) Thời điểm lần đầu gặp</label><input type="text" id="sk_la_lan_dau" placeholder="..." /></div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">4. Lá khác</div>
+        <div class="field-group"><label>Tên/Bộ/Vai trò/Có thể gặp ở center hay không</label><textarea id="sk_la_khac" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">5. Thông tin xác nhận</div>
+        <div class="field-group"><label>1) Số lần BB (Tên bài học gần nhất)</label><input type="text" id="sk_so_lan_bb" placeholder="..." /></div>
+        <div class="field-group"><label>2) Lý do mong muốn học center (Điểm hái trái)</label><textarea id="sk_ly_do_center" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>3) Đề cập quá trình học kéo dài 8~9 tháng</label><input type="text" id="sk_8_9_thang" placeholder="..." /></div>
+        <div class="field-group"><label>4) Thứ và thời gian sẽ học</label><input type="text" id="sk_thu_gio_hoc" placeholder="..." /></div>
+        <div class="field-group"><label>5) Bảo an — những người xung quanh đã biết</label><textarea id="sk_bao_an_ai_biet" placeholder="Ai biết về việc học KT? Có thể gây ảnh hưởng?..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>6) Chiến lược concept với người xung quanh</label><textarea id="sk_chien_luoc_concept" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>7) Địa điểm sẽ học qua Zoom</label><input type="text" id="sk_dia_diem_zoom" placeholder="..." /></div>
+        <div class="field-group"><label>8) Đã từng học trên Zoom chưa</label><select id="sk_da_hoc_zoom"><option value="">Chọn...</option><option value="Đã từng">Đã từng</option><option value="Chưa từng">Chưa từng</option></select></div>
+        <div class="field-group"><label>9) Dự kiến ngày nhập ngũ</label><input type="text" id="sk_du_kien_nhap_ngu" placeholder="Có thể hoãn được không?..." /></div>
+        <div class="field-group"><label>10) Mối nguy hiểm lớn nhất</label><textarea id="sk_moi_nguy_hiem" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+
+        <button class="save-btn" onclick="saveSinka()" style="margin-top:12px;">💾 Lưu Giấy Sinka</button>
       </div>
     </div>
 
@@ -688,6 +788,7 @@
 <script src="notification.js?v=2026041518"></script>
 <script src="priority.js?v=2026041307"></script>
 <script src="notes.js?v=2026041518"></script>
+<script src="sinka.js?v=2026041618"></script>
 <script src="lacie.js?v=2026041307"></script>
 <script src="mindmap.js?v=2026041510"></script>
 <script>
