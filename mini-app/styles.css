@@ -281,13 +281,13 @@
       margin: 0 auto;
       width: 100%;
     }
-    /* Single continuous vertical line — 1 pseudo-element thay vì border-right từng row */
+    /* Single continuous vertical line */
     .tl-container::before {
       content: '';
       position: absolute;
       top: 0;
       bottom: 0;
-      left: calc(35% - 1px);
+      left: calc(45% - 1px);
       width: 3px;
       background: var(--accent);
       z-index: 2;
@@ -303,27 +303,24 @@
     .tl-item:last-child { border-bottom: none; }
     .tl-item:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
     .tl-left {
-      flex: 0 0 35%;
-      width: 35%;
-      max-width: 35%;
+      flex: 0 0 45%;
+      width: 45%;
+      max-width: 45%;
       min-width: 0;
       display: flex;
       align-items: center;
-      gap: 6px;
-      /* padding-right nhỏ lại để nhường chỗ cho đường kẻ giả */
-      padding: 8px 6px 8px 10px;
+      gap: 5px;
+      padding: 7px 6px 7px 8px;
       border-right: none;
       box-sizing: border-box;
-      overflow: hidden;
     }
     .tl-right {
       flex: 1 1 0;
       min-width: 0;
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 8px 8px 10px;
-      overflow: hidden;
+      gap: 5px;
+      padding: 7px 8px 7px 8px;
     }
     /* Major milestone row */
     .tl-major .tl-left { background: var(--surface2); font-weight: 700; }
@@ -333,27 +330,24 @@
     /* Report-only row */
     .tl-report-row .tl-left { background: var(--surface2); }
     /* Icons & labels */
-    .tl-icon { font-size: 14px; flex-shrink: 0; line-height: 1; }
+    .tl-icon { font-size: 13px; flex-shrink: 0; line-height: 1; }
     .tl-label {
       font-size: 12px;
       font-weight: 600;
       color: var(--text);
-      white-space: normal;
+      line-height: 1.35;
       word-break: break-word;
       overflow-wrap: break-word;
-      line-height: 1.3;
     }
     .tl-label-kt { color: var(--green); font-weight: 700; }
     .tl-left-info {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
       flex: 1;
       min-width: 0;
-      overflow: hidden;
     }
     .tl-left-info .tl-label {
-      white-space: normal;
       word-break: break-word;
       overflow-wrap: break-word;
     }
@@ -361,13 +355,11 @@
     .tl-right-info {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
       flex: 1;
       min-width: 0;
-      overflow: hidden;
     }
     .tl-right-info .tl-label {
-      white-space: normal;
       word-break: break-word;
       overflow-wrap: break-word;
     }
