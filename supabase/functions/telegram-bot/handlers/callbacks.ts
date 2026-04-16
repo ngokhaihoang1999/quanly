@@ -121,10 +121,8 @@ export async function handleCallback(update: any, staffData: any) {
       const ph = prof?.phase || 'chakki';
       const { count: tvC } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgm.profile_id).eq('record_type', 'tu_van');
       const { count: bbC } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fgm.profile_id).eq('record_type', 'bien_ban');
-      // Check if Sinka data exists
-      const { data: skCheck } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fgm.profile_id).single();
-      const hasSinka = skCheck?.data && Object.keys(skCheck.data).some((k: string) => k.startsWith('sk_'));
-      if ((tvC || 0) > 0 || (bbC || 0) > 0 || hasSinka) {
+      const showSk = ['bb', 'center', 'completed'].includes(ph);
+      if ((tvC || 0) > 0 || (bbC || 0) > 0 || showSk) {
         keyboard.push([{ text: `📋 Xem BC TV/BB/Sinka`, callback_data: 'menu_view_report' }]);
       }
       if (['tu_van', 'bb', 'center'].includes(ph)) {
@@ -263,16 +261,16 @@ export async function handleCallback(update: any, staffData: any) {
 
   // ── Xem báo cáo: show sub-menu with TV/BB/Sinka ──
   if (cbData === 'menu_view_report') {
-    const { data: fg } = await supabase.from('fruit_groups').select('profile_id').eq('telegram_group_id', chatId).single();
+    const { data: fg } = await supabase.from('fruit_groups').select('profile_id, profiles(phase)').eq('telegram_group_id', chatId).single();
     if (!fg?.profile_id) return sendText(chatId, `❌ Group chưa gắn hồ sơ.`);
     const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'tu_van');
     const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', fg.profile_id).eq('record_type', 'bien_ban');
-    const { data: skData } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', fg.profile_id).single();
-    const hasSinka = skData?.data && Object.keys(skData.data).some((k: string) => k.startsWith('sk_'));
+    const phase = (fg as any).profiles?.phase || '';
+    const showSinka = ['bb', 'center', 'completed'].includes(phase);
     const kb: any[] = [];
     if ((tvCount || 0) > 0) kb.push([{ text: `📝 Báo cáo TV (${tvCount} phiếu)`, callback_data: 'view_report_list_tv' }]);
     if ((bbCount || 0) > 0) kb.push([{ text: `📖 Báo cáo BB (${bbCount} phiếu)`, callback_data: 'view_report_list_bb' }]);
-    if (hasSinka) kb.push([{ text: `📜 Giấy Sinka`, callback_data: 'view_sinka' }]);
+    if (showSinka) kb.push([{ text: `📜 Giấy Sinka`, callback_data: 'view_sinka' }]);
     kb.push([{ text: '← Quay lại', callback_data: 'menu_back' }]);
     await editMessageText(chatId, messageId, `📋 *Chọn loại báo cáo:*`, kb);
     return;

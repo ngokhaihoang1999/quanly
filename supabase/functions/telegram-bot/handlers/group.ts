@@ -371,9 +371,8 @@ export async function handleGroupChat(update: any) {
       // Xem báo cáo
       const { count: tvCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'tu_van');
       const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'bien_ban');
-      const { data: skChk } = await supabase.from('form_hanh_chinh').select('data').eq('profile_id', linkedProfileId).single();
-      const hasSk = skChk?.data && Object.keys(skChk.data).some((k: string) => k.startsWith('sk_'));
-      if ((tvCount || 0) > 0 || (bbCount || 0) > 0 || hasSk) {
+      const showSk = ['bb', 'center', 'completed'].includes(phase);
+      if ((tvCount || 0) > 0 || (bbCount || 0) > 0 || showSk) {
         keyboard.push([{ text: `📋 Xem BC TV/BB/Sinka`, callback_data: 'menu_view_report' }]);
       }
 
