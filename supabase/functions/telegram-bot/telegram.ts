@@ -66,15 +66,17 @@ export async function exportChatInviteLink(chatId: number): Promise<string | nul
   } catch { return null; }
 }
 
-export async function sendDocument(chatId: number, documentUrl: string, fileName: string, caption: string = '') {
+export async function sendDocument(chatId: number, fileBuffer: Uint8Array | ArrayBuffer, fileName: string, caption: string = '') {
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  form.append('document', new Blob([fileBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), fileName);
+  if (caption) {
+    form.append('caption', caption);
+    form.append('parse_mode', 'Markdown');
+  }
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      document: documentUrl,
-      caption,
-      parse_mode: "Markdown",
-    })
+    method: "POST",
+    body: form
   });
 }
 

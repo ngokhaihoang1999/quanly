@@ -1,4 +1,4 @@
-import { supabase, BOT_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
+import { supabase, BOT_TOKEN, ADMIN_STAFF_CODE, ROLE_LABELS, POSITION_LABELS, POSITION_LEVELS } from "../config.ts";
 import { posLevel, canAssignRole, canLinkProfile, canChangeLevel, canApproveHapja, canAssignPosition, canDefineStructure } from "../permissions.ts";
 import { sendText, sendKeyboard, editMessageReplyMarkup, editMessageText, getChatAdmins, getChatMember, getStaffByTelegramId, exportChatInviteLink, sendDocument } from "../telegram.ts";
 import { sendBBFormTemplate } from "./group.ts";
@@ -558,23 +558,9 @@ ${ln('Người trao đổi', v('sk_nguoi_trao_doi'))}${ln('XN center', v('sk_xac
       const buffer = await Packer.toBuffer(doc);
       const fileName = `Sinka_${name.replace(/[^\w]/g, '_')}.docx`;
 
-      // Upload to Supabase Storage
-      const storagePath = `exports/${fg.profile_id}_${Date.now()}.docx`;
-      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sinka-exports/${storagePath}`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_SERVICE_ROLE_KEY,
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'x-upsert': 'true'
-        },
-        body: buffer
-      });
-      if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
-      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/sinka-exports/${storagePath}`;
-
-      await sendDocument(chatId, publicUrl, fileName, `📜 Giấy Sinka \u2014 ${name}`);
-      await editMessageText(chatId, messageId, `✅ Đã xuất file *Giấy Sinka \u2014 ${name}*`, [
+      // Send directly to Telegram (no storage needed)
+      await sendDocument(chatId, buffer, fileName, `📜 Giấy Sinka — ${name}`);
+      await editMessageText(chatId, messageId, `✅ Đã xuất file *Giấy Sinka — ${name}*`, [
         [{ text: '← Quay lại', callback_data: 'view_sinka' }]
       ]);
     } catch (e: any) {
