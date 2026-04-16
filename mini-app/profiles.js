@@ -711,49 +711,76 @@ async function _sendShareToStaff(profileId, profileName) {
   }
 }
 
-function _copyProfileDeepLink(profileId) {
+async function _copyProfileDeepLink(profileId) {
   const link = `https://t.me/quanlyhcm_bot/app?startapp=${profileId}`;
   const displayName = (window._shareProfileName || 'Hồ sơ trái quả').trim();
   const htmlContent = `<a href="${link}">🍎 ${displayName}</a>`;
   const plainContent = `🍎 ${displayName}\n${link}`;
+  let copied = false;
 
   // Method 1: ClipboardItem API (desktop — preserves HTML hyperlink)
   if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
     try {
       const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
       const textBlob = new Blob([plainContent], { type: 'text/plain' });
-      navigator.clipboard.write([
+      await navigator.clipboard.write([
         new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
-      ]).then(() => {
-        showToast('📋 Đã sao chép: ' + displayName);
-      }).catch(() => {
-        // ClipboardItem bị chặn → copy plain text qua textarea
-        _fallbackCopy(plainContent);
-      });
-      return;
+      ]);
+      copied = true;
+    } catch(e) {
+      // ClipboardItem bị chặn hoặc Permission denied → tiếp tục fallback
+    }
+  }
+
+  // Method 2: navigator.clipboard.writeText (simpler, wider support)
+  if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(plainContent);
+      copied = true;
     } catch(e) {}
   }
 
-  // Method 2: execCommand with contentEditable (mobile — rich text)
-  try {
-    const el = document.createElement('div');
-    el.contentEditable = 'true';
-    el.innerHTML = htmlContent;
-    el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
-    document.body.appendChild(el);
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    const ok = document.execCommand('copy');
-    sel.removeAllRanges();
-    el.remove();
-    if (ok) { showToast('📋 Đã sao chép: ' + displayName); return; }
-  } catch(e) {}
+  // Method 3: execCommand with contentEditable (mobile — rich text)
+  if (!copied) {
+    try {
+      const el = document.createElement('div');
+      el.contentEditable = 'true';
+      el.innerHTML = htmlContent;
+      el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+      document.body.appendChild(el);
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      copied = document.execCommand('copy');
+      sel.removeAllRanges();
+      el.remove();
+    } catch(e) {}
+  }
 
-  // Method 3: plain text textarea fallback
-  _fallbackCopy(plainContent);
+  // Method 4: plain text textarea fallback
+  if (!copied) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = plainContent;
+      ta.style.cssText = 'position:fixed;left:-9999px;';
+      document.body.appendChild(ta);
+      ta.select();
+      copied = document.execCommand('copy');
+      ta.remove();
+    } catch(e) {}
+  }
+
+  // Always show feedback
+  if (copied) {
+    showToast('📋 Đã sao chép: ' + displayName);
+  } else {
+    showToast('⚠️ Không thể copy, hãy copy thủ công');
+    // Select text in input for manual copy
+    const inp = document.getElementById('shareDeepLinkInput');
+    if (inp) { inp.select(); inp.focus(); }
+  }
 }
 
 
