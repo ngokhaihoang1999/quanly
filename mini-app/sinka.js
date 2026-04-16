@@ -24,10 +24,10 @@ function compactTeamLabel(unitStr) {
 }
 
 // ── Build filename for Word export ──
-// Cú pháp: (HL) HoTen HS - HoTen NDD - ToNDD - KVSong.doc
+// Cú pháp: (HL) HoTen HS - HoTen NDD - ToNDD - KVSong.docx
 function _buildSinkaFileName() {
   const p = allProfiles.find(x => x.id === currentProfileId);
-  if (!p) return 'Giay_Sinka.doc';
+  if (!p) return 'Giay_Sinka.docx';
 
   const hsName = removeVietnamese(p.full_name || '');
   
@@ -53,7 +53,7 @@ function _buildSinkaFileName() {
   
   // Build parts
   const parts = [hsName, nddName, toNDD, kvSong].filter(Boolean);
-  return `${prefix}${parts.join(' - ')}.doc`;
+  return `${prefix}${parts.join(' - ')}.docx`;
 }
 
 // ── All Sinka field IDs ──
@@ -379,142 +379,177 @@ Ngày ghi chép: ${v('sk_ngay_ghi_chep')}
   copyToClipboard(text);
 }
 
-// ── Export Sinka to Word (.doc) ──
+// ── Lazy-load docx library ──
+let _docxLoaded = false;
+function _lazyDocx() {
+  if (_docxLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/docx@9.1.1/build/index.umd.min.js';
+    s.onload = () => { _docxLoaded = true; resolve(); };
+    s.onerror = () => reject(new Error('Failed to load docx library'));
+    document.head.appendChild(s);
+  });
+}
+
+// ── Export Sinka to Word (.docx) ──
 async function exportSinkaWord() {
   const v = id => document.getElementById(id)?.value?.trim() || '';
   const p = allProfiles.find(x => x.id === currentProfileId);
   if (!p) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
 
+  showToast('⏳ Đang tạo file...');
+  try { await _lazyDocx(); } catch(e) {
+    showToast('❌ Không thể tải thư viện docx');
+    return;
+  }
+
   const fileName = _buildSinkaFileName();
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = window.docx;
 
-  // Build HTML content for Word
-  const css = `
-    body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.6; margin: 2cm; }
-    h1 { font-size: 16pt; text-align: center; margin-bottom: 20pt; }
-    h2 { font-size: 14pt; margin-top: 16pt; margin-bottom: 8pt; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 4pt; }
-    h3 { font-size: 13pt; margin-top: 12pt; margin-bottom: 6pt; }
-    .field { margin: 4pt 0; }
-    .label { font-weight: bold; }
-    .important { color: #cc0000; font-weight: bold; }
-    .section-header { background: #f0f0f0; padding: 6pt 10pt; border-radius: 4pt; margin: 12pt 0 8pt; }
-  `;
+  // Helper: labeled field → Paragraph
+  const field = (num, label, value) => new Paragraph({
+    spacing: { after: 80 },
+    children: [
+      new TextRun({ text: `${num}) `, bold: true, size: 24, font: 'Times New Roman' }),
+      new TextRun({ text: `${label}: `, bold: true, size: 24, font: 'Times New Roman' }),
+      new TextRun({ text: value || '—', size: 24, font: 'Times New Roman' }),
+    ]
+  });
 
-  const htmlBody = `
-<h1>⬜️ Giấy Sinka</h1>
-<p><b>Ngày ghi chép:</b> ${v('sk_ngay_ghi_chep') || new Date().toLocaleDateString('vi-VN')}</p>
+  const sectionHeader = (text) => new Paragraph({
+    spacing: { before: 300, after: 150 },
+    heading: HeadingLevel.HEADING_2,
+    children: [new TextRun({ text, bold: true, size: 28, font: 'Times New Roman' })]
+  });
 
-<h2>1. Người dẫn dắt</h2>
-<div class="field">1) <span class="label">Tên/Bộ/Khu vực/Số liên lạc:</span> ${escHtml(v('sk_ndd_ten_bo_kv_sdt'))}</div>
-<div class="field">2) <span class="important">❗ Mã định danh trong SCJ:</span> ${escHtml(v('sk_ndd_ma_dinh_danh'))}</div>
-<div class="field">3) <span class="label">Hình thức truyền đạo:</span> ${escHtml(v('sk_hinh_thuc_truyen_dao'))}</div>
-<div class="field">4) <span class="label">Mối quan hệ với trái quả:</span> ${escHtml(v('sk_moi_quan_he'))}</div>
-<div class="field">5) <span class="label">Concept thuộc thể:</span> ${escHtml(v('sk_concept_thuoc_the'))}</div>
-<div class="field">6) <span class="label">Concept thuộc linh:</span> ${escHtml(v('sk_concept_thuoc_linh'))}</div>
+  const subHeader = (text) => new Paragraph({
+    spacing: { before: 200, after: 100 },
+    heading: HeadingLevel.HEADING_3,
+    children: [new TextRun({ text, bold: true, size: 26, font: 'Times New Roman' })]
+  });
 
-<h2>2. Thông tin cơ bản của học viên</h2>
-<div class="field">1) <span class="label">Tên/Giới tính/Tuổi:</span> ${escHtml(v('sk_ten_gt_tuoi'))}</div>
-<div class="field">2) <span class="label">Quốc tịch:</span> ${escHtml(v('sk_quoc_tich'))}</div>
-<div class="field">3) <span class="label">Sở thích/Sở trường/Số liên lạc:</span> ${escHtml(v('sk_so_thich_sdt'))}</div>
-<div class="field">4) <span class="label">Ngày tháng năm sinh:</span> ${escHtml(v('sk_ngay_sinh'))}</div>
-<div class="field">5) <span class="label">Địa chỉ nhà (Địa chỉ đang sống):</span> ${escHtml(v('sk_dia_chi'))}</div>
-<div class="field">6) <span class="label">Nơi làm việc (Công việc, Vị trí):</span> ${escHtml(v('sk_noi_lam_viec'))}</div>
-<div class="field">7) <span class="label">Lịch trình:</span> ${escHtml(v('sk_lich_trinh'))}</div>
-<div class="field">8) <span class="label">Tình trạng hôn nhân:</span> ${escHtml(v('sk_hon_nhan'))}</div>
-<div class="field">9) <span class="label">Có bạn khác giới không / Thời gian chơi:</span> ${escHtml(v('sk_ban_khac_gioi'))}</div>
-<div class="field">10) <span class="label">Có học lại hay không?:</span> ${escHtml(v('sk_hoc_lai'))}</div>
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        // Title
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+          children: [new TextRun({ text: '⬜️ Giấy Sinka', bold: true, size: 36, font: 'Times New Roman' })]
+        }),
+        new Paragraph({
+          spacing: { after: 200 },
+          children: [
+            new TextRun({ text: 'Ngày ghi chép: ', bold: true, size: 24, font: 'Times New Roman' }),
+            new TextRun({ text: v('sk_ngay_ghi_chep'), size: 24, font: 'Times New Roman' })
+          ]
+        }),
 
-<h2>3. Gia đình/Bối cảnh trưởng thành</h2>
-<div class="field">1) <span class="label">Các thành viên trong gia đình:</span> ${escHtml(v('sk_thanh_vien_gd'))}</div>
-<div class="field">2) <span class="label">Quá trình trưởng thành, hoàn cảnh gia đình:</span> ${escHtml(v('sk_qua_trinh_truong_thanh'))}</div>
-<div class="field">3) <span class="label">Mức độ gia đình can thiệp đến học viên:</span> ${escHtml(v('sk_muc_do_gd_can_thiep'))}</div>
+        // Section 1: NDD
+        sectionHeader('1. Người dẫn dắt'),
+        field('1', 'Tên/Bộ/Khu vực/Số liên lạc', v('sk_ndd_ten_bo_kv_sdt')),
+        field('2', '❗Mã định danh trong SCJ', v('sk_ndd_ma_dinh_danh')),
+        field('3', 'Hình thức truyền đạo', v('sk_hinh_thuc_truyen_dao')),
+        field('4', 'Mối quan hệ với trái quả', v('sk_moi_quan_he')),
+        field('5', 'Concept thuộc thể', v('sk_concept_thuoc_the')),
+        field('6', 'Concept thuộc linh', v('sk_concept_thuoc_linh')),
 
-<h2>4. Tính cách</h2>
-<div class="field">1) <span class="label">Khuynh hướng (Enneagram, MBTI):</span> ${escHtml(v('sk_enneagram_mbti'))}</div>
-<div class="field">2) <span class="label">Khuynh hướng sẽ phù hợp với tính cách:</span> ${escHtml(v('sk_phu_hop_tinh_cach'))}</div>
-<div class="field">3) <span class="label">Những yếu tố có thể mua được tấm lòng:</span> ${escHtml(v('sk_mua_tam_long'))}</div>
-<div class="field">4) <span class="label">Mối quan tâm và lo lắng thuộc thể:</span> ${escHtml(v('sk_quan_tam_thuoc_the'))}</div>
-<div class="field">5) <span class="label">Mối quan tâm và lo lắng thuộc linh:</span> ${escHtml(v('sk_quan_tam_thuoc_linh'))}</div>
+        // Section 2: HS
+        sectionHeader('2. Thông tin cơ bản của học viên'),
+        field('1', 'Tên/Giới tính/Tuổi', v('sk_ten_gt_tuoi')),
+        field('2', 'Quốc tịch', v('sk_quoc_tich')),
+        field('3', 'Sở thích/Sở trường/Số liên lạc', v('sk_so_thich_sdt')),
+        field('4', 'Ngày tháng năm sinh', v('sk_ngay_sinh')),
+        field('5', 'Địa chỉ nhà (Địa chỉ đang sống)', v('sk_dia_chi')),
+        field('6', 'Nơi làm việc (Công việc, Vị trí)', v('sk_noi_lam_viec')),
+        field('7', 'Lịch trình', v('sk_lich_trinh')),
+        field('8', 'Tình trạng hôn nhân', v('sk_hon_nhan')),
+        field('9', 'Có bạn khác giới không / Thời gian chơi', v('sk_ban_khac_gioi')),
+        field('10', 'Có học lại hay không?', v('sk_hoc_lai')),
 
-<h2>5. Tâm hướng Thần</h2>
-<div class="field">1) <span class="label">Tôn giáo:</span> ${escHtml(v('sk_ton_giao'))}</div>
-<div class="field">2) <span class="label">Giáo phái/tên nhà thờ/thời gian theo đạo/chức trách, chức vụ:</span> ${escHtml(v('sk_giao_phai'))}</div>
-<div class="field">3) <span class="label">Lý do bắt đầu theo đạo:</span> ${escHtml(v('sk_ly_do_theo_dao'))}</div>
-<div class="field">4) <span class="label">Có tin vào sự tồn tại của thần linh hay không?:</span> ${escHtml(v('sk_tin_than_linh'))}</div>
-<div class="field">5) <span class="label">Nhận thức về tín ngưỡng, Cơ đốc giáo, tôn giáo:</span> ${escHtml(v('sk_nhan_thuc_tin_nguong'))}</div>
-<div class="field">6) <span class="label">Mức độ quan tâm đến Kinh Thánh:</span> ${escHtml(v('sk_muc_do_quan_tam_kt'))}</div>
+        // Section 3: Gia đình
+        sectionHeader('3. Gia đình/Bối cảnh trưởng thành'),
+        field('1', 'Các thành viên trong gia đình', v('sk_thanh_vien_gd')),
+        field('2', 'Quá trình trưởng thành, hoàn cảnh gia đình', v('sk_qua_trinh_truong_thanh')),
+        field('3', 'Mức độ gia đình can thiệp đến học viên', v('sk_muc_do_gd_can_thiep')),
 
-<h2>🔸 Hạng mục ghi chép bổ sung khi phỏng vấn GVBB, NDD, Lá</h2>
+        // Section 4: Tính cách
+        sectionHeader('4. Tính cách'),
+        field('1', 'Khuynh hướng (Enneagram, MBTI)', v('sk_enneagram_mbti')),
+        field('2', 'Khuynh hướng sẽ phù hợp với tính cách', v('sk_phu_hop_tinh_cach')),
+        field('3', 'Những yếu tố có thể mua được tấm lòng', v('sk_mua_tam_long')),
+        field('4', 'Mối quan tâm và lo lắng thuộc thể', v('sk_quan_tam_thuoc_the')),
+        field('5', 'Mối quan tâm và lo lắng thuộc linh', v('sk_quan_tam_thuoc_linh')),
 
-<h3>1. Người sẽ trao đổi với đội ngũ khai giảng</h3>
-<div class="field"><span class="label">Tên/Bộ/Số liên lạc:</span> ${escHtml(v('sk_nguoi_trao_doi'))}</div>
-<div class="field"><span class="label">Đã xác nhận học center chưa?:</span> ${escHtml(v('sk_xac_nhan_center'))}</div>
+        // Section 5: Tâm hướng Thần
+        sectionHeader('5. Tâm hướng Thần'),
+        field('1', 'Tôn giáo', v('sk_ton_giao')),
+        field('2', 'Giáo phái/tên nhà thờ/thời gian theo đạo/chức trách', v('sk_giao_phai')),
+        field('3', 'Lý do bắt đầu theo đạo', v('sk_ly_do_theo_dao')),
+        field('4', 'Có tin vào sự tồn tại của thần linh hay không?', v('sk_tin_than_linh')),
+        field('5', 'Nhận thức về tín ngưỡng, Cơ đốc giáo, tôn giáo', v('sk_nhan_thuc_tin_nguong')),
+        field('6', 'Mức độ quan tâm đến Kinh Thánh', v('sk_muc_do_quan_tam_kt')),
 
-<h3>2. Thông tin GVBB</h3>
-<div class="field">1) <span class="label">Tên/Bộ/Khu vực/Số liên lạc:</span> ${escHtml(v('sk_gvbb_ten'))}</div>
-<div class="field">2) <span class="label">Concept thuộc thể:</span> ${escHtml(v('sk_gvbb_concept_the'))}</div>
-<div class="field">3) <span class="label">Concept thuộc linh:</span> ${escHtml(v('sk_gvbb_concept_linh'))}</div>
-<div class="field">4) <span class="important">❗ Mã số định danh tại SCJ:</span> ${escHtml(v('sk_gvbb_ma_dinh_danh'))}</div>
-<div class="field">5) <span class="label">Phương pháp kết nối:</span> ${escHtml(v('sk_gvbb_ket_noi'))}</div>
-<div class="field">6) <span class="label">Thời điểm lần đầu gặp:</span> ${escHtml(v('sk_gvbb_lan_dau'))}</div>
+        // Supplement
+        sectionHeader('🔸 Hạng mục ghi chép bổ sung'),
+        subHeader('1. Người sẽ trao đổi với đội ngũ khai giảng'),
+        field('', 'Tên/Bộ/Số liên lạc', v('sk_nguoi_trao_doi')),
+        field('', 'Đã xác nhận học center chưa?', v('sk_xac_nhan_center')),
 
-<h3>3. Lá</h3>
-<div class="field">1) <span class="label">Tên/Bộ/Khu vực/Số liên lạc:</span> ${escHtml(v('sk_la_ten'))}</div>
-<div class="field">2) <span class="label">Concept thuộc thể:</span> ${escHtml(v('sk_la_concept_the'))}</div>
-<div class="field">3) <span class="label">Concept thuộc linh:</span> ${escHtml(v('sk_la_concept_linh'))}</div>
-<div class="field">4) <span class="label">Phương pháp kết nối:</span> ${escHtml(v('sk_la_ket_noi'))}</div>
-<div class="field">5) <span class="label">Thời điểm lần đầu gặp:</span> ${escHtml(v('sk_la_lan_dau'))}</div>
+        subHeader('2. Thông tin GVBB'),
+        field('1', 'Tên/Bộ/Khu vực/Số liên lạc', v('sk_gvbb_ten')),
+        field('2', 'Concept thuộc thể', v('sk_gvbb_concept_the')),
+        field('3', 'Concept thuộc linh', v('sk_gvbb_concept_linh')),
+        field('4', '❗Mã số định danh tại SCJ', v('sk_gvbb_ma_dinh_danh')),
+        field('5', 'Phương pháp kết nối', v('sk_gvbb_ket_noi')),
+        field('6', 'Thời điểm lần đầu gặp', v('sk_gvbb_lan_dau')),
 
-<h3>4. Lá khác</h3>
-<div class="field">${escHtml(v('sk_la_khac'))}</div>
+        subHeader('3. Lá'),
+        field('1', 'Tên/Bộ/Khu vực/Số liên lạc', v('sk_la_ten')),
+        field('2', 'Concept thuộc thể', v('sk_la_concept_the')),
+        field('3', 'Concept thuộc linh', v('sk_la_concept_linh')),
+        field('4', 'Phương pháp kết nối', v('sk_la_ket_noi')),
+        field('5', 'Thời điểm lần đầu gặp', v('sk_la_lan_dau')),
 
-<h3>5. Thông tin xác nhận</h3>
-<div class="field">1) <span class="label">Số lần BB (Tên bài học gần nhất):</span> ${escHtml(v('sk_so_lan_bb'))}</div>
-<div class="field">2) <span class="label">Lý do mong muốn học center (Điểm hái trái):</span> ${escHtml(v('sk_ly_do_center'))}</div>
-<div class="field">3) <span class="label">Đề cập quá trình học kéo dài 8~9 tháng:</span> ${escHtml(v('sk_8_9_thang'))}</div>
-<div class="field">4) <span class="label">Thứ và thời gian sẽ học:</span> ${escHtml(v('sk_thu_gio_hoc'))}</div>
-<div class="field">5) <span class="label">Bảo an — những người xung quanh đã biết:</span> ${escHtml(v('sk_bao_an_ai_biet'))}</div>
-<div class="field">6) <span class="label">Chiến lược concept với người xung quanh khi tham gia học center:</span> ${escHtml(v('sk_chien_luoc_concept'))}</div>
-<div class="field">7) <span class="label">Địa điểm sẽ học qua Zoom:</span> ${escHtml(v('sk_dia_diem_zoom'))}</div>
-<div class="field">8) <span class="label">Đã từng học trên Zoom chưa:</span> ${escHtml(v('sk_da_hoc_zoom'))}</div>
-<div class="field">9) <span class="label">Dự kiến ngày nhập ngũ:</span> ${escHtml(v('sk_du_kien_nhap_ngu'))}</div>
-<div class="field">10) <span class="label">Mối nguy hiểm lớn nhất:</span> ${escHtml(v('sk_moi_nguy_hiem'))}</div>
-`;
+        subHeader('4. Lá khác'),
+        new Paragraph({ children: [new TextRun({ text: v('sk_la_khac') || '—', size: 24, font: 'Times New Roman' })] }),
 
-  // Word-compatible HTML document
-  const fullHtml = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-      xmlns:w="urn:schemas-microsoft-com:office:word"
-      xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="utf-8">
-<meta name="ProgId" content="Word.Document">
-<style>${css}</style>
-</head>
-<body>${htmlBody}</body>
-</html>`;
+        subHeader('5. Thông tin xác nhận'),
+        field('1', 'Số lần BB (Tên bài học gần nhất)', v('sk_so_lan_bb')),
+        field('2', 'Lý do mong muốn học center (Điểm hái trái)', v('sk_ly_do_center')),
+        field('3', 'Đề cập quá trình học kéo dài 8~9 tháng', v('sk_8_9_thang')),
+        field('4', 'Thứ và thời gian sẽ học', v('sk_thu_gio_hoc')),
+        field('5', 'Bảo an — những người xung quanh đã biết', v('sk_bao_an_ai_biet')),
+        field('6', 'Chiến lược concept với người xung quanh', v('sk_chien_luoc_concept')),
+        field('7', 'Địa điểm sẽ học qua Zoom', v('sk_dia_diem_zoom')),
+        field('8', 'Đã từng học trên Zoom chưa', v('sk_da_hoc_zoom')),
+        field('9', 'Dự kiến ngày nhập ngũ', v('sk_du_kien_nhap_ngu')),
+        field('10', 'Mối nguy hiểm lớn nhất', v('sk_moi_nguy_hiem')),
+      ]
+    }]
+  });
 
-  // Create blob
-  const blob = new Blob(['\ufeff' + fullHtml], { type: 'application/msword;charset=utf-8' });
+  // Generate .docx blob
+  const blob = await Packer.toBlob(doc);
 
-  // ── Telegram WebApp: upload to Supabase Storage → open link ──
+  // ── Telegram WebApp: upload to Supabase Storage → download ──
   if (window.Telegram?.WebApp) {
     try {
-      showToast('⏳ Đang tạo file...');
-      // Upload to Supabase Storage (sinka-exports bucket)
-      const storagePath = `exports/${currentProfileId}_${Date.now()}.doc`;
+      const storagePath = `exports/${currentProfileId}_${Date.now()}.docx`;
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sinka-exports/${storagePath}`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY,
           'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Content-Type': 'application/msword',
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'x-upsert': 'true'
         },
         body: blob
       });
       if (!uploadRes.ok) throw new Error('Upload failed: ' + uploadRes.status);
 
-      // Get public URL
       const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/sinka-exports/${storagePath}`;
 
       // Try Telegram downloadFile API (v8.0+)
@@ -526,23 +561,13 @@ async function exportSinkaWord() {
         } catch(e) { console.warn('TG downloadFile failed:', e); }
       }
 
-      // Fallback: open in external browser (will auto-download)
       Telegram.WebApp.openLink(publicUrl);
       showToast('📄 Đã mở link tải file');
       return;
     } catch(e) {
-      console.warn('Storage upload failed, trying share:', e);
-      // Fallback to navigator.share
-      try {
-        const file = new File([blob], fileName, { type: 'application/msword' });
-        await navigator.share({ files: [file], title: 'Giấy Sinka' });
-        showToast('📄 Đã chia sẻ: ' + fileName);
-        return;
-      } catch(e2) {
-        console.warn('Share also failed:', e2);
-        showToast('⚠️ Không thể tải file. Hãy dùng nút 📋 Copy rồi paste vào Word.');
-        return;
-      }
+      console.warn('Storage upload failed:', e);
+      showToast('⚠️ Không thể tải file. Dùng nút 📋 Copy rồi paste vào Word.');
+      return;
     }
   }
 
