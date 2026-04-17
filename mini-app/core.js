@@ -1543,9 +1543,9 @@ function _clearLoadingStates() {
 
 // ============ NAVIGATION ============
 function backToList() {
-  // Use FLIP animation if available
-  if (typeof FlipTransition !== 'undefined') {
-    FlipTransition.close();
+  // Use animated transition if available
+  if (typeof ProfileTransition !== 'undefined') {
+    ProfileTransition.close();
     return;
   }
   // Fallback: original logic

@@ -90,9 +90,11 @@ async function openProfileById(id) {
 }
 async function openProfile(p, cardEl) {
   currentProfileId = p.id;
-  // FLIP transition: animate card expanding into detail view
-  if (typeof FlipTransition !== 'undefined' && cardEl) {
-    FlipTransition.open(cardEl, p.id);
+  // Animated profile transition
+  if (typeof ProfileTransition !== 'undefined') {
+    ProfileTransition.open(cardEl, p.id);
+  } else {
+    document.getElementById('detailView').style.display = 'block';
   }
   // Hide ALL center tabs (including reports, unit, etc.) — not just the static list
   ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority','tab-reports','tab-notes'].forEach(t=>{ 
@@ -101,10 +103,6 @@ async function openProfile(p, cardEl) {
       el.style.display = 'none'; 
     }
   });
-  // Show detail view (FlipTransition handles animation if available)
-  if (typeof FlipTransition === 'undefined' || !cardEl) {
-    document.getElementById('detailView').style.display = 'block';
-  }
   document.getElementById('fabBtn').style.display = 'none';
 
 

@@ -1783,47 +1783,19 @@
 
 /* ═══════════════ MOTION SYSTEM ═══════════════ */
 
-/* ── Liquid Tab Indicator ── */
-.tab-indicator {
+/* ── Tab Ghost (sliding highlight during tab switch) ── */
+.tab-ghost {
   position: absolute;
-  left: 0; top: 0;
-  width: 0; height: 0;
-  border-radius: 20px;
-  background: var(--accent);
   pointer-events: none;
   z-index: 0;
-  will-change: left, top, width, height;
-  box-shadow: 0 0 16px var(--fab-shadow);
+  background: var(--accent);
+  opacity: 0;
+  border-radius: 20px;
+  box-shadow: 0 0 20px var(--fab-shadow);
 }
-/* When indicator is active, the tab's own active background becomes transparent
-   so the indicator sliding behind is the visual highlight */
-.has-tab-indicator .tab-bar .tab.active {
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-/* Tabs must sit above the indicator blob */
-.tab, .form-tab, .dash-mode-btn {
-  position: relative;
-  z-index: 1;
-}
-
-/* ── Form tabs indicator ── */
-.form-tabs .tab-indicator {
+.form-tabs .tab-ghost {
   border-radius: 8px;
   box-shadow: none;
-  opacity: 0.85;
-}
-.has-tab-indicator .form-tabs .form-tab.active {
-  background: transparent !important;
-}
-
-/* ── FLIP Profile Transition ── */
-.flip-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  pointer-events: none;
 }
 
 /* ── Swipe container ── */
@@ -1838,11 +1810,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .tab-indicator { display: none !important; }
-  .has-tab-indicator .tab-bar .tab.active {
-    background: var(--accent) !important;
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 16px var(--fab-shadow) !important;
-  }
-  .flip-overlay { display: none !important; }
+  .tab-ghost { display: none !important; }
 }
