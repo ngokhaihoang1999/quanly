@@ -205,7 +205,8 @@ async function _autoFillSinka(profileId, p) {
   fill('sk_ndd_ma_dinh_danh', nddStaff?.scj_code || '');
   fill('sk_hinh_thuc_truyen_dao', t2_values.hinh_thuc);
   fill('sk_moi_quan_he', t2_values.ket_noi);
-  fill('sk_concept_thuoc_the', t2_values.cong_cu);
+  // Concept thuộc thể: ưu tiên staff.concept_the (NDD tự nhập trong Cá nhân hóa)
+  fill('sk_concept_thuoc_the', nddStaff?.concept_the || t2_values.cong_cu);
 
   // Section 2: HS
   const tenGtTuoi = [t2_values.ho_ten, t2_values.gioi_tinh, t2_values.nam_sinh].filter(Boolean).join(' / ');
@@ -236,6 +237,8 @@ async function _autoFillSinka(profileId, p) {
     fill('sk_gvbb_ten', [gvbbStaff.full_name, gvbbUnit, gvbbPhone].filter(Boolean).join(' / '));
     // Mã SCJ GVBB: từ staff.scj_code
     fill('sk_gvbb_ma_dinh_danh', gvbbStaff?.scj_code || '');
+    // Concept thuộc thể GVBB: từ staff.concept_the
+    fill('sk_gvbb_concept_the', gvbbStaff?.concept_the || '');
   } else if (gvbbCode && gvbbCode.startsWith('tg:')) {
     // Unregistered GVBB — show display name from roles
     const display = window._rolesDisplay?.gvbb || gvbbCode;
