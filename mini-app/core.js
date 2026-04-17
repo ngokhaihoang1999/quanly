@@ -8,6 +8,19 @@ let _pendingPrefs = {}; // live personalization edits not yet saved
 let _pinUnlocked = false; // session flag — once unlocked, stays unlocked until full reload
 let _authChecked = false; // set true sau khi loadStaffInfo() xong — dùng bởi security guard
 
+// ============ PREMIUM UX ============
+window.haptic = function(style = 'light') {
+  try {
+    if (!window.Telegram?.WebApp?.HapticFeedback) return;
+    if (['light', 'medium', 'heavy', 'rigid', 'soft'].includes(style)) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
+    } else if (['error', 'success', 'warning'].includes(style)) {
+      window.Telegram.WebApp.HapticFeedback.notificationOccurred(style);
+    } else if (style === 'selection') {
+      window.Telegram.WebApp.HapticFeedback.selectionChanged();
+    }
+  } catch(e) {}
+};
 // ============ PIN LOCK SYSTEM ============
 const PIN_HASH_KEY = 'cj_pin_hash';
 const PIN_ENABLED_KEY = 'cj_pin_enabled';
@@ -575,8 +588,13 @@ function getChipValues(id) { const el=document.getElementById(id); if(!el) retur
 function setChipValues(id, vals) { const el=document.getElementById(id); if(!el||!vals) return; el.querySelectorAll('.chip').forEach(c=>{ vals.includes(c.textContent.trim()) ? c.classList.add('selected') : c.classList.remove('selected'); }); }
 function clearChips(id) { const el=document.getElementById(id); if(el) el.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected')); }
 function toggleChip(el) { el.classList.toggle('selected'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+function closeModal(id) { haptic('selection'); document.getElementById(id).classList.remove('open'); }
+function showToast(msg) { 
+  if (msg.includes('✅') || msg.includes('✨')) haptic('success');
+  else if (msg.includes('❌') || msg.includes('⚠️')) haptic('error');
+  else haptic('light');
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); 
+}
 
 // ── Top loading bar ──
 function showLoading() {
@@ -1562,6 +1580,7 @@ function switchFormTab(el, cardId) {
   }
 }
 function switchMainTab(el, tab) {
+  haptic('light');
   if (typeof _isTabPinned === 'function' && _isTabPinned(tab) && window.innerWidth >= 1024) return;
   
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
