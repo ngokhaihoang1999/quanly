@@ -2387,6 +2387,7 @@ function openPersonalizationPanel() {
               <div style="font-weight:700;font-size:14px;">${myStaff?.full_name||'---'}</div>
               <div style="font-size:11px;color:var(--text3);">${myStaff?.staff_code||''} · ${getPositionName(myStaff?.position)}${getStaffUnit(myStaff?.staff_code) ? ' · <span style="color:var(--accent);">' + getStaffUnit(myStaff.staff_code) + '</span>' : ''}</div>
             </div>
+          </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã JD)</span></label>
             <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Khải, Phi, Hoa..."
