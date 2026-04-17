@@ -266,8 +266,9 @@
     .tree-label { font-size: 13px; font-weight: 600; flex: 1; }
     .tree-meta { font-size: 11px; color: var(--text3); text-align: right; white-space: nowrap; flex-shrink: 0; }
     .tree-manager { font-size: 10px; color: var(--accent2); font-weight: 500; }
-    .tree-add { cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
+    .tree-add { cursor: pointer; opacity: 0.7; transition: opacity 0.2s; color: var(--accent); }
     .tree-add:hover { opacity: 1; }
+    .tree-add .tree-label { color: var(--accent); font-weight: 500; }
     /* View As bar */
     .view-as-bar { display: none; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); border-radius: 10px; padding: 6px 12px; margin-bottom: 10px; align-items: center; gap: 8px; }
     .view-as-bar.active { display: flex; }
