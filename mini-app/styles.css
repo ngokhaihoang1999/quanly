@@ -1746,21 +1746,27 @@
   text-overflow: ellipsis;
   max-width: 50px;
 }
-/* Micro-Animations & Premium UX */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Micro-Animations & Premium UX (Spring Mechanics) */
+@keyframes springFadeUp {
+  0% { opacity: 0; transform: translateY(20px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-.stagger-item, .tree-node, .staff-card, .profile-card, .dash-card, .dash-stat { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger-item, .tree-node, .staff-card, .profile-card, .dash-card, .dash-stat { animation: springFadeUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.15) both; }
 .tree-node, .staff-card { border-left: 2px solid transparent; transition: border-color 0.3s; }
 
 /* Apply staggered delay to list items using a small JS trick or CSS nth-child */
-.stagger-item:nth-child(1), .tree-node:nth-child(1), .staff-card:nth-child(1) { animation-delay: 0.05s; }
-.stagger-item:nth-child(2), .tree-node:nth-child(2), .staff-card:nth-child(2) { animation-delay: 0.1s; }
-.stagger-item:nth-child(3), .tree-node:nth-child(3), .staff-card:nth-child(3) { animation-delay: 0.15s; }
-.stagger-item:nth-child(4), .tree-node:nth-child(4), .staff-card:nth-child(4) { animation-delay: 0.2s; }
-.stagger-item:nth-child(5), .tree-node:nth-child(5), .staff-card:nth-child(5) { animation-delay: 0.25s; }
-.stagger-item:nth-child(1n+6), .tree-node:nth-child(1n+6), .staff-card:nth-child(1n+6) { animation-delay: 0.3s; }
+.stagger-item:nth-child(1), .tree-node:nth-child(1), .staff-card:nth-child(1) { animation-delay: 0.04s; }
+.stagger-item:nth-child(2), .tree-node:nth-child(2), .staff-card:nth-child(2) { animation-delay: 0.08s; }
+.stagger-item:nth-child(3), .tree-node:nth-child(3), .staff-card:nth-child(3) { animation-delay: 0.12s; }
+.stagger-item:nth-child(4), .tree-node:nth-child(4), .staff-card:nth-child(4) { animation-delay: 0.16s; }
+.stagger-item:nth-child(5), .tree-node:nth-child(5), .staff-card:nth-child(5) { animation-delay: 0.20s; }
+.stagger-item:nth-child(1n+6), .tree-node:nth-child(1n+6), .staff-card:nth-child(1n+6) { animation-delay: 0.24s; }
+
+@keyframes tabSlideIn {
+  0% { opacity: 0; transform: perspective(500px) translate3d(0, 15px, -20px); filter: blur(2px); }
+  100% { opacity: 1; transform: perspective(500px) translate3d(0,0,0); filter: blur(0); }
+}
+.tab-content-enter { animation: tabSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards; }
 
 /* Button ripple effect */
 .add-record-btn, .button, .form-btn, .tab, .fab { overflow: hidden; }
@@ -1771,6 +1777,6 @@
   top: 0; left: 0; pointer-events: none;
   background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
   background-repeat: no-repeat; background-position: 50%; transform: scale(10, 10);
-  opacity: 0; transition: transform .5s, opacity 1s; z-index: 10;
+  opacity: 0; transition: transform .6s, opacity 1s; z-index: 10;
 }
 .add-record-btn:active::after, .button:active::after, .fab:active::after, .form-btn:active::after, .tab:active::after { transform: scale(0, 0); opacity: .2; transition: 0s; }
