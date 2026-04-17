@@ -23,4 +23,5 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase link --project-ref smzoomekyvllsgppgvxw --password $SUPABASE_DB_PASSWORD
+          supabase migration repair 20240417000000 --status applied --linked --password $SUPABASE_DB_PASSWORD || true
           supabase db push
