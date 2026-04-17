@@ -255,8 +255,10 @@
     .tree-node.team { border-left: 4px solid var(--yellow); }
     .tree-children { padding-left: 18px; border-left: 2px solid var(--border); margin-left: 10px; margin-bottom: 2px; }
     .tree-children.tree-members { padding-left: 14px; margin-left: 8px; border-left: 2px dashed var(--border); }
-    .tree-member { padding: 5px 10px !important; font-size: 12px !important; border: none !important; background: transparent !important; margin-bottom: 0 !important; }
-    .tree-member:hover { background: var(--surface2) !important; }
+    .tree-member-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; margin-bottom: 2px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); transition: border-color 0.15s; }
+    .tree-member-card:hover { border-color: var(--accent); background: var(--surface2); }
+    .tree-member-name { font-size: 12px; font-weight: 500; color: var(--text2); white-space: nowrap; flex-shrink: 0; }
+    .tree-member-badges { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; }
     .tree-chevron { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; font-size: 10px; color: var(--text3); transition: transform 0.2s ease; flex-shrink: 0; user-select: none; }
     .tree-chevron.open { transform: rotate(90deg); }
     .tree-edit-icon { font-size: 12px; opacity: 0.4; transition: opacity 0.2s; cursor: pointer; }

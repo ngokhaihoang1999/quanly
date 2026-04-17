@@ -120,11 +120,11 @@ async function loadStructure() {
               if (m.staff_code === g.tjn_staff_code) ep = 'tjn';
               if (m.staff_code === t.gyjn_staff_code) ep = 'gyjn';
               if (m.staff_code === t.bgyjn_staff_code) ep = 'bgyjn';
-              const posBadge = ep && ep !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(ep)}" style="margin-left:6px;font-size:9px;padding:1px 6px;">${getPositionName(ep)}</span>` : '';
+              const posBadge = ep && ep !== 'td' ? `<span class="staff-role-badge ${getBadgeClass(ep)}" style="font-size:9px;padding:1px 6px;">${getPositionName(ep)}</span>` : '';
               const cmBadge = m.specialist_position
-                ? `<span class="staff-role-badge" style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(139,92,246,0.12);color:#7c3aed;border:1px solid rgba(139,92,246,0.25);">${getPositionName(m.specialist_position)}</span>`
+                ? `<span class="staff-role-badge" style="font-size:9px;padding:1px 5px;background:rgba(139,92,246,0.12);color:#7c3aed;border:1px solid rgba(139,92,246,0.25);">${getPositionName(m.specialist_position)}</span>`
                 : '';
-              html += `<div class="tree-node tree-member"><span style="color:var(--text2);">\ud83d\udc64 ${m.staff_code}</span>${posBadge}${cmBadge}</div>`;
+              html += `<div class="tree-member-card"><div class="tree-member-name">\ud83d\udc64 ${m.staff_code}</div><div class="tree-member-badges">${posBadge}${cmBadge}</div></div>`;
             });
             html += '</div>';
           }
