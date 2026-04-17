@@ -1467,7 +1467,7 @@ async function loadStaffInfo() {
           ? renderAnimatedAvatar(letter, myStaff.staff_avatar_color || '', 'md')
           : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${letter}</div>`;
         headerAv.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá">
+          <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cài đặt">
             <div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">
               ${avatarHtml}
             </div>
@@ -2262,14 +2262,21 @@ function openPersonalizationPanel() {
     <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.3);">
       <div style="position:sticky;top:0;background:var(--surface);padding:16px 16px 12px;border-radius:20px 20px 0 0;z-index:2;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div style="font-weight:700;font-size:16px;">⚙️ Cá nhân hoá</div>
+          <div style="font-weight:700;font-size:16px;">⚙️ Cài đặt</div>
           <button onclick="document.getElementById('personalizationModal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);">✕</button>
         </div>
         <div id="pref_preview_bar" style="height:5px;border-radius:3px;background:${hex0};transition:background 0.25s;"></div>
       </div>
       <div style="padding:0 16px 36px;">
-        <!-- ═══ MÀU SẮC ═══ -->
-        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:14px 0 8px;">🎨 MÀU CHỦ ĐẠO</div>
+        <!-- ═══ TAB BAR ═══ -->
+        <div id="settingsTabBar" style="display:flex;gap:0;margin:10px 0 16px;border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+          <button onclick="_switchSettingsTab('appearance')" class="settings-tab active" id="stab_appearance" style="flex:1;padding:10px 0;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:white;transition:all 0.2s;">🎨 Giao diện</button>
+          <button onclick="_switchSettingsTab('profile')" class="settings-tab" id="stab_profile" style="flex:1;padding:10px 0;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all 0.2s;">👤 Hồ sơ</button>
+          <button onclick="_switchSettingsTab('security')" class="settings-tab" id="stab_security" style="flex:1;padding:10px 0;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all 0.2s;">🔐 Bảo mật</button>
+        </div>
+        <!-- ═══ TAB: GIAO DIỆN ═══ -->
+        <div id="settingsPane_appearance">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:0 0 8px;">🎨 MÀU CHỦ ĐẠO</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">${presetHtml}</div>
         <!-- System tabs -->
         <div style="display:flex;gap:6px;margin-bottom:12px;">
@@ -2368,17 +2375,18 @@ function openPersonalizationPanel() {
           </div>
           <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">💡 Bố cục chỉ hiện khi dùng màn hình rộng (≥1024px)</div>
         </div>
-        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
-        <!-- ═══ HỒ SƠ TĐ ═══ -->
+        <button onclick="_savePrefs()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Lưu giao diện</button>
+        <button onclick="_resetPrefs()" style="width:100%;padding:10px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:12px;cursor:pointer;">↩ Về mặc định hệ thống</button>
+        </div>
+        <!-- ═══ TAB: HỒ SƠ CÁ NHÂN ═══ -->
+        <div id="settingsPane_profile" style="display:none;">
         <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">👤 HỒ SƠ CÁ NHÂN TĐ</div>
         <div style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
-            <div style="width:46px;height:46px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;flex-shrink:0;">${(myStaff?.full_name||'?')[0]}</div>
             <div>
               <div style="font-weight:700;font-size:14px;">${myStaff?.full_name||'---'}</div>
               <div style="font-size:11px;color:var(--text3);">${myStaff?.staff_code||''} · ${getPositionName(myStaff?.position)}${getStaffUnit(myStaff?.staff_code) ? ' · <span style="color:var(--accent);">' + getStaffUnit(myStaff.staff_code) + '</span>' : ''}</div>
             </div>
-          </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã JD)</span></label>
             <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Khải, Phi, Hoa..."
@@ -2391,7 +2399,7 @@ function openPersonalizationPanel() {
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">🎨 Avatar (nhấn để chọn phong cách)</label>
             <div style="display:flex;align-items:center;gap:14px;">
               <div id="staffAvatarPreviewBox" onclick="_openStaffAvatarPicker()" style="cursor:pointer;">
-                ${typeof renderAnimatedAvatar==='function' ? renderAnimatedAvatar(((myStaff?.nickname||myStaff?.full_name||'?')[0]), myStaff?.staff_avatar_color||'', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">'+((myStaff?.full_name||'?')[0])+'</div>'}
+                ${typeof renderAnimatedAvatar==='function' ? renderAnimatedAvatar(getNameInitial(myStaff?.nickname||myStaff?.full_name), myStaff?.staff_avatar_color||'', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">'+getNameInitial(myStaff?.full_name)+'</div>'}
               </div>
               <div style="flex:1;">
                 <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Nhấn avatar để chọn 11 phong cách animated + emoji tuỳ chỉnh</div>
@@ -2441,12 +2449,12 @@ function openPersonalizationPanel() {
           </div>
           <button onclick="saveMyStaffProfile()" style="padding:11px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">💾 Lưu hồ sơ TĐ</button>
         </div>
-        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
-        <!-- ═══ KHOÁ PIN ═══ -->
+        </div>
+        <!-- ═══ TAB: BẢO MẬT ═══ -->
+        <div id="settingsPane_security" style="display:none;">
         <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">🔐 BẢO MẬT</div>
         <div id="pinToggleArea" style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:12px;margin-bottom:16px;"></div>
-        <button onclick="_savePrefs()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Lưu cá nhân hoá</button>
-        <button onclick="_resetPrefs()" style="width:100%;padding:10px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:12px;cursor:pointer;">↩ Về mặc định hệ thống</button>
+        </div>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -2621,6 +2629,19 @@ function _resetDesktopConfig() {
   showToast('↩ Đã reset bố cục về mặc định!');
 }
 
+// ── Settings tab switching ──
+function _switchSettingsTab(tab) {
+  ['appearance','profile','security'].forEach(t => {
+    const pane = document.getElementById('settingsPane_' + t);
+    const btn = document.getElementById('stab_' + t);
+    if (pane) pane.style.display = t === tab ? '' : 'none';
+    if (btn) {
+      btn.style.background = t === tab ? 'var(--accent)' : 'var(--surface2)';
+      btn.style.color = t === tab ? 'white' : 'var(--text2)';
+    }
+  });
+}
+
 let _prefTabOrder = null;
 let _prefTabHidden = null;
 
@@ -2713,7 +2734,7 @@ async function _savePrefs() {
     if (myStaff) myStaff.preferences = prefs;
     document.getElementById('personalizationModal')?.remove();
     _pendingPrefs = {}; _prefTabOrder = null; _prefTabHidden = null;
-    showToast('✅ Đã lưu cá nhân hoá');
+    showToast('✅ Đã lưu cài đặt');
   } catch(e) { showToast('❌ Lỗi lưu'); console.error(e); }
 }
 
@@ -2780,11 +2801,11 @@ async function saveMyStaffProfile() {
     const headerAv = document.getElementById('headerAvatar');
     if (headerAv) {
       const dn = myStaff.nickname || myStaff.full_name || '?';
-      const lt = dn[0];
+      const lt = getNameInitial(dn);
       const avH = typeof renderAnimatedAvatar === 'function'
         ? renderAnimatedAvatar(lt, myStaff.staff_avatar_color || '', 'md')
         : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${lt}</div>`;
-      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
+      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cài đặt"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
       headerAv.style.display = 'block';
     }
     if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu hồ sơ TĐ'; }
@@ -2800,7 +2821,7 @@ function showStaffCard(code) {
   if (!s) { showToast('Khong tim thay: ' + code); return; }
   var existing = document.getElementById('staffCardModal');
   if (existing) existing.remove();
-  var avatar = (s.nickname || s.full_name || '?')[0];
+  var avatar = getNameInitial(s.nickname || s.full_name);
   var isEmoji = false;
   var unit    = getStaffUnit(code) || '';
   var gStr = s.gender ? ' · ' + s.gender : '';

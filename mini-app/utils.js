@@ -55,3 +55,11 @@ function escHtml(s) {
   d.textContent = s;
   return d.innerHTML;
 }
+
+// ── Name initial: take first letter of LAST word (Vietnamese convention) ──
+// "Huyền Trang" → "T", "Ngô Khải Hoàng" → "H", "Maize" → "M"
+function getNameInitial(name) {
+  if (!name || name === '?') return '?';
+  const parts = name.trim().split(/\s+/);
+  return (parts[parts.length - 1][0] || '?').toUpperCase();
+}

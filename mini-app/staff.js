@@ -21,7 +21,7 @@ function renderStaff(list) {
     const deleteBtn = canDelete ? `<button onclick="event.stopPropagation();deleteStaffFromList('${s.staff_code}')" style="background:none;border:none;color:var(--red);font-size:14px;cursor:pointer;padding:4px;opacity:0.6;" title="Xoá TĐ khỏi hệ thống">🗑</button>` : '';
     return `
     <div class="staff-card" style="display:flex;align-items:center;gap:10px;">
-      <div class="staff-avatar">${(s.nickname||s.full_name||'?')[0]}</div>
+      <div class="staff-avatar">${getNameInitial(s.nickname||s.full_name)}</div>
       <div class="profile-info" style="flex:1;min-width:0;">
         <div class="profile-name">${displayName} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
         <div class="profile-meta" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">

@@ -197,7 +197,7 @@ async function openProfile(p) {
   // Avatar: animated style system
   const avatarRaw = p.avatar_color || '';
   const canEditColor = hasFullEdit || isProfileNDD;
-  const avatarLetter = (p.full_name||'?')[0];
+  const avatarLetter = getNameInitial(p.full_name);
   const avatarHtml = typeof renderAnimatedAvatar === 'function'
     ? renderAnimatedAvatar(avatarLetter, avatarRaw, 'md')
     : `<div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#ec4899);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">${avatarLetter}</div>`;

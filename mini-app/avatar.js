@@ -214,7 +214,7 @@ function openAvatarStylePicker(profileId, encodedRaw) {
   let existing = document.getElementById('avatarStyleModal');
   if (existing) existing.remove();
 
-  const letter = (allProfiles?.find(p=>p.id===profileId)?.full_name || '?')[0];
+  const letter = getNameInitial(allProfiles?.find(p=>p.id===profileId)?.full_name);
 
   const modal = document.createElement('div');
   modal.id = 'avatarStyleModal';
@@ -352,7 +352,7 @@ function _toggleEmojiSelection(emoji) {
     _avatarPickerState.emojis.push(emoji);
   }
   _renderSelectedEmojis();
-  const letter = (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
+  const letter = getNameInitial(allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name);
   _updateAvatarPreview(letter);
 }
 
@@ -368,8 +368,8 @@ window._addCustomEmoji = function(val) {
   }
   _renderSelectedEmojis();
   const letter = _avatarPickerState.profileId === '__staff__'
-    ? (myStaff?.nickname || myStaff?.full_name || '?')[0]
-    : (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
+    ? getNameInitial(myStaff?.nickname || myStaff?.full_name)
+    : getNameInitial(allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name);
   _updateAvatarPreview(letter);
 };
 
@@ -405,7 +405,7 @@ function _selectGradientOnly(gradient) {
   });
   document.getElementById('avEmojiSection').style.display = 'none';
   document.getElementById('avPickerStyleName').textContent = '🖌 Chỉ dùng màu nền (không có animation)';
-  const letter = (allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name || '?')[0];
+  const letter = getNameInitial(allProfiles?.find(p=>p.id===_avatarPickerState.profileId)?.full_name);
   _updateAvatarPreview(letter);
 }
 
@@ -466,7 +466,7 @@ async function _saveAvatarStyle() {
 function _openStaffAvatarPicker() {
   const currentRaw = document.getElementById('prof_staff_avatar_color')?.value || '';
   const cfg = parseAvatarConfig(currentRaw) || {};
-  const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
+  const letter = getNameInitial(myStaff?.nickname || myStaff?.full_name);
 
   _avatarPickerState = {
     profileId: '__staff__',
@@ -565,7 +565,7 @@ async function _saveStaffAvatarStyle() {
     if (input) input.value = value;
 
     // Update preview box in settings panel
-    const letter = (myStaff?.nickname || myStaff?.full_name || '?')[0];
+    const letter = getNameInitial(myStaff?.nickname || myStaff?.full_name);
     const previewBox = document.getElementById('staffAvatarPreviewBox');
     if (previewBox) {
       previewBox.innerHTML = renderAnimatedAvatar(letter, value, 'md');
@@ -575,11 +575,11 @@ async function _saveStaffAvatarStyle() {
     const headerAv = document.getElementById('headerAvatar');
     if (headerAv) {
       const dn = myStaff.nickname || myStaff.full_name || '?';
-      const lt = dn[0];
+      const lt = getNameInitial(dn);
       const avH = typeof renderAnimatedAvatar === 'function'
         ? renderAnimatedAvatar(lt, value, 'md')
         : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${lt}</div>`;
-      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cá nhân hoá"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
+      headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cài đặt"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
     }
 
     showToast('✅ Đã lưu avatar!');
