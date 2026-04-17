@@ -1485,7 +1485,7 @@ async function loadStaffInfo() {
       // Apply saved personalization
       if (myStaff.preferences && typeof applyUserPreferences === 'function') applyUserPreferences(myStaff.preferences);
       try {
-        const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,scj_code,concept_the,position,specialist_position,telegram_id');
+        const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,scj_code,sinka_info,position,specialist_position,telegram_id');
         const allS = await allRes.json();
         allStaff = allS;
         const dl = document.getElementById('staffSuggest');
@@ -2428,8 +2428,8 @@ function openPersonalizationPanel() {
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">🎭 Concept thuộc thể</label>
-            <input type="text" id="prof_concept_the" value="${(myStaff?.concept_the||'').replace(/"/g,'&quot;')}" placeholder="Concept thuộc thể dùng trong Sinka..." maxlength="100"
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">📋 Tên/Bộ/KV/SĐT (Sinka)</label>
+            <input type="text" id="prof_sinka_info" value="${(myStaff?.sinka_info||'').replace(/"/g,'&quot;')}" placeholder="VD: Nguyễn Văn A / Bộ 1 / Q.1 / 0901234567" maxlength="150"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
           <div>
@@ -2751,7 +2751,7 @@ async function saveMyStaffProfile() {
   const avatar_emoji = document.getElementById('prof_avatar_emoji')?.value || null;
   const motto      = document.getElementById('prof_motto')?.value?.trim() || null;
   const scj_code   = document.getElementById('prof_scj_code')?.value?.trim() || null;
-  const concept_the = document.getElementById('prof_concept_the')?.value?.trim() || null;
+  const sinka_info = document.getElementById('prof_sinka_info')?.value?.trim() || null;
 
   if (birth_year && (birth_year < 1900 || birth_year > 2030)) {
     showToast('⚠️ Năm sinh không hợp lệ'); return;
@@ -2762,10 +2762,10 @@ async function saveMyStaffProfile() {
     const staff_avatar_color = document.getElementById('prof_staff_avatar_color')?.value || null;
     await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
       method: 'PATCH',
-      body: JSON.stringify({ nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, concept_the, staff_avatar_color })
+      body: JSON.stringify({ nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, sinka_info, staff_avatar_color })
     });
     // Update local cache
-    Object.assign(myStaff, { nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, concept_the, staff_avatar_color });
+    Object.assign(myStaff, { nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, sinka_info, staff_avatar_color });
     // Update header badge if nickname set
     const badge = document.getElementById('myStaffBadge');
     if (badge && nickname) {

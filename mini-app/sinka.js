@@ -199,14 +199,14 @@ async function _autoFillSinka(profileId, p) {
   // Section 1: NDD
   const nddUnit = nddCode ? getStaffUnit(nddCode) : '';
   const nddPhone = nddStaff?.phone || '';
-  const nddInfo = [nddStaff?.full_name, nddUnit, nddPhone].filter(Boolean).join(' / ');
+  // sinka_info (điền sẵn trong Cá nhân hóa) ưu tiên hơn auto-generated
+  const nddInfo = nddStaff?.sinka_info || [nddStaff?.full_name, nddUnit, nddPhone].filter(Boolean).join(' / ');
   fill('sk_ndd_ten_bo_kv_sdt', nddInfo);
   // Mã SCJ: lấy từ staff.scj_code (user tự nhập trong Cá nhân hoá)
   fill('sk_ndd_ma_dinh_danh', nddStaff?.scj_code || '');
   fill('sk_hinh_thuc_truyen_dao', t2_values.hinh_thuc);
   fill('sk_moi_quan_he', t2_values.ket_noi);
-  // Concept thuộc thể: ưu tiên staff.concept_the (NDD tự nhập trong Cá nhân hóa)
-  fill('sk_concept_thuoc_the', nddStaff?.concept_the || t2_values.cong_cu);
+  fill('sk_concept_thuoc_the', t2_values.cong_cu);
 
   // Section 2: HS
   const tenGtTuoi = [t2_values.ho_ten, t2_values.gioi_tinh, t2_values.nam_sinh].filter(Boolean).join(' / ');
@@ -234,11 +234,10 @@ async function _autoFillSinka(profileId, p) {
   if (gvbbStaff) {
     const gvbbUnit = getStaffUnit(gvbbCode);
     const gvbbPhone = gvbbStaff.phone || '';
-    fill('sk_gvbb_ten', [gvbbStaff.full_name, gvbbUnit, gvbbPhone].filter(Boolean).join(' / '));
+    // sinka_info ưu tiên hơn auto-generated
+    fill('sk_gvbb_ten', gvbbStaff.sinka_info || [gvbbStaff.full_name, gvbbUnit, gvbbPhone].filter(Boolean).join(' / '));
     // Mã SCJ GVBB: từ staff.scj_code
     fill('sk_gvbb_ma_dinh_danh', gvbbStaff?.scj_code || '');
-    // Concept thuộc thể GVBB: từ staff.concept_the
-    fill('sk_gvbb_concept_the', gvbbStaff?.concept_the || '');
   } else if (gvbbCode && gvbbCode.startsWith('tg:')) {
     // Unregistered GVBB — show display name from roles
     const display = window._rolesDisplay?.gvbb || gvbbCode;

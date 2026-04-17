@@ -384,15 +384,15 @@ export async function handleCallback(update: any, staffData: any) {
     const d: any = fhc?.data || {};
 
     // Auto-fill pipeline (same as Mini App _autoFillSinka)
-    let nddInfo = '', nddScj = '', nddConceptThe = '';
+    let nddInfo = '', nddScj = '';
     if (p.ndd_staff_code) {
-      const { data: ndd } = await supabase.from('staff').select('full_name, phone, scj_code, concept_the').eq('staff_code', p.ndd_staff_code).single();
-      if (ndd) { nddInfo = [ndd.full_name, ndd.phone].filter(Boolean).join(' / '); nddScj = ndd.scj_code || ''; nddConceptThe = ndd.concept_the || ''; }
+      const { data: ndd } = await supabase.from('staff').select('full_name, phone, scj_code, sinka_info').eq('staff_code', p.ndd_staff_code).single();
+      if (ndd) { nddInfo = ndd.sinka_info || [ndd.full_name, ndd.phone].filter(Boolean).join(' / '); nddScj = ndd.scj_code || ''; }
     }
-    let gvbbInfo = '', gvbbScj = '', gvbbConceptThe = '';
+    let gvbbInfo = '', gvbbScj = '';
     if (p.gvbb_staff_code && !p.gvbb_staff_code.startsWith('tg:')) {
-      const { data: gvbb } = await supabase.from('staff').select('full_name, phone, scj_code, concept_the').eq('staff_code', p.gvbb_staff_code).single();
-      if (gvbb) { gvbbInfo = [gvbb.full_name, gvbb.phone].filter(Boolean).join(' / '); gvbbScj = gvbb.scj_code || ''; gvbbConceptThe = gvbb.concept_the || ''; }
+      const { data: gvbb } = await supabase.from('staff').select('full_name, phone, scj_code, sinka_info').eq('staff_code', p.gvbb_staff_code).single();
+      if (gvbb) { gvbbInfo = gvbb.sinka_info || [gvbb.full_name, gvbb.phone].filter(Boolean).join(' / '); gvbbScj = gvbb.scj_code || ''; }
     }
     let laInfo = '';
     try {
@@ -416,7 +416,7 @@ export async function handleCallback(update: any, staffData: any) {
     af['sk_ndd_ma_dinh_danh'] = nddScj;
     af['sk_hinh_thuc_truyen_dao'] = d.t2_hinh_thuc || '';
     af['sk_moi_quan_he'] = d.t2_ket_noi || '';
-    af['sk_concept_thuoc_the'] = nddConceptThe || d.t2_cong_cu || '';
+    af['sk_concept_thuoc_the'] = d.t2_cong_cu || '';
     af['sk_ten_gt_tuoi'] = [p.full_name, p.gender, p.birth_year].filter(Boolean).join(' / ');
     af['sk_quoc_tich'] = 'Vi\u1ec7t Nam';
     af['sk_so_thich_sdt'] = [d.t2_so_thich, p.phone_number].filter(Boolean).join(' / ');
@@ -430,7 +430,6 @@ export async function handleCallback(update: any, staffData: any) {
     af['sk_ton_giao'] = d.t2_ton_giao || '';
     af['sk_gvbb_ten'] = gvbbInfo;
     af['sk_gvbb_ma_dinh_danh'] = gvbbScj;
-    af['sk_gvbb_concept_the'] = gvbbConceptThe;
     af['sk_la_ten'] = laInfo;
     af['sk_so_lan_bb'] = bbCount ? String(bbCount) : '';
 
