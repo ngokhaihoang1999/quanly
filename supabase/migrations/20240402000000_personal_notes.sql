@@ -31,14 +31,22 @@ ALTER TABLE public.personal_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.note_shares ENABLE ROW LEVEL SECURITY;
 
 -- Allow all CRUD for anon (same pattern as rest of the app)
+DROP POLICY IF EXISTS "Allow public select personal_notes" ON public.personal_notes;
 CREATE POLICY "Allow public select personal_notes" ON public.personal_notes FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert personal_notes" ON public.personal_notes;
 CREATE POLICY "Allow public insert personal_notes" ON public.personal_notes FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update personal_notes" ON public.personal_notes;
 CREATE POLICY "Allow public update personal_notes" ON public.personal_notes FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete personal_notes" ON public.personal_notes;
 CREATE POLICY "Allow public delete personal_notes" ON public.personal_notes FOR DELETE USING (true);
 
+DROP POLICY IF EXISTS "Allow public select note_shares" ON public.note_shares;
 CREATE POLICY "Allow public select note_shares" ON public.note_shares FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert note_shares" ON public.note_shares;
 CREATE POLICY "Allow public insert note_shares" ON public.note_shares FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public update note_shares" ON public.note_shares;
 CREATE POLICY "Allow public update note_shares" ON public.note_shares FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow public delete note_shares" ON public.note_shares;
 CREATE POLICY "Allow public delete note_shares" ON public.note_shares FOR DELETE USING (true);
 
 -- ===== INDEXES =====

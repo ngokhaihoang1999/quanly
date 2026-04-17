@@ -20,6 +20,7 @@ ALTER TABLE check_hapja ADD COLUMN IF NOT EXISTS semester_id uuid REFERENCES sem
 
 -- 4. RLS
 ALTER TABLE semesters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "semesters_open" ON semesters;
 CREATE POLICY "semesters_open" ON semesters FOR ALL USING (true);
 
 -- 5. Indexes

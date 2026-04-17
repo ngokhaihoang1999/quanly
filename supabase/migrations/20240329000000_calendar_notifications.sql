@@ -28,9 +28,13 @@ CREATE TABLE IF NOT EXISTS public.calendar_events (
 );
 
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cal_select" ON public.calendar_events;
 CREATE POLICY "cal_select" ON public.calendar_events FOR SELECT USING (true);
+DROP POLICY IF EXISTS "cal_insert" ON public.calendar_events;
 CREATE POLICY "cal_insert" ON public.calendar_events FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "cal_update" ON public.calendar_events;
 CREATE POLICY "cal_update" ON public.calendar_events FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "cal_delete" ON public.calendar_events;
 CREATE POLICY "cal_delete" ON public.calendar_events FOR DELETE USING (true);
 
 CREATE INDEX IF NOT EXISTS idx_cal_staff ON public.calendar_events(staff_code);
@@ -55,9 +59,13 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 );
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "notif_select" ON public.notifications;
 CREATE POLICY "notif_select" ON public.notifications FOR SELECT USING (true);
+DROP POLICY IF EXISTS "notif_insert" ON public.notifications;
 CREATE POLICY "notif_insert" ON public.notifications FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "notif_update" ON public.notifications;
 CREATE POLICY "notif_update" ON public.notifications FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "notif_delete" ON public.notifications;
 CREATE POLICY "notif_delete" ON public.notifications FOR DELETE USING (true);
 
 CREATE INDEX IF NOT EXISTS idx_notif_recipient ON public.notifications(recipient_staff_code, is_read);
@@ -74,8 +82,11 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
 );
 
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "np_select" ON public.notification_preferences;
 CREATE POLICY "np_select" ON public.notification_preferences FOR SELECT USING (true);
+DROP POLICY IF EXISTS "np_insert" ON public.notification_preferences;
 CREATE POLICY "np_insert" ON public.notification_preferences FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "np_update" ON public.notification_preferences;
 CREATE POLICY "np_update" ON public.notification_preferences FOR UPDATE USING (true);
 
 -- ═══════════════════════════════════════════════════════
@@ -97,9 +108,13 @@ CREATE TABLE IF NOT EXISTS public.priority_tasks (
 );
 
 ALTER TABLE public.priority_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "pt_select" ON public.priority_tasks;
 CREATE POLICY "pt_select" ON public.priority_tasks FOR SELECT USING (true);
+DROP POLICY IF EXISTS "pt_insert" ON public.priority_tasks;
 CREATE POLICY "pt_insert" ON public.priority_tasks FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "pt_update" ON public.priority_tasks;
 CREATE POLICY "pt_update" ON public.priority_tasks FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "pt_delete" ON public.priority_tasks;
 CREATE POLICY "pt_delete" ON public.priority_tasks FOR DELETE USING (true);
 
 CREATE INDEX IF NOT EXISTS idx_pt_staff ON public.priority_tasks(staff_code, is_completed);
