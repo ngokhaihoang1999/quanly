@@ -23,5 +23,22 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase link --project-ref smzoomekyvllsgppgvxw --password $SUPABASE_DB_PASSWORD
-          supabase migration repair 20240417000000 --status reverted --linked --password $SUPABASE_DB_PASSWORD || true
+
+          # Repair all previously-applied migrations so db push only runs new ones
+          for v in \
+            20240312000000 20240313000000 20240314000000 20240315000000 \
+            20240316000000 20240317000000 20240318000000 20240319000000 \
+            20240320000000 20240321000000 20240322000000 20240323000000 \
+            20240324000000 20240325000000 20240326000000 20240327000000 \
+            20240328000000 20240329000000 20240330000000 20240330000001 \
+            20240330000002 20240331000000 20240331000001 20240401000000 \
+            20240401000001 20240402000000 \
+            20260416 \
+          ; do
+            supabase migration repair "$v" --status applied --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
+          done
+
+          # Also handle the deleted concept_the migration
+          supabase migration repair 20240417000000 --status reverted --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
+
           supabase db push
