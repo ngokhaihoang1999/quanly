@@ -1493,9 +1493,9 @@
     padding-bottom: 24px;
   }
 
-  /* Ẩn nút back khi ở desktop vì không cần thiết nữa */
+  /* Back button trên desktop: nhỏ gọn hơn */
   #detailView .back-btn {
-    display: none !important;
+    margin-bottom: 8px;
   }
 
   /* ── Center panel: grids must respond to container width, not viewport ── */
@@ -1783,6 +1783,12 @@
 
 /* ═══════════════ MOTION SYSTEM ═══════════════ */
 
+/* Tabs must sit above ghost indicator */
+.tab, .form-tab, .dash-mode-btn {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Tab Ghost (sliding highlight during tab switch) ── */
 .tab-ghost {
   position: absolute;
@@ -1798,6 +1804,23 @@
   box-shadow: none;
 }
 
+/* ── Profile Morph Transition ── */
+.flip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+.flip-morph {
+  position: fixed;
+  background: var(--accent);
+  opacity: 0.85;
+  border-radius: 12px;
+  pointer-events: none;
+  will-change: transform;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
 /* ── Swipe container ── */
 #mainContent {
   touch-action: pan-y;
@@ -1810,5 +1833,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .tab-ghost { display: none !important; }
+  .tab-ghost, .flip-overlay { display: none !important; }
 }
