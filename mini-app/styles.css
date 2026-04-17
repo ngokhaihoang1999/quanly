@@ -1780,3 +1780,70 @@
   opacity: 0; transition: transform .6s, opacity 1s; z-index: 10;
 }
 .add-record-btn:active::after, .button:active::after, .fab:active::after, .form-btn:active::after, .tab:active::after { transform: scale(0, 0); opacity: .2; transition: 0s; }
+
+/* ═══════════════ MOTION SYSTEM ═══════════════ */
+
+/* ── Liquid Tab Indicator ── */
+.tab-indicator {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  height: 100%;
+  border-radius: 20px;
+  background: var(--accent);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, width;
+  transition: none;
+}
+.form-tabs .tab-indicator {
+  bottom: 0;
+  border-radius: 8px;
+  opacity: 0.15;
+}
+.dash-mode-toggle .tab-indicator {
+  border-radius: 8px;
+  height: calc(100% - 6px);
+  top: 3px;
+  bottom: auto;
+  opacity: 0.12;
+}
+/* Ensure tabs sit above indicator */
+.tab, .form-tab, .dash-mode-btn, .chip {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── FLIP Profile Transition ── */
+.flip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  background: transparent;
+}
+.flip-clone {
+  transform-origin: top left;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ── Swipe container ── */
+#mainContent {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: auto; /* Allow text selection normally, but override during swipe via JS */
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .tab-indicator { display: none !important; }
+  .flip-overlay { display: none !important; }
+  .tab-content-enter { animation: none !important; }
+}

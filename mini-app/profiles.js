@@ -57,6 +57,8 @@ function filterProfiles() {
 // ============ PROFILE DETAIL ============
 async function openProfileById(id) {
   if (!id || id==='undefined') return;
+  // Find the card element for FLIP animation
+  const cardEl = document.querySelector(`.profile-card[data-pid="${id}"]`);
   let p = allProfiles.find(x=>x.id===id);
   // Profile not in filtered cache (e.g. different semester) → fetch directly from DB
   if (!p) {
@@ -84,10 +86,14 @@ async function openProfileById(id) {
       p.gvbb_staff_code = gvbb || '';
     } catch(e) { showToast('❌ Lỗi mở hồ sơ'); return; }
   }
-  openProfile(p);
+  openProfile(p, cardEl);
 }
-async function openProfile(p) {
+async function openProfile(p, cardEl) {
   currentProfileId = p.id;
+  // FLIP transition: animate card expanding into detail view
+  if (typeof FlipTransition !== 'undefined' && cardEl) {
+    FlipTransition.open(cardEl, p.id);
+  }
   // Hide ALL center tabs (including reports, unit, etc.) — not just the static list
   ['tab-unit','tab-personal','tab-staff','tab-structure','tab-calendar','tab-priority','tab-reports','tab-notes'].forEach(t=>{ 
     const el = document.getElementById(t); 
@@ -95,7 +101,10 @@ async function openProfile(p) {
       el.style.display = 'none'; 
     }
   });
-  document.getElementById('detailView').style.display = 'block';
+  // Show detail view (FlipTransition handles animation if available)
+  if (typeof FlipTransition === 'undefined' || !cardEl) {
+    document.getElementById('detailView').style.display = 'block';
+  }
   document.getElementById('fabBtn').style.display = 'none';
 
 

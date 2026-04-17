@@ -407,7 +407,7 @@ function renderProfileCard(p, opts = {}) {
     ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px;">${rolesRow}${activityRow}</div>`
     : '';
 
-  return `<div class="profile-card" onclick="${clickFn}" style="padding:12px 14px;">
+  return `<div class="profile-card" data-pid="${resolvedId}" onclick="${clickFn}" style="padding:12px 14px;">
     <div class="profile-info" style="width:100%;min-width:0;">
       ${row1}${row2}${dropoutNote}${bottomHtml}
     </div>
@@ -1543,6 +1543,12 @@ function _clearLoadingStates() {
 
 // ============ NAVIGATION ============
 function backToList() {
+  // Use FLIP animation if available
+  if (typeof FlipTransition !== 'undefined') {
+    FlipTransition.close();
+    return;
+  }
+  // Fallback: original logic
   const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
   ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t=>{
     const elT = document.getElementById(t);
@@ -1559,8 +1565,19 @@ function backToList() {
   currentProfileId = null;
 }
 function switchFormTab(el, cardId) {
+  // Tab indicator animation
+  if (typeof TabIndicator !== 'undefined') TabIndicator.moveTo(el);
+  // Directional slide
+  const dir = typeof navDirectionForFormTab === 'function' ? navDirectionForFormTab(cardId) : 1;
+  
   document.querySelectorAll('.form-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  document.querySelectorAll('.form-card').forEach(c=>c.classList.remove('active')); document.getElementById(cardId).classList.add('active');
+  document.querySelectorAll('.form-card').forEach(c=>c.classList.remove('active')); 
+  const card = document.getElementById(cardId);
+  card.classList.add('active');
+  
+  // Apply directional slide animation to the card content
+  if (typeof navSlide === 'function') navSlide(card, dir);
+  
   // Trigger mindmap render when Tư Duy tab is opened
   if (cardId === 'mindmapTab' && typeof renderMindmap === 'function') {
     setTimeout(renderMindmap, 50);
@@ -1583,6 +1600,11 @@ function switchMainTab(el, tab) {
   haptic('light');
   if (typeof _isTabPinned === 'function' && _isTabPinned(tab) && window.innerWidth >= 1024) return;
   
+  // Tab indicator animation
+  if (typeof TabIndicator !== 'undefined') TabIndicator.moveTo(el);
+  // Get navigation direction BEFORE changing active state
+  const dir = typeof navDirectionForMainTab === 'function' ? navDirectionForMainTab(tab) : 1;
+  
   document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
   ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t=>{
     const elT = document.getElementById(t);
@@ -1591,18 +1613,24 @@ function switchMainTab(el, tab) {
     }
   });
   const tTab = document.getElementById('tab-'+tab);
-  
-  // Re-trigger CSS animation
-  const mainContent = document.getElementById('mainContent');
-  if (mainContent) {
-    mainContent.classList.remove('tab-content-enter');
-    void mainContent.offsetWidth; // trigger reflow
-    mainContent.classList.add('tab-content-enter');
-  }
 
   if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(tab))) {
     tTab.style.display = 'block';
   }
+  
+  // Directional slide animation (replaces old tab-content-enter)
+  if (typeof navSlide === 'function' && tTab) {
+    navSlide(tTab, dir);
+  } else {
+    // Fallback: Re-trigger CSS animation
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) {
+      mainContent.classList.remove('tab-content-enter');
+      void mainContent.offsetWidth;
+      mainContent.classList.add('tab-content-enter');
+    }
+  }
+
   document.getElementById('detailView').style.display = 'none';
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
   // Only re-fetch if data is stale (>30s old). Writes invalidate cache automatically.

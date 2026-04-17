@@ -264,6 +264,19 @@ async function loadDashboard() {
     }
     window.renderDashMetrics = renderDashMetrics;
     renderDashMetrics();
+    
+    // Count-up animation for dashboard numbers
+    setTimeout(() => {
+      if (typeof countUp === 'function') {
+        document.querySelectorAll('.dash-stat .num, .dash-center-circle .num').forEach(el => {
+          const target = parseInt(el.textContent) || 0;
+          if (target > 0) {
+            el.textContent = '0';
+            countUp(el, target, 600);
+          }
+        });
+      }
+    }, 100);
 
 
     // Pre-fetch latest records AND sessions per profile — both needed for latestActivityLabel()
