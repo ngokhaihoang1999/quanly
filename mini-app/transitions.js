@@ -104,15 +104,12 @@ const TabIndicator = (() => {
 })();
 
 
-// ============ 3. PROFILE TRANSITION (Morph Rectangle) ============
-// Open: accent-colored rectangle at card position → expands to detail area → fades out → content shows
-// Close: rectangle at detail position → shrinks to card position → fades out → list shows
-// Saves and restores scroll position so user returns to exact previous state.
+// ============ 3. PROFILE TRANSITION (Card Blink) ============
+// Open: card pulses with accent glow → detail view fades in
+// Close: detail hides → scroll restores → card blinks to show origin
+// No overlays, no clones — simple, reliable, works everywhere.
 const ProfileTransition = (() => {
-  let _storedRect = null;
   let _profileId = null;
-  let _activeAnim = null;
-  // Scroll state preservation
   let _savedScroll = { windowY: 0, panel: 0, mainContent: 0 };
 
   function _saveScroll() {
@@ -123,92 +120,68 @@ const ProfileTransition = (() => {
     _savedScroll.mainContent = mc ? mc.scrollTop : 0;
   }
 
-  function _restoreScroll() {
+  function _restoreScrollSync() {
+    window.scrollTo(0, _savedScroll.windowY);
+    const panel = document.getElementById('panelCenter');
+    if (panel) panel.scrollTop = _savedScroll.panel;
+    const mc = document.getElementById('mainContent');
+    if (mc) mc.scrollTop = _savedScroll.mainContent;
+  }
+
+  function _restoreScrollAsync() {
+    setTimeout(_restoreScrollSync, 60);
+  }
+
+  // Blink/pulse a card element with accent glow
+  function _blinkCard(card) {
+    if (!card || !MotionPrefs.canAnimate()) return;
+    card.style.transition = 'transform 0.15s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s ease, border-color 0.15s ease';
+    card.style.transform = 'scale(0.96)';
+    card.style.boxShadow = '0 0 0 3px var(--accent), 0 4px 20px var(--fab-shadow)';
+    card.style.borderColor = 'var(--accent)';
     setTimeout(() => {
-      window.scrollTo(0, _savedScroll.windowY);
-      const panel = document.getElementById('panelCenter');
-      if (panel) panel.scrollTop = _savedScroll.panel;
-      const mc = document.getElementById('mainContent');
-      if (mc) mc.scrollTop = _savedScroll.mainContent;
-    }, 60);
+      card.style.transform = 'scale(1.02)';
+      setTimeout(() => {
+        card.style.transition = 'transform 0.2s ease, box-shadow 0.4s ease, border-color 0.4s ease';
+        card.style.transform = '';
+        card.style.boxShadow = '';
+        card.style.borderColor = '';
+        setTimeout(() => { card.style.transition = ''; }, 420);
+      }, 150);
+    }, 150);
   }
 
   function open(cardEl, profileId) {
     _profileId = profileId;
-    // SAVE scroll position before switching views
     _saveScroll();
 
-    if (!MotionPrefs.canAnimate() || !cardEl) {
-      document.getElementById('detailView').style.display = 'block';
-      return;
-    }
+    // Blink the card being opened
+    _blinkCard(cardEl);
 
-    // Store the card rect for close animation
-    const cr = cardEl.getBoundingClientRect();
-    _storedRect = { left: cr.left, top: cr.top, width: cr.width, height: cr.height };
-
-    // Create morph overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'flip-overlay';
-
-    const morph = document.createElement('div');
-    morph.className = 'flip-morph';
-    morph.style.left = cr.left + 'px';
-    morph.style.top = cr.top + 'px';
-    morph.style.width = cr.width + 'px';
-    morph.style.height = cr.height + 'px';
-    morph.style.borderRadius = getComputedStyle(cardEl).borderRadius || '12px';
-    overlay.appendChild(morph);
-    document.body.appendChild(overlay);
-
-    // Subtle card press
-    cardEl.style.transition = 'transform 0.12s ease';
-    cardEl.style.transform = 'scale(0.96)';
-
-    // Target: content area (panelCenter on desktop, mainContent on mobile)
-    const content = document.getElementById('panelCenter')
-      || document.querySelector('#mainContent .content')
-      || document.getElementById('mainContent');
-    const tRect = content.getBoundingClientRect();
-
-    // Animate morph expanding
-    requestAnimationFrame(() => {
-      morph.style.transition = 'left 0.3s cubic-bezier(0.4,0,0,1), top 0.3s cubic-bezier(0.4,0,0,1), width 0.3s cubic-bezier(0.4,0,0,1), height 0.3s cubic-bezier(0.4,0,0,1), border-radius 0.3s ease, opacity 0.1s ease 0.2s';
-      morph.style.left = tRect.left + 'px';
-      morph.style.top = tRect.top + 'px';
-      morph.style.width = tRect.width + 'px';
-      morph.style.height = Math.min(tRect.height, 300) + 'px';
-      morph.style.borderRadius = '12px';
-      morph.style.opacity = '0';
-    });
-
-    // After morph expands, show detail view
+    // Show detail after blink starts
     setTimeout(() => {
-      overlay.remove();
-      cardEl.style.transition = '';
-      cardEl.style.transform = '';
-
       const dv = document.getElementById('detailView');
       dv.style.display = 'block';
-      dv.style.opacity = '0';
-      dv.style.transform = 'translateY(12px)';
-      void dv.offsetWidth;
-      dv.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-      dv.style.opacity = '1';
-      dv.style.transform = 'translateY(0)';
-      setTimeout(() => {
-        dv.style.transition = '';
-        dv.style.opacity = '';
-        dv.style.transform = '';
-      }, 210);
-    }, 300);
+
+      if (MotionPrefs.canAnimate()) {
+        dv.style.opacity = '0';
+        dv.style.transform = 'translateY(10px)';
+        void dv.offsetWidth;
+        dv.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+        dv.style.opacity = '1';
+        dv.style.transform = 'translateY(0)';
+        setTimeout(() => {
+          dv.style.transition = '';
+          dv.style.opacity = '';
+          dv.style.transform = '';
+        }, 230);
+      }
+    }, 180);
 
     if (typeof haptic === 'function') haptic('medium');
   }
 
   function close() {
-    if (_activeAnim) { _activeAnim.cancel(); _activeAnim = null; }
-
     const dv = document.getElementById('detailView');
     if (!dv || dv.style.display === 'none') {
       _finishClose();
@@ -218,76 +191,47 @@ const ProfileTransition = (() => {
     if (!MotionPrefs.canAnimate()) {
       dv.style.display = 'none';
       _finishClose();
-      _restoreScroll();
+      _restoreScrollAsync();
       return;
     }
 
-    const dvRect = dv.getBoundingClientRect();
-
-    // First hide detail + restore tabs so we can find the card
-    dv.style.display = 'none';
-    _restoreTabs();
-    // Restore scroll BEFORE finding card (card might be below fold)
-    _restoreScrollSync();
-
-    // Try to find the actual card position now that tabs are visible
-    let targetRect = _storedRect;
-    if (_profileId) {
-      const card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
-      if (card) {
-        const r = card.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) {
-          targetRect = { left: r.left, top: r.top, width: r.width, height: r.height };
-        }
-      }
-    }
-
-    if (!targetRect) {
-      _finishCloseState();
-      return;
-    }
-
-    // Create morph rectangle at detail view position
-    const overlay = document.createElement('div');
-    overlay.className = 'flip-overlay';
-
-    const morph = document.createElement('div');
-    morph.className = 'flip-morph';
-    const morphH = Math.min(dvRect.height, 120);
-    morph.style.left = dvRect.left + 'px';
-    morph.style.top = dvRect.top + 'px';
-    morph.style.width = dvRect.width + 'px';
-    morph.style.height = morphH + 'px';
-    morph.style.opacity = '0.7';
-    overlay.appendChild(morph);
-    document.body.appendChild(overlay);
-
-    // Animate morph shrinking to card position
-    requestAnimationFrame(() => {
-      morph.style.transition = 'left 0.28s cubic-bezier(0.4,0,0,1), top 0.28s cubic-bezier(0.4,0,0,1), width 0.28s cubic-bezier(0.4,0,0,1), height 0.28s cubic-bezier(0.4,0,0,1), border-radius 0.28s ease, opacity 0.28s ease';
-      morph.style.left = targetRect.left + 'px';
-      morph.style.top = targetRect.top + 'px';
-      morph.style.width = targetRect.width + 'px';
-      morph.style.height = targetRect.height + 'px';
-      morph.style.borderRadius = '12px';
-      morph.style.opacity = '0';
-    });
+    // Fade out detail
+    dv.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
+    dv.style.opacity = '0';
+    dv.style.transform = 'translateY(8px)';
 
     setTimeout(() => {
-      overlay.remove();
-      _finishCloseState();
-    }, 290);
+      dv.style.display = 'none';
+      dv.style.transition = '';
+      dv.style.opacity = '';
+      dv.style.transform = '';
+
+      // Restore tabs and scroll
+      _restoreTabs();
+      _restoreScrollSync();
+
+      // Find and blink the original card
+      if (_profileId) {
+        // Use rAF to ensure DOM is painted before blinking
+        requestAnimationFrame(() => {
+          const card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
+          _blinkCard(card);
+          // Scroll card into view if it's off-screen
+          if (card) {
+            const r = card.getBoundingClientRect();
+            const vh = window.innerHeight;
+            if (r.top < 0 || r.bottom > vh) {
+              card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          _finishCloseState();
+        });
+      } else {
+        _finishCloseState();
+      }
+    }, 190);
 
     if (typeof haptic === 'function') haptic('light');
-  }
-
-  // Restore scroll synchronously (before finding card rect)
-  function _restoreScrollSync() {
-    window.scrollTo(0, _savedScroll.windowY);
-    const panel = document.getElementById('panelCenter');
-    if (panel) panel.scrollTop = _savedScroll.panel;
-    const mc = document.getElementById('mainContent');
-    if (mc) mc.scrollTop = _savedScroll.mainContent;
   }
 
   function _restoreTabs() {
@@ -307,14 +251,13 @@ const ProfileTransition = (() => {
 
   function _finishCloseState() {
     currentProfileId = null;
-    _storedRect = null;
     _profileId = null;
   }
 
   function _finishClose() {
     _restoreTabs();
     document.getElementById('detailView').style.display = 'none';
-    _restoreScroll();
+    _restoreScrollAsync();
     _finishCloseState();
   }
 

@@ -23,7 +23,7 @@
     [data-theme="light"] .logo-text h1,
     [data-theme="light"] .logo-text span { color: #fff; }
     [data-theme="light"] .tab { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); }
-    [data-theme="light"] .tab.active { background: #fff; color: var(--accent); border-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    [data-theme="light"] .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 12px var(--fab-shadow); }
     [data-theme="light"] .profile-card, [data-theme="light"] .staff-card, [data-theme="light"] .dash-stat {
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
@@ -1804,23 +1804,6 @@
   box-shadow: none;
 }
 
-/* ── Profile Morph Transition ── */
-.flip-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  pointer-events: none;
-}
-.flip-morph {
-  position: fixed;
-  background: var(--accent);
-  opacity: 0.85;
-  border-radius: 12px;
-  pointer-events: none;
-  will-change: transform;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-
 /* ── Swipe container ── */
 #mainContent {
   touch-action: pan-y;
@@ -1833,5 +1816,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .tab-ghost, .flip-overlay { display: none !important; }
+  .tab-ghost { display: none !important; }
 }
