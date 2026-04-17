@@ -1786,33 +1786,36 @@
 /* ── Liquid Tab Indicator ── */
 .tab-indicator {
   position: absolute;
-  bottom: 2px;
-  left: 0;
-  height: 100%;
+  left: 0; top: 0;
+  width: 0; height: 0;
   border-radius: 20px;
   background: var(--accent);
-  opacity: 0.18;
   pointer-events: none;
   z-index: 0;
-  will-change: transform, width;
-  transition: none;
+  will-change: left, top, width, height;
+  box-shadow: 0 0 16px var(--fab-shadow);
 }
-.form-tabs .tab-indicator {
-  bottom: 0;
-  border-radius: 8px;
-  opacity: 0.15;
+/* When indicator is active, the tab's own active background becomes transparent
+   so the indicator sliding behind is the visual highlight */
+.has-tab-indicator .tab-bar .tab.active {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
-.dash-mode-toggle .tab-indicator {
-  border-radius: 8px;
-  height: calc(100% - 6px);
-  top: 3px;
-  bottom: auto;
-  opacity: 0.12;
-}
-/* Ensure tabs sit above indicator */
-.tab, .form-tab, .dash-mode-btn, .chip {
+/* Tabs must sit above the indicator blob */
+.tab, .form-tab, .dash-mode-btn {
   position: relative;
   z-index: 1;
+}
+
+/* ── Form tabs indicator ── */
+.form-tabs .tab-indicator {
+  border-radius: 8px;
+  box-shadow: none;
+  opacity: 0.85;
+}
+.has-tab-indicator .form-tabs .form-tab.active {
+  background: transparent !important;
 }
 
 /* ── FLIP Profile Transition ── */
@@ -1821,19 +1824,11 @@
   inset: 0;
   z-index: 10000;
   pointer-events: none;
-  background: transparent;
-}
-.flip-clone {
-  transform-origin: top left;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 /* ── Swipe container ── */
 #mainContent {
   touch-action: pan-y;
-  -webkit-user-select: none;
-  user-select: auto; /* Allow text selection normally, but override during swipe via JS */
 }
 
 /* ── Reduced Motion ── */
@@ -1844,6 +1839,10 @@
     transition-duration: 0.01ms !important;
   }
   .tab-indicator { display: none !important; }
+  .has-tab-indicator .tab-bar .tab.active {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 16px var(--fab-shadow) !important;
+  }
   .flip-overlay { display: none !important; }
-  .tab-content-enter { animation: none !important; }
 }

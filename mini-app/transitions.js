@@ -9,7 +9,6 @@ const MotionPrefs = (() => {
   let _reduced = mqReduced?.matches || false;
   mqReduced?.addEventListener?.('change', e => { _reduced = e.matches; });
 
-  // Simple FPS check — run once on first animation
   let _fpsChecked = false;
   let _lowFps = false;
 
@@ -37,197 +36,281 @@ const MotionPrefs = (() => {
   };
 })();
 
-// ============ 2. FLIP PROFILE TRANSITION ============
+// ============ 2. LIQUID TAB INDICATOR ============
+// The indicator IS the active tab background — it slides between tabs.
+// When active, the tab's own .active background becomes transparent so the indicator shows through.
+const TabIndicator = (() => {
+  const _indicators = new WeakMap();
+  let _initialized = false;
+
+  function _getOrCreate(container) {
+    if (_indicators.has(container)) return _indicators.get(container);
+
+    const ind = document.createElement('div');
+    ind.className = 'tab-indicator';
+    // MUST be first child or use proper positioning
+    container.style.position = 'relative';
+    container.appendChild(ind);
+    _indicators.set(container, ind);
+
+    // Position to current active tab immediately
+    const activeTab = container.querySelector('.tab.active, .form-tab.active, .dash-mode-btn.active');
+    if (activeTab) {
+      _snapTo(ind, activeTab, container);
+    } else {
+      ind.style.opacity = '0';
+    }
+
+    return ind;
+  }
+
+  // Instantly position indicator to match a tab exactly
+  function _snapTo(ind, tab, container) {
+    const tRect = tab.getBoundingClientRect();
+    const cRect = container.getBoundingClientRect();
+
+    const left = tRect.left - cRect.left + container.scrollLeft;
+    const top = tRect.top - cRect.top;
+
+    ind.style.transition = 'none';
+    ind.style.left = left + 'px';
+    ind.style.top = top + 'px';
+    ind.style.width = tRect.width + 'px';
+    ind.style.height = tRect.height + 'px';
+    ind.style.borderRadius = getComputedStyle(tab).borderRadius;
+    ind.style.opacity = '1';
+  }
+
+  // Animate indicator from current position to new tab
+  function _slideTo(ind, tab, container) {
+    const tRect = tab.getBoundingClientRect();
+    const cRect = container.getBoundingClientRect();
+
+    const left = tRect.left - cRect.left + container.scrollLeft;
+    const top = tRect.top - cRect.top;
+    const br = getComputedStyle(tab).borderRadius;
+
+    // Phase 1: stretch (fast)
+    ind.style.transition = 'left 0.32s cubic-bezier(0.4, 0, 0.2, 1), top 0.32s cubic-bezier(0.4, 0, 0.2, 1), width 0.32s cubic-bezier(0.4, 0, 0.2, 1), height 0.32s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.32s ease';
+    ind.style.left = left + 'px';
+    ind.style.top = top + 'px';
+    ind.style.width = tRect.width + 'px';
+    ind.style.height = tRect.height + 'px';
+    ind.style.borderRadius = br;
+    ind.style.opacity = '1';
+  }
+
+  function moveTo(tabEl) {
+    if (!tabEl || !MotionPrefs.canAnimate()) return;
+    const container = tabEl.closest('.tab-bar, .form-tabs, .dash-mode-toggle');
+    if (!container) return;
+
+    const ind = _getOrCreate(container);
+    _slideTo(ind, tabEl, container);
+
+    if (typeof haptic === 'function') haptic('selection');
+  }
+
+  function init() {
+    if (_initialized) return;
+    _initialized = true;
+
+    // Add class to body so CSS knows indicator is active
+    document.body.classList.add('has-tab-indicator');
+
+    document.querySelectorAll('.tab-bar, .form-tabs').forEach(container => {
+      _getOrCreate(container);
+    });
+  }
+
+  function refresh() {
+    document.querySelectorAll('.tab-bar, .form-tabs, .dash-mode-toggle').forEach(container => {
+      if (!_indicators.has(container)) return;
+      const ind = _indicators.get(container);
+      const active = container.querySelector('.tab.active, .form-tab.active, .dash-mode-btn.active');
+      if (active) _snapTo(ind, active, container);
+    });
+  }
+
+  return { moveTo, init, refresh };
+})();
+
+
+// ============ 3. FLIP PROFILE TRANSITION ============
 const FlipTransition = (() => {
   let _activeAnimation = null;
   let _lastCardRect = null;
-  let _lastCardId = null;
-
-  // Clone the visual appearance of a card for the overlay
-  function createClone(card) {
-    const clone = card.cloneNode(true);
-    clone.className = 'flip-clone';
-    clone.style.cssText = `
-      position: fixed; z-index: 10001; pointer-events: none;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); overflow: hidden;
-      will-change: transform, opacity;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    `;
-    // Remove onclick to prevent accidental triggering
-    clone.removeAttribute('onclick');
-    return clone;
-  }
+  let _lastProfileId = null;
 
   function open(cardEl, profileId) {
     if (!cardEl || !MotionPrefs.canAnimate()) {
-      // Fallback: just show with fade
+      // Fallback: simple fade
       _showDetailFade();
       return;
     }
 
-    // Cancel any in-progress animation
+    // Cancel previous
     if (_activeAnimation) { _activeAnimation.cancel(); _activeAnimation = null; }
 
-    // FIRST — capture card's position
+    // FIRST — card position
     const cardRect = cardEl.getBoundingClientRect();
-    _lastCardRect = cardRect;
-    _lastCardId = profileId;
+    _lastCardRect = { left: cardRect.left, top: cardRect.top, width: cardRect.width, height: cardRect.height };
+    _lastProfileId = profileId;
 
-    // Store scroll position so we can restore later
-    _lastCardEl = cardEl;
+    // Hide original card temporarily
+    cardEl.style.visibility = 'hidden';
 
-    // Create overlay
+    // Create overlay + clone
     const overlay = document.createElement('div');
     overlay.className = 'flip-overlay';
-    overlay.id = 'flipOverlay';
 
-    // Create clone of the card
-    const clone = createClone(cardEl);
-
-    // Set clone to card's exact position
-    clone.style.left = cardRect.left + 'px';
-    clone.style.top = cardRect.top + 'px';
-    clone.style.width = cardRect.width + 'px';
-    clone.style.height = cardRect.height + 'px';
+    // Clone the card visually  
+    const clone = cardEl.cloneNode(true);
+    clone.removeAttribute('onclick');
+    clone.style.cssText = `
+      position: fixed;
+      left: ${cardRect.left}px;
+      top: ${cardRect.top}px;
+      width: ${cardRect.width}px;
+      height: ${cardRect.height}px;
+      margin: 0;
+      z-index: 10001;
+      pointer-events: none;
+      will-change: transform;
+      transform-origin: top left;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      visibility: visible;
+    `;
 
     overlay.appendChild(clone);
     document.body.appendChild(overlay);
 
-    // Hide original card during animation
-    cardEl.style.opacity = '0';
+    // LAST — target: full width of content area
+    const content = document.querySelector('#mainContent .content') || document.getElementById('mainContent');
+    const contentRect = content.getBoundingClientRect();
 
-    // LAST — calculate target position (full content area)
-    const content = document.getElementById('mainContent');
-    const contentRect = content ? content.getBoundingClientRect() : { left: 0, top: 60, width: window.innerWidth, height: window.innerHeight - 60 };
+    // Calculate transform needed: from card position to content top-left, scaled to content width
+    const scaleX = contentRect.width / cardRect.width;
+    const scaleY = Math.min(scaleX * 0.6, 2); // Don't stretch height too much
+    const dx = contentRect.left - cardRect.left;
+    const dy = contentRect.top - cardRect.top;
 
-    // Target: top of content area, full width, auto height
-    const targetLeft = contentRect.left;
-    const targetTop = contentRect.top;
-    const targetWidth = contentRect.width;
-
-    // Calculate scale and translate
-    const scaleX = targetWidth / cardRect.width;
-    const scaleY = Math.min(scaleX, 2.5); // Don't stretch too much vertically
-    const translateX = targetLeft - cardRect.left + (targetWidth - cardRect.width * scaleX) / 2;
-    const translateY = targetTop - cardRect.top;
-
-    // PLAY — animate using Web Animations API
+    // PLAY
     _activeAnimation = clone.animate([
-      {
-        transform: 'translate(0, 0) scale(1)',
-        opacity: 1,
-        borderRadius: 'var(--radius)'
-      },
-      {
-        transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
-        opacity: 0.6,
-        borderRadius: '4px'
-      }
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`, opacity: 0.3 }
     ], {
-      duration: 320,
+      duration: 300,
       easing: 'cubic-bezier(0.4, 0, 0, 1)',
       fill: 'forwards'
     });
 
     _activeAnimation.onfinish = () => {
-      // Show actual detail view
       _showDetail();
-      // Clean up overlay
       overlay.remove();
+      cardEl.style.visibility = '';
       _activeAnimation = null;
-      // Restore card opacity
-      cardEl.style.opacity = '';
     };
 
     _activeAnimation.oncancel = () => {
       overlay.remove();
-      cardEl.style.opacity = '';
+      cardEl.style.visibility = '';
       _activeAnimation = null;
     };
 
-    // Haptic feedback
     if (typeof haptic === 'function') haptic('medium');
   }
 
-  let _lastCardEl = null;
-
   function close() {
-    if (!MotionPrefs.canAnimate() || !_lastCardRect) {
-      _hideDetail();
+    if (!MotionPrefs.canAnimate()) {
+      _hideDetailInstant();
+      _finishClose();
       return;
     }
 
-    // Cancel any in-progress animation
     if (_activeAnimation) { _activeAnimation.cancel(); _activeAnimation = null; }
 
     const detailView = document.getElementById('detailView');
     if (!detailView || detailView.style.display === 'none') {
-      _hideDetail();
+      _finishClose();
       return;
     }
 
-    const detailRect = detailView.getBoundingClientRect();
-
-    // Try to find the original card by profile id
-    let targetRect = _lastCardRect;
+    // Find the original card
     let targetCard = null;
+    let targetRect = _lastCardRect;
 
-    if (_lastCardId) {
-      targetCard = document.querySelector(`.profile-card[data-pid="${_lastCardId}"]`);
-      if (targetCard) {
-        // Card is still in DOM — check if it's visible
-        const tr = targetCard.getBoundingClientRect();
-        if (tr.top > -100 && tr.top < window.innerHeight + 100) {
-          targetRect = tr;
-        } else {
-          // Card out of viewport — use fast animation
-          _hideDetailFast();
-          return;
-        }
+    if (_lastProfileId) {
+      targetCard = document.querySelector(`.profile-card[data-pid="${_lastProfileId}"]`);
+    }
+
+    // If card is visible in viewport, animate towards it
+    if (targetCard) {
+      const tr = targetCard.getBoundingClientRect();
+      // Check if card's container tab is visible (it might be display:none because we hid tabs)
+      if (tr.width > 0 && tr.height > 0) {
+        targetRect = { left: tr.left, top: tr.top, width: tr.width, height: tr.height };
       }
     }
 
-    // Create overlay for reverse animation
+    if (!targetRect) {
+      // No target — just fade out
+      _hideDetailFade(() => _finishClose());
+      return;
+    }
+
+    // Get detail view position
+    const detailRect = detailView.getBoundingClientRect();
+
+    // Create a shrinking overlay from detail to card position
     const overlay = document.createElement('div');
     overlay.className = 'flip-overlay';
-    overlay.id = 'flipOverlay';
 
-    const clone = document.createElement('div');
-    clone.className = 'flip-clone';
-    clone.style.cssText = `
-      position: fixed; z-index: 10001; pointer-events: none;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 4px; overflow: hidden;
-      will-change: transform, opacity;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-      left: ${detailRect.left}px; top: ${detailRect.top}px;
-      width: ${detailRect.width}px; height: ${Math.min(detailRect.height, 200)}px;
+    const phantom = document.createElement('div');
+    phantom.style.cssText = `
+      position: fixed;
+      left: ${detailRect.left}px;
+      top: ${detailRect.top}px;
+      width: ${detailRect.width}px;
+      height: ${Math.min(detailRect.height, 160)}px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      z-index: 10001;
+      pointer-events: none;
+      will-change: transform;
+      transform-origin: top left;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      overflow: hidden;
     `;
 
-    overlay.appendChild(clone);
+    overlay.appendChild(phantom);
     document.body.appendChild(overlay);
 
     // Hide detail immediately
     detailView.style.display = 'none';
 
-    // PLAY — reverse animation (detail → card)
-    const scaleX = targetRect.width / detailRect.width;
-    const scaleY = targetRect.height / Math.min(detailRect.height, 200);
-    const translateX = targetRect.left - detailRect.left;
-    const translateY = targetRect.top - detailRect.top;
+    // Show the tabs back first so card is potentially findable
+    _restoreTabs();
 
-    _activeAnimation = clone.animate([
-      {
-        transform: 'translate(0, 0) scale(1)',
-        opacity: 0.8,
-        borderRadius: '4px'
-      },
-      {
-        transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
-        opacity: 1,
-        borderRadius: 'var(--radius)'
+    // Now re-find the card's actual position (tabs are visible again)
+    if (targetCard) {
+      const freshRect = targetCard.getBoundingClientRect();
+      if (freshRect.width > 0 && freshRect.height > 0) {
+        targetRect = { left: freshRect.left, top: freshRect.top, width: freshRect.width, height: freshRect.height };
       }
+    }
+
+    // Animate phantom shrinking to card position
+    const phantomH = Math.min(detailRect.height, 160);
+    const scaleX = targetRect.width / detailRect.width;
+    const scaleY = targetRect.height / phantomH;
+    const dx = targetRect.left - detailRect.left;
+    const dy = targetRect.top - detailRect.top;
+
+    _activeAnimation = phantom.animate([
+      { transform: 'translate(0, 0) scale(1)', opacity: 0.7, borderRadius: 'var(--radius)' },
+      { transform: `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`, opacity: 0, borderRadius: 'var(--radius)' }
     ], {
       duration: 250,
       easing: 'cubic-bezier(0.4, 0, 0, 1)',
@@ -236,83 +319,66 @@ const FlipTransition = (() => {
 
     _activeAnimation.onfinish = () => {
       overlay.remove();
-      _finishClose();
+      _finishCloseState();
       _activeAnimation = null;
     };
 
     _activeAnimation.oncancel = () => {
       overlay.remove();
-      _finishClose();
+      _finishCloseState();
       _activeAnimation = null;
     };
 
     if (typeof haptic === 'function') haptic('light');
   }
 
+  // Show detail view with fade-in
   function _showDetail() {
-    document.getElementById('detailView').style.display = 'block';
-    // Fade in content inside detail
-    const detailContent = document.getElementById('detailView');
-    if (detailContent) {
-      detailContent.style.opacity = '0';
-      detailContent.style.transform = 'translateY(8px)';
-      requestAnimationFrame(() => {
-        detailContent.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-        detailContent.style.opacity = '1';
-        detailContent.style.transform = 'translateY(0)';
-        setTimeout(() => {
-          detailContent.style.transition = '';
-          detailContent.style.transform = '';
-        }, 220);
-      });
-    }
+    const dv = document.getElementById('detailView');
+    dv.style.display = 'block';
+    dv.style.opacity = '0';
+    dv.style.transform = 'translateY(8px)';
+    requestAnimationFrame(() => {
+      dv.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+      dv.style.opacity = '1';
+      dv.style.transform = 'translateY(0)';
+      setTimeout(() => {
+        dv.style.transition = '';
+        dv.style.opacity = '';
+        dv.style.transform = '';
+      }, 220);
+    });
   }
 
   function _showDetailFade() {
     const dv = document.getElementById('detailView');
     dv.style.display = 'block';
     dv.style.opacity = '0';
-    dv.style.transform = 'translateY(12px)';
     requestAnimationFrame(() => {
-      dv.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+      dv.style.transition = 'opacity 0.15s ease';
       dv.style.opacity = '1';
-      dv.style.transform = 'translateY(0)';
-      setTimeout(() => { dv.style.transition = ''; dv.style.transform = ''; }, 170);
+      setTimeout(() => { dv.style.transition = ''; dv.style.opacity = ''; }, 170);
     });
   }
 
-  function _hideDetail() {
+  function _hideDetailInstant() {
+    document.getElementById('detailView').style.display = 'none';
+  }
+
+  function _hideDetailFade(cb) {
     const dv = document.getElementById('detailView');
-    dv.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+    dv.style.transition = 'opacity 0.15s ease';
     dv.style.opacity = '0';
-    dv.style.transform = 'translateY(12px)';
     setTimeout(() => {
       dv.style.display = 'none';
       dv.style.transition = '';
       dv.style.opacity = '';
-      dv.style.transform = '';
-      _finishClose();
+      if (cb) cb();
     }, 160);
   }
 
-  function _hideDetailFast() {
-    const dv = document.getElementById('detailView');
-    // Quick scale down + fade
-    dv.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
-    dv.style.opacity = '0';
-    dv.style.transform = 'scale(0.95) translateY(8px)';
-    setTimeout(() => {
-      dv.style.display = 'none';
-      dv.style.transition = '';
-      dv.style.opacity = '';
-      dv.style.transform = '';
-      _finishClose();
-    }, 190);
-  }
-
-  function _finishClose() {
-    // Trigger the original backToList logic (tabs, FAB, etc.)
-    // This is called AFTER animation completes
+  // Restore tabs WITHOUT clearing currentProfileId (that happens in _finishCloseState)
+  function _restoreTabs() {
     const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
     ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure'].forEach(t => {
       const elT = document.getElementById(t);
@@ -325,118 +391,23 @@ const FlipTransition = (() => {
       tTab.style.display = 'block';
     }
     document.getElementById('fabBtn').style.display = (activeTab === 'unit' || activeTab === 'personal') ? 'flex' : 'none';
-    currentProfileId = null;
+  }
 
-    // Reset stored state
+  // Called after animation completes
+  function _finishCloseState() {
+    currentProfileId = null;
     _lastCardRect = null;
-    _lastCardId = null;
-    _lastCardEl = null;
+    _lastProfileId = null;
+  }
+
+  // Full close without animation (tabs + state)
+  function _finishClose() {
+    _restoreTabs();
+    _hideDetailInstant();
+    _finishCloseState();
   }
 
   return { open, close };
-})();
-
-
-// ============ 3. LIQUID TAB INDICATOR ============
-const TabIndicator = (() => {
-  const _indicators = new WeakMap(); // container → indicator element
-
-  function _getOrCreate(container) {
-    if (_indicators.has(container)) return _indicators.get(container);
-
-    // Create indicator element
-    const ind = document.createElement('div');
-    ind.className = 'tab-indicator';
-    container.style.position = 'relative';
-    container.appendChild(ind);
-    _indicators.set(container, ind);
-
-    // Position to current active tab immediately (no animation)
-    const activeTab = container.querySelector('.tab.active, .form-tab.active, .dash-mode-btn.active, .chip.active, .chip.selected');
-    if (activeTab) {
-      _positionTo(ind, activeTab, container, false);
-    }
-
-    return ind;
-  }
-
-  function _positionTo(ind, tab, container, animate = true) {
-    const tabRect = tab.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const scrollLeft = container.scrollLeft || 0;
-
-    const left = tabRect.left - containerRect.left + scrollLeft;
-    const width = tabRect.width;
-
-    if (!animate || !MotionPrefs.canAnimate()) {
-      // Instant position
-      ind.style.transition = 'none';
-      ind.style.transform = `translateX(${left}px) scaleX(1)`;
-      ind.style.width = width + 'px';
-      ind.style.opacity = '1';
-      return;
-    }
-
-    // Get current position
-    const currentTransform = ind.style.transform || '';
-    const currentX = parseFloat(currentTransform.match(/translateX\(([^)]+)px\)/)?.[1] || left);
-    const currentW = parseFloat(ind.style.width) || width;
-
-    // Phase 1: stretch to cover both positions
-    const minX = Math.min(currentX, left);
-    const maxRight = Math.max(currentX + currentW, left + width);
-    const stretchWidth = maxRight - minX;
-
-    ind.style.transition = 'none';
-    ind.style.transform = `translateX(${currentX}px) scaleX(1)`;
-    ind.style.width = currentW + 'px';
-
-    // Force reflow
-    void ind.offsetWidth;
-
-    // Phase 1: stretch
-    ind.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s';
-    ind.style.transform = `translateX(${minX}px) scaleX(1)`;
-    ind.style.width = stretchWidth + 'px';
-    ind.style.borderRadius = '10px'; // flatten during stretch
-
-    // Phase 2: contract to target
-    setTimeout(() => {
-      ind.style.transition = 'transform 0.22s cubic-bezier(0, 0, 0.2, 1), width 0.22s cubic-bezier(0, 0, 0.2, 1), border-radius 0.22s';
-      ind.style.transform = `translateX(${left}px) scaleX(1)`;
-      ind.style.width = width + 'px';
-      ind.style.borderRadius = '20px'; // back to pill shape
-    }, 180);
-
-    if (typeof haptic === 'function') haptic('selection');
-  }
-
-  function moveTo(tabEl) {
-    if (!tabEl) return;
-    const container = tabEl.closest('.tab-bar, .form-tabs, .dash-mode-toggle, #statusFilter, #notesFilterChips');
-    if (!container) return;
-    const ind = _getOrCreate(container);
-    _positionTo(ind, tabEl, container, true);
-  }
-
-  // Initialize indicators for existing active tabs
-  function init() {
-    document.querySelectorAll('.tab-bar, .form-tabs').forEach(container => {
-      _getOrCreate(container);
-    });
-  }
-
-  // Refresh position (e.g. after resize)
-  function refresh() {
-    document.querySelectorAll('.tab-bar, .form-tabs').forEach(container => {
-      if (!_indicators.has(container)) return;
-      const ind = _indicators.get(container);
-      const active = container.querySelector('.tab.active, .form-tab.active');
-      if (active) _positionTo(ind, active, container, false);
-    });
-  }
-
-  return { moveTo, init, refresh };
 })();
 
 
@@ -447,8 +418,8 @@ const SwipeHandler = (() => {
   let _ticking = false;
   let _contentEl = null;
 
-  const THRESHOLD = 50;     // min horizontal px to trigger
-  const ANGLE_RATIO = 2;    // deltaX must be > deltaY * ratio
+  const THRESHOLD = 50;
+  const ANGLE_RATIO = 2;
 
   function init() {
     _contentEl = document.getElementById('mainContent');
@@ -465,16 +436,14 @@ const SwipeHandler = (() => {
     const tag = el.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
     if (el.contentEditable === 'true') return true;
-    if (el.closest('.ac-list, .modal, .modal-overlay, .pin-keypad')) return true;
-    // Don't swipe on horizontal-scrollable elements like tab bars
-    if (el.closest('.tab-bar, .form-tabs')) return true;
+    if (el.closest('.ac-list, .modal, .modal-overlay, .pin-keypad, .markmap, .ai-chat-msgs')) return true;
+    if (el.closest('.tab-bar, .form-tabs, .tl-container')) return true;
     return false;
   }
 
   function onDown(e) {
     if (_isInputElement(e.target)) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-
     _startX = e.clientX;
     _startY = e.clientY;
     _deltaX = 0;
@@ -485,32 +454,28 @@ const SwipeHandler = (() => {
 
   function onMove(e) {
     if (!_isTracking) return;
-
     _deltaX = e.clientX - _startX;
     _deltaY = e.clientY - _startY;
 
-    // Determine if this is a horizontal swipe
     if (!_isSwiping) {
       if (Math.abs(_deltaX) > 15 && Math.abs(_deltaX) > Math.abs(_deltaY) * ANGLE_RATIO) {
         _isSwiping = true;
         _contentEl.style.willChange = 'transform, opacity';
       } else if (Math.abs(_deltaY) > 15) {
-        // Vertical scroll — abort
         _isTracking = false;
         return;
       }
       return;
     }
 
-    e.preventDefault(); // Prevent scroll while swiping
+    e.preventDefault();
 
     if (!_ticking) {
       requestAnimationFrame(() => {
         if (_isSwiping) {
-          // Translate content with resistance
-          const resistance = 0.4;
+          const resistance = 0.35;
           const tx = _deltaX * resistance;
-          const opacity = Math.max(0.5, 1 - Math.abs(tx) / 400);
+          const opacity = Math.max(0.6, 1 - Math.abs(tx) / 300);
           _contentEl.style.transform = `translateX(${tx}px)`;
           _contentEl.style.opacity = opacity;
         }
@@ -520,29 +485,25 @@ const SwipeHandler = (() => {
     }
   }
 
-  function onUp(e) {
+  function onUp() {
     if (!_isTracking) return;
     _isTracking = false;
 
     if (!_isSwiping) return;
     _isSwiping = false;
 
-    // Snap back animation
+    // Spring back
     _contentEl.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease';
     _contentEl.style.transform = '';
     _contentEl.style.opacity = '';
-
     setTimeout(() => {
       _contentEl.style.transition = '';
       _contentEl.style.willChange = '';
     }, 260);
 
-    // Check threshold
     if (Math.abs(_deltaX) < THRESHOLD) return;
 
-    const direction = _deltaX > 0 ? -1 : 1; // swipe left = next tab, swipe right = prev tab
-
-    // Determine context: detail view or main tabs
+    const direction = _deltaX > 0 ? -1 : 1;
     const detailView = document.getElementById('detailView');
     const isInDetail = detailView && detailView.style.display === 'block';
 
@@ -560,7 +521,6 @@ const SwipeHandler = (() => {
     const idx = tabs.indexOf(active);
     const next = idx + dir;
     if (next < 0 || next >= tabs.length) return;
-    // Trigger the tab switch
     const nextTab = tabs[next];
     const tabId = nextTab.dataset.tab;
     if (tabId && typeof switchMainTab === 'function') {
@@ -602,12 +562,10 @@ function countUp(el, target, duration = 500) {
   function update(now) {
     const elapsed = now - start;
     const progress = Math.min(elapsed / duration, 1);
-    // easeOutExpo
     const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
     el.textContent = Math.round(startVal + diff * eased);
     if (progress < 1) requestAnimationFrame(update);
   }
-
   requestAnimationFrame(update);
 }
 
@@ -615,22 +573,17 @@ function countUp(el, target, duration = 500) {
 // ============ 6. SKELETON → CONTENT CROSSFADE ============
 function crossfadeContent(container) {
   if (!container || !MotionPrefs.canAnimate()) return;
-
-  // Apply fade-in to children
   const children = container.children;
   for (let i = 0; i < children.length; i++) {
     const child = children[i];
     child.style.opacity = '0';
     child.style.transform = 'translateY(8px)';
     child.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    child.style.transitionDelay = (i * 0.04) + 's'; // stagger
-
-    // Trigger reflow then animate
+    child.style.transitionDelay = (i * 0.04) + 's';
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         child.style.opacity = '1';
         child.style.transform = 'translateY(0)';
-        // Cleanup after animation
         setTimeout(() => {
           child.style.transition = '';
           child.style.transitionDelay = '';
@@ -644,16 +597,12 @@ function crossfadeContent(container) {
 
 // ============ 7. DIRECTIONAL TAB NAVIGATION ============
 function navSlide(contentEl, direction) {
-  // direction: 1 = forward (slide from right), -1 = backward (slide from left)
   if (!contentEl || !MotionPrefs.canAnimate()) return;
-
   const fromX = direction > 0 ? '30px' : '-30px';
 
   contentEl.style.transition = 'none';
   contentEl.style.transform = `translateX(${fromX})`;
   contentEl.style.opacity = '0';
-
-  // Force reflow
   void contentEl.offsetWidth;
 
   contentEl.style.transition = 'transform 0.32s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease';
@@ -667,7 +616,6 @@ function navSlide(contentEl, direction) {
   }, 340);
 }
 
-// Track tab indices for direction
 const _tabOrder = {};
 function getTabIndex(tabName) {
   const tabs = document.querySelectorAll('#mainTabBar .tab');
@@ -683,7 +631,6 @@ function navDirectionForMainTab(newTabName) {
   return dir;
 }
 
-// Same for form tabs
 let _lastFormTabIndex = 0;
 function navDirectionForFormTab(cardId) {
   const tabs = Array.from(document.querySelectorAll('#profileTabs .form-tab'))
@@ -701,23 +648,20 @@ function navDirectionForFormTab(cardId) {
 // ============ INIT ============
 function initTransitions() {
   MotionPrefs.init();
-
-  // Delay indicator init slightly to ensure DOM is ready
   setTimeout(() => {
     TabIndicator.init();
     SwipeHandler.init();
-  }, 500);
+  }, 800);
 
-  // Refresh indicator on resize
+  let _resizeTimer;
   window.addEventListener('resize', () => {
-    TabIndicator.refresh();
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => TabIndicator.refresh(), 150);
   });
 }
 
-// Auto-init when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initTransitions);
 } else {
-  // DOM already loaded — init on next frame
   requestAnimationFrame(initTransitions);
 }
