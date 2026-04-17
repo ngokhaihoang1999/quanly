@@ -107,14 +107,36 @@ const TabIndicator = (() => {
 // ============ 3. PROFILE TRANSITION (Morph Rectangle) ============
 // Open: accent-colored rectangle at card position → expands to detail area → fades out → content shows
 // Close: rectangle at detail position → shrinks to card position → fades out → list shows
-// Works on ALL viewports. Falls back to simple fade if no card element.
+// Saves and restores scroll position so user returns to exact previous state.
 const ProfileTransition = (() => {
   let _storedRect = null;
   let _profileId = null;
   let _activeAnim = null;
+  // Scroll state preservation
+  let _savedScroll = { windowY: 0, panel: 0, mainContent: 0 };
+
+  function _saveScroll() {
+    _savedScroll.windowY = window.scrollY || window.pageYOffset || 0;
+    const panel = document.getElementById('panelCenter');
+    _savedScroll.panel = panel ? panel.scrollTop : 0;
+    const mc = document.getElementById('mainContent');
+    _savedScroll.mainContent = mc ? mc.scrollTop : 0;
+  }
+
+  function _restoreScroll() {
+    setTimeout(() => {
+      window.scrollTo(0, _savedScroll.windowY);
+      const panel = document.getElementById('panelCenter');
+      if (panel) panel.scrollTop = _savedScroll.panel;
+      const mc = document.getElementById('mainContent');
+      if (mc) mc.scrollTop = _savedScroll.mainContent;
+    }, 60);
+  }
 
   function open(cardEl, profileId) {
     _profileId = profileId;
+    // SAVE scroll position before switching views
+    _saveScroll();
 
     if (!MotionPrefs.canAnimate() || !cardEl) {
       document.getElementById('detailView').style.display = 'block';
@@ -143,8 +165,10 @@ const ProfileTransition = (() => {
     cardEl.style.transition = 'transform 0.12s ease';
     cardEl.style.transform = 'scale(0.96)';
 
-    // Target: content area
-    const content = document.querySelector('#mainContent .content') || document.getElementById('mainContent');
+    // Target: content area (panelCenter on desktop, mainContent on mobile)
+    const content = document.getElementById('panelCenter')
+      || document.querySelector('#mainContent .content')
+      || document.getElementById('mainContent');
     const tRect = content.getBoundingClientRect();
 
     // Animate morph expanding
@@ -194,6 +218,7 @@ const ProfileTransition = (() => {
     if (!MotionPrefs.canAnimate()) {
       dv.style.display = 'none';
       _finishClose();
+      _restoreScroll();
       return;
     }
 
@@ -202,6 +227,8 @@ const ProfileTransition = (() => {
     // First hide detail + restore tabs so we can find the card
     dv.style.display = 'none';
     _restoreTabs();
+    // Restore scroll BEFORE finding card (card might be below fold)
+    _restoreScrollSync();
 
     // Try to find the actual card position now that tabs are visible
     let targetRect = _storedRect;
@@ -216,7 +243,6 @@ const ProfileTransition = (() => {
     }
 
     if (!targetRect) {
-      // No target at all — just finish
       _finishCloseState();
       return;
     }
@@ -255,6 +281,15 @@ const ProfileTransition = (() => {
     if (typeof haptic === 'function') haptic('light');
   }
 
+  // Restore scroll synchronously (before finding card rect)
+  function _restoreScrollSync() {
+    window.scrollTo(0, _savedScroll.windowY);
+    const panel = document.getElementById('panelCenter');
+    if (panel) panel.scrollTop = _savedScroll.panel;
+    const mc = document.getElementById('mainContent');
+    if (mc) mc.scrollTop = _savedScroll.mainContent;
+  }
+
   function _restoreTabs() {
     const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
     ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t => {
@@ -279,6 +314,7 @@ const ProfileTransition = (() => {
   function _finishClose() {
     _restoreTabs();
     document.getElementById('detailView').style.display = 'none';
+    _restoreScroll();
     _finishCloseState();
   }
 
