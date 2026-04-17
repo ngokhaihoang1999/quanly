@@ -373,7 +373,7 @@ export async function handleGroupChat(update: any) {
       const { count: bbCount } = await supabase.from('records').select('*', { count: 'exact', head: true }).eq('profile_id', linkedProfileId).eq('record_type', 'bien_ban');
       const showSk = ['bb', 'center', 'completed'].includes(phase);
       if ((tvCount || 0) > 0 || (bbCount || 0) > 0 || showSk) {
-        keyboard.push([{ text: `📋 Xem BC TV/BB/Sinka`, callback_data: 'menu_view_report' }]);
+        keyboard.push([{ text: `📋 Xem BC TV/BB/Thẻ HV`, callback_data: 'menu_view_report' }]);
       }
 
       // Thêm báo cáo BB

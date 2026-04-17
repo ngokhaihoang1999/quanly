@@ -1,4 +1,4 @@
-// ============ GIẤY SINKA — Thẻ học viên Center ============
+// ============ THẺ HỌC VIÊN — Thẻ học viên Center ============
 
 // ── Vietnamese accent removal ──
 function removeVietnamese(str) {
@@ -27,7 +27,7 @@ function compactTeamLabel(unitStr) {
 // Cú pháp: (HL) HoTen HS - HoTen NDD - ToNDD - KVSong.docx
 function _buildSinkaFileName() {
   const p = allProfiles.find(x => x.id === currentProfileId);
-  if (!p) return 'Giay_Sinka.docx';
+  if (!p) return 'The_hoc_vien.docx';
 
   const hsName = removeVietnamese(p.full_name || '');
   
@@ -286,10 +286,10 @@ async function saveSinka() {
       headers: { 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ profile_id: currentProfileId, data: merged })
     });
-    showToast('✅ Đã lưu Giấy Sinka!');
+    showToast('✅ Đã lưu Thẻ học viên!');
   } catch(e) {
     console.error('saveSinka error:', e);
-    showToast('❌ Lỗi khi lưu Giấy Sinka');
+    showToast('❌ Lỗi khi lưu Thẻ học viên');
   }
 }
 
@@ -299,7 +299,7 @@ function copySinka() {
   const p = allProfiles.find(x => x.id === currentProfileId);
   const name = p?.full_name || '';
 
-  const text = `⬜️ Giấy Sinka
+  const text = `⬜️ Thẻ học viên
 Ngày ghi chép: ${v('sk_ngay_ghi_chep')}
 
 1. Người dẫn dắt:
@@ -432,7 +432,7 @@ async function exportSinkaWord() {
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { after: 200 },
-          children: [new TextRun({ text: '⬜️ Giấy Sinka', bold: true, size: 36, font: 'Times New Roman' })]
+          children: [new TextRun({ text: '⬜️ Thẻ học viên', bold: true, size: 36, font: 'Times New Roman' })]
         }),
         new Paragraph({
           spacing: { after: 200 },

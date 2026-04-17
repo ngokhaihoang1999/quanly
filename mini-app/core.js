@@ -2428,7 +2428,7 @@ function openPersonalizationPanel() {
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">📋 Tên/Bộ/KV/SĐT (Sinka)</label>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">📋 Tên/Bộ/KV/SĐT (Thẻ HV)</label>
             <input type="text" id="prof_sinka_info" value="${(myStaff?.sinka_info||'').replace(/"/g,'&quot;')}" placeholder="VD: Nguyễn Văn A / Bộ 1 / Q.1 / 0901234567" maxlength="150"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
