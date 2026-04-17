@@ -41,4 +41,4 @@ jobs:
           # Also handle the deleted concept_the migration
           supabase migration repair 20240417000000 --status reverted --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
 
-          supabase db push
+          supabase db push --include-all
