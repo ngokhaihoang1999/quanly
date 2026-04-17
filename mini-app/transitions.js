@@ -111,6 +111,7 @@ const TabIndicator = (() => {
 const ProfileTransition = (() => {
   let _profileId = null;
   let _openedCardEl = null;
+  let _sourceContainerId = null;
   let _savedScroll = { windowY: 0, panel: 0, mainContent: 0 };
 
   function _saveScroll() {
@@ -155,6 +156,12 @@ const ProfileTransition = (() => {
   function open(cardEl, profileId) {
     _profileId = profileId;
     _openedCardEl = cardEl;
+    if (cardEl) {
+      let parent = cardEl.closest('[id]');
+      _sourceContainerId = parent ? parent.id : null;
+    } else {
+      _sourceContainerId = null;
+    }
     _saveScroll();
 
     // Blink the card being opened
@@ -218,7 +225,13 @@ const ProfileTransition = (() => {
         requestAnimationFrame(() => {
           let card = _openedCardEl;
           if (!card || !document.body.contains(card)) {
-            card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
+            // Re-render happened, fallback to query within the exact source container if known
+            if (_sourceContainerId) {
+              card = document.querySelector(`#${_sourceContainerId} .profile-card[data-pid="${_profileId}"]`);
+            }
+            if (!card) {
+              card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
+            }
           }
           _blinkCard(card);
           // Scroll card into view if it's off-screen
@@ -258,6 +271,7 @@ const ProfileTransition = (() => {
     currentProfileId = null;
     _profileId = null;
     _openedCardEl = null;
+    _sourceContainerId = null;
   }
 
   function _finishClose() {
