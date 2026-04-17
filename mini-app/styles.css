@@ -245,17 +245,24 @@
     .dash-dot.resubmitted { background: #8b5cf6; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-    /* Structure tree - chart style with connectors */
+    /* Structure tree - collapsible tree */
     .tree-container { position: relative; }
-    .tree-node { position: relative; padding: 8px 12px; margin-bottom: 2px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
+    .tree-branch { position: relative; }
+    .tree-node { position: relative; padding: 8px 12px; margin-bottom: 2px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; gap: 8px; }
     .tree-node:hover { border-color: var(--accent); }
-    .tree-node.area { border-left: 4px solid var(--accent); margin-left: 0; }
-    .tree-node.group { border-left: 4px solid var(--green); margin-left: 28px; }
-    .tree-node.team { border-left: 4px solid var(--yellow); margin-left: 56px; }
-    .tree-node.group::before, .tree-node.team::before { content: ''; position: absolute; left: -20px; top: 50%; width: 16px; height: 1px; background: var(--border); }
-    .tree-node.group::after, .tree-node.team::after { content: ''; position: absolute; left: -20px; top: -2px; width: 1px; height: calc(50% + 2px); background: var(--border); }
+    .tree-node.area { border-left: 4px solid var(--accent); }
+    .tree-node.group { border-left: 4px solid var(--green); }
+    .tree-node.team { border-left: 4px solid var(--yellow); }
+    .tree-children { padding-left: 18px; border-left: 2px solid var(--border); margin-left: 10px; margin-bottom: 2px; }
+    .tree-children.tree-members { padding-left: 14px; margin-left: 8px; border-left: 2px dashed var(--border); }
+    .tree-member { padding: 5px 10px !important; font-size: 12px !important; border: none !important; background: transparent !important; margin-bottom: 0 !important; }
+    .tree-member:hover { background: var(--surface2) !important; }
+    .tree-chevron { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; font-size: 10px; color: var(--text3); transition: transform 0.2s ease; flex-shrink: 0; user-select: none; }
+    .tree-chevron.open { transform: rotate(90deg); }
+    .tree-edit-icon { font-size: 12px; opacity: 0.4; transition: opacity 0.2s; cursor: pointer; }
+    .tree-edit-icon:hover { opacity: 1; }
     .tree-label { font-size: 13px; font-weight: 600; flex: 1; }
-    .tree-meta { font-size: 11px; color: var(--text3); text-align: right; }
+    .tree-meta { font-size: 11px; color: var(--text3); text-align: right; white-space: nowrap; flex-shrink: 0; }
     .tree-manager { font-size: 10px; color: var(--accent2); font-weight: 500; }
     .tree-add { cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
     .tree-add:hover { opacity: 1; }

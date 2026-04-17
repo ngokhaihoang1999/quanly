@@ -1,4 +1,20 @@
 // ============ STRUCTURE ============
+// --- Tree toggle helpers ---
+const _treeState = JSON.parse(sessionStorage.getItem('_treeState')||'{}');
+function _isTreeOpen(key, defaultOpen) { return _treeState[key] !== undefined ? _treeState[key] : defaultOpen; }
+function _toggleTree(key, nodeEl) {
+  _treeState[key] = !_isTreeOpen(key, true);
+  sessionStorage.setItem('_treeState', JSON.stringify(_treeState));
+  const branch = nodeEl.closest('.tree-branch');
+  if (!branch) return;
+  const children = branch.querySelector(':scope > .tree-children');
+  const chevron = nodeEl.querySelector('.tree-chevron');
+  if (children) {
+    const isOpen = children.style.display !== 'none';
+    children.style.display = isOpen ? 'none' : 'block';
+    if (chevron) chevron.classList.toggle('open', !isOpen);
+  }
+}
 async function loadStructure() {
   try {
     const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
@@ -40,13 +56,41 @@ async function loadStructure() {
     structureData.forEach(a => {
       const aY = a.yjyn_staff_code ? '\ud83d\udc51 ' + a.yjyn_staff_code + ' <span class="staff-role-badge badge-yjyn" style="font-size:9px;padding:1px 6px;">YJYN</span>' : '';
       const canArea = isAdmin || (pos==='yjyn' && a.yjyn_staff_code===myCode);
-      const aClick = canArea ? ` style="cursor:pointer" onclick="openEditStructModal('area','${a.id}')"` : '';
-      html += `<div class="tree-node area"${aClick}><div><div class="tree-label">\ud83c\udfe2 ${a.name}${canArea?' \u270f\ufe0f':''}</div>${aY?`<div class="tree-manager">${aY}</div>`:''}</div><div class="tree-meta">Khu v\u1ef1c</div></div>`;
+      const aEdit = canArea ? ` onclick="event.stopPropagation();openEditStructModal('area','${a.id}')"` : '';
+      const aOpen = _isTreeOpen('a_'+a.id, true);
+      const grpCount = (a.org_groups||[]).length;
+      const totalMembers = (a.org_groups||[]).reduce((s,g) => s + (g.teams||[]).reduce((s2,t) => s2 + (t.staff||[]).length, 0), 0);
+      html += `<div class="tree-branch">
+        <div class="tree-node area" onclick="_toggleTree('a_${a.id}',this)" style="cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+            <span class="tree-chevron${aOpen?' open':''}">\u25B6</span>
+            <div style="flex:1;min-width:0;">
+              <div class="tree-label">\ud83c\udfe2 ${a.name}${canArea?`<span class="tree-edit-icon"${aEdit}> \u270f\ufe0f</span>`:''}</div>
+              ${aY?`<div class="tree-manager">${aY}</div>`:''}
+            </div>
+          </div>
+          <div class="tree-meta">${grpCount} nhóm · ${totalMembers} TV</div>
+        </div>
+        <div class="tree-children" style="display:${aOpen?'block':'none'};">`;
       (a.org_groups||[]).forEach(g => {
         const gT = g.tjn_staff_code ? '\ud83d\udc51 ' + g.tjn_staff_code + ' <span class="staff-role-badge badge-tjn" style="font-size:9px;padding:1px 6px;">TJN</span>' : '';
         const canGrp = canArea || (pos==='tjn' && g.tjn_staff_code===myCode);
-        const gClick = canGrp ? ` style="cursor:pointer" onclick="openEditStructModal('group','${g.id}')"` : '';
-        html += `<div class="tree-node group"${gClick}><div><div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?' \u270f\ufe0f':''}</div>${gT?`<div class="tree-manager">${gT}</div>`:''}</div><div class="tree-meta">Nh\u00f3m</div></div>`;
+        const gEdit = canGrp ? ` onclick="event.stopPropagation();openEditStructModal('group','${g.id}')"` : '';
+        const gOpen = _isTreeOpen('g_'+g.id, true);
+        const teamCount = (g.teams||[]).length;
+        const gMembers = (g.teams||[]).reduce((s,t) => s + (t.staff||[]).length, 0);
+        html += `<div class="tree-branch">
+          <div class="tree-node group" onclick="_toggleTree('g_${g.id}',this)" style="cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+              <span class="tree-chevron${gOpen?' open':''}">\u25B6</span>
+              <div style="flex:1;min-width:0;">
+                <div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?`<span class="tree-edit-icon"${gEdit}> \u270f\ufe0f</span>`:''}</div>
+                ${gT?`<div class="tree-manager">${gT}</div>`:''}
+              </div>
+            </div>
+            <div class="tree-meta">${teamCount} tổ · ${gMembers} TV</div>
+          </div>
+          <div class="tree-children" style="display:${gOpen?'block':'none'};">`;
         (g.teams||[]).forEach(t => {
           const tMArr = [];
           if (t.gyjn_staff_code) tMArr.push(t.gyjn_staff_code + ' <span class="staff-role-badge badge-gyjn" style="font-size:9px;padding:1px 6px;">GYJN</span>');
@@ -54,9 +98,21 @@ async function loadStructure() {
           const tM = tMArr.join(', ');
           const members = t.staff||[];
           const canTeam = canGrp || (['gyjn','bgyjn'].includes(pos) && (t.gyjn_staff_code===myCode||t.bgyjn_staff_code===myCode));
-          const tClick = canTeam ? ` style="cursor:pointer" onclick="openEditStructModal('team','${t.id}')"` : '';
-          html += `<div class="tree-node team"${tClick}><div><div class="tree-label">\ud83d\udccc ${t.name}${canTeam?' \u270f\ufe0f':''}</div>${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}</div><div class="tree-meta">${members.length} TV</div></div>`;
+          const tEdit = canTeam ? ` onclick="event.stopPropagation();openEditStructModal('team','${t.id}')"` : '';
+          const tOpen = _isTreeOpen('t_'+t.id, false);
+          html += `<div class="tree-branch">
+            <div class="tree-node team" onclick="${members.length?`_toggleTree('t_${t.id}',this)`:'void(0)'}" style="cursor:${members.length?'pointer':'default'};">
+              <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+                ${members.length?`<span class="tree-chevron${tOpen?' open':''}">\u25B6</span>`:'<span style="width:16px;display:inline-block;"></span>'}
+                <div style="flex:1;min-width:0;">
+                  <div class="tree-label">\ud83d\udccc ${t.name}${canTeam?`<span class="tree-edit-icon"${tEdit}> \u270f\ufe0f</span>`:''}</div>
+                  ${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}
+                </div>
+              </div>
+              <div class="tree-meta">${members.length} TV</div>
+            </div>`;
           if (members.length) {
+            html += `<div class="tree-children tree-members" style="display:${tOpen?'block':'none'};">`;
             members.forEach(m => {
               let ep = m.position || 'td';
               if (['yjyn','tjn','gyjn','bgyjn'].includes(ep)) ep = 'td';
@@ -68,13 +124,17 @@ async function loadStructure() {
               const cmBadge = m.specialist_position
                 ? `<span class="staff-role-badge" style="margin-left:4px;font-size:9px;padding:1px 5px;background:rgba(139,92,246,0.12);color:#7c3aed;border:1px solid rgba(139,92,246,0.25);">${getPositionName(m.specialist_position)}</span>`
                 : '';
-              html += `<div class="tree-node" style="margin-left:76px;padding:5px 10px;font-size:12px;border-left:2px dashed var(--border);"><span style="color:var(--text2);">👤 ${m.staff_code}</span>${posBadge}${cmBadge}</div>`;
+              html += `<div class="tree-node tree-member"><span style="color:var(--text2);">\ud83d\udc64 ${m.staff_code}</span>${posBadge}${cmBadge}</div>`;
             });
+            html += '</div>';
           }
+          html += '</div>';
         });
         if (canGrp) html += `<div class="tree-node group tree-add" onclick="openAddTeamModal('${g.id}')"><div class="tree-label">+ T\u1ed5</div></div>`;
+        html += '</div></div>';
       });
       if (canArea) html += `<div class="tree-node group tree-add" onclick="openAddGroupModal('${a.id}')"><div class="tree-label">+ Nh\u00f3m</div></div>`;
+      html += '</div></div>';
     });
     html += '</div>';
     el.innerHTML = html;
