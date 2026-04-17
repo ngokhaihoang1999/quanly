@@ -1591,6 +1591,15 @@ function switchMainTab(el, tab) {
     }
   });
   const tTab = document.getElementById('tab-'+tab);
+  
+  // Re-trigger CSS animation
+  const mainContent = document.getElementById('mainContent');
+  if (mainContent) {
+    mainContent.classList.remove('tab-content-enter');
+    void mainContent.offsetWidth; // trigger reflow
+    mainContent.classList.add('tab-content-enter');
+  }
+
   if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(tab))) {
     tTab.style.display = 'block';
   }
