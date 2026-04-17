@@ -1461,8 +1461,8 @@ async function loadStaffInfo() {
       // Populate header avatar + nickname
       const headerAv = document.getElementById('headerAvatar');
       if (headerAv) {
-        const displayName = myStaff.nickname || myStaff.full_name || '?';
-        const letter = displayName[0];
+        const displayName = myStaff.nickname || myStaff.full_name || myStaff.staff_code || '?';
+        const letter = getNameInitial(displayName);
         const avatarHtml = typeof renderAnimatedAvatar === 'function'
           ? renderAnimatedAvatar(letter, myStaff.staff_avatar_color || '', 'md')
           : `<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${letter}</div>`;
@@ -2384,7 +2384,7 @@ function openPersonalizationPanel() {
         <div style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
             <div>
-              <div style="font-weight:700;font-size:14px;">${myStaff?.full_name||'---'}</div>
+              <div style="font-weight:700;font-size:14px;">${myStaff?.full_name||myStaff?.staff_code||'---'}</div>
               <div style="font-size:11px;color:var(--text3);">${myStaff?.staff_code||''} · ${getPositionName(myStaff?.position)}${getStaffUnit(myStaff?.staff_code) ? ' · <span style="color:var(--accent);">' + getStaffUnit(myStaff.staff_code) + '</span>' : ''}</div>
             </div>
           </div>
@@ -2801,7 +2801,7 @@ async function saveMyStaffProfile() {
     // Refresh header avatar
     const headerAv = document.getElementById('headerAvatar');
     if (headerAv) {
-      const dn = myStaff.nickname || myStaff.full_name || '?';
+      const dn = myStaff.nickname || myStaff.full_name || myStaff.staff_code || '?';
       const lt = getNameInitial(dn);
       const avH = typeof renderAnimatedAvatar === 'function'
         ? renderAnimatedAvatar(lt, myStaff.staff_avatar_color || '', 'md')
@@ -2822,7 +2822,7 @@ function showStaffCard(code) {
   if (!s) { showToast('Khong tim thay: ' + code); return; }
   var existing = document.getElementById('staffCardModal');
   if (existing) existing.remove();
-  var avatar = getNameInitial(s.nickname || s.full_name);
+  var avatar = getNameInitial(s.nickname || s.full_name || s.staff_code);
   var isEmoji = false;
   var unit    = getStaffUnit(code) || '';
   var gStr = s.gender ? ' · ' + s.gender : '';
@@ -2837,7 +2837,7 @@ function showStaffCard(code) {
       '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">' +
         (typeof renderAnimatedAvatar === 'function' ? renderAnimatedAvatar(avatar, s.staff_avatar_color || '', 'md') : '<div style="width:56px;height:56px;border-radius:16px;background:' + (s.staff_avatar_color || 'var(--accent)') + ';display:flex;align-items:center;justify-content:center;font-size:' + (isEmoji?'28px':'22px') + ';font-weight:700;color:white;flex-shrink:0;">' + avatar + '</div>') +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:700;font-size:16px;">' + (s.nickname || s.full_name) + '</div>' +
+          '<div style="font-weight:700;font-size:16px;">' + (s.nickname || s.full_name || s.staff_code) + '</div>' +
           (s.nickname ? '<div style="font-size:12px;color:var(--text3);">' + s.full_name + ' (' + s.staff_code + ')</div>' : '<div style="font-size:12px;color:var(--text3);">' + s.staff_code + '</div>') +
           '<div style="margin-top:4px;">' +
             '<span class="staff-role-badge ' + getBadgeClass(s.position) + '" style="font-size:10px;padding:3px 10px;">' + getPositionName(s.position) + '</span>' +

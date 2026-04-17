@@ -13,7 +13,8 @@ function renderStaff(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Chưa có TĐ</div></div>'; return; }
   const canDelete = hasPermission('manage_structure');
   el.innerHTML = list.map(s => {
-    const displayName = s.nickname ? `${s.nickname} <span style="color:var(--text3);font-size:11px;">(${s.full_name})</span>` : s.full_name;
+    const name = s.nickname || s.full_name || s.staff_code;
+    const subName = s.nickname && s.full_name ? `<span style="color:var(--text3);font-size:11px;">(${s.full_name})</span>` : '';
     const botStatus = s.telegram_id
       ? '<span style="color:#22c55e;font-size:11px;font-weight:600;">🟢 Đã kết nối</span>'
       : '<span style="color:var(--text3);font-size:11px;">🔴 Chưa kết nối</span>';
@@ -21,9 +22,9 @@ function renderStaff(list) {
     const deleteBtn = canDelete ? `<button onclick="event.stopPropagation();deleteStaffFromList('${s.staff_code}')" style="background:none;border:none;color:var(--red);font-size:14px;cursor:pointer;padding:4px;opacity:0.6;" title="Xoá TĐ khỏi hệ thống">🗑</button>` : '';
     return `
     <div class="staff-card" style="display:flex;align-items:center;gap:10px;">
-      <div class="staff-avatar">${getNameInitial(s.nickname||s.full_name)}</div>
+      <div class="staff-avatar">${getNameInitial(name)}</div>
       <div class="profile-info" style="flex:1;min-width:0;">
-        <div class="profile-name">${displayName} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
+        <div class="profile-name">${name} ${subName} <span style="color:var(--text3);font-size:12px;">(${s.staff_code})</span></div>
         <div class="profile-meta" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
           <span class="staff-role-badge ${getBadgeClass(s.position)}">${getPositionName(s.position)}</span>
           ${s.specialist_position ? `<span class="staff-role-badge role-tvv">${getPositionName(s.specialist_position)}</span>` : ''}
@@ -47,35 +48,37 @@ function getStaffTeamName(code) {
   return '';
 }
 
-function filterStaff() { const q=document.getElementById('staffSearchInput').value.toLowerCase(); renderStaff(allStaff.filter(s=>s.full_name?.toLowerCase().includes(q)||s.staff_code.toLowerCase().includes(q)||(s.position||'').includes(q))); }
+function filterStaff() { const q=document.getElementById('staffSearchInput').value.toLowerCase(); renderStaff(allStaff.filter(s=>(s.full_name||'').toLowerCase().includes(q)||s.staff_code.toLowerCase().includes(q)||(s.nickname||'').toLowerCase().includes(q)||(s.position||'').includes(q))); }
 
 function openAddStaffModal() {
   document.getElementById('addStaffModal').classList.add('open');
-  document.getElementById('new_staff_code').value = '';
-  document.getElementById('new_staff_name').value = '';
-  const tgEl = document.getElementById('new_staff_tg');
-  if (tgEl) tgEl.value = '';
+  document.getElementById('new_staff_codes').value = '';
 }
 
-async function addStaff() {
-  const name = document.getElementById('new_staff_name').value.trim();
-  const code = document.getElementById('new_staff_code').value.trim();
-  if (!name || !code) { showToast('⚠️ Nhập họ tên và mã JD'); return; }
+async function addStaffBulk() {
+  const raw = document.getElementById('new_staff_codes').value.trim();
+  if (!raw) { showToast('⚠️ Nhập ít nhất 1 mã JD'); return; }
+  // Parse lines, trim, filter empty, uppercase
+  const codes = raw.split(/[\n,;]+/).map(c => c.trim().toUpperCase()).filter(Boolean);
+  if (!codes.length) { showToast('⚠️ Nhập ít nhất 1 mã JD'); return; }
   // Validate format
-  if (!/^\d{3,6}-.+$/.test(code)) { showToast('⚠️ Mã JD phải có dạng: 000xxx-ABC'); return; }
-  // Check dup
-  if (allStaff.some(s => s.staff_code === code)) { showToast('⚠️ Mã "' + code + '" đã tồn tại!'); return; }
-  const tgId = document.getElementById('new_staff_tg')?.value.trim() || null;
+  const invalid = codes.filter(c => !/^\d{3,6}-.+$/.test(c));
+  if (invalid.length) { showToast('⚠️ Sai định dạng: ' + invalid.join(', ') + '\nCần dạng: 000xxx-ABC'); return; }
+  // Check dups
+  const existing = codes.filter(c => allStaff.some(s => s.staff_code === c));
+  if (existing.length) { showToast('⚠️ Đã tồn tại: ' + existing.join(', ')); return; }
+  // Bulk insert
+  const btn = document.querySelector('#addStaffModal .save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang thêm...'; }
   try {
-    const res = await sbFetch('/rest/v1/staff', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-      full_name: name, staff_code: code, position: 'td',
-      telegram_id: tgId ? parseInt(tgId) : null
-    })});
+    const body = codes.map(c => ({ staff_code: c, full_name: null, position: 'td' }));
+    const res = await sbFetch('/rest/v1/staff', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Lỗi'); }
     closeModal('addStaffModal');
-    showToast('✅ Đã tạo TĐ "' + code + '"!');
+    showToast(`✅ Đã thêm ${codes.length} TĐ!`);
     await loadStaff();
   } catch(e) { showToast('❌ Lỗi: ' + (e.message||'')); console.error(e); }
+  if (btn) { btn.disabled = false; btn.textContent = '➕ Thêm TĐ'; }
 }
 
 async function deleteStaffFromList(staffCode) {
