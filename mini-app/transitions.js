@@ -110,6 +110,7 @@ const TabIndicator = (() => {
 // No overlays, no clones — simple, reliable, works everywhere.
 const ProfileTransition = (() => {
   let _profileId = null;
+  let _openedCardEl = null;
   let _savedScroll = { windowY: 0, panel: 0, mainContent: 0 };
 
   function _saveScroll() {
@@ -153,6 +154,7 @@ const ProfileTransition = (() => {
 
   function open(cardEl, profileId) {
     _profileId = profileId;
+    _openedCardEl = cardEl;
     _saveScroll();
 
     // Blink the card being opened
@@ -214,7 +216,10 @@ const ProfileTransition = (() => {
       if (_profileId) {
         // Use rAF to ensure DOM is painted before blinking
         requestAnimationFrame(() => {
-          const card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
+          let card = _openedCardEl;
+          if (!card || !document.body.contains(card)) {
+            card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
+          }
           _blinkCard(card);
           // Scroll card into view if it's off-screen
           if (card) {
@@ -252,6 +257,7 @@ const ProfileTransition = (() => {
   function _finishCloseState() {
     currentProfileId = null;
     _profileId = null;
+    _openedCardEl = null;
   }
 
   function _finishClose() {
