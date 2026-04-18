@@ -34,7 +34,8 @@ jobs:
             20240330000002 20240331000000 20240331000001 20240331000002 20240401000000 \
             20240401000001 20240402000000 \
             20240417000001 \
-            20260416 \
+            20240418000000 \
+            20260416 20260416000001 \
           ; do
             supabase migration repair "$v" --status applied --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
           done
