@@ -53,7 +53,7 @@ async function loadCalendar() {
     // Fetch calendar events + linked notes in parallel
     const [evRes, noteRes] = await Promise.all([
       sbFetch(`/rest/v1/calendar_events?event_date=gte.${startStr}&event_date=lte.${endStr}&select=*&order=event_date.asc,event_time.asc`),
-      sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,cal_date,color,owner_staff_code&order=cal_date.asc`).catch(() => null)
+      sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,content,cal_date,color,owner_staff_code,updated_at,reminder_at,reminder_sent&order=cal_date.asc`).catch(() => null)
     ]);
     const allEvents = await evRes.json();
     try {
