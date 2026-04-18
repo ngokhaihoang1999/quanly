@@ -1,24 +1,24 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// TRANSITIONS.JS v4 — Motion System for Mini App
-// GPU-only (transform + opacity), interruptible, reduced-motion aware
+// TRANSITIONS.JS v5 — Motion System for Mini App
+// GPU-only (transform + opacity), reduced-motion & low-FPS aware
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ============ 1. MOTION PREFERENCES ============
 const MotionPrefs = (() => {
-  const mqReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-  let _reduced = mqReduced?.matches || false;
-  mqReduced?.addEventListener?.('change', e => { _reduced = e.matches; });
+  const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  let _reduced = mq?.matches || false;
+  mq?.addEventListener?.('change', e => { _reduced = e.matches; });
 
-  let _fpsChecked = false, _lowFps = false;
+  let _checked = false, _lowFps = false;
   function checkFps() {
-    if (_fpsChecked) return;
-    _fpsChecked = true;
+    if (_checked) return;
+    _checked = true;
     let frames = 0;
-    const start = performance.now();
+    const t0 = performance.now();
     const count = () => {
       frames++;
-      if (performance.now() - start < 500) requestAnimationFrame(count);
-      else _lowFps = (frames / ((performance.now() - start) / 1000)) < 30;
+      if (performance.now() - t0 < 500) requestAnimationFrame(count);
+      else _lowFps = (frames / ((performance.now() - t0) / 1000)) < 30;
     };
     requestAnimationFrame(count);
   }
@@ -32,110 +32,90 @@ const MotionPrefs = (() => {
 
 
 // ============ 2. TAB INDICATOR (Ghost slide) ============
-// A ghost element slides from old tab to new tab during switch,
-// then fades out. Tab's own .active styling is NEVER touched.
 const TabIndicator = (() => {
   const _ghosts = new WeakMap();
-  let _initialized = false;
+  let _inited = false;
 
   function _getOrCreate(container) {
     if (_ghosts.has(container)) return _ghosts.get(container);
-    const ghost = document.createElement('div');
-    ghost.className = 'tab-ghost';
+    const g = document.createElement('div');
+    g.className = 'tab-ghost';
     container.style.position = 'relative';
-    container.appendChild(ghost);
-    _ghosts.set(container, ghost);
-    ghost.style.opacity = '0';
-    return ghost;
+    container.appendChild(g);
+    _ghosts.set(container, g);
+    g.style.opacity = '0';
+    return g;
   }
 
-  function moveTo(newTabEl) {
-    if (!newTabEl || !MotionPrefs.canAnimate()) return;
-    const container = newTabEl.closest('.tab-bar, .form-tabs, .dash-mode-toggle');
+  function moveTo(newTab) {
+    if (!newTab || !MotionPrefs.canAnimate()) return;
+    const container = newTab.closest('.tab-bar, .form-tabs, .dash-mode-toggle');
     if (!container) return;
-
     const ghost = _getOrCreate(container);
-    // Old tab = currently active one (moveTo called BEFORE class switch)
     const oldTab = container.querySelector('.tab.active, .form-tab.active, .dash-mode-btn.active');
+    if (!oldTab || oldTab === newTab) return;
 
-    if (!oldTab || oldTab === newTabEl) return;
-
-    const cRect = container.getBoundingClientRect();
-    const oldRect = oldTab.getBoundingClientRect();
-    const newRect = newTabEl.getBoundingClientRect();
-    const scrollL = container.scrollLeft || 0;
-    const isMainTab = container.classList.contains('tab-bar');
-    const br = isMainTab ? '20px' : '8px';
+    const cR = container.getBoundingClientRect();
+    const oR = oldTab.getBoundingClientRect();
+    const nR = newTab.getBoundingClientRect();
+    const sL = container.scrollLeft || 0;
+    const br = container.classList.contains('tab-bar') ? '20px' : '8px';
+    const ease = '0.35s cubic-bezier(0.4,0,0.2,1)';
 
     // Snap to old position
     ghost.style.transition = 'none';
-    ghost.style.left = (oldRect.left - cRect.left + scrollL) + 'px';
-    ghost.style.top = (oldRect.top - cRect.top) + 'px';
-    ghost.style.width = oldRect.width + 'px';
-    ghost.style.height = oldRect.height + 'px';
+    ghost.style.left = (oR.left - cR.left + sL) + 'px';
+    ghost.style.top = (oR.top - cR.top) + 'px';
+    ghost.style.width = oR.width + 'px';
+    ghost.style.height = oR.height + 'px';
     ghost.style.borderRadius = br;
     ghost.style.opacity = '1';
     void ghost.offsetWidth;
 
     // Slide to new position
-    ghost.style.transition = 'left 0.35s cubic-bezier(0.4,0,0.2,1), top 0.35s cubic-bezier(0.4,0,0.2,1), width 0.35s cubic-bezier(0.4,0,0.2,1), height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease, border-radius 0.2s ease';
-    ghost.style.left = (newRect.left - cRect.left + scrollL) + 'px';
-    ghost.style.top = (newRect.top - cRect.top) + 'px';
-    ghost.style.width = newRect.width + 'px';
-    ghost.style.height = newRect.height + 'px';
-    ghost.style.borderRadius = br;
+    ghost.style.transition = `left ${ease}, top ${ease}, width ${ease}, height ${ease}, opacity 0.35s ease, border-radius 0.2s ease`;
+    ghost.style.left = (nR.left - cR.left + sL) + 'px';
+    ghost.style.top = (nR.top - cR.top) + 'px';
+    ghost.style.width = nR.width + 'px';
+    ghost.style.height = nR.height + 'px';
 
-    // Fade out after arriving
-    setTimeout(() => {
-      ghost.style.transition = 'opacity 0.2s ease';
-      ghost.style.opacity = '0';
-    }, 360);
+    setTimeout(() => { ghost.style.transition = 'opacity 0.2s ease'; ghost.style.opacity = '0'; }, 360);
   }
 
   function init() {
-    if (_initialized) return;
-    _initialized = true;
+    if (_inited) return;
+    _inited = true;
     document.querySelectorAll('.tab-bar, .form-tabs').forEach(c => _getOrCreate(c));
   }
 
-  function refresh() { /* ghost only visible during transition */ }
-
-  return { moveTo, init, refresh };
+  return { moveTo, init };
 })();
 
 
 // ============ 3. PROFILE TRANSITION (Card Blink) ============
-// Open: card pulses with accent glow → detail view fades in
-// Close: detail hides → scroll restores → card blinks to show origin
-// No overlays, no clones — simple, reliable, works everywhere.
 const ProfileTransition = (() => {
-  let _profileId = null;
-  let _openedCardEl = null;
-  let _sourceContainerId = null;
-  let _savedScroll = { windowY: 0, panel: 0, mainContent: 0 };
+  let _pid = null, _cardEl = null, _containerId = null;
+  let _scroll = { windowY: 0, panel: 0, main: 0 };
+
+  const CONTAINERS = ['profileList', 'dashMyList', 'dashSubUnits', 'dashUnitList', 'staffList', 'unitPopupList'];
 
   function _saveScroll() {
-    _savedScroll.windowY = window.scrollY || window.pageYOffset || 0;
-    const panel = document.getElementById('panelCenter');
-    _savedScroll.panel = panel ? panel.scrollTop : 0;
-    const mc = document.getElementById('mainContent');
-    _savedScroll.mainContent = mc ? mc.scrollTop : 0;
+    _scroll.windowY = window.scrollY || window.pageYOffset || 0;
+    const p = document.getElementById('panelCenter');
+    _scroll.panel = p ? p.scrollTop : 0;
+    const m = document.getElementById('mainContent');
+    _scroll.main = m ? m.scrollTop : 0;
   }
 
-  function _restoreScrollSync() {
-    window.scrollTo(0, _savedScroll.windowY);
-    const panel = document.getElementById('panelCenter');
-    if (panel) panel.scrollTop = _savedScroll.panel;
-    const mc = document.getElementById('mainContent');
-    if (mc) mc.scrollTop = _savedScroll.mainContent;
+  function _restoreScroll() {
+    window.scrollTo(0, _scroll.windowY);
+    const p = document.getElementById('panelCenter');
+    if (p) p.scrollTop = _scroll.panel;
+    const m = document.getElementById('mainContent');
+    if (m) m.scrollTop = _scroll.main;
   }
 
-  function _restoreScrollAsync() {
-    setTimeout(_restoreScrollSync, 60);
-  }
-
-  // Blink/pulse a card element with accent glow
-  function _blinkCard(card) {
+  function _blink(card) {
     if (!card || !MotionPrefs.canAnimate()) return;
     card.style.transition = 'transform 0.15s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s ease, border-color 0.15s ease';
     card.style.transform = 'scale(0.96)';
@@ -153,50 +133,63 @@ const ProfileTransition = (() => {
     }, 150);
   }
 
-  function open(cardEl, profileId) {
-    _profileId = profileId;
-    _openedCardEl = cardEl;
-    // Walk up to find the list container this card belongs to
-    _sourceContainerId = null;
-    if (cardEl) {
-      const knownContainers = ['profileList', 'dashMyList', 'dashSubUnits', 'dashUnitList', 'staffList', 'unitPopupList'];
-      let el = cardEl.parentElement;
-      while (el) {
-        if (el.id && knownContainers.includes(el.id)) {
-          _sourceContainerId = el.id;
-          break;
-        }
-        // Also match dynamically generated subteam/subgrp containers
-        if (el.id && (el.id.startsWith('subteam_') || el.id.startsWith('subgrp_'))) {
-          _sourceContainerId = el.id;
-          break;
-        }
-        el = el.parentElement;
-      }
+  // Animate `el` with a quick fade+slide (in or out)
+  function _fade(el, show) {
+    if (!MotionPrefs.canAnimate()) return;
+    const [from, to] = show ? ['0', '1'] : ['1', '0'];
+    const y = show ? '10px' : '8px';
+    el.style.opacity = from;
+    el.style.transform = show ? `translateY(${y})` : '';
+    void el.offsetWidth;
+    el.style.transition = `opacity 0.2s ease, transform 0.2s ease`;
+    el.style.opacity = to;
+    el.style.transform = show ? 'translateY(0)' : `translateY(${y})`;
+    setTimeout(() => { el.style.transition = ''; el.style.opacity = ''; el.style.transform = ''; }, 220);
+  }
+
+  function _findContainer(cardEl) {
+    let el = cardEl?.parentElement;
+    while (el) {
+      if (el.id && (CONTAINERS.includes(el.id) || el.id.startsWith('subteam_') || el.id.startsWith('subgrp_'))) return el.id;
+      el = el.parentElement;
     }
+    return null;
+  }
+
+  // Find the card to blink on close — prefer stored ref, then container-scoped query, then global
+  function _findCard() {
+    if (_cardEl && document.body.contains(_cardEl)) return _cardEl;
+    if (_containerId) {
+      const c = document.querySelector(`#${_containerId} .profile-card[data-pid="${_pid}"]`);
+      if (c) return c;
+    }
+    return document.querySelector(`.profile-card[data-pid="${_pid}"]`);
+  }
+
+  function _restoreTabs() {
+    const active = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
+    ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t => {
+      const el = document.getElementById(t);
+      if (el && (typeof _isTabPinned !== 'function' || !_isTabPinned(t.replace('tab-','')))) el.style.display = 'none';
+    });
+    const tTab = document.getElementById('tab-' + active);
+    if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(active))) tTab.style.display = 'block';
+    document.getElementById('fabBtn').style.display = (active === 'unit' || active === 'personal') ? 'flex' : 'none';
+  }
+
+  function _reset() { currentProfileId = null; _pid = null; _cardEl = null; _containerId = null; }
+
+  function open(cardEl, profileId) {
+    _pid = profileId;
+    _cardEl = cardEl;
+    _containerId = _findContainer(cardEl);
     _saveScroll();
+    _blink(cardEl);
 
-    // Blink the card being opened
-    _blinkCard(cardEl);
-
-    // Show detail after blink starts
     setTimeout(() => {
       const dv = document.getElementById('detailView');
       dv.style.display = 'block';
-
-      if (MotionPrefs.canAnimate()) {
-        dv.style.opacity = '0';
-        dv.style.transform = 'translateY(10px)';
-        void dv.offsetWidth;
-        dv.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
-        dv.style.opacity = '1';
-        dv.style.transform = 'translateY(0)';
-        setTimeout(() => {
-          dv.style.transition = '';
-          dv.style.opacity = '';
-          dv.style.transform = '';
-        }, 230);
-      }
+      _fade(dv, true);
     }, 180);
 
     if (typeof haptic === 'function') haptic('medium');
@@ -204,93 +197,37 @@ const ProfileTransition = (() => {
 
   function close() {
     const dv = document.getElementById('detailView');
-    if (!dv || dv.style.display === 'none') {
-      _finishClose();
-      return;
-    }
+    if (!dv || dv.style.display === 'none') { _restoreTabs(); dv && (dv.style.display = 'none'); setTimeout(_restoreScroll, 60); _reset(); return; }
 
     if (!MotionPrefs.canAnimate()) {
       dv.style.display = 'none';
-      _finishClose();
-      _restoreScrollAsync();
+      _restoreTabs(); setTimeout(_restoreScroll, 60); _reset();
       return;
     }
 
-    // Fade out detail
-    dv.style.transition = 'opacity 0.18s ease, transform 0.18s ease';
-    dv.style.opacity = '0';
-    dv.style.transform = 'translateY(8px)';
+    _fade(dv, false);
 
     setTimeout(() => {
       dv.style.display = 'none';
-      dv.style.transition = '';
-      dv.style.opacity = '';
-      dv.style.transform = '';
-
-      // Restore tabs and scroll
       _restoreTabs();
-      _restoreScrollSync();
+      _restoreScroll();
 
-      // Find and blink the original card
-      if (_profileId) {
-        // Use rAF to ensure DOM is painted before blinking
+      if (_pid) {
         requestAnimationFrame(() => {
-          let card = _openedCardEl;
-          if (!card || !document.body.contains(card)) {
-            // Re-render happened, fallback to query within the exact source container if known
-            if (_sourceContainerId) {
-              card = document.querySelector(`#${_sourceContainerId} .profile-card[data-pid="${_profileId}"]`);
-            }
-            if (!card) {
-              card = document.querySelector(`.profile-card[data-pid="${_profileId}"]`);
-            }
-          }
-          _blinkCard(card);
-          // Scroll card into view if it's off-screen
+          const card = _findCard();
+          _blink(card);
           if (card) {
             const r = card.getBoundingClientRect();
-            const vh = window.innerHeight;
-            if (r.top < 0 || r.bottom > vh) {
-              card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            if (r.top < 0 || r.bottom > window.innerHeight) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-          _finishCloseState();
+          _reset();
         });
       } else {
-        _finishCloseState();
+        _reset();
       }
     }, 190);
 
     if (typeof haptic === 'function') haptic('light');
-  }
-
-  function _restoreTabs() {
-    const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset.tab || 'unit';
-    ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t => {
-      const elT = document.getElementById(t);
-      if (elT && (typeof _isTabPinned !== 'function' || !_isTabPinned(t.replace('tab-','')))) {
-        elT.style.display = 'none';
-      }
-    });
-    const tTab = document.getElementById('tab-' + activeTab);
-    if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(activeTab))) {
-      tTab.style.display = 'block';
-    }
-    document.getElementById('fabBtn').style.display = (activeTab === 'unit' || activeTab === 'personal') ? 'flex' : 'none';
-  }
-
-  function _finishCloseState() {
-    currentProfileId = null;
-    _profileId = null;
-    _openedCardEl = null;
-    _sourceContainerId = null;
-  }
-
-  function _finishClose() {
-    _restoreTabs();
-    document.getElementById('detailView').style.display = 'none';
-    _restoreScrollAsync();
-    _finishCloseState();
   }
 
   return { open, close };
@@ -299,53 +236,39 @@ const ProfileTransition = (() => {
 
 // ============ 4. SWIPE GESTURE HANDLER ============
 const SwipeHandler = (() => {
-  let _startX = 0, _startY = 0, _deltaX = 0, _deltaY = 0;
-  let _isSwiping = false, _isTracking = false, _ticking = false;
-  let _contentEl = null;
+  let _sx = 0, _sy = 0, _dx = 0, _dy = 0;
+  let _swiping = false, _tracking = false, _ticking = false;
+  let _el = null;
   const THRESHOLD = 50;
+  const SKIP = '.ac-list,.modal,.modal-overlay,.pin-keypad,.markmap,.ai-chat-msgs,.tab-bar,.form-tabs,.tl-container';
 
-  function init() {
-    _contentEl = document.getElementById('mainContent');
-    if (!_contentEl) return;
-    _contentEl.addEventListener('pointerdown', onDown, { passive: true });
-    _contentEl.addEventListener('pointermove', onMove, { passive: false });
-    _contentEl.addEventListener('pointerup', onUp, { passive: true });
-    _contentEl.addEventListener('pointercancel', onUp, { passive: true });
-  }
-
-  function _isInputEl(el) {
+  function _isInput(el) {
     if (!el) return false;
     const t = el.tagName;
-    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return true;
-    if (el.contentEditable === 'true') return true;
-    if (el.closest('.ac-list,.modal,.modal-overlay,.pin-keypad,.markmap,.ai-chat-msgs,.tab-bar,.form-tabs,.tl-container')) return true;
-    return false;
+    return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.contentEditable === 'true' || !!el.closest(SKIP);
   }
 
   function onDown(e) {
-    if (_isInputEl(e.target)) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    _startX = e.clientX; _startY = e.clientY;
-    _deltaX = 0; _deltaY = 0;
-    _isTracking = true; _isSwiping = false;
+    if (_isInput(e.target) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    _sx = e.clientX; _sy = e.clientY; _dx = 0; _dy = 0;
+    _tracking = true; _swiping = false;
   }
 
   function onMove(e) {
-    if (!_isTracking) return;
-    _deltaX = e.clientX - _startX;
-    _deltaY = e.clientY - _startY;
-    if (!_isSwiping) {
-      if (Math.abs(_deltaX) > 15 && Math.abs(_deltaX) > Math.abs(_deltaY) * 2) _isSwiping = true;
-      else if (Math.abs(_deltaY) > 15) { _isTracking = false; return; }
+    if (!_tracking) return;
+    _dx = e.clientX - _sx; _dy = e.clientY - _sy;
+    if (!_swiping) {
+      if (Math.abs(_dx) > 15 && Math.abs(_dx) > Math.abs(_dy) * 2) _swiping = true;
+      else if (Math.abs(_dy) > 15) { _tracking = false; return; }
       return;
     }
     e.preventDefault();
     if (!_ticking) {
       requestAnimationFrame(() => {
-        if (_isSwiping && _contentEl) {
-          const tx = _deltaX * 0.35;
-          _contentEl.style.transform = `translateX(${tx}px)`;
-          _contentEl.style.opacity = Math.max(0.6, 1 - Math.abs(tx) / 300);
+        if (_swiping && _el) {
+          const tx = _dx * 0.35;
+          _el.style.transform = `translateX(${tx}px)`;
+          _el.style.opacity = Math.max(0.6, 1 - Math.abs(tx) / 300);
         }
         _ticking = false;
       });
@@ -354,36 +277,42 @@ const SwipeHandler = (() => {
   }
 
   function onUp() {
-    if (!_isTracking) return;
-    _isTracking = false;
-    if (!_isSwiping) return;
-    _isSwiping = false;
-    _contentEl.style.transition = 'transform 0.25s cubic-bezier(0.2,0,0,1), opacity 0.25s ease';
-    _contentEl.style.transform = '';
-    _contentEl.style.opacity = '';
-    setTimeout(() => { _contentEl.style.transition = ''; }, 260);
-    if (Math.abs(_deltaX) < THRESHOLD) return;
-    const dir = _deltaX > 0 ? -1 : 1;
+    if (!_tracking) return;
+    _tracking = false;
+    if (!_swiping) return;
+    _swiping = false;
+    _el.style.transition = 'transform 0.25s cubic-bezier(0.2,0,0,1), opacity 0.25s ease';
+    _el.style.transform = ''; _el.style.opacity = '';
+    setTimeout(() => { _el.style.transition = ''; }, 260);
+    if (Math.abs(_dx) < THRESHOLD) return;
+    const dir = _dx > 0 ? -1 : 1;
     const dv = document.getElementById('detailView');
-    if (dv && dv.style.display === 'block') _swipeForm(dir);
-    else _swipeMain(dir);
+    (dv && dv.style.display === 'block') ? _swipeForm(dir) : _swipeMain(dir);
   }
 
   function _swipeMain(dir) {
     const tabs = [...document.querySelectorAll('#mainTabBar .tab')].filter(t => t.style.display !== 'none' && t.offsetParent !== null);
-    const active = document.querySelector('#mainTabBar .tab.active');
-    const i = tabs.indexOf(active), n = i + dir;
-    if (n < 0 || n >= tabs.length) return;
-    if (tabs[n].dataset.tab && typeof switchMainTab === 'function') switchMainTab(tabs[n], tabs[n].dataset.tab);
+    const i = tabs.indexOf(document.querySelector('#mainTabBar .tab.active'));
+    const n = i + dir;
+    if (n >= 0 && n < tabs.length && tabs[n].dataset.tab && typeof switchMainTab === 'function') switchMainTab(tabs[n], tabs[n].dataset.tab);
   }
 
   function _swipeForm(dir) {
     const tabs = [...document.querySelectorAll('#profileTabs .form-tab')].filter(t => t.style.display !== 'none' && t.offsetParent !== null);
-    const active = document.querySelector('#profileTabs .form-tab.active');
-    const i = tabs.indexOf(active), n = i + dir;
+    const i = tabs.indexOf(document.querySelector('#profileTabs .form-tab.active'));
+    const n = i + dir;
     if (n < 0 || n >= tabs.length) return;
     const m = (tabs[n].getAttribute('onclick') || '').match(/'([^']+)'/);
     if (m && typeof switchFormTab === 'function') switchFormTab(tabs[n], m[1]);
+  }
+
+  function init() {
+    _el = document.getElementById('mainContent');
+    if (!_el) return;
+    _el.addEventListener('pointerdown', onDown, { passive: true });
+    _el.addEventListener('pointermove', onMove, { passive: false });
+    _el.addEventListener('pointerup', onUp, { passive: true });
+    _el.addEventListener('pointercancel', onUp, { passive: true });
   }
 
   return { init };
@@ -393,32 +322,18 @@ const SwipeHandler = (() => {
 // ============ 5. COUNT-UP ANIMATION ============
 function countUp(el, target, duration = 500) {
   if (!el || !MotionPrefs.canAnimate()) { if (el) el.textContent = target; return; }
-  const start = performance.now(), startVal = parseInt(el.textContent) || 0, diff = target - startVal;
+  const t0 = performance.now(), v0 = parseInt(el.textContent) || 0, diff = target - v0;
   if (diff === 0) return;
-  function tick(now) {
-    const p = Math.min((now - start) / duration, 1);
-    el.textContent = Math.round(startVal + diff * (p === 1 ? 1 : 1 - Math.pow(2, -10 * p)));
+  const tick = now => {
+    const p = Math.min((now - t0) / duration, 1);
+    el.textContent = Math.round(v0 + diff * (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p)));
     if (p < 1) requestAnimationFrame(tick);
-  }
+  };
   requestAnimationFrame(tick);
 }
 
-// ============ 6. CROSSFADE CONTENT ============
-function crossfadeContent(container) {
-  if (!container || !MotionPrefs.canAnimate()) return;
-  for (let i = 0; i < container.children.length; i++) {
-    const c = container.children[i];
-    c.style.opacity = '0'; c.style.transform = 'translateY(8px)';
-    c.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    c.style.transitionDelay = (i * 0.04) + 's';
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      c.style.opacity = '1'; c.style.transform = 'translateY(0)';
-      setTimeout(() => { c.style.transition = ''; c.style.transitionDelay = ''; c.style.transform = ''; }, 350 + i * 40);
-    }));
-  }
-}
 
-// ============ 7. DIRECTIONAL NAV SLIDE ============
+// ============ 6. DIRECTIONAL NAV SLIDE ============
 function navSlide(el, dir) {
   if (!el || !MotionPrefs.canAnimate()) return;
   el.style.transition = 'none';
@@ -432,22 +347,23 @@ function navSlide(el, dir) {
 }
 
 const _tabOrder = {};
+let _lastMainIdx = 0, _lastFormIdx = 0;
+
 function getTabIndex(name) {
   document.querySelectorAll('#mainTabBar .tab').forEach((t, i) => { _tabOrder[t.dataset.tab] = i; });
   return _tabOrder[name] ?? -1;
 }
-let _lastMainIdx = 0;
 function navDirectionForMainTab(name) {
   const i = getTabIndex(name), d = i >= _lastMainIdx ? 1 : -1;
   _lastMainIdx = i; return d;
 }
-let _lastFormIdx = 0;
 function navDirectionForFormTab(id) {
   const tabs = [...document.querySelectorAll('#profileTabs .form-tab')].filter(t => t.style.display !== 'none');
   const i = tabs.findIndex(t => (t.getAttribute('onclick') || '').includes(id));
   const d = i >= _lastFormIdx ? 1 : -1;
   _lastFormIdx = i >= 0 ? i : _lastFormIdx; return d;
 }
+
 
 // ============ INIT ============
 function initTransitions() {
