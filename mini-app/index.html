@@ -752,6 +752,19 @@
   </div>
   <div class="field-group"><label>🔗 Gắn hồ sơ (tuỳ chọn)</label><input type="text" id="pnote_link_profile" placeholder="Tìm tên trái quả..." data-profile-id="" /></div>
   <div class="field-group"><label>📅 Gắn vào lịch (tuỳ chọn)</label><input type="date" id="pnote_cal_date" /></div>
+  <div class="field-group" style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 12px;">
+    <label>🔔 Nhắc nhở (tuỳ chọn)</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <input type="date" id="pnote_alarm_date" />
+      <input type="time" id="pnote_alarm_time" />
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
+      <button type="button" class="chip" onclick="setNoteAlarmPreset(30)" style="font-size:10px;padding:3px 8px;">30p</button>
+      <button type="button" class="chip" onclick="setNoteAlarmPreset(60)" style="font-size:10px;padding:3px 8px;">1h</button>
+      <button type="button" class="chip" onclick="setNoteAlarmPreset(1440)" style="font-size:10px;padding:3px 8px;">1 ngày</button>
+      <button type="button" class="chip" onclick="clearNoteAlarm()" style="font-size:10px;padding:3px 8px;color:var(--red);">Xoá alarm</button>
+    </div>
+  </div>
   <button class="save-btn" onclick="savePersonalNote()">💾 Lưu ghi chú</button>
   <button id="pnoteDeleteBtn" onclick="deletePersonalNote(_editingNoteId)" style="display:none;width:100%;padding:12px;background:none;border:1px solid rgba(248,113,113,0.5);color:var(--red);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;">🗑️ Xoá ghi chú</button>
   <button onclick="closeModal('createNoteModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>

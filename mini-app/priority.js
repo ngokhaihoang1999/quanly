@@ -372,33 +372,71 @@ async function checkDueReminders() {
   try {
     const now = new Date().toISOString();
     const fiveAgo = new Date(Date.now() - 5 * 60000).toISOString();
-    // Find events with reminder_at in the past 5 minutes that haven't been sent
+
+    // 1. Check calendar event alarms
     const res = await sbFetch(
       `/rest/v1/calendar_events?staff_code=eq.${myCode}&reminder_at=lte.${encodeURIComponent(now)}&reminder_at=gte.${encodeURIComponent(fiveAgo)}&reminder_sent=eq.false&select=id,title,event_date,event_time,profile_id&limit=10`
     );
-    if (!res.ok) return;
-    const events = await res.json();
-    if (!events || events.length === 0) return;
+    if (res.ok) {
+      const events = await res.json();
+      for (const ev of (events || [])) {
+        const timeStr = ev.event_time ? ev.event_time.substring(0, 5) : '';
 
-    for (const ev of events) {
-      // Show in-app toast
-      const timeStr = ev.event_time ? ev.event_time.substring(0, 5) : '';
-      showToast(`⏰ Nhắc: ${ev.title}${timeStr ? ' lúc ' + timeStr : ''}`, 6000);
+        // Show dramatic alarm overlay (in-app)
+        if (typeof showAlarmOverlay === 'function') {
+          showAlarmOverlay(ev.title, ev.event_date, timeStr, 'event');
+        } else {
+          showToast(`⏰ Nhắc: ${ev.title}${timeStr ? ' lúc ' + timeStr : ''}`, 6000);
+        }
 
-      // Create in-app notification
-      if (typeof createNotification === 'function') {
-        createNotification(
-          [myCode], 'reminder',
-          `⏰ ${ev.title}`,
-          timeStr ? `Lúc ${timeStr} ngày ${ev.event_date}` : `Ngày ${ev.event_date}`,
-          ev.profile_id || null
-        );
+        // Create in-app notification
+        if (typeof createNotification === 'function') {
+          createNotification(
+            [myCode], 'reminder',
+            `⏰ ${ev.title}`,
+            timeStr ? `Lúc ${timeStr} ngày ${ev.event_date}` : `Ngày ${ev.event_date}`,
+            ev.profile_id || null
+          );
+        }
+
+        // Mark as sent to avoid re-triggering
+        await sbFetch(`/rest/v1/calendar_events?id=eq.${ev.id}`, {
+          method: 'PATCH', body: JSON.stringify({ reminder_sent: true })
+        });
       }
+    }
 
-      // Mark as sent to avoid re-triggering
-      await sbFetch(`/rest/v1/calendar_events?id=eq.${ev.id}`, {
-        method: 'PATCH', body: JSON.stringify({ reminder_sent: true })
-      });
+    // 2. Check personal_notes alarms
+    const noteRes = await sbFetch(
+      `/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(myCode)}&reminder_at=lte.${encodeURIComponent(now)}&reminder_at=gte.${encodeURIComponent(fiveAgo)}&reminder_sent=eq.false&select=id,title,content,cal_date&limit=10`
+    );
+    if (noteRes.ok) {
+      const notes = await noteRes.json();
+      for (const note of (notes || [])) {
+        const noteTitle = note.title || (note.content || '').substring(0, 40);
+
+        // Show dramatic alarm overlay
+        if (typeof showAlarmOverlay === 'function') {
+          showAlarmOverlay(noteTitle, note.cal_date || '', '', 'note');
+        } else {
+          showToast(`📝 Nhắc ghi chú: ${noteTitle}`, 6000);
+        }
+
+        // Create in-app notification
+        if (typeof createNotification === 'function') {
+          createNotification(
+            [myCode], 'reminder',
+            `📝 ${noteTitle}`,
+            note.cal_date ? `Ngày ${note.cal_date}` : 'Ghi chú cá nhân',
+            null
+          );
+        }
+
+        // Mark as sent
+        await sbFetch(`/rest/v1/personal_notes?id=eq.${note.id}`, {
+          method: 'PATCH', body: JSON.stringify({ reminder_sent: true })
+        });
+      }
     }
   } catch (e) { console.warn('checkDueReminders:', e); }
 }

@@ -131,6 +131,16 @@ function renderNoteCard(note) {
     calBadge = `<span style="font-size:10px;background:rgba(249,115,22,0.15);padding:1px 6px;border-radius:8px;color:#ea580c;">📅 ${note.cal_date.split('-').reverse().join('/')}</span>`;
   }
 
+  let alarmBadge = '';
+  if (note.reminder_at && !note.reminder_sent) {
+    const rAt = new Date(note.reminder_at);
+    const rTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
+    const rDate = `${String(rAt.getDate()).padStart(2,'0')}/${String(rAt.getMonth()+1).padStart(2,'0')}`;
+    alarmBadge = `<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.12);padding:1px 6px;border-radius:8px;">🔔 ${rDate} ${rTime}</span>`;
+  } else if (note.reminder_sent) {
+    alarmBadge = `<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 6px;border-radius:8px;">✅ Đã nhắc</span>`;
+  }
+
   let sharedBadge = '';
   if (isShared) {
     const sharer = allStaff.find(s => s.staff_code === note._sharedBy);
@@ -158,7 +168,7 @@ function renderNoteCard(note) {
       <div class="pnote-full" style="display:none;">${escHtml(note.content)}</div>
     </div>
     <div class="pnote-footer">
-      <div class="pnote-badges">${linkedBadge}${calBadge}${sharedBadge}${shareCount}</div>
+      <div class="pnote-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}${shareCount}</div>
       ${canEdit ? `
       <div class="pnote-actions">
         <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share" style="color:${c.dateTxt};">📤</button>
@@ -217,6 +227,15 @@ function renderBoardNoteCard(note, idx) {
     calBadge = `<span class="board-badge" style="color:#ea580c;background:rgba(249,115,22,0.15);">📅 ${note.cal_date.split('-').reverse().join('/')}</span>`;
   }
 
+  // Alarm badge
+  let alarmBadge = '';
+  if (note.reminder_at && !note.reminder_sent) {
+    const rAt = new Date(note.reminder_at);
+    const rTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
+    const rDate = `${String(rAt.getDate()).padStart(2,'0')}/${String(rAt.getMonth()+1).padStart(2,'0')}`;
+    alarmBadge = `<span class="board-badge" style="color:#fbbf24;background:rgba(251,191,36,0.12);">🔔 ${rDate} ${rTime}</span>`;
+  }
+
   const actionBtns = canEdit ? `
     <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa">✏️</button>
     <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share">📤</button>
@@ -232,7 +251,7 @@ function renderBoardNoteCard(note, idx) {
       <div class="board-note-content">${escHtml(note.content)}</div>
     </div>
     <div class="board-note-footer">
-      <div class="board-note-badges">${linkedBadge}${calBadge}${sharedBadge}</div>
+      <div class="board-note-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}</div>
       <div class="board-note-actions" style="color:${c.dateTxt};">${actionBtns}</div>
     </div>
     <div class="board-note-resize"></div>
@@ -441,6 +460,11 @@ function openCreateNoteModal() {
   document.getElementById('pnote_content').value = '';
   document.getElementById('pnote_link_profile').value = '';
   document.getElementById('pnote_cal_date').value = '';
+  // Clear alarm fields
+  const alarmDate = document.getElementById('pnote_alarm_date');
+  const alarmTime = document.getElementById('pnote_alarm_time');
+  if (alarmDate) alarmDate.value = '';
+  if (alarmTime) alarmTime.value = '';
   // Reset color selection
   document.querySelectorAll('#pnoteColorPicker .pnote-color-opt').forEach(c => c.classList.remove('selected'));
   const defaultColor = document.querySelector('#pnoteColorPicker .pnote-color-opt[data-color="yellow"]');
@@ -477,6 +501,18 @@ function openEditNoteModal(noteId) {
   const calDateInput = document.getElementById('pnote_cal_date');
   if (calDateInput) calDateInput.value = note.cal_date || '';
 
+  // Set alarm fields
+  const alarmDate = document.getElementById('pnote_alarm_date');
+  const alarmTime = document.getElementById('pnote_alarm_time');
+  if (note.reminder_at) {
+    const rAt = new Date(note.reminder_at);
+    if (alarmDate) alarmDate.value = `${rAt.getFullYear()}-${String(rAt.getMonth()+1).padStart(2,'0')}-${String(rAt.getDate()).padStart(2,'0')}`;
+    if (alarmTime) alarmTime.value = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
+  } else {
+    if (alarmDate) alarmDate.value = '';
+    if (alarmTime) alarmTime.value = '';
+  }
+
   document.getElementById('pnoteDeleteBtn').style.display = 'block';
   document.getElementById('createNoteModal').classList.add('open');
 }
@@ -506,12 +542,28 @@ async function savePersonalNote() {
 
   const calDate = document.getElementById('pnote_cal_date')?.value || null;
 
+  // Alarm fields
+  const alarmD = document.getElementById('pnote_alarm_date')?.value;
+  const alarmT = document.getElementById('pnote_alarm_time')?.value;
+  let reminderAt = null;
+  let reminderSent = undefined; // don't change unless we set a new reminder
+  if (alarmD && alarmT) {
+    reminderAt = new Date(`${alarmD}T${alarmT}:00`).toISOString();
+    reminderSent = false; // reset sent flag for new/changed alarm
+  } else if (!alarmD && !alarmT) {
+    // User cleared alarm — null it out
+    reminderAt = null;
+    reminderSent = false;
+  }
+
   const body = {
     title: title || null,
     content,
     color,
     linked_profile_id: linkedProfileId,
     cal_date: calDate || null,
+    reminder_at: reminderAt,
+    reminder_sent: reminderSent !== undefined ? reminderSent : false,
     updated_at: new Date().toISOString()
   };
 
@@ -730,4 +782,20 @@ function initNotesTab() {
   setupNotesProfileAutocomplete();
   if (!isFresh('notes')) loadPersonalNotes();
   startNotesPoll();
+}
+
+// ── Note Alarm Helpers ──
+function setNoteAlarmPreset(minutes) {
+  const r = new Date(Date.now() + minutes * 60000);
+  const dEl = document.getElementById('pnote_alarm_date');
+  const tEl = document.getElementById('pnote_alarm_time');
+  if (dEl) dEl.value = `${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,'0')}-${String(r.getDate()).padStart(2,'0')}`;
+  if (tEl) tEl.value = `${String(r.getHours()).padStart(2,'0')}:${String(r.getMinutes()).padStart(2,'0')}`;
+}
+
+function clearNoteAlarm() {
+  const dEl = document.getElementById('pnote_alarm_date');
+  const tEl = document.getElementById('pnote_alarm_time');
+  if (dEl) dEl.value = '';
+  if (tEl) tEl.value = '';
 }

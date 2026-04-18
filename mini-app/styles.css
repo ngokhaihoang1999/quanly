@@ -1805,6 +1805,107 @@
   touch-action: pan-y;
 }
 
+/* ═══════════════ ALARM OVERLAY ═══════════════ */
+.alarm-overlay {
+  position: fixed; inset: 0; z-index: 99998;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  animation: alarmFadeIn 0.3s ease;
+}
+@keyframes alarmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes alarmFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+.alarm-card {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+  border: 2px solid rgba(167,139,250,0.5);
+  border-radius: 24px; padding: 32px 28px; text-align: center;
+  max-width: 340px; width: 90%;
+  box-shadow: 0 16px 64px rgba(99,102,241,0.5), 0 0 80px rgba(139,92,246,0.25);
+  animation: alarmBounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes alarmBounceIn {
+  0% { opacity: 0; transform: scale(0.5) translateY(40px); }
+  60% { transform: scale(1.05) translateY(-5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.alarm-bell {
+  font-size: 64px; line-height: 1;
+  animation: alarmRing 0.5s ease-in-out infinite alternate;
+  display: inline-block; margin-bottom: 12px;
+  filter: drop-shadow(0 0 16px rgba(251,191,36,0.6));
+}
+@keyframes alarmRing {
+  0% { transform: rotate(-12deg) scale(1); }
+  50% { transform: rotate(12deg) scale(1.1); }
+  100% { transform: rotate(-12deg) scale(1); }
+}
+
+.alarm-pulse-ring {
+  position: absolute; width: 120px; height: 120px; border-radius: 50%;
+  border: 3px solid rgba(251,191,36,0.4);
+  animation: alarmPulseRing 1.5s ease-out infinite;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+@keyframes alarmPulseRing {
+  0% { width: 80px; height: 80px; opacity: 1; }
+  100% { width: 200px; height: 200px; opacity: 0; }
+}
+
+.alarm-title {
+  font-size: 20px; font-weight: 800; color: #fff; margin: 8px 0 6px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.alarm-subtitle {
+  font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 8px;
+  font-weight: 500;
+}
+.alarm-time-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 20px;
+  background: rgba(251,191,36,0.2); border: 1px solid rgba(251,191,36,0.4);
+  color: #fbbf24; font-size: 13px; font-weight: 700; margin-bottom: 16px;
+}
+.alarm-dismiss {
+  padding: 12px 32px; border-radius: 30px; border: none;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1e1b4b;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(251,191,36,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.alarm-dismiss:active { transform: scale(0.95); }
+.alarm-countdown {
+  font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 12px;
+}
+
+/* Alarm icon on event cards */
+.cal-event-alarm-btn {
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text2);
+  transition: all 0.2s; flex-shrink: 0;
+}
+.cal-event-alarm-btn:hover { border-color: #fbbf24; color: #fbbf24; }
+.cal-event-alarm-btn.has-alarm { color: #fbbf24; border-color: #fbbf24; background: rgba(251,191,36,0.1); }
+
+/* Edit event button */
+.cal-event-edit-btn {
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text2);
+  transition: all 0.2s; flex-shrink: 0;
+}
+.cal-event-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Screen shake for alarm emphasis */
+.alarm-shake { animation: alarmScreenShake 0.3s ease-in-out 2; }
+@keyframes alarmScreenShake {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate(3px, -2px); }
+  60% { transform: translate(-2px, 1px); }
+  80% { transform: translate(2px, -1px); }
+}
+
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -289,6 +289,7 @@ function renderCalendarDayEvents(date) {
   
   const dayEvents = calEvents.filter(e => e.event_date === dateStr);
   const dayNotes = _calLinkedNotes.filter(n => n.cal_date === dateStr);
+  const myCode = getEffectiveStaffCode();
   
   let html = '';
 
@@ -314,9 +315,43 @@ function renderCalendarDayEvents(date) {
       } else if (profile) {
           metaHtml += `<span>\ud83d\udc64 ${profile.full_name}</span>`;
       }
+
+      // Alarm badge
+      const hasAlarm = !!ev.reminder_at && !ev.reminder_sent;
+      const alarmSent = !!ev.reminder_sent;
+      let alarmBadge = '';
+      if (hasAlarm) {
+        const rAt = new Date(ev.reminder_at);
+        const rTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
+        const rDate = `${String(rAt.getDate()).padStart(2,'0')}/${String(rAt.getMonth()+1).padStart(2,'0')}`;
+        alarmBadge = `<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.12);padding:1px 6px;border-radius:8px;">🔔 ${rDate} ${rTime}</span>`;
+      } else if (alarmSent) {
+        alarmBadge = `<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 6px;border-radius:8px;">✅ Đã nhắc</span>`;
+      }
+      if (alarmBadge) metaHtml += alarmBadge;
       
       // Don't allow deleting virtual semester events
       const canDelete = !ev.is_auto && !ev._virtual;
+      const isCreator = ev.created_by === myCode;
+      const canEdit = isCreator && !ev._virtual && !ev.is_auto;
+      const isRealEvent = !ev._virtual && ev.id && !String(ev.id).startsWith('v');
+
+      // Action buttons row
+      let actionBtns = '';
+      if (isRealEvent) {
+        // Alarm button — only if no alarm yet
+        if (!ev.reminder_at) {
+          actionBtns += `<button onclick="event.stopPropagation();openSetAlarmModal('${ev.id}','${ev.event_date}','${ev.event_time || ''}','${(ev.title||'').replace(/'/g,"\\'")}')" class="cal-event-alarm-btn" title="Đặt nhắc">🔔</button>`;
+        } else {
+          actionBtns += `<button onclick="event.stopPropagation();showToast('⚠️ Sự kiện này đã có alarm')" class="cal-event-alarm-btn has-alarm" title="Đã có alarm">🔔</button>`;
+        }
+      }
+      if (canEdit) {
+        actionBtns += `<button onclick="event.stopPropagation();openEditEventModal('${ev.id}')" class="cal-event-edit-btn" title="Sửa">✏️</button>`;
+      }
+      if (canDelete) {
+        actionBtns += `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">🗑</button>`;
+      }
       
       return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
         <div class="cal-event-bar" style="background:${color}"></div>
@@ -327,7 +362,7 @@ function renderCalendarDayEvents(date) {
           </div>
           ${ev.description ? `<div class="cal-event-desc" style="margin-top:8px;font-size:13px;color:var(--text2);">${ev.description}</div>` : ''}
         </div>
-        ${canDelete ? `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">🗑</button>` : ''}
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">${actionBtns}</div>
       </div>`;
     }).join('');
   }
@@ -354,6 +389,216 @@ function renderCalendarDayEvents(date) {
 
   listEl.innerHTML = html;
 }
+
+// ============ SET ALARM MODAL ============
+function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle) {
+  const evDt = eventTime ? new Date(`${eventDate}T${eventTime}:00`) : new Date(`${eventDate}T23:59:59`);
+  // Default: 30 min before event
+  const defaultRemind = new Date(evDt.getTime() - 30 * 60000);
+  const defaultDate = `${defaultRemind.getFullYear()}-${String(defaultRemind.getMonth()+1).padStart(2,'0')}-${String(defaultRemind.getDate()).padStart(2,'0')}`;
+  const defaultTime = `${String(defaultRemind.getHours()).padStart(2,'0')}:${String(defaultRemind.getMinutes()).padStart(2,'0')}`;
+
+  document.getElementById('recordModalTitle').textContent = `🔔 Đặt Alarm — ${eventTitle}`;
+  document.getElementById('recordModalBody').innerHTML = `
+    <div style="text-align:center;font-size:32px;margin-bottom:8px;">🔔</div>
+    <div style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:12px;">
+      Sự kiện: <b>${eventTitle}</b><br>
+      ${eventTime ? `Lúc ${eventTime.substring(0,5)} ngày ${eventDate}` : `Ngày ${eventDate}`}
+    </div>
+    <div class="grid-2">
+      <div class="field-group"><label>📅 Ngày nhắc</label><input type="date" id="alarm_date" value="${defaultDate}" /></div>
+      <div class="field-group"><label>⏰ Giờ nhắc</label><input type="time" id="alarm_time" value="${defaultTime}" /></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+      <button class="chip" onclick="setAlarmPreset(15,'${eventDate}','${eventTime}')">15p trước</button>
+      <button class="chip" onclick="setAlarmPreset(30,'${eventDate}','${eventTime}')">30p trước</button>
+      <button class="chip" onclick="setAlarmPreset(60,'${eventDate}','${eventTime}')">1h trước</button>
+      <button class="chip" onclick="setAlarmPreset(1440,'${eventDate}','${eventTime}')">1 ngày trước</button>
+    </div>
+    <div id="alarm_warn" style="font-size:11px;color:var(--red);margin-top:6px;display:none;">⚠️ Phải trước thời điểm sự kiện</div>
+    <input type="hidden" id="alarm_event_id" value="${eventId}" />
+    <input type="hidden" id="alarm_event_date" value="${eventDate}" />
+    <input type="hidden" id="alarm_event_time" value="${eventTime}" />
+  `;
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) { saveBtn.textContent = '🔔 Đặt Alarm'; saveBtn.onclick = saveEventAlarm; saveBtn.style.display = ''; }
+  document.getElementById('addRecordModal').classList.add('open');
+}
+
+function setAlarmPreset(minutes, eventDate, eventTime) {
+  const evDt = eventTime ? new Date(`${eventDate}T${eventTime}:00`) : new Date(`${eventDate}T23:59:59`);
+  const r = new Date(evDt.getTime() - minutes * 60000);
+  document.getElementById('alarm_date').value = `${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,'0')}-${String(r.getDate()).padStart(2,'0')}`;
+  document.getElementById('alarm_time').value = `${String(r.getHours()).padStart(2,'0')}:${String(r.getMinutes()).padStart(2,'0')}`;
+}
+
+async function saveEventAlarm() {
+  const eventId = document.getElementById('alarm_event_id')?.value;
+  const ad = document.getElementById('alarm_date')?.value;
+  const at = document.getElementById('alarm_time')?.value;
+  const evDate = document.getElementById('alarm_event_date')?.value;
+  const evTime = document.getElementById('alarm_event_time')?.value;
+
+  if (!ad || !at) { showToast('⚠️ Chọn ngày và giờ nhắc'); return; }
+
+  const reminderAt = new Date(`${ad}T${at}:00`);
+  const eventDt = evTime ? new Date(`${evDate}T${evTime}:00`) : new Date(`${evDate}T23:59:59`);
+  
+  if (reminderAt >= eventDt) {
+    document.getElementById('alarm_warn').style.display = '';
+    showToast('⚠️ Giờ nhắc phải trước sự kiện');
+    return;
+  }
+
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⌛...'; }
+
+  try {
+    await sbFetch(`/rest/v1/calendar_events?id=eq.${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ reminder_at: reminderAt.toISOString(), reminder_sent: false })
+    });
+    closeModal('addRecordModal');
+    showToast('🔔 Đã đặt alarm!');
+    if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; saveBtn.disabled = false; }
+    loadCalendar();
+  } catch(e) {
+    showToast('❌ Lỗi đặt alarm');
+    console.error(e);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '🔔 Đặt Alarm'; }
+  }
+}
+
+// ============ EDIT EVENT ============
+function openEditEventModal(eventId) {
+  const ev = calEvents.find(e => e.id === eventId);
+  if (!ev) { showToast('Không tìm thấy sự kiện'); return; }
+
+  document.getElementById('recordModalTitle').textContent = '✏️ Sửa sự kiện';
+  document.getElementById('recordModalBody').innerHTML = `
+    <div class="field-group"><label>Tiêu đề *</label><input type="text" id="edit_ev_title" value="${(ev.title||'').replace(/"/g,'&quot;')}" /></div>
+    <div class="grid-2">
+      <div class="field-group"><label>Ngày *</label><input type="date" id="edit_ev_date" value="${ev.event_date}" /></div>
+      <div class="field-group"><label>Giờ</label><input type="time" id="edit_ev_time" value="${ev.event_time ? ev.event_time.substring(0,5) : ''}" /></div>
+    </div>
+    <div class="field-group"><label>Mô tả</label><textarea id="edit_ev_desc" placeholder="Chi tiết..." style="min-height:60px;">${ev.description || ''}</textarea></div>
+    <input type="hidden" id="edit_ev_id" value="${eventId}" />
+    <input type="hidden" id="edit_ev_is_system" value="${ev.is_system ? '1' : '0'}" />
+    <input type="hidden" id="edit_ev_created_by" value="${ev.created_by || ''}" />
+    <input type="hidden" id="edit_ev_old_title" value="${(ev.title||'').replace(/"/g,'&quot;')}" />
+    <input type="hidden" id="edit_ev_old_date" value="${ev.event_date}" />
+    ${ev.is_system ? '<div style="font-size:11px;color:var(--accent);margin-top:4px;">📢 Sự kiện phân phối — chỉnh sửa sẽ cập nhật cho tất cả người nhận</div>' : ''}
+  `;
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) { saveBtn.textContent = '💾 Lưu chỉnh sửa'; saveBtn.onclick = saveEditedEvent; saveBtn.style.display = ''; }
+  document.getElementById('addRecordModal').classList.add('open');
+}
+
+async function saveEditedEvent() {
+  const eventId = document.getElementById('edit_ev_id')?.value;
+  const title = document.getElementById('edit_ev_title')?.value?.trim();
+  const date = document.getElementById('edit_ev_date')?.value;
+  const time = document.getElementById('edit_ev_time')?.value || null;
+  const desc = document.getElementById('edit_ev_desc')?.value?.trim() || null;
+  const isSystem = document.getElementById('edit_ev_is_system')?.value === '1';
+  const createdBy = document.getElementById('edit_ev_created_by')?.value;
+  const oldTitle = document.getElementById('edit_ev_old_title')?.value;
+  const oldDate = document.getElementById('edit_ev_old_date')?.value;
+
+  if (!title || !date) { showToast('⚠️ Nhập tiêu đề và ngày'); return; }
+
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⌛ Đang lưu...'; }
+
+  try {
+    const patch = { title, event_date: date, event_time: time, description: desc };
+
+    if (isSystem && createdBy) {
+      // Distributed event — update ALL copies with same created_by + old title + old date
+      await sbFetch(`/rest/v1/calendar_events?created_by=eq.${encodeURIComponent(createdBy)}&title=eq.${encodeURIComponent(oldTitle)}&event_date=eq.${oldDate}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+      showToast('✅ Đã cập nhật cho tất cả người nhận');
+    } else {
+      // Single event
+      await sbFetch(`/rest/v1/calendar_events?id=eq.${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+      showToast('✅ Đã cập nhật sự kiện');
+    }
+
+    closeModal('addRecordModal');
+    if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; saveBtn.disabled = false; }
+    loadCalendar();
+  } catch(e) {
+    showToast('❌ Lỗi cập nhật');
+    console.error(e);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Lưu chỉnh sửa'; }
+  }
+}
+
+// ============ ALARM OVERLAY (dramatic in-app) ============
+function showAlarmOverlay(title, dateStr, timeStr, source = 'event') {
+  // Prevent duplicate overlays
+  if (document.getElementById('alarmOverlay')) return;
+
+  // Screen shake
+  document.body.classList.add('alarm-shake');
+  setTimeout(() => document.body.classList.remove('alarm-shake'), 600);
+
+  // Haptic
+  haptic('heavy');
+  setTimeout(() => haptic('heavy'), 300);
+  setTimeout(() => haptic('heavy'), 600);
+
+  const icon = source === 'note' ? '📝' : '📅';
+  const sourceLabel = source === 'note' ? 'Ghi chú' : 'Sự kiện';
+  const displayTime = timeStr ? `${timeStr}` : '';
+  const displayDate = dateStr || '';
+
+  let countdown = 15;
+  const overlay = document.createElement('div');
+  overlay.id = 'alarmOverlay';
+  overlay.className = 'alarm-overlay';
+  overlay.innerHTML = `
+    <div class="alarm-card" style="position:relative;">
+      <div class="alarm-pulse-ring"></div>
+      <div class="alarm-bell">🔔</div>
+      <div class="alarm-title">${icon} ${title}</div>
+      <div class="alarm-subtitle">${sourceLabel}</div>
+      ${displayTime || displayDate ? `<div class="alarm-time-badge">⏰ ${displayTime}${displayTime && displayDate ? ' · ' : ''}${displayDate}</div>` : ''}
+      <button class="alarm-dismiss" onclick="dismissAlarm()">✓ Đã biết</button>
+      <div class="alarm-countdown" id="alarmCountdown">Tự đóng sau ${countdown}s</div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Auto dismiss countdown
+  const timer = setInterval(() => {
+    countdown--;
+    const el = document.getElementById('alarmCountdown');
+    if (el) el.textContent = `Tự đóng sau ${countdown}s`;
+    if (countdown <= 0) {
+      clearInterval(timer);
+      dismissAlarm();
+    }
+  }, 1000);
+  overlay._timer = timer;
+}
+
+function dismissAlarm() {
+  const overlay = document.getElementById('alarmOverlay');
+  if (!overlay) return;
+  if (overlay._timer) clearInterval(overlay._timer);
+  overlay.style.animation = 'alarmFadeOut 0.3s ease forwards';
+  setTimeout(() => overlay.remove(), 300);
+  haptic('success');
+}
+
 
 // ── Unlink note from calendar (still used from day view) ──
 async function unlinkNoteFromCal(noteId, dateStr) {
