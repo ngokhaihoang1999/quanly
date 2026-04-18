@@ -378,11 +378,26 @@ function renderCalendarDayEvents(date) {
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">📝 Ghi chú gắn ngày này (${dayNotes.length})</div>`;
     html += dayNotes.map(n => {
-      const noteColor = n.color || '#fef08a';
-      return `<div onclick="openNoteFromCal('${n.id}')" style="padding:8px 12px;margin-bottom:6px;background:${noteColor};border-radius:8px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);transition:transform 0.15s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform=''">
-        <div style="font-size:13px;font-weight:600;color:#333;">${n.title || 'Không tiêu đề'}</div>
-        <div style="display:flex;justify-content:flex-end;margin-top:4px;">
-          <button onclick="event.stopPropagation();unlinkNoteFromCal('${n.id}','${dateStr}')" style="font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#666;cursor:pointer;" title="Bỏ gắn">✕ Bỏ gắn</button>
+      const nc = (typeof NOTE_COLORS !== 'undefined' && NOTE_COLORS[n.color]) || { bg: '#fef9c3', text: '#92400e', dateTxt: '#b45309' };
+      // Alarm badge
+      let noteAlarmBadge = '';
+      if (n.reminder_at && !n.reminder_sent) {
+        const rAt = new Date(n.reminder_at);
+        const rTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
+        const rDate = `${String(rAt.getDate()).padStart(2,'0')}/${String(rAt.getMonth()+1).padStart(2,'0')}`;
+        noteAlarmBadge = `<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.12);padding:1px 6px;border-radius:8px;">🔔 ${rDate} ${rTime}</span>`;
+      } else if (n.reminder_sent) {
+        noteAlarmBadge = `<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 6px;border-radius:8px;">✅ Đã nhắc</span>`;
+      }
+      // Content preview
+      const preview = n.content ? (n.content.length > 60 ? n.content.substring(0, 60) + '...' : n.content) : '';
+      
+      return `<div onclick="openNoteFromCal('${n.id}')" style="padding:8px 12px;margin-bottom:6px;background:${nc.bg};border-radius:8px;cursor:pointer;border:1px solid rgba(0,0,0,0.08);transition:transform 0.15s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:13px;font-weight:600;color:${nc.text};">${n.title || 'Không tiêu đề'}</div>
+        ${preview ? `<div style="font-size:11px;color:${nc.text};opacity:0.7;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${typeof escHtml === 'function' ? escHtml(preview) : preview}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:6px;">
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">${noteAlarmBadge}</div>
+          <button onclick="event.stopPropagation();unlinkNoteFromCal('${n.id}','${dateStr}')" style="font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#666;cursor:pointer;flex-shrink:0;" title="Bỏ gắn">✕ Bỏ gắn</button>
         </div>
       </div>`;
     }).join('');
