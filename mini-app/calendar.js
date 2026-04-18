@@ -88,6 +88,7 @@ async function loadCalendar() {
     }
   }
   renderCalendarDayEvents(calSelectedDate);
+  if (typeof markFresh === 'function') markFresh('calendar');
 }
 
 // Fetch TV & BB records and merge as virtual calendar events
@@ -548,10 +549,20 @@ async function saveCalEvent() {
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⌛ Đang tạo...'; }
 
   try {
+    // Convert preset reminder_minutes to an absolute reminder_at timestamp
+    // so the client-side polling can fire them (no server cron exists)
+    if (!reminderAt && reminderMinutes.length > 0 && date) {
+      const eventDt = time ? new Date(`${date}T${time}:00`) : new Date(`${date}T08:00:00`);
+      // Use the largest preset (e.g. 60 min) as the single reminder_at
+      const maxMins = Math.max(...reminderMinutes);
+      const r = new Date(eventDt.getTime() - maxMins * 60000);
+      if (r > new Date()) reminderAt = r.toISOString();
+    }
+
     // Build event rows for each target
     const rows = targetCodes.map(code => ({
       staff_code: code,
-      created_by: myCode, // track who created
+      created_by: myCode,
       event_type: 'custom',
       title, description: desc,
       event_date: date, event_time: time,
@@ -559,7 +570,7 @@ async function saveCalEvent() {
       reminder_at: reminderAt,
       reminder_channels: ['app','chat'],
       is_auto: false,
-      is_system: isDistributed // system=true so scope-based visibility applies
+      is_system: isDistributed
     }));
 
     // Insert in batches of 50

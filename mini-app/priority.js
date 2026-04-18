@@ -210,6 +210,7 @@ async function loadPriority() {
     if (totalCount === 0) {
       listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Tốt lắm!</div><div class="empty-sub">Không có việc ưu tiên cần xử lý</div></div>';
       updatePriorityBadge(0);
+      if (typeof markFresh === 'function') markFresh('priority');
       return;
     }
 
@@ -267,6 +268,7 @@ async function loadPriority() {
 
     listEl.innerHTML = html;
     updatePriorityBadge(totalCount);
+    if (typeof markFresh === 'function') markFresh('priority');
 
   } catch(e) {
     console.error('loadPriority:', e);
@@ -355,8 +357,56 @@ async function completePriorityTask(profileId, taskType) {
   } catch(e) { console.warn('completePriorityTask:', e); }
 }
 
-// Auto-refresh priority every 60s
-setInterval(() => { if (typeof loadPriority === 'function') loadPriority(); }, 60000);
+// Smart refresh: only run loadPriority when priority tab is active
+setInterval(() => {
+  const tab = document.querySelector('#mainTabBar .tab.active')?.dataset?.tab;
+  const pinned = typeof _isTabPinned === 'function' && _isTabPinned('priority');
+  if ((tab === 'priority' || pinned) && typeof loadPriority === 'function') loadPriority();
+}, 120000); // 2 min — less aggressive
+
+// ============ CLIENT-SIDE REMINDER POLLING ============
+// Since there's no server cron, check for due reminders from the client
+async function checkDueReminders() {
+  const myCode = getEffectiveStaffCode();
+  if (!myCode) return;
+  try {
+    const now = new Date().toISOString();
+    const fiveAgo = new Date(Date.now() - 5 * 60000).toISOString();
+    // Find events with reminder_at in the past 5 minutes that haven't been sent
+    const res = await sbFetch(
+      `/rest/v1/calendar_events?staff_code=eq.${myCode}&reminder_at=lte.${encodeURIComponent(now)}&reminder_at=gte.${encodeURIComponent(fiveAgo)}&reminder_sent=eq.false&select=id,title,event_date,event_time,profile_id&limit=10`
+    );
+    if (!res.ok) return;
+    const events = await res.json();
+    if (!events || events.length === 0) return;
+
+    for (const ev of events) {
+      // Show in-app toast
+      const timeStr = ev.event_time ? ev.event_time.substring(0, 5) : '';
+      showToast(`⏰ Nhắc: ${ev.title}${timeStr ? ' lúc ' + timeStr : ''}`, 6000);
+
+      // Create in-app notification
+      if (typeof createNotification === 'function') {
+        createNotification(
+          [myCode], 'reminder',
+          `⏰ ${ev.title}`,
+          timeStr ? `Lúc ${timeStr} ngày ${ev.event_date}` : `Ngày ${ev.event_date}`,
+          ev.profile_id || null
+        );
+      }
+
+      // Mark as sent to avoid re-triggering
+      await sbFetch(`/rest/v1/calendar_events?id=eq.${ev.id}`, {
+        method: 'PATCH', body: JSON.stringify({ reminder_sent: true })
+      });
+    }
+  } catch (e) { console.warn('checkDueReminders:', e); }
+}
+
+// Check reminders every 60s
+setInterval(checkDueReminders, 60000);
+// Also check on app load (after a short delay to let auth settle)
+setTimeout(checkDueReminders, 5000);
 
 // ─── HELPER: cập nhật task chot_tv_1 khi TVV được bổ sung ───────────────────
 // Gọi sau khi gán TVV vào hồ sơ, để cập nhật title task còn thiếu gì.
