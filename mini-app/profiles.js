@@ -55,10 +55,16 @@ function filterProfiles() {
 }
 
 // ============ PROFILE DETAIL ============
-async function openProfileById(id) {
+async function openProfileById(id, evt) {
   if (!id || id==='undefined') return;
-  // Find the card element for FLIP animation
-  const cardEl = document.querySelector(`.profile-card[data-pid="${id}"]`);
+  // Find the card element: use the event target (exact click) instead of querySelector (which grabs first match in DOM)
+  let cardEl = null;
+  if (evt && evt.target) {
+    cardEl = evt.target.closest('.profile-card');
+  }
+  if (!cardEl) {
+    cardEl = document.querySelector(`.profile-card[data-pid="${id}"]`);
+  }
   let p = allProfiles.find(x=>x.id===id);
   // Profile not in filtered cache (e.g. different semester) → fetch directly from DB
   if (!p) {

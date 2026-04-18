@@ -156,11 +156,23 @@ const ProfileTransition = (() => {
   function open(cardEl, profileId) {
     _profileId = profileId;
     _openedCardEl = cardEl;
+    // Walk up to find the list container this card belongs to
+    _sourceContainerId = null;
     if (cardEl) {
-      let parent = cardEl.closest('[id]');
-      _sourceContainerId = parent ? parent.id : null;
-    } else {
-      _sourceContainerId = null;
+      const knownContainers = ['profileList', 'dashMyList', 'dashSubUnits', 'dashUnitList', 'staffList', 'unitPopupList'];
+      let el = cardEl.parentElement;
+      while (el) {
+        if (el.id && knownContainers.includes(el.id)) {
+          _sourceContainerId = el.id;
+          break;
+        }
+        // Also match dynamically generated subteam/subgrp containers
+        if (el.id && (el.id.startsWith('subteam_') || el.id.startsWith('subgrp_'))) {
+          _sourceContainerId = el.id;
+          break;
+        }
+        el = el.parentElement;
+      }
     }
     _saveScroll();
 

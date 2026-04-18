@@ -361,7 +361,7 @@ function renderProfileCard(p, opts = {}) {
 
   const extraBadges = opts.extraBadges || '';
   const resolvedId = p.id || opts.profileId || '';
-  const clickFn = opts.clickFn || `openProfileById('${resolvedId}')`;
+  const clickFn = opts.clickFn || `openProfileById('${resolvedId}', event)`;
 
   // Birth year
   const birthYear = !isInactive && p.birth_year ? p.birth_year : '';
