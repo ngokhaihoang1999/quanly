@@ -371,11 +371,10 @@ async function checkDueReminders() {
   if (!myCode) return;
   try {
     const now = new Date().toISOString();
-    const fiveAgo = new Date(Date.now() - 5 * 60000).toISOString();
 
-    // 1. Check calendar event alarms
+    // 1. Check calendar event alarms (all overdue, not just 5min window)
     const res = await sbFetch(
-      `/rest/v1/calendar_events?staff_code=eq.${myCode}&reminder_at=lte.${encodeURIComponent(now)}&reminder_at=gte.${encodeURIComponent(fiveAgo)}&reminder_sent=eq.false&select=id,title,event_date,event_time,profile_id&limit=10`
+      `/rest/v1/calendar_events?staff_code=eq.${myCode}&reminder_at=lte.${encodeURIComponent(now)}&reminder_sent=eq.false&select=id,title,event_date,event_time,profile_id&limit=10`
     );
     if (res.ok) {
       const events = await res.json();
@@ -406,9 +405,9 @@ async function checkDueReminders() {
       }
     }
 
-    // 2. Check personal_notes alarms
+    // 2. Check personal_notes alarms (all overdue)
     const noteRes = await sbFetch(
-      `/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(myCode)}&reminder_at=lte.${encodeURIComponent(now)}&reminder_at=gte.${encodeURIComponent(fiveAgo)}&reminder_sent=eq.false&select=id,title,content,cal_date&limit=10`
+      `/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(myCode)}&reminder_at=lte.${encodeURIComponent(now)}&reminder_sent=eq.false&select=id,title,content,cal_date&limit=10`
     );
     if (noteRes.ok) {
       const notes = await noteRes.json();
