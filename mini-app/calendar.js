@@ -336,13 +336,19 @@ function renderCalendarDayEvents(date) {
 
       // Build compact action buttons — single horizontal row
       let actionBtns = '';
+      
+      // Alarm button — show for ALL events (real + virtual)
       if (isRealEvent) {
-        // Alarm: set new OR edit existing
         const alarmIcon = ev.reminder_at ? '🔔' : '🔕';
         const alarmCls = ev.reminder_at ? 'cal-event-alarm-btn has-alarm' : 'cal-event-alarm-btn';
         const alarmTitle = ev.reminder_at ? 'Sửa alarm' : 'Đặt nhắc';
         actionBtns += `<button onclick="event.stopPropagation();openSetAlarmModal('${ev.id}','${ev.event_date}','${ev.event_time || ''}','${(ev.title||'').replace(/'/g,"\\'")}','${ev.reminder_at || ''}')" class="${alarmCls}" title="${alarmTitle}">${alarmIcon}</button>`;
+      } else if (ev._virtual && ev.id) {
+        // Virtual event — need to create real event first, then set alarm
+        const safeTitle = (ev.title||'').replace(/'/g,"\\'");
+        actionBtns += `<button onclick="event.stopPropagation();createAndAlarmVirtual('${ev.event_date}','${ev.event_time || ''}','${safeTitle}','${ev.event_type}','${ev.profile_id || ''}')" class="cal-event-alarm-btn" title="Đặt nhắc">🔕</button>`;
       }
+      
       if (canEdit) {
         actionBtns += `<button onclick="event.stopPropagation();openEditEventModal('${ev.id}')" class="cal-event-edit-btn" title="Sửa">✏️</button>`;
       }
@@ -495,6 +501,50 @@ async function removeEventAlarm(eventId) {
     loadCalendar();
   } catch(e) {
     showToast('❌ Lỗi xoá alarm');
+    console.error(e);
+  }
+}
+
+// ============ VIRTUAL EVENT → CREATE REAL + SET ALARM ============
+async function createAndAlarmVirtual(eventDate, eventTime, title, eventType, profileId) {
+  const myCode = getEffectiveStaffCode();
+  if (!myCode) return;
+  
+  // Check if a real event already exists for this (to avoid duplicates)
+  const checkRes = await sbFetch(
+    `/rest/v1/calendar_events?staff_code=eq.${myCode}&event_date=eq.${eventDate}&title=eq.${encodeURIComponent(title)}&select=id,reminder_at&limit=1`
+  );
+  if (checkRes.ok) {
+    const existing = await checkRes.json();
+    if (existing && existing.length > 0) {
+      // Already has real event → just open alarm modal on it
+      openSetAlarmModal(existing[0].id, eventDate, eventTime, title, existing[0].reminder_at || '');
+      return;
+    }
+  }
+  
+  // Create real event from virtual
+  try {
+    const body = {
+      title, event_date: eventDate, event_time: eventTime || null,
+      event_type: eventType, staff_code: myCode,
+      profile_id: profileId || null, is_system: false,
+      created_by: myCode
+    };
+    const res = await sbFetch('/rest/v1/calendar_events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const created = await res.json();
+    const newId = Array.isArray(created) ? created[0].id : created.id;
+    
+    // Reload calendar to reflect the new event, then open alarm modal
+    await loadCalendar();
+    openSetAlarmModal(newId, eventDate, eventTime, title, '');
+  } catch(e) {
+    showToast('❌ Lỗi tạo sự kiện');
     console.error(e);
   }
 }
