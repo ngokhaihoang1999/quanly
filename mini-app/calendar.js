@@ -316,53 +316,53 @@ function renderCalendarDayEvents(date) {
           metaHtml += `<span>\ud83d\udc64 ${profile.full_name}</span>`;
       }
 
-      // Alarm badge
+      // Alarm badge — show in meta only if alarm exists
       const hasAlarm = !!ev.reminder_at && !ev.reminder_sent;
       const alarmSent = !!ev.reminder_sent;
-      let alarmBadge = '';
       if (hasAlarm) {
         const rAt = new Date(ev.reminder_at);
         const rTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
         const rDate = `${String(rAt.getDate()).padStart(2,'0')}/${String(rAt.getMonth()+1).padStart(2,'0')}`;
-        alarmBadge = `<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.12);padding:1px 6px;border-radius:8px;">🔔 ${rDate} ${rTime}</span>`;
+        metaHtml += `<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.12);padding:1px 6px;border-radius:8px;">🔔 ${rDate} ${rTime}</span>`;
       } else if (alarmSent) {
-        alarmBadge = `<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 6px;border-radius:8px;">✅ Đã nhắc</span>`;
+        metaHtml += `<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 6px;border-radius:8px;">✅ Đã nhắc</span>`;
       }
-      if (alarmBadge) metaHtml += alarmBadge;
       
-      // Don't allow deleting virtual semester events
+      // Determine capabilities
       const canDelete = !ev.is_auto && !ev._virtual;
       const isCreator = ev.created_by === myCode;
       const canEdit = isCreator && !ev._virtual && !ev.is_auto;
       const isRealEvent = !ev._virtual && ev.id && !String(ev.id).startsWith('v');
 
-      // Action buttons row
+      // Build compact action buttons — single horizontal row
       let actionBtns = '';
       if (isRealEvent) {
-        // Alarm button — only if no alarm yet
-        if (!ev.reminder_at) {
-          actionBtns += `<button onclick="event.stopPropagation();openSetAlarmModal('${ev.id}','${ev.event_date}','${ev.event_time || ''}','${(ev.title||'').replace(/'/g,"\\'")}')" class="cal-event-alarm-btn" title="Đặt nhắc">🔔</button>`;
-        } else {
-          actionBtns += `<button onclick="event.stopPropagation();showToast('⚠️ Sự kiện này đã có alarm')" class="cal-event-alarm-btn has-alarm" title="Đã có alarm">🔔</button>`;
-        }
+        // Alarm: set new OR edit existing
+        const alarmIcon = ev.reminder_at ? '🔔' : '🔕';
+        const alarmCls = ev.reminder_at ? 'cal-event-alarm-btn has-alarm' : 'cal-event-alarm-btn';
+        const alarmTitle = ev.reminder_at ? 'Sửa alarm' : 'Đặt nhắc';
+        actionBtns += `<button onclick="event.stopPropagation();openSetAlarmModal('${ev.id}','${ev.event_date}','${ev.event_time || ''}','${(ev.title||'').replace(/'/g,"\\'")}','${ev.reminder_at || ''}')" class="${alarmCls}" title="${alarmTitle}">${alarmIcon}</button>`;
       }
       if (canEdit) {
         actionBtns += `<button onclick="event.stopPropagation();openEditEventModal('${ev.id}')" class="cal-event-edit-btn" title="Sửa">✏️</button>`;
       }
       if (canDelete) {
-        actionBtns += `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá">🗑</button>`;
+        actionBtns += `<button onclick="event.stopPropagation();deleteCalEvent('${ev.id}')" class="cal-event-del" title="Xoá" style="font-size:12px;">🗑</button>`;
       }
       
+      // Only show action column if there are buttons
+      const actionCol = actionBtns ? `<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;margin-left:4px;">${actionBtns}</div>` : '';
+
       return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
         <div class="cal-event-bar" style="background:${color}"></div>
-        <div class="cal-event-body">
-          <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px;">${ev.title}</div>
-          <div class="cal-event-meta" style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text3);align-items:center;">
+        <div class="cal-event-body" style="flex:1;min-width:0;">
+          <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:4px;">${ev.title}</div>
+          <div class="cal-event-meta" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--text3);align-items:center;">
             ${metaHtml}
           </div>
-          ${ev.description ? `<div class="cal-event-desc" style="margin-top:8px;font-size:13px;color:var(--text2);">${ev.description}</div>` : ''}
+          ${ev.description ? `<div class="cal-event-desc" style="margin-top:6px;font-size:12px;color:var(--text2);">${ev.description}</div>` : ''}
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">${actionBtns}</div>
+        ${actionCol}
       </div>`;
     }).join('');
   }
@@ -391,14 +391,24 @@ function renderCalendarDayEvents(date) {
 }
 
 // ============ SET ALARM MODAL ============
-function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle) {
+function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle, existingAlarm) {
   const evDt = eventTime ? new Date(`${eventDate}T${eventTime}:00`) : new Date(`${eventDate}T23:59:59`);
-  // Default: 30 min before event
-  const defaultRemind = new Date(evDt.getTime() - 30 * 60000);
-  const defaultDate = `${defaultRemind.getFullYear()}-${String(defaultRemind.getMonth()+1).padStart(2,'0')}-${String(defaultRemind.getDate()).padStart(2,'0')}`;
-  const defaultTime = `${String(defaultRemind.getHours()).padStart(2,'0')}:${String(defaultRemind.getMinutes()).padStart(2,'0')}`;
+  
+  let defaultDate, defaultTime;
+  if (existingAlarm) {
+    // Pre-fill with existing alarm
+    const rAt = new Date(existingAlarm);
+    defaultDate = `${rAt.getFullYear()}-${String(rAt.getMonth()+1).padStart(2,'0')}-${String(rAt.getDate()).padStart(2,'0')}`;
+    defaultTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
+  } else {
+    // Default: 30 min before event
+    const defaultRemind = new Date(evDt.getTime() - 30 * 60000);
+    defaultDate = `${defaultRemind.getFullYear()}-${String(defaultRemind.getMonth()+1).padStart(2,'0')}-${String(defaultRemind.getDate()).padStart(2,'0')}`;
+    defaultTime = `${String(defaultRemind.getHours()).padStart(2,'0')}:${String(defaultRemind.getMinutes()).padStart(2,'0')}`;
+  }
 
-  document.getElementById('recordModalTitle').textContent = `🔔 Đặt Alarm — ${eventTitle}`;
+  const modalTitle = existingAlarm ? `🔔 Sửa Alarm — ${eventTitle}` : `🔔 Đặt Alarm — ${eventTitle}`;
+  document.getElementById('recordModalTitle').textContent = modalTitle;
   document.getElementById('recordModalBody').innerHTML = `
     <div style="text-align:center;font-size:32px;margin-bottom:8px;">🔔</div>
     <div style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:12px;">
@@ -416,12 +426,13 @@ function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle) {
       <button class="chip" onclick="setAlarmPreset(1440,'${eventDate}','${eventTime}')">1 ngày trước</button>
     </div>
     <div id="alarm_warn" style="font-size:11px;color:var(--red);margin-top:6px;display:none;">⚠️ Phải trước thời điểm sự kiện</div>
+    ${existingAlarm ? `<button type="button" onclick="removeEventAlarm('${eventId}')" style="width:100%;margin-top:8px;padding:8px;border:1px solid rgba(248,113,113,0.4);background:none;color:var(--red);border-radius:8px;font-size:12px;cursor:pointer;">🗑 Xoá alarm</button>` : ''}
     <input type="hidden" id="alarm_event_id" value="${eventId}" />
     <input type="hidden" id="alarm_event_date" value="${eventDate}" />
     <input type="hidden" id="alarm_event_time" value="${eventTime}" />
   `;
   const saveBtn = document.querySelector('#addRecordModal .save-btn');
-  if (saveBtn) { saveBtn.textContent = '🔔 Đặt Alarm'; saveBtn.onclick = saveEventAlarm; saveBtn.style.display = ''; }
+  if (saveBtn) { saveBtn.textContent = existingAlarm ? '💾 Lưu Alarm' : '🔔 Đặt Alarm'; saveBtn.onclick = saveEventAlarm; saveBtn.style.display = ''; }
   document.getElementById('addRecordModal').classList.add('open');
 }
 
@@ -460,13 +471,31 @@ async function saveEventAlarm() {
       body: JSON.stringify({ reminder_at: reminderAt.toISOString(), reminder_sent: false })
     });
     closeModal('addRecordModal');
-    showToast('🔔 Đã đặt alarm!');
+    showToast('🔔 Đã lưu alarm!');
     if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; saveBtn.disabled = false; }
     loadCalendar();
   } catch(e) {
-    showToast('❌ Lỗi đặt alarm');
+    showToast('❌ Lỗi lưu alarm');
     console.error(e);
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '🔔 Đặt Alarm'; }
+  }
+}
+
+async function removeEventAlarm(eventId) {
+  try {
+    await sbFetch(`/rest/v1/calendar_events?id=eq.${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ reminder_at: null, reminder_sent: false })
+    });
+    closeModal('addRecordModal');
+    showToast('🗑 Đã xoá alarm');
+    const saveBtn = document.querySelector('#addRecordModal .save-btn');
+    if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; saveBtn.disabled = false; }
+    loadCalendar();
+  } catch(e) {
+    showToast('❌ Lỗi xoá alarm');
+    console.error(e);
   }
 }
 

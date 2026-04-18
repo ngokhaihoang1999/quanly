@@ -1881,18 +1881,18 @@
 
 /* Alarm icon on event cards */
 .cal-event-alarm-btn {
-  background: none; border: 1px solid var(--border); border-radius: 8px;
-  padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text2);
-  transition: all 0.2s; flex-shrink: 0;
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 2px 5px; font-size: 11px; cursor: pointer; color: var(--text2);
+  transition: all 0.2s; flex-shrink: 0; line-height: 1;
 }
 .cal-event-alarm-btn:hover { border-color: #fbbf24; color: #fbbf24; }
 .cal-event-alarm-btn.has-alarm { color: #fbbf24; border-color: #fbbf24; background: rgba(251,191,36,0.1); }
 
 /* Edit event button */
 .cal-event-edit-btn {
-  background: none; border: 1px solid var(--border); border-radius: 8px;
-  padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text2);
-  transition: all 0.2s; flex-shrink: 0;
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 2px 5px; font-size: 11px; cursor: pointer; color: var(--text2);
+  transition: all 0.2s; flex-shrink: 0; line-height: 1;
 }
 .cal-event-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 
