@@ -245,7 +245,14 @@ async function runAIAnalysis() {
     var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+(p.phase||'chakki')+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do: '+p.dropout_reason : '')+'\nNg\u01b0\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
-      ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
+      ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
+      context += '\n';
+    }
+    // Strategy data (cl_* keys from form_hanh_chinh)
+    if (typeof _strategyData !== 'undefined' && Object.keys(_strategyData).length) {
+      context += 'CHIEN LUOC TIEP CAN (NDD tu viet):\n';
+      var clLabels = {cl_concept:'Concept',cl_cach_quen:'Cach quen',cl_kho_khan:'Kho khan',cl_diem_hai:'Diem hai trai DU KIEN',cl_rao_can:'Rao can',cl_tv1_cong_cu:'TV1 Cong cu',cl_tv1_muc_tieu:'TV1 Muc tieu',cl_tv1_tam_long:'TV1 Cay tam long',cl_tv1_khai_thac:'TV1 Khai thac',cl_tv1_dan_dat:'TV1 Dan dat sang TV2',cl_tv2_cong_cu:'TV2 Cong cu',cl_tv2_muc_tieu:'TV2 Muc tieu',cl_tv2_dao_sau:'TV2 Dao sau',cl_tv2_chot_group:'TV2 Chot group',cl_timeline:'Timeline',cl_lich_gap:'Lich gap',cl_gvbb_du_kien:'GVBB du kien',cl_ghi_chu:'Ghi chu',cl_rui_ro:'Rui ro',cl_phuong_an:'Phuong an',cl_nguoi_ho_tro:'Nguoi ho tro'};
+      Object.keys(_strategyData).forEach(function(k) { if (_strategyData[k]?.trim()) context += (clLabels[k]||k)+': '+_strategyData[k]+'\n'; });
       context += '\n';
     }
     tvs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; context+='--- TV LAN '+(c.lan_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
@@ -422,9 +429,16 @@ async function buildChatCtx() {
   var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+(p.phase||'chakki')+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
   if (Object.keys(d).length) {
     ctx += 'PHI\u1ebeU TT:\n';
-    ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu'].forEach(function(k){
+    ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){
       if (d[k]) ctx += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n';
     });
+    ctx += '\n';
+  }
+  // Strategy data (cl_* keys)
+  if (typeof _strategyData !== 'undefined' && Object.keys(_strategyData).length) {
+    ctx += 'CHIEN LUOC TIEP CAN (NDD tu viet):\n';
+    var clL = {cl_concept:'Concept',cl_cach_quen:'Cach quen',cl_kho_khan:'Kho khan',cl_diem_hai:'Diem hai trai DU KIEN',cl_rao_can:'Rao can',cl_tv1_cong_cu:'TV1 Cong cu',cl_tv1_muc_tieu:'TV1 Muc tieu',cl_tv1_tam_long:'TV1 Cay tam long',cl_tv1_khai_thac:'TV1 Khai thac',cl_tv1_dan_dat:'TV1 Dan dat sang TV2',cl_tv2_cong_cu:'TV2 Cong cu',cl_tv2_muc_tieu:'TV2 Muc tieu',cl_tv2_dao_sau:'TV2 Dao sau',cl_tv2_chot_group:'TV2 Chot group',cl_timeline:'Timeline',cl_lich_gap:'Lich gap',cl_gvbb_du_kien:'GVBB du kien',cl_ghi_chu:'Ghi chu',cl_rui_ro:'Rui ro',cl_phuong_an:'Phuong an',cl_nguoi_ho_tro:'Nguoi ho tro'};
+    Object.keys(_strategyData).forEach(function(k) { if (_strategyData[k]?.trim()) ctx += (clL[k]||k)+': '+_strategyData[k]+'\n'; });
     ctx += '\n';
   }
   tvs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; ctx+='--- TV '+(c.lan_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])ctx+=k+': '+c[k]+'\n';}); ctx+='\n'; });
