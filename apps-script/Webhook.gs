@@ -302,16 +302,16 @@ function syncAllUnits() {
 }
 
 // ── Sync one unit sheet ──
-// Matching: ID NDD → Tên (case-insensitive) → Ngày chakki (tiebreaker)
-// Group change: Alive profiles move (clear old sheet, add to new sheet)
-// Non-Alive profiles stay on old sheet (history preserved)
+// 1 NDD quản lý NHIỀU học sinh → ID NDD KHÔNG phải key duy nhất
+// Match: Tên+ID NDD (combo) → Tên (alone) → Tên+Ngày (tiebreaker)
+// Group change: Alive profiles move (xoá sheet cũ, thêm sheet mới)
 function syncOneUnit(allData, group, targetId, targetTab) {
-  // 1. Filter master rows by Group, skip without ID NDD
+  // 1. Filter master rows by Group, skip without student name
   var masterRows = [];
   for (var i = 1; i < allData.length; i++) {
     var rowGroup = String(allData[i][0] || '').trim();
-    var rowId = String(allData[i][2] || '').trim();
-    if (rowGroup === group && rowId) {
+    var rowName = String(allData[i][3] || '').trim(); // Tên học sinh = key chính
+    if (rowGroup === group && rowName) {
       masterRows.push(allData[i]);
     }
   }
@@ -328,9 +328,11 @@ function syncOneUnit(allData, group, targetId, targetTab) {
   var targetData = targetResult.values || [];
   
   // Build matching indices
-  var targetIdRowMap = {};    // ID NDD → row number
-  var targetNameMap = {};     // lowercase name → [{row, date}]
-  var lastDataRow = 1;        // actual last row with content
+  // comboMap: "tên|idndd" → row (chính xác nhất)
+  // nameMap:  "tên" → [{row, nddId, date}] (fallback)
+  var comboMap = {};
+  var nameMap = {};
+  var lastDataRow = 1;
   
   for (var t = 1; t < targetData.length; t++) {
     var sheetRow = t + 1;
@@ -339,46 +341,51 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     var colD = String(tr[1] || '').trim();   // Tên học sinh
     var colN = (tr.length > 11) ? String(tr[11] || '') : ''; // Ngày chakki
     
-    // Track last row with any content
     if (colC || colD) lastDataRow = sheetRow;
     
-    // ID index
-    if (colC) targetIdRowMap[colC] = sheetRow;
-    
-    // Name index (case-insensitive, for fallback matching)
     if (colD) {
-      var nameKey = colD.toLowerCase();
-      if (!targetNameMap[nameKey]) targetNameMap[nameKey] = [];
-      targetNameMap[nameKey].push({ row: sheetRow, date: colN });
+      var nameLower = colD.toLowerCase();
+      
+      // Combo key: tên + id ndd
+      if (colC) {
+        var comboKey = nameLower + '|' + colC.toLowerCase();
+        if (!comboMap[comboKey]) comboMap[comboKey] = sheetRow; // first match wins
+      }
+      
+      // Name-only index
+      if (!nameMap[nameLower]) nameMap[nameLower] = [];
+      nameMap[nameLower].push({ row: sheetRow, nddId: colC, date: colN });
     }
   }
   
   // 3. Process master rows: match → update or add at bottom
   var batchData = [];
   var nextAppendRow = lastDataRow + 1;
-  var processedIds = {};
-  var usedRows = {};  // prevent same target row matched twice
+  var usedRows = {};
+  var processedKeys = {}; // for group-change detection
   var updated = 0, added = 0;
   
   for (var m = 0; m < masterRows.length; m++) {
     var row = masterRows[m];
-    var id = String(row[2] || '').trim();
+    var nddId = String(row[2] || '').trim();
     var name = String(row[3] || '').trim();
     var masterDate = String(sanitizeVal(row[13]) || '');
+    var nameLower = name.toLowerCase();
     
     var targetRow = null;
     
-    // Priority 1: Match by ID NDD (exact)
-    if (targetIdRowMap[id] && !usedRows[targetIdRowMap[id]]) {
-      targetRow = targetIdRowMap[id];
+    // Priority 1: Combo match (Tên + ID NDD) → chính xác nhất
+    if (nddId) {
+      var comboKey = nameLower + '|' + nddId.toLowerCase();
+      if (comboMap[comboKey] && !usedRows[comboMap[comboKey]]) {
+        targetRow = comboMap[comboKey];
+      }
     }
     
-    // Priority 2: Match by name (case-insensitive)
-    if (!targetRow && name) {
-      var nameKey = name.toLowerCase();
-      var nameMatches = targetNameMap[nameKey];
+    // Priority 2: Name-only match (khi target không có ID NDD)
+    if (!targetRow) {
+      var nameMatches = nameMap[nameLower];
       if (nameMatches) {
-        // Filter out already-used rows
         var available = [];
         for (var n = 0; n < nameMatches.length; n++) {
           if (!usedRows[nameMatches[n].row]) available.push(nameMatches[n]);
@@ -386,18 +393,18 @@ function syncOneUnit(allData, group, targetId, targetTab) {
         
         if (available.length === 1) {
           targetRow = available[0].row;
-        } else if (available.length > 1 && masterDate) {
+        } else if (available.length > 1) {
           // Priority 3: Multiple name matches → compare ngày chakki
-          for (var n = 0; n < available.length; n++) {
-            if (available[n].date === masterDate) {
-              targetRow = available[n].row;
-              break;
+          if (masterDate) {
+            for (var n = 0; n < available.length; n++) {
+              if (available[n].date === masterDate) {
+                targetRow = available[n].row;
+                break;
+              }
             }
           }
-          // Still no match → take first available
+          // Still no unique match → take first available
           if (!targetRow) targetRow = available[0].row;
-        } else if (available.length > 1) {
-          targetRow = available[0].row;
         }
       }
     }
@@ -411,7 +418,10 @@ function syncOneUnit(allData, group, targetId, targetTab) {
       added++;
     }
     
-    processedIds[id] = true;
+    // Track for group-change detection
+    if (nddId && name) {
+      processedKeys[nameLower + '|' + nddId.toLowerCase()] = true;
+    }
     
     // Build app-controlled column data
     var cj = [];
@@ -424,20 +434,25 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     batchData.push({ range: targetTab + '!R' + targetRow + ':T' + targetRow, values: [rt] });
   }
   
-  // 4. Handle Group change: Alive profiles that moved to a different group → clear from THIS sheet
+  // 4. Handle Group change: Alive profiles that moved to a different group
   var moved = 0;
-  for (var existingId in targetIdRowMap) {
-    if (processedIds[existingId]) continue; // still in this group, skip
+  for (var combo in comboMap) {
+    if (processedKeys[combo]) continue; // still in this group
     
-    // Check if this ID exists in master with a DIFFERENT group + Alive status
+    // Extract name and nddId from combo key
+    var parts = combo.split('|');
+    var cName = parts[0];
+    var cNddId = parts[1];
+    
+    // Check if this combo exists in master with DIFFERENT group + Alive
     for (var i = 1; i < allData.length; i++) {
-      var mId = String(allData[i][2] || '').trim();
+      var mNddId = String(allData[i][2] || '').trim().toLowerCase();
+      var mName = String(allData[i][3] || '').trim().toLowerCase();
       var mGroup = String(allData[i][0] || '').trim();
-      var mStatus = String(allData[i][6] || '').trim(); // Trạng thái (column G)
+      var mStatus = String(allData[i][6] || '').trim();
       
-      if (mId === existingId && mGroup !== group && mStatus === 'Alive') {
-        // Profile moved to another group AND is Alive → clear from this sheet
-        var clearRow = targetIdRowMap[existingId];
+      if (mName === cName && mNddId === cNddId && mGroup !== group && mStatus === 'Alive') {
+        var clearRow = comboMap[combo];
         batchData.push({ range: targetTab + '!C' + clearRow + ':J' + clearRow, values: [['','','','','','','','']] });
         batchData.push({ range: targetTab + '!M' + clearRow + ':O' + clearRow, values: [['','','']] });
         batchData.push({ range: targetTab + '!R' + clearRow + ':T' + clearRow, values: [['','','']] });
@@ -447,7 +462,7 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     }
   }
   
-  // 5. Batch write all changes at once
+  // 5. Batch write
   if (batchData.length > 0) {
     Sheets.Spreadsheets.Values.batchUpdate({
       data: batchData,
