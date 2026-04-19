@@ -3,6 +3,9 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     
+    // ── Dirty flag: mark data changed so sync trigger picks it up ──
+    PropertiesService.getScriptProperties().setProperty('lastChanged', String(new Date().getTime()));
+    
     // Tạo 22 cột (Cột V bắt buộc giấu Profile_ID_Hidden để App biết ai là ai mà moi ra sửa)
     if (sheet.getLastRow() === 0) {
       var headers = [
@@ -233,6 +236,7 @@ function doPost(e) {
 
 // ═══════════════════════════════════════════════════════════
 // ── MULTI-UNIT SYNC: Master → Unit Sheets (trigger-based) ──
+// ID NDD matching + deletion handling + dirty flag
 // ═══════════════════════════════════════════════════════════
 
 // Sanitize cell values for Sheets API
@@ -243,13 +247,21 @@ function sanitizeVal(val) {
     var d = String(val.getDate()).padStart(2, '0');
     return y + '-' + m + '-' + d;
   }
-  // Keep booleans as-is for USER_ENTERED mode (checkbox support)
   return val;
 }
 
-// Main sync function — called by time trigger every 1 minute
+// ── Main sync — called by trigger every 5 minutes ──
 function syncAllUnits() {
   try {
+    // ── Dirty Flag check: skip if nothing changed ──
+    var props = PropertiesService.getScriptProperties();
+    var lastChanged = Number(props.getProperty('lastChanged') || 0);
+    var lastSynced = Number(props.getProperty('lastSynced') || 0);
+    
+    if (lastChanged <= lastSynced) {
+      return; // No changes since last sync
+    }
+    
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var masterSheet = ss.getSheetByName('Trang tính1');
     var configSheet = ss.getSheetByName('Config');
@@ -266,66 +278,124 @@ function syncAllUnits() {
     // Read config: [Group, SheetID, TabName]
     var configData = configSheet.getDataRange().getValues();
     
-    for (var c = 1; c < configData.length; c++) { // skip header
+    for (var c = 1; c < configData.length; c++) {
       var group = String(configData[c][0] || '').trim();
       var targetId = String(configData[c][1] || '').trim();
       var targetTab = String(configData[c][2] || 'Data').trim();
       
       if (!group || !targetId) continue;
       
-      // Filter master rows by Group (column A, index 0)
-      var filtered = [];
-      for (var i = 1; i < allData.length; i++) {
-        if (String(allData[i][0]).trim() === group) {
-          filtered.push(allData[i]);
-        }
-      }
-      
-      if (filtered.length === 0) continue;
-      
-      // Build column blocks (only app-controlled columns)
-      // Block 1: C-J (index 2-9, 8 cols)
-      // Block 2: M-O (index 12-14, 3 cols)
-      // Block 3: R-T (index 17-19, 3 cols)
-      var blockCJ = [], blockMO = [], blockRT = [];
-      
-      for (var r = 0; r < filtered.length; r++) {
-        var row = filtered[r];
-        
-        // C-J: ID NDD, Tên, Giai đoạn, Công cụ, Trạng thái, Mục tiêu Tháng, Ghi chú, Đăng ký BB
-        var cj = [];
-        for (var j = 2; j <= 9; j++) cj.push(sanitizeVal(row[j]));
-        blockCJ.push(cj);
-        
-        // M-O: GVBB, Ngày, ONLINE/OFFLINE
-        blockMO.push([sanitizeVal(row[12]), sanitizeVal(row[13]), sanitizeVal(row[14])]);
-        
-        // R-T: Lí do nghỉ học, Chủ đề, Số điện thoại
-        blockRT.push([sanitizeVal(row[17]), sanitizeVal(row[18]), sanitizeVal(row[19])]);
-      }
-      
-      var lastRow = filtered.length + 1;
-      
-      // Batch write 3 column blocks via Sheets API
-      // USER_ENTERED mode: TRUE/FALSE → checkbox, dates parsed properly
-      // Only overwrites app columns — team columns (K, L, P, Q, U) untouched
       try {
-        Sheets.Spreadsheets.Values.batchUpdate({
-          data: [
-            { range: targetTab + '!C2:J' + lastRow, values: blockCJ },
-            { range: targetTab + '!M2:O' + lastRow, values: blockMO },
-            { range: targetTab + '!R2:T' + lastRow, values: blockRT }
-          ],
-          valueInputOption: 'USER_ENTERED'
-        }, targetId);
-        Logger.log('Synced ' + filtered.length + ' rows to ' + group + ' (' + targetId.substring(0,8) + '...)');
-      } catch(writeErr) {
-        Logger.log('Write error for ' + group + ': ' + writeErr.toString());
+        syncOneUnit(allData, group, targetId, targetTab);
+      } catch(unitErr) {
+        Logger.log('Error syncing ' + group + ': ' + unitErr.toString());
       }
     }
+    
+    // Mark as synced
+    props.setProperty('lastSynced', String(lastChanged));
+    Logger.log('syncAllUnits completed.');
+    
   } catch(e) {
     Logger.log('syncAllUnits error: ' + e.toString());
   }
+}
+
+// ── Sync one unit sheet (matched by ID NDD) ──
+function syncOneUnit(allData, group, targetId, targetTab) {
+  // 1. Filter master rows by Group (column A)
+  var masterRows = [];
+  for (var i = 1; i < allData.length; i++) {
+    if (String(allData[i][0]).trim() === group) {
+      masterRows.push(allData[i]);
+    }
+  }
+  
+  // Build master ID map: ID NDD → row data
+  var masterIdMap = {};
+  for (var m = 0; m < masterRows.length; m++) {
+    var id = String(masterRows[m][2] || '').trim();
+    if (id) masterIdMap[id] = masterRows[m];
+  }
+  
+  // 2. Read current target IDs (column C) via Sheets API
+  var targetIdsResult;
+  try {
+    targetIdsResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:C');
+  } catch(e) {
+    Logger.log('Cannot read target for ' + group + ': ' + e);
+    return;
+  }
+  
+  var targetIds = targetIdsResult.values || [];
+  
+  // Build target ID map: ID NDD → row number (1-indexed in sheet)
+  var targetIdRowMap = {};
+  var maxTargetRow = 1; // 1 = header
+  for (var t = 1; t < targetIds.length; t++) {
+    var tid = String(targetIds[t][0] || '').trim();
+    if (tid) {
+      targetIdRowMap[tid] = t + 1; // sheet row (1-indexed, +1 for header)
+      if (t + 1 > maxTargetRow) maxTargetRow = t + 1;
+    }
+  }
+  
+  // 3. Process: update existing, append new, clear deleted
+  var batchData = [];
+  var processedIds = {};
+  var nextAppendRow = maxTargetRow + 1;
+  
+  // 3a. Update/Append master rows
+  for (var m = 0; m < masterRows.length; m++) {
+    var row = masterRows[m];
+    var id = String(row[2] || '').trim();
+    if (!id) continue;
+    
+    var targetRow;
+    if (targetIdRowMap[id]) {
+      // Existing profile → update in place
+      targetRow = targetIdRowMap[id];
+      processedIds[id] = true;
+    } else {
+      // New profile → append at end
+      targetRow = nextAppendRow++;
+    }
+    
+    // Build app-controlled column data for this row
+    // C-J (8 cols): ID NDD, Tên, Giai đoạn, Công cụ, Trạng thái, Mục tiêu, Ghi chú, ĐK BB
+    var cj = [];
+    for (var j = 2; j <= 9; j++) cj.push(sanitizeVal(row[j]));
+    
+    // M-O (3 cols): GVBB, Ngày, ONLINE/OFFLINE
+    var mo = [sanitizeVal(row[12]), sanitizeVal(row[13]), sanitizeVal(row[14])];
+    
+    // R-T (3 cols): Lí do, Chủ đề, SĐT
+    var rt = [sanitizeVal(row[17]), sanitizeVal(row[18]), sanitizeVal(row[19])];
+    
+    batchData.push({ range: targetTab + '!C' + targetRow + ':J' + targetRow, values: [cj] });
+    batchData.push({ range: targetTab + '!M' + targetRow + ':O' + targetRow, values: [mo] });
+    batchData.push({ range: targetTab + '!R' + targetRow + ':T' + targetRow, values: [rt] });
+  }
+  
+  // 3b. Clear deleted profiles (in target but NOT in master for this group)
+  for (var existingId in targetIdRowMap) {
+    if (!masterIdMap[existingId] && !processedIds[existingId]) {
+      var clearRow = targetIdRowMap[existingId];
+      batchData.push({ range: targetTab + '!C' + clearRow + ':J' + clearRow, values: [['','','','','','','','']] });
+      batchData.push({ range: targetTab + '!M' + clearRow + ':O' + clearRow, values: [['','','']] });
+      batchData.push({ range: targetTab + '!R' + clearRow + ':T' + clearRow, values: [['','','']] });
+    }
+  }
+  
+  // 4. Batch write all changes at once
+  if (batchData.length > 0) {
+    Sheets.Spreadsheets.Values.batchUpdate({
+      data: batchData,
+      valueInputOption: 'USER_ENTERED'
+    }, targetId);
+  }
+  
+  Logger.log('Synced ' + masterRows.length + ' rows to ' + group + ' (matched by ID, deleted: cleared)');
 }
 
 // ── Setup: Create Config tab with headers (run once) ──
@@ -339,7 +409,6 @@ function setupConfig() {
   var config = ss.insertSheet('Config');
   config.getRange(1, 1, 1, 3).setValues([['Group', 'Sheet ID đích', 'Tab Name']])
     .setFontWeight('bold').setBackground('#d9ead3');
-  // Example row
   config.getRange(2, 1, 1, 3).setValues([['HCM2 - N1T3', '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g', 'Data']]);
   config.setColumnWidth(1, 150);
   config.setColumnWidth(2, 350);
@@ -347,26 +416,28 @@ function setupConfig() {
   Logger.log('Config tab created! Add your unit sheets here.');
 }
 
-// ── Setup: Install 1-minute trigger (run once) ──
+// ── Setup: Install 5-minute trigger (run once) ──
 function setupSyncTrigger() {
-  // Remove old sync triggers
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === 'syncAllUnits') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  // New trigger: every 1 minute
   ScriptApp.newTrigger('syncAllUnits')
     .timeBased()
-    .everyMinutes(1)
+    .everyMinutes(5)
     .create();
-  Logger.log('Trigger installed: syncAllUnits runs every 1 minute.');
+  Logger.log('Trigger installed: syncAllUnits runs every 5 minutes.');
 }
 
-// ── DEBUG: Test sync manually ──
+// ── DEBUG: Test sync manually (bypasses dirty flag) ──
 function testSync() {
   Logger.log('=== Testing syncAllUnits ===');
+  // Force dirty flag so sync runs
+  PropertiesService.getScriptProperties().setProperty('lastChanged', String(new Date().getTime()));
+  PropertiesService.getScriptProperties().deleteProperty('lastSynced');
+  
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var config = ss.getSheetByName('Config');
   if (!config) {
