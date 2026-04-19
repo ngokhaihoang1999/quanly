@@ -234,50 +234,65 @@ function doPost(e) {
   }
 }
 
-// ── AUTO-SYNC: Copy C2:U from source sheet to target sheet's "Data" tab ──
+// ── AUTO-SYNC: Copy C2:U from source → target "Data" tab using Sheets API ──
+// Uses Advanced Sheets API to bypass data validation (no format/color/dropdown impact)
 function syncToTargetSheet(sourceSheet) {
   try {
     var TARGET_ID = '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g';
     var TARGET_TAB = 'Data';
     
-    // Ensure all pending changes are written first
     SpreadsheetApp.flush();
     
     var src = sourceSheet || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var allData = src.getDataRange().getValues();
+    if (allData.length < 2) return;
     
-    // Use getDataRange for reliable row detection
-    var allData = src.getDataRange().getValues(); // includes header
-    if (allData.length < 2) return; // No data rows
-    
-    // Extract C2:U (columns index 2-20 = C through U = 19 columns)
+    // Extract C2:U (columns index 2-20)
     var srcData = [];
-    for (var i = 1; i < allData.length; i++) { // skip header row (i=0)
+    for (var i = 1; i < allData.length; i++) {
       var row = [];
-      for (var j = 2; j <= 20; j++) { // columns C(2) through U(20)
+      for (var j = 2; j <= 20; j++) {
         row.push(allData[i][j]);
       }
       srcData.push(row);
     }
-    
     if (srcData.length === 0) return;
     
-    // Open target sheet
-    var target = SpreadsheetApp.openById(TARGET_ID);
-    var tSheet = target.getSheetByName(TARGET_TAB);
-    if (!tSheet) return;
+    // Clear old values in target via Sheets API (values only, no format/validation impact)
+    var clearRange = TARGET_TAB + '!C2:U';
+    Sheets.Spreadsheets.Values.clear({}, TARGET_ID, clearRange);
     
-    // Clear old data in target (C2:U, generous range)
-    var tLastRow = Math.max(tSheet.getLastRow(), srcData.length + 1);
-    if (tLastRow > 1) {
-      tSheet.getRange(2, 3, tLastRow, 19).clearContent();
-    }
-    
-    // Paste new data starting at C2
-    tSheet.getRange(2, 3, srcData.length, 19).setValues(srcData);
-    
-    SpreadsheetApp.flush();
+    // Write new values via Sheets API (bypasses data validation entirely)
+    var writeRange = TARGET_TAB + '!C2:U' + (srcData.length + 1);
+    Sheets.Spreadsheets.Values.update(
+      { values: srcData },
+      TARGET_ID,
+      writeRange,
+      { valueInputOption: 'RAW' }
+    );
   } catch(e) {
-    // Silent fail — don't break webhook response
     Logger.log('syncToTargetSheet error: ' + e.toString());
   }
+}
+
+// ── DEBUG: Run manually from Script Editor to test sync ──
+function testSync() {
+  var src = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  Logger.log('Source sheet name: ' + src.getName());
+  Logger.log('Source last row: ' + src.getLastRow());
+  var allData = src.getDataRange().getValues();
+  Logger.log('Source total rows (incl header): ' + allData.length);
+  Logger.log('Source row 2 sample: ' + JSON.stringify(allData[1]));
+  
+  var TARGET_ID = '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g';
+  var target = SpreadsheetApp.openById(TARGET_ID);
+  var sheets = target.getSheets();
+  Logger.log('Target sheet tabs: ' + sheets.map(function(s) { return s.getName() + ' (gid=' + s.getSheetId() + ')'; }).join(', '));
+  
+  var tSheet = target.getSheetByName('Data');
+  Logger.log('Found "Data" tab: ' + (tSheet ? 'YES' : 'NO'));
+  
+  // Try the actual sync
+  syncToTargetSheet(src);
+  Logger.log('Sync completed. Check target sheet.');
 }

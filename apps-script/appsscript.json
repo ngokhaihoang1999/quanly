@@ -1,6 +1,13 @@
 {
   "timeZone": "Asia/Ho_Chi_Minh",
   "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Sheets",
+        "version": "v4",
+        "serviceId": "sheets"
+      }
+    ]
   },
   "webapp": {
     "access": "ANYONE_ANONYMOUS",
