@@ -334,7 +334,7 @@ function openStrategyPitchDeck() {
     <div class="deck-container">
       <div style="text-align:center; margin-bottom:16px;">
         <div style="font-weight:700; opacity:0.6; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Nhiệm vụ mục tiêu</div>
-        <div style="font-size:15px; font-weight:800; color:#c084fc;">${name}</div>
+        <div style="font-size:15px; font-weight:800; color:#0284c7;">${name}</div>
       </div>
       ${progressHtml}
       <div class="deck-slide-area">
