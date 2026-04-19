@@ -301,67 +301,77 @@ function syncAllUnits() {
   }
 }
 
-// ── Sync one unit sheet (matched by ID NDD) ──
+// ── Sync one unit sheet ──
+// - Match by ID NDD: existing → update in place, new → append at bottom
+// - NEVER delete rows (preserves history when NDD changes group or is removed)
+// - Skip profiles without ID NDD or without Group
 function syncOneUnit(allData, group, targetId, targetTab) {
-  // 1. Filter master rows by Group (column A)
+  // 1. Filter master rows by Group (column A), skip rows without ID NDD
   var masterRows = [];
   for (var i = 1; i < allData.length; i++) {
-    if (String(allData[i][0]).trim() === group) {
+    var rowGroup = String(allData[i][0] || '').trim();
+    var rowId = String(allData[i][2] || '').trim();
+    if (rowGroup === group && rowId) {
       masterRows.push(allData[i]);
     }
   }
   
-  // Build master ID map: ID NDD → row data
-  var masterIdMap = {};
-  for (var m = 0; m < masterRows.length; m++) {
-    var id = String(masterRows[m][2] || '').trim();
-    if (id) masterIdMap[id] = masterRows[m];
-  }
+  if (masterRows.length === 0) return;
   
-  // 2. Read current target IDs (column C) via Sheets API
-  var targetIdsResult;
+  // 2. Read target columns C and D to:
+  //    - Find existing IDs (column C) and their row positions
+  //    - Determine actual last row with data (for appending)
+  var targetResult;
   try {
-    targetIdsResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:C');
+    targetResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:D');
   } catch(e) {
     Logger.log('Cannot read target for ' + group + ': ' + e);
     return;
   }
   
-  var targetIds = targetIdsResult.values || [];
+  var targetData = targetResult.values || [];
   
-  // Build target ID map: ID NDD → row number (1-indexed in sheet)
+  // Build target ID map: ID NDD → sheet row number
+  // Also find the actual last row that has ANY content
   var targetIdRowMap = {};
-  var maxTargetRow = 1; // 1 = header
-  for (var t = 1; t < targetIds.length; t++) {
-    var tid = String(targetIds[t][0] || '').trim();
-    if (tid) {
-      targetIdRowMap[tid] = t + 1; // sheet row (1-indexed, +1 for header)
-      if (t + 1 > maxTargetRow) maxTargetRow = t + 1;
+  var lastDataRow = 1; // 1 = header only
+  for (var t = 1; t < targetData.length; t++) {
+    var sheetRow = t + 1; // t=1 → sheet row 2, etc.
+    var colC = String(targetData[t][0] || '').trim();
+    var colD = String(targetData[t][1] || '').trim();
+    
+    // Track last row with any content
+    if (colC || colD) {
+      lastDataRow = sheetRow;
+    }
+    
+    // Map ID NDD to row
+    if (colC) {
+      targetIdRowMap[colC] = sheetRow;
     }
   }
   
-  // 3. Process: update existing, append new, clear deleted
+  // 3. Process master rows: update existing or append new
   var batchData = [];
-  var processedIds = {};
-  var nextAppendRow = maxTargetRow + 1;
+  var nextAppendRow = lastDataRow + 1;
+  var updated = 0, appended = 0;
   
-  // 3a. Update/Append master rows
   for (var m = 0; m < masterRows.length; m++) {
     var row = masterRows[m];
     var id = String(row[2] || '').trim();
-    if (!id) continue;
     
     var targetRow;
     if (targetIdRowMap[id]) {
-      // Existing profile → update in place
+      // ✏️ Existing profile → update in place (same row)
       targetRow = targetIdRowMap[id];
-      processedIds[id] = true;
+      updated++;
     } else {
-      // New profile → append at end
+      // ➕ New profile → append at very bottom
       targetRow = nextAppendRow++;
+      appended++;
     }
     
-    // Build app-controlled column data for this row
+    // Build app-controlled column data
     // C-J (8 cols): ID NDD, Tên, Giai đoạn, Công cụ, Trạng thái, Mục tiêu, Ghi chú, ĐK BB
     var cj = [];
     for (var j = 2; j <= 9; j++) cj.push(sanitizeVal(row[j]));
@@ -377,17 +387,7 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     batchData.push({ range: targetTab + '!R' + targetRow + ':T' + targetRow, values: [rt] });
   }
   
-  // 3b. Clear deleted profiles (in target but NOT in master for this group)
-  for (var existingId in targetIdRowMap) {
-    if (!masterIdMap[existingId] && !processedIds[existingId]) {
-      var clearRow = targetIdRowMap[existingId];
-      batchData.push({ range: targetTab + '!C' + clearRow + ':J' + clearRow, values: [['','','','','','','','']] });
-      batchData.push({ range: targetTab + '!M' + clearRow + ':O' + clearRow, values: [['','','']] });
-      batchData.push({ range: targetTab + '!R' + clearRow + ':T' + clearRow, values: [['','','']] });
-    }
-  }
-  
-  // 4. Batch write all changes at once
+  // 4. Batch write all changes at once (NO deletion)
   if (batchData.length > 0) {
     Sheets.Spreadsheets.Values.batchUpdate({
       data: batchData,
@@ -395,7 +395,7 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     }, targetId);
   }
   
-  Logger.log('Synced ' + masterRows.length + ' rows to ' + group + ' (matched by ID, deleted: cleared)');
+  Logger.log(group + ': ' + updated + ' updated, ' + appended + ' appended (total ' + masterRows.length + ')');
 }
 
 // ── Setup: Create Config tab with headers (run once) ──
