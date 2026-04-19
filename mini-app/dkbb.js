@@ -110,6 +110,11 @@ async function loadDKBB(profileId) {
   // 7. Trạng thái
   set('dkbb_trang_thai', _dkbbStatus(p.fruit_status));
 
+  // 8. Mục tiêu tháng (from profiles.semester_id → allSemesters lookup)
+  const semRaw = (p.semester_id && typeof allSemesters !== 'undefined')
+    ? (allSemesters.find(s => s.id === p.semester_id)?.name || '') : '';
+  set('dkbb_muc_tieu', _dkbbFmtMonth(semRaw));
+
   // 10. Độ tuổi
   const birthYear = p.birth_year ? parseInt(p.birth_year) : 0;
   const age = birthYear ? (new Date().getFullYear() - birthYear) : '';
@@ -129,14 +134,11 @@ async function loadDKBB(profileId) {
   // 18. Lý do
   set('dkbb_ly_do', p.dropout_reason || '');
 
-  // ── Fetch form_hanh_chinh for fields 8, 9, 12, 13 ──
+  // ── Fetch form_hanh_chinh for fields 9, 12, 13 ──
   try {
     const res = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data`);
     const rows = await res.json();
     const d = rows?.[0]?.data || {};
-
-    // 8. Mục tiêu tháng (from t2_que_quan = Kỳ khai giảng)
-    set('dkbb_muc_tieu', _dkbbFmtMonth(d.t2_que_quan || ''));
 
     // 9. Quan hệ với NDD
     const moiQuanHe = d.sk_moi_quan_he || '';
