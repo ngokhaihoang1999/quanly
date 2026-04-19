@@ -101,6 +101,7 @@ function doPost(e) {
           }
         }
       }
+      syncToTargetSheet(sheet);
       return ContentService.createTextOutput(JSON.stringify({"status": "deleted"})).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -122,6 +123,7 @@ function doPost(e) {
         // Set checkboxes for columns J (10) and K (11)
         sheet.getRange(2, 10, newValues.length, 2).insertCheckboxes();
       }
+      syncToTargetSheet(sheet);
       return ContentService.createTextOutput(JSON.stringify({"status": "bulk_success"})).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -225,8 +227,44 @@ function doPost(e) {
       if (lyDo) sheet.getRange(rowIdx, 18).setValue(lyDo);
     }
     
+    syncToTargetSheet(sheet);
     return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ── AUTO-SYNC: Copy C2:U from source sheet to target sheet's "Data" tab ──
+function syncToTargetSheet(sourceSheet) {
+  try {
+    var TARGET_ID = '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g';
+    var TARGET_TAB = 'Data';
+    
+    var src = sourceSheet || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = src.getLastRow();
+    if (lastRow < 2) return; // No data
+    
+    // Read C2:U (columns 3-21 = 19 columns)
+    var numRows = lastRow - 1;
+    var srcData = src.getRange(2, 3, numRows, 19).getValues();
+    
+    // Open target sheet
+    var target = SpreadsheetApp.openById(TARGET_ID);
+    var tSheet = target.getSheetByName(TARGET_TAB);
+    if (!tSheet) return;
+    
+    // Clear old data in target (C2:U onward)
+    var tLastRow = tSheet.getLastRow();
+    if (tLastRow > 1) {
+      tSheet.getRange(2, 3, tLastRow - 1, 19).clearContent();
+    }
+    
+    // Paste new data
+    if (srcData.length > 0) {
+      tSheet.getRange(2, 3, srcData.length, 19).setValues(srcData);
+    }
+  } catch(e) {
+    // Silent fail — don't break webhook response
+    Logger.log('syncToTargetSheet error: ' + e.toString());
   }
 }
