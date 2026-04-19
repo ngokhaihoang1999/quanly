@@ -247,12 +247,23 @@ function syncToTargetSheet(sourceSheet) {
     var allData = src.getDataRange().getValues();
     if (allData.length < 2) return;
     
-    // Extract C2:U (columns index 2-20)
+    // Extract C2:U (columns index 2-20), sanitize values
     var srcData = [];
     for (var i = 1; i < allData.length; i++) {
       var row = [];
       for (var j = 2; j <= 20; j++) {
-        row.push(allData[i][j]);
+        var val = allData[i][j];
+        // Convert Date objects to YYYY-MM-DD string (avoid timezone mess)
+        if (val instanceof Date) {
+          var y = val.getFullYear();
+          var m = String(val.getMonth() + 1).padStart(2, '0');
+          var d = String(val.getDate()).padStart(2, '0');
+          val = y + '-' + m + '-' + d;
+        }
+        // Convert booleans to readable strings
+        else if (val === true) val = 'TRUE';
+        else if (val === false) val = 'FALSE';
+        row.push(val);
       }
       srcData.push(row);
     }
