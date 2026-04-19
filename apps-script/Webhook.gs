@@ -65,7 +65,7 @@ function doPost(e) {
       var dangKyBB = false;
       if (p.phase === "bb" || p.phase === "center" || p.phase === "completed") dangKyBB = true;
       var giaiDoan = getPhaseCode(p.phase);
-      var congCu = itemData.tools || d.t2_cong_cu || ""; 
+      var congCu = itemData.tools || d.t2_concept || ""; 
       var ghiChu = itemData.recentNote || ""; 
       var gvbb = p.gvbb_staff_code || "";
       var lyDo = p.dropout_reason || "";
@@ -160,7 +160,7 @@ function doPost(e) {
     };
     var giaiDoan = getPhaseCode(p.phase);
     
-    var congCu = data.tools || d.t2_cong_cu || ""; 
+    var congCu = data.tools || d.t2_concept || ""; 
     var ghiChu = data.recentNote || ""; 
     var gvbb = p.gvbb_staff_code || "";
     var lyDo = p.dropout_reason || "";

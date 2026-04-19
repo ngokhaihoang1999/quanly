@@ -447,7 +447,7 @@ async function approveHapja(id) {
           t2_nghe_nghiep: d.nghe_nghiep || '',
           t2_tinh_cach: d.tinh_cach_cong_cu || d.tinh_cach || '',
           t2_dia_chi: d.noi_o || '',
-          t2_que_quan: '',
+          t2_ky_khai_giang: '',
           t2_khung_ranh: d.tg_ranh || '',
           t2_so_thich: d.su_quan_tam || '',
           t2_chuyen_cu: d.hoan_canh_hien_tai || d.hoan_canh || '',

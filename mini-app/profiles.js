@@ -379,7 +379,7 @@ async function refreshProfileInPlace() {
   }
 }
 function clearFormFields() {
-  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_ky_khai_giang','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_concept','t2_luu_y'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   ['chips_ton_giao','chips_hon_nhan','chips_quan_he_ndd','chips_khong_gian_song'].forEach(clearChips);
   // Clear Sinka fields
   if (typeof SINKA_FIELDS !== 'undefined') SINKA_FIELDS.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
@@ -404,7 +404,7 @@ async function loadInfoSheet(profileId) {
     window._currentInfoSheet = {
       gioi_tinh: d.t2_gioi_tinh, nam_sinh: d.t2_nam_sinh, nghe_nghiep: d.t2_nghe_nghiep,
       ton_giao: d.t2_ton_giao, hon_nhan: d.t2_hon_nhan, dia_chi: d.t2_dia_chi,
-      que_quan: d.t2_que_quan, tinh_cach: d.t2_tinh_cach, so_thich: d.t2_so_thich,
+      ky_khai_giang: d.t2_ky_khai_giang, tinh_cach: d.t2_tinh_cach, so_thich: d.t2_so_thich,
       du_dinh: d.t2_du_dinh, nguoi_quan_trong: d.t2_nguoi_quan_trong,
       quan_diem: d.t2_quan_diem, sdt: d.t2_sdt,
       chuyen_cu: d.t2_chuyen_cu, nguoi_than: d.t2_nguoi_than, luu_y: d.t2_luu_y,
@@ -419,12 +419,12 @@ async function loadInfoSheet(profileId) {
     // Pre-fill fields 19, 21, 22 từ Hapja/profile nếu chưa có
     const p = allProfiles.find(x => x.id === profileId);
     // Field 8: Kỳ khai giảng — from profiles.semester_id → allSemesters
-    if (!d.t2_que_quan && p?.semester_id && typeof allSemesters !== 'undefined') {
+    if (!d.t2_ky_khai_giang && p?.semester_id && typeof allSemesters !== 'undefined') {
       const sem = allSemesters.find(s => s.id === p.semester_id);
       if (sem?.name) {
         const semFmt = typeof formatSemesterMonth === 'function' ? formatSemesterMonth(sem.name) : sem.name;
-        const queQuanEl = document.getElementById('t2_que_quan');
-        if (queQuanEl) queQuanEl.value = semFmt;
+        const kkgEl = document.getElementById('t2_ky_khai_giang');
+        if (kkgEl) kkgEl.value = semFmt;
       }
     }
     // Field 22: NDD phụ trách — from profile
@@ -442,7 +442,7 @@ async function loadInfoSheet(profileId) {
 }
 async function saveInfoSheet() {
   const data = {};
-  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_que_quan','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_cong_cu','t2_luu_y','t2_hinh_thuc','t2_ket_noi','t2_ngay_chakki','t2_ndd','t2_ghi_chu'].forEach(id=>{ data[id]=document.getElementById(id)?.value||''; });
+  ['t2_ho_ten','t2_gioi_tinh','t2_nam_sinh','t2_nghe_nghiep','t2_thoi_gian_lam_viec','t2_sdt','t2_dia_chi','t2_ky_khai_giang','t2_khung_ranh','t2_so_thich','t2_tinh_cach','t2_du_dinh','t2_chuyen_cu','t2_nguoi_than','t2_nguoi_quan_trong','t2_quan_diem','t2_concept','t2_luu_y','t2_hinh_thuc','t2_ket_noi','t2_ngay_chakki','t2_ndd','t2_ghi_chu'].forEach(id=>{ data[id]=document.getElementById(id)?.value||''; });
   data.t2_ton_giao = getChipValues('chips_ton_giao');
   data.t2_hon_nhan = getChipValues('chips_hon_nhan');
   data.t2_quan_he_ndd = getChipValues('chips_quan_he_ndd');
@@ -514,7 +514,7 @@ function copyInfoSheet() {
     { l: 'Thời gian làm việc', v: v('t2_thoi_gian_lam_viec') },
     { l: 'SĐT', v: v('t2_sdt') },
     { l: 'Địa chỉ', v: v('t2_dia_chi') },
-    { l: semLabel ? `Kỳ khai giảng (${semLabel})` : 'Kỳ khai giảng', v: v('t2_que_quan') },
+    { l: semLabel ? `Kỳ khai giảng (${semLabel})` : 'Kỳ khai giảng', v: v('t2_ky_khai_giang') },
     { l: 'Khung rảnh', v: v('t2_khung_ranh') },
     { l: 'Sở thích', v: v('t2_so_thich') },
     { l: 'Tính cách', v: v('t2_tinh_cach') },
@@ -523,7 +523,7 @@ function copyInfoSheet() {
     { l: 'Người thân', v: v('t2_nguoi_than') },
     { l: 'Người quan trọng', v: v('t2_nguoi_quan_trong') },
     { l: 'Quan điểm', v: v('t2_quan_diem') },
-    { l: 'Concept / Vỏ bọc', v: v('t2_cong_cu') },
+    { l: 'Concept / Vỏ bọc', v: v('t2_concept') },
     { l: 'Lưu ý', v: v('t2_luu_y') },
     { l: 'Hình thức tiếp cận', v: v('t2_hinh_thuc') },
     { l: 'Kết nối', v: v('t2_ket_noi') },

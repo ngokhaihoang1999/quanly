@@ -63,7 +63,7 @@ async function syncToGoogleSheet(pid) {
         d: d,
         hj: hj,
         recentNote: recentNote,
-        tools: tools || d.t2_cong_cu || '',
+        tools: tools || d.t2_concept || '',
         nddGroup: nddGroup,
         semesterName: semName
       })
@@ -167,7 +167,7 @@ async function bulkSyncDatabaseToSheet() {
       const nddGroup = formatGroupName(p.ndd_staff_code ? (freshUnitMap[p.ndd_staff_code] || '') : '');
       const semName = formatSemesterMonth(p.semester_id ? (semMap[p.semester_id] || '') : '');
       const recentNote = noteMap[pid] || '';
-      const tools = (tvToolsMap[pid] ? [...tvToolsMap[pid]].join(', ') : '') || d.t2_cong_cu || '';
+      const tools = (tvToolsMap[pid] ? [...tvToolsMap[pid]].join(', ') : '') || d.t2_concept || '';
       
       // Inject gvbb into p so Webhook.gs can read p.gvbb_staff_code
       const pWithGvbb = { ...p, gvbb_staff_code: gvbbCode };

@@ -174,7 +174,7 @@ async function _autoFillSinka(profileId, p) {
     tinh_cach: v('t2_tinh_cach'),
     nguoi_than: v('t2_nguoi_than'),
     hinh_thuc: v('t2_hinh_thuc'),
-    cong_cu: v('t2_cong_cu'),
+    cong_cu: v('t2_concept'),
     ket_noi: v('t2_ket_noi'),
     hon_nhan: '',
     ton_giao: ''

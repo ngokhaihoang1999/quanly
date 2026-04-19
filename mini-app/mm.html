@@ -58,7 +58,7 @@ function buildInfoMD(p, d) {
     d.t2_quan_he_ndd ? 'Quan hệ với NĐD: '+(Array.isArray(d.t2_quan_he_ndd)?d.t2_quan_he_ndd.join(', '):d.t2_quan_he_ndd) : null,
     d.t2_khong_gian_song ? 'Ở chung: '+(Array.isArray(d.t2_khong_gian_song)?d.t2_khong_gian_song.join(', '):d.t2_khong_gian_song) : null,
     d.t2_dia_chi ? 'Nơi ở hiện tại: '+d.t2_dia_chi : null,
-    d.t2_que_quan ? 'Nhà ba mẹ (Quê): '+d.t2_que_quan : null
+    d.t2_ky_khai_giang ? 'Nhà ba mẹ (Quê): '+d.t2_ky_khai_giang : null
   ].filter(Boolean);
   if (dm.length) { md += '## 🏛️ Nhân thân & Nền tảng\n'; dm.forEach(function(v){md+='- '+fmt(v,45)+'\n';}); }
   if (d.t2_nguoi_than) md += '## 🏡 Gia đình & Hoàn cảnh\n### 👨‍👩‍👧‍👦 Hoàn cảnh gia đình\n' + mdS(d.t2_nguoi_than,55);

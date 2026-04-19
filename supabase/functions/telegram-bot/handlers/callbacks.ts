@@ -416,7 +416,7 @@ export async function handleCallback(update: any, staffData: any) {
     af['sk_ndd_ma_dinh_danh'] = nddScj;
     af['sk_hinh_thuc_truyen_dao'] = d.t2_hinh_thuc || '';
     af['sk_moi_quan_he'] = d.t2_ket_noi || '';
-    af['sk_concept_thuoc_the'] = d.t2_cong_cu || '';
+    af['sk_concept_thuoc_the'] = d.t2_concept || '';
     af['sk_ten_gt_tuoi'] = [p.full_name, p.gender, p.birth_year].filter(Boolean).join(' / ');
     af['sk_quoc_tich'] = 'Vi\u1ec7t Nam';
     af['sk_so_thich_sdt'] = [d.t2_so_thich, p.phone_number].filter(Boolean).join(' / ');
