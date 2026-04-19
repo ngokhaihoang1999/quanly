@@ -55,6 +55,8 @@ const CL_SECTIONS = [
 let _strategyLoaded = false;
 let _strategyData = {};
 
+function _clEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 // ── Render Strategy Board ──────────────────────────────────────────────────
 function renderStrategyBoard() {
   const container = document.getElementById('strategyContent');
@@ -88,13 +90,13 @@ function renderStrategyBoard() {
         fieldsHtml += `
           <div class="cl-field">
             <label>${f.label}</label>
-            <textarea id="${f.key}" placeholder="${f.placeholder}" onblur="_saveStrategyField('${f.key}',this.value)">${val}</textarea>
+            <textarea id="${f.key}" placeholder="${f.placeholder}" onblur="_saveStrategyField('${f.key}',this.value)">${_clEsc(val)}</textarea>
           </div>`;
       } else {
         fieldsHtml += `
           <div class="cl-field">
             <label>${f.label}</label>
-            <input type="text" id="${f.key}" value="${val}" placeholder="${f.placeholder}" onblur="_saveStrategyField('${f.key}',this.value)" />
+            <input type="text" id="${f.key}" value="${_clEsc(val)}" placeholder="${f.placeholder}" onblur="_saveStrategyField('${f.key}',this.value)" />
           </div>`;
       }
     });
@@ -240,7 +242,7 @@ async function _saveAllStrategy() {
     
     await sbFetch('/rest/v1/form_hanh_chinh', {
       method: 'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ profile_id: currentProfileId, data: merged })
     });
     showToast('✅ Đã lưu chiến lược');
