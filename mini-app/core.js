@@ -1989,13 +1989,43 @@ async function toggleFruitStatus(profileId, current) {
 
   const label = newStatus === 'dropout' ? 'Drop-out' : newStatus === 'pause' ? 'Pause' : 'Alive';
 
-  // Ask reason for pause/dropout
+  // Ask reason for pause/dropout using modal with datalist suggestions
   let reason = '';
   if (newStatus === 'dropout' || newStatus === 'pause') {
-    const prompt_label = newStatus === 'dropout' ? 'Nhập lý do Drop-out (có thể để trống):' : 'Nhập lý do Pause (có thể để trống):';
-    reason = prompt(prompt_label);
+    reason = await new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      const box = document.createElement('div');
+      box.style.cssText = 'background:var(--bg1,#fff);border-radius:16px;padding:20px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
+      const statusLabel = newStatus === 'dropout' ? 'Drop-out' : 'Pause';
+      const color = newStatus === 'dropout' ? 'var(--red,#ef4444)' : '#f59e0b';
+      box.innerHTML = `
+        <div style="font-size:15px;font-weight:700;color:${color};margin-bottom:12px;">${newStatus === 'dropout' ? '🔴' : '⏸️'} Lý do ${statusLabel}</div>
+        <div class="field-group" style="margin-bottom:10px;">
+          <label style="font-size:12px;">Lý do chính</label>
+          <input type="text" id="_reason_input" list="datalist_dropout_reasons" placeholder="Chọn hoặc nhập lý do..." autocomplete="off" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+        </div>
+        <div class="field-group" style="margin-bottom:14px;">
+          <label style="font-size:12px;">Chi tiết bổ sung</label>
+          <textarea id="_reason_detail" placeholder="Ghi thêm chi tiết (nếu có)..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;min-height:60px;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="_reason_cancel" style="padding:8px 16px;border-radius:10px;background:var(--bg2,#f5f5f5);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:12px;font-weight:600;cursor:pointer;">Huỷ</button>
+          <button id="_reason_ok" style="padding:8px 16px;border-radius:10px;background:${color};border:none;color:white;font-size:12px;font-weight:700;cursor:pointer;">Xác nhận</button>
+        </div>`;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      setTimeout(() => box.querySelector('#_reason_input')?.focus(), 100);
+      box.querySelector('#_reason_cancel').onclick = () => { overlay.remove(); resolve(null); };
+      box.querySelector('#_reason_ok').onclick = () => {
+        const main = box.querySelector('#_reason_input')?.value?.trim() || '';
+        const detail = box.querySelector('#_reason_detail')?.value?.trim() || '';
+        overlay.remove();
+        resolve(detail ? `${main} — ${detail}` : main);
+      };
+      overlay.onclick = e => { if (e.target === overlay) { overlay.remove(); resolve(null); } };
+    });
     if (reason === null) return;
-    reason = reason.trim();
   }
 
   if (!await showConfirmAsync(`Chuyển trạng thái trái quả thành "${label}"?`)) return;

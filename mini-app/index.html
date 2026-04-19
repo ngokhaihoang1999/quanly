@@ -503,7 +503,7 @@
   </div>
   <div class="field-group">
     <label>🔧 Công cụ tư vấn <span style="color:var(--red);">*</span></label>
-    <input type="text" id="stv_tool" placeholder="VD: Sinh trắc vân tay, MBTI, Ennea, Trực tiếp..." />
+    <input type="text" id="stv_tool" list="datalist_tools" placeholder="Chọn hoặc nhập công cụ..." autocomplete="off" />
   </div>
   <div class="field-group">
     <label>👤 TVV phụ trách</label>
@@ -644,7 +644,8 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title">🔴 Ghi nhận Drop-out</div>
-  <div class="field-group"><label>Lý do drop-out</label><textarea id="dropout_reason" placeholder="Ghi lý do..." style="resize:vertical;min-height:80px;"></textarea></div>
+  <div class="field-group"><label>Lý do drop-out</label><input type="text" id="dropout_reason" list="datalist_dropout_reasons" placeholder="Chọn hoặc nhập lý do..." autocomplete="off" /></div>
+  <div class="field-group"><label>Chi tiết bổ sung</label><textarea id="dropout_reason_detail" placeholder="Ghi thêm chi tiết (nếu có)..." style="resize:vertical;min-height:60px;"></textarea></div>
   <button class="save-btn" style="background:var(--red);" onclick="confirmDropout()">🔴 Xác nhận Drop-out</button>
   <button onclick="closeModal('dropoutModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
@@ -821,5 +822,47 @@ window._lazyMarkmap = function() {
 };
 </script>
 <!-- Deep link logic moved to core.js -->
+
+<!-- ── Datalist: Công cụ tư vấn (chuẩn hoá) ── -->
+<datalist id="datalist_tools">
+  <option value="4 hình">
+  <option value="Rắn và hoa">
+  <option value="Enneagram">
+  <option value="6 hình">
+  <option value="Bể cá gia đình">
+  <option value="Cái bắt">
+  <option value="Cái cây">
+  <option value="Chiêm tinh/Bản đồ sao">
+  <option value="Thần số học">
+  <option value="Cô gái dưới mưa">
+  <option value="Life Graph">
+  <option value="Tarot">
+  <option value="Cảm Xúc Chủ Đạo">
+  <option value="Loại hình gắn bó">
+  <option value="Test Beck">
+  <option value="HTP">
+  <option value="Ly cảm xúc">
+  <option value="JD Festival">
+  <option value="Kokology">
+  <option value="Echo Color">
+</datalist>
+
+<!-- ── Datalist: Lý do nghỉ học (chuẩn hoá) ── -->
+<datalist id="datalist_dropout_reasons">
+  <option value="Mất liên lạc">
+  <option value="Thời gian">
+  <option value="Trầm cảm">
+  <option value="Thái độ không tốt">
+  <option value="Bị ngăn cản/ảnh hưởng">
+  <option value="Cấn KT">
+  <option value="Ngăn cản công ty">
+  <option value="Tài chính (và lệ phí)">
+  <option value="Chưa đủ tuổi">
+  <option value="Nghề nghiệp (Đa cấp/bitcoin/chính phủ)">
+  <option value="LGBT">
+  <option value="Xin chuyển khoá sau">
+  <option value="Khác">
+</datalist>
+
 </body>
 </html>
