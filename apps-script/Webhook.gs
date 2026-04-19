@@ -240,29 +240,42 @@ function syncToTargetSheet(sourceSheet) {
     var TARGET_ID = '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g';
     var TARGET_TAB = 'Data';
     
-    var src = sourceSheet || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var lastRow = src.getLastRow();
-    if (lastRow < 2) return; // No data
+    // Ensure all pending changes are written first
+    SpreadsheetApp.flush();
     
-    // Read C2:U (columns 3-21 = 19 columns)
-    var numRows = lastRow - 1;
-    var srcData = src.getRange(2, 3, numRows, 19).getValues();
+    var src = sourceSheet || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    // Use getDataRange for reliable row detection
+    var allData = src.getDataRange().getValues(); // includes header
+    if (allData.length < 2) return; // No data rows
+    
+    // Extract C2:U (columns index 2-20 = C through U = 19 columns)
+    var srcData = [];
+    for (var i = 1; i < allData.length; i++) { // skip header row (i=0)
+      var row = [];
+      for (var j = 2; j <= 20; j++) { // columns C(2) through U(20)
+        row.push(allData[i][j]);
+      }
+      srcData.push(row);
+    }
+    
+    if (srcData.length === 0) return;
     
     // Open target sheet
     var target = SpreadsheetApp.openById(TARGET_ID);
     var tSheet = target.getSheetByName(TARGET_TAB);
     if (!tSheet) return;
     
-    // Clear old data in target (C2:U onward)
-    var tLastRow = tSheet.getLastRow();
+    // Clear old data in target (C2:U, generous range)
+    var tLastRow = Math.max(tSheet.getLastRow(), srcData.length + 1);
     if (tLastRow > 1) {
-      tSheet.getRange(2, 3, tLastRow - 1, 19).clearContent();
+      tSheet.getRange(2, 3, tLastRow, 19).clearContent();
     }
     
-    // Paste new data
-    if (srcData.length > 0) {
-      tSheet.getRange(2, 3, srcData.length, 19).setValues(srcData);
-    }
+    // Paste new data starting at C2
+    tSheet.getRange(2, 3, srcData.length, 19).setValues(srcData);
+    
+    SpreadsheetApp.flush();
   } catch(e) {
     // Silent fail — don't break webhook response
     Logger.log('syncToTargetSheet error: ' + e.toString());
