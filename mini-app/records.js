@@ -1062,6 +1062,7 @@ function openAddRecordModal(type, existingContent = null, readOnly = false) {
         </div>
         <div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Bạn có thể thay đổi thời gian này sau đó</div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><input type="checkbox" id="rm_has_kt_content" ${c.has_kt_content ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent);"/><label for="rm_has_kt_content" style="margin:0;font-size:13px;font-weight:600;">📖 Có nội dung KT</label></div>
       <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   }
   document.getElementById('addRecordModal').classList.add('open');
@@ -1107,6 +1108,7 @@ async function saveRecord() {
       de_xuat_cs:    document.getElementById('rm_de_xuat_cs')?.value,
       buoi_tiep:     buoiTiepISO,
       noi_dung_tiep: document.getElementById('rm_noi_dung_tiep')?.value,
+      has_kt_content: document.getElementById('rm_has_kt_content')?.checked || false,
     };
   }
   try {
@@ -1329,8 +1331,8 @@ async function confirmMoKT() {
       });
     }
 
-    // Update profile: is_kt_opened + auto-transition tu_van → bb
-    const patchData = { is_kt_opened: true };
+    // Update profile: is_kt_opened + kt_opened_at + auto-transition tu_van → bb
+    const patchData = { is_kt_opened: true, kt_opened_at: new Date().toISOString() };
     if (p && p.phase === 'tu_van') patchData.phase = 'bb';
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
       method: 'PATCH', body: JSON.stringify(patchData)
@@ -1339,6 +1341,7 @@ async function confirmMoKT() {
     // Sync local cache
     if (p) {
       p.is_kt_opened = true;
+      p.kt_opened_at = patchData.kt_opened_at;
       if (patchData.phase) p.phase = 'bb';
     }
 

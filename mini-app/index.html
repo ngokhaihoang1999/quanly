@@ -248,16 +248,25 @@
       </div>
     </div>
 
-    <!-- SINKA TAB -->
+    <!-- SINKA TAB (contains sub-tabs: Thẻ HV + ĐK BB) -->
     <div class="form-card" id="sinkaTab">
       <div class="form-card-header">
         <div class="form-card-title">📜 THẺ HỌC VIÊN</div>
-        <div style="display:flex;gap:6px;align-items:center;">
+        <div style="display:flex;gap:6px;align-items:center;" id="sinkaHeaderBtns">
           <button onclick="copySinka()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Copy Thẻ học viên">📋</button>
           <button onclick="exportSinkaWord()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Xuất file Word">📄 Word</button>
         </div>
+        <div style="display:none;gap:6px;align-items:center;" id="dkbbHeaderBtns">
+          <button onclick="copyDKBB()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Copy báo cáo ĐK BB">📋 Copy</button>
+        </div>
       </div>
-      <div class="form-card-body">
+      <!-- Sub-tab switcher -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin:0 -16px;padding:0 16px;">
+        <button class="sinka-subtab active" id="subtabSinka" onclick="switchSinkaSubtab('sinka')" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;">📜 Thẻ HV</button>
+        <button class="sinka-subtab" id="subtabDKBB" onclick="switchSinkaSubtab('dkbb')" style="flex:1;padding:10px 0;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px;">📋 ĐK BB</button>
+      </div>
+      <!-- Sub-tab: Thẻ HV (existing form) -->
+      <div class="form-card-body" id="sinkaContent">
         <div class="field-group"><label>📅 Ngày ghi chép</label><input type="text" id="sk_ngay_ghi_chep" placeholder="VD: 43.04.13" /></div>
 
         <!-- SECTION 1: NDD -->
@@ -344,6 +353,45 @@
         <div class="field-group"><label>10) Mối nguy hiểm lớn nhất</label><textarea id="sk_moi_nguy_hiem" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
 
         <button class="save-btn" onclick="saveSinka()" style="margin-top:12px;">💾 Lưu Giấy Sinka</button>
+      </div>
+      <!-- Sub-tab: ĐK BB -->
+      <div class="form-card-body" id="dkbbContent" style="display:none;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);">🔄 Tự động điền từ dữ liệu hồ sơ. Chỉ 3 trường cần điền tay.</div>
+
+        <div style="font-size:14px;font-weight:700;margin:8px 0;padding:8px 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border-radius:var(--radius-sm);">🌿 Thông tin ĐK BB</div>
+
+        <div class="field-group"><label>1. Họ tên trái</label><input type="text" id="dkbb_ho_ten" disabled style="opacity:0.85;" /></div>
+        <div class="grid-2">
+          <div class="field-group"><label>2. Tổ NDD</label><input type="text" id="dkbb_to_ndd" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>3. ID NDD</label><input type="text" id="dkbb_id_ndd" disabled style="opacity:0.85;" /></div>
+        </div>
+        <div class="grid-2">
+          <div class="field-group"><label>4. Tổ GVBB</label><input type="text" id="dkbb_to_gvbb" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>5. ID GVBB</label><input type="text" id="dkbb_id_gvbb" disabled style="opacity:0.85;" /></div>
+        </div>
+        <div class="grid-2">
+          <div class="field-group"><label>6. Giai đoạn</label><input type="text" id="dkbb_giai_doan" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>7. Trạng thái</label><input type="text" id="dkbb_trang_thai" disabled style="opacity:0.85;" /></div>
+        </div>
+        <div class="field-group"><label>8. Mục tiêu tháng</label><input type="text" id="dkbb_muc_tieu" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>9. Quan hệ với NDD (Onl/Off/Gia đình/Người quen)</label><input type="text" id="dkbb_quan_he" disabled style="opacity:0.85;" /></div>
+        <div class="grid-2">
+          <div class="field-group"><label>10. Độ tuổi</label><input type="text" id="dkbb_do_tuoi" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>11. Tôn giáo ✏️</label><input type="text" id="dkbb_ton_giao" placeholder="Điền tay..." /></div>
+        </div>
+        <div class="field-group"><label>12. Nơi ở</label><input type="text" id="dkbb_noi_o" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>13. Nghề nghiệp</label><input type="text" id="dkbb_nghe_nghiep" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>14. Ngày học đầu tiên ✏️</label><input type="text" id="dkbb_ngay_hoc_dau" placeholder="Điền tay..." /></div>
+        <div class="field-group"><label>15. Số lần GD/tuần ✏️</label><input type="text" id="dkbb_so_lan_gd" placeholder="Điền tay..." /></div>
+        <div class="field-group"><label>16. Ngày mở KT</label><input type="text" id="dkbb_ngay_mo_kt" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>17. Tuần chuyển BB</label><select id="dkbb_tuan_chuyen" onchange="saveDKBBWeek()"><option value="">Chọn...</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option><option>Week 5</option><option>Week 6</option><option>Week 7</option><option>Week 8</option></select></div>
+        <div class="field-group"><label>18. Lý do dropped/pause</label><input type="text" id="dkbb_ly_do" disabled style="opacity:0.85;" /></div>
+
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#22c55e,#14b8a6);color:white;border-radius:var(--radius-sm);">📊 Báo cáo BB</div>
+        <div class="grid-2">
+          <div class="field-group"><label>* Tổng số buổi đã học</label><input type="text" id="dkbb_tong_buoi" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>* Buổi có nội dung KT</label><input type="text" id="dkbb_buoi_kt" disabled style="opacity:0.85;" /></div>
+        </div>
       </div>
     </div>
 
@@ -804,6 +852,7 @@
 <script src="priority.js?v=2026041802"></script>
 <script src="notes.js?v=2026041518"></script>
 <script src="sinka.js?v=2026041618"></script>
+<script src="dkbb.js?v=2026042001"></script>
 <script src="lacie.js?v=2026041307"></script>
 <script src="mindmap.js?v=2026041510"></script>
 <script>

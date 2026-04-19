@@ -80,9 +80,11 @@ function doPost(e) {
       var phuongThuc = arrStr(hj.ket_noi || d.ket_noi || "");
       var tinh = d.t2_tinh || hj.tinh || p.province || "";
       
+      var bbWeek = p.bb_week || "";
+      
       return [
         fmtGroup(nhomNDD), rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, fmtMonth(mucTieuThang), ghiChu,
-        dangKyBB, false, "", gvbb, ngayChakki, hinhThuc, phuongThuc, tinh, lyDo, concept, reqDataPhone, "", itemData.profile_id || ""
+        dangKyBB, false, "", gvbb, ngayChakki, hinhThuc, phuongThuc, tinh, lyDo, concept, reqDataPhone, bbWeek, itemData.profile_id || ""
       ];
     };
 
@@ -441,6 +443,12 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     batchData.push({ range: targetTab + '!C' + targetRow + ':J' + targetRow, values: [cj] });
     batchData.push({ range: targetTab + '!M' + targetRow + ':O' + targetRow, values: [mo] });
     batchData.push({ range: targetTab + '!R' + targetRow + ':T' + targetRow, values: [rt] });
+    
+    // Ghi Tuần chuyển BB vào cột U
+    var bbWeek = sanitizeVal(row[20]);
+    if (bbWeek) {
+      batchData.push({ range: targetTab + '!U' + targetRow, values: [[bbWeek]] });
+    }
     
     // ★ Ghi Profile ID vào cột V → "khoá" dòng này vĩnh viễn
     if (profileId) {
