@@ -269,12 +269,9 @@ function syncToTargetSheet(sourceSheet) {
     }
     if (srcData.length === 0) return;
     
-    // Clear old values in target via Sheets API (values only, no format/validation impact)
-    var clearRange = TARGET_TAB + '!C2:U';
-    Sheets.Spreadsheets.Values.clear({}, TARGET_ID, clearRange);
-    
-    // Write new values via Sheets API (bypasses data validation entirely)
-    var writeRange = TARGET_TAB + '!C2:U' + (srcData.length + 1);
+    // Overwrite values in target (NO clear — just write over existing cells)
+    // Rows beyond srcData.length are untouched
+    var writeRange = TARGET_TAB + '!C2';
     Sheets.Spreadsheets.Values.update(
       { values: srcData },
       TARGET_ID,
