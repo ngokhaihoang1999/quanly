@@ -4,6 +4,26 @@
 // Paste Google Apps Script Webhook URL here to enable Google Sheets sync
 window.HAPJA_SHEET_WEBHOOK = 'https://script.google.com/macros/s/AKfycbw7M2PaW97SlZquTOEI_VRMR2GZDo1LaQUEkkCih75f2dxGCrNhzDdlXFWqwxDn4Pib_A/exec';
 
+// ── Format helpers ──
+// "HCM2 · Nhóm 1 · Tổ 3" → "HCM2 - N1T3"
+function formatGroupName(raw) {
+  if (!raw) return '';
+  const m = raw.match(/^(.+?)\s*[·•-]\s*Nhóm\s*(\d+)\s*[·•-]\s*Tổ\s*(\d+)$/i);
+  if (m) return `${m[1].trim()} - N${m[2]}T${m[3]}`;
+  return raw; // fallback
+}
+
+// "Tháng 5/2026" → "May/Tháng 5",  "Tháng 12/2026" → "Dec/Tháng 12"
+function formatSemesterMonth(raw) {
+  if (!raw) return '';
+  const m = raw.match(/Tháng\s*(\d+)/i);
+  if (!m) return raw;
+  const monthNum = parseInt(m[1]);
+  const engNames = ['', 'Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const eng = engNames[monthNum] || '';
+  return eng ? `${eng}/Tháng ${monthNum}` : raw;
+}
+
 // Global background syncer to Google Sheets
 async function syncToGoogleSheet(pid) {
   if (!window.HAPJA_SHEET_WEBHOOK || !pid) return;
@@ -26,10 +46,12 @@ async function syncToGoogleSheet(pid) {
     const recentNote = notes[0]?.content?.body || '';
     const tools = tvs.map(r => r.content?.ten_cong_cu).filter(Boolean).join(', ');
     
-    const nddGroup = (typeof staffUnitMap !== 'undefined' && p.ndd_staff_code) 
+    const rawGroup = (typeof staffUnitMap !== 'undefined' && p.ndd_staff_code) 
                     ? (staffUnitMap[p.ndd_staff_code] || '') : '';
-    const semName = (typeof allSemesters !== 'undefined' && p.semester_id)
+    const nddGroup = formatGroupName(rawGroup);
+    const rawSem = (typeof allSemesters !== 'undefined' && p.semester_id)
                     ? (allSemesters.find(s => s.id === p.semester_id)?.name || '') : '';
+    const semName = formatSemesterMonth(rawSem);
 
     fetch(window.HAPJA_SHEET_WEBHOOK, {
       method: 'POST', mode: 'no-cors',
@@ -142,8 +164,8 @@ async function bulkSyncDatabaseToSheet() {
       const hj = hjMap[pid] || {};
       // Use freshly fetched GVBB (fruit_roles) or fall back to profiles field
       const gvbbCode = gvbbMap[pid] || p.gvbb_staff_code || '';
-      const nddGroup = p.ndd_staff_code ? (freshUnitMap[p.ndd_staff_code] || '') : '';
-      const semName = p.semester_id ? (semMap[p.semester_id] || '') : '';
+      const nddGroup = formatGroupName(p.ndd_staff_code ? (freshUnitMap[p.ndd_staff_code] || '') : '');
+      const semName = formatSemesterMonth(p.semester_id ? (semMap[p.semester_id] || '') : '');
       const recentNote = noteMap[pid] || '';
       const tools = (tvToolsMap[pid] ? [...tvToolsMap[pid]].join(', ') : '') || d.t2_cong_cu || '';
       

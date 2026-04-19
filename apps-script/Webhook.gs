@@ -25,9 +25,30 @@ function doPost(e) {
       if (ph === 'chakki' || ph === 'new' || !ph) return 'CK';
       if (ph === 'tu_van_hinh') return 'TVH';
       if (ph === 'tu_van') return 'TV';
+      if (ph === 'dk_sau_ts') return 'ĐK sau TS';
+      if (ph === 'nghi_he') return 'NH';
       if (ph === 'bb') return 'BB';
+      if (ph === 'dk_center') return 'ĐK CT';
       if (ph === 'center' || ph === 'completed') return 'CT';
+      if (ph === 'hoan_lai') return 'HL';
+      if (ph === 'tv_group') return 'TV group';
+      if (ph === 'bb_group') return 'BB group';
       return 'CK';
+    };
+    // "HCM2 · Nhóm 1 · Tổ 3" → "HCM2 - N1T3"
+    var fmtGroup = function(raw) {
+      if (!raw) return '';
+      var m = raw.match(/^(.+?)\s*[·•-]\s*Nhóm\s*(\d+)\s*[·•-]\s*Tổ\s*(\d+)$/i);
+      return m ? (m[1].trim() + ' - N' + m[2] + 'T' + m[3]) : raw;
+    };
+    // "Tháng 5/2026" → "May/Tháng 5"
+    var fmtMonth = function(raw) {
+      if (!raw) return '';
+      var m = raw.match(/Tháng\s*(\d+)/i);
+      if (!m) return raw;
+      var mn = parseInt(m[1]);
+      var en = ['','Jan','Feb','Mar','April','May','June','July','Aug','Sep','Oct','Nov','Dec'];
+      return en[mn] ? (en[mn] + '/Tháng ' + mn) : raw;
     };
 
     // Helper to generate a full row array from payload data
@@ -57,7 +78,7 @@ function doPost(e) {
       var tinh = d.t2_tinh || hj.tinh || p.province || "";
       
       return [
-        nhomNDD, rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, mucTieuThang, ghiChu,
+        fmtGroup(nhomNDD), rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, fmtMonth(mucTieuThang), ghiChu,
         dangKyBB, false, "", gvbb, ngayChakki, hinhThuc, phuongThuc, tinh, lyDo, concept, reqDataPhone, "", itemData.profile_id || ""
       ];
     };
@@ -122,8 +143,14 @@ function doPost(e) {
       if (ph === 'chakki' || ph === 'new' || !ph) return 'CK';
       if (ph === 'tu_van_hinh') return 'TVH';
       if (ph === 'tu_van') return 'TV';
+      if (ph === 'dk_sau_ts') return 'ĐK sau TS';
+      if (ph === 'nghi_he') return 'NH';
       if (ph === 'bb') return 'BB';
+      if (ph === 'dk_center') return 'ĐK CT';
       if (ph === 'center' || ph === 'completed') return 'CT';
+      if (ph === 'hoan_lai') return 'HL';
+      if (ph === 'tv_group') return 'TV group';
+      if (ph === 'bb_group') return 'BB group';
       return 'CK';
     };
     var giaiDoan = getPhaseCode(p.phase);
@@ -132,8 +159,8 @@ function doPost(e) {
     var ghiChu = data.recentNote || ""; 
     var gvbb = p.gvbb_staff_code || "";
     var lyDo = p.dropout_reason || "";
-    var nhomNDD = data.nddGroup || ""; // Ví dụ HCM2-Nhóm 1-Tổ 3
-    var mucTieuThang = data.semesterName || ""; // Cột 8: Khai giảng tháng
+    var nhomNDD = fmtGroup(data.nddGroup || ""); // "HCM2 · Nhóm 1 · Tổ 3" → "HCM2 - N1T3"
+    var mucTieuThang = fmtMonth(data.semesterName || ""); // Kì khai giảng → Jan/Tháng 1 format
     var no = Math.max(1, sheet.getLastRow()); 
     var ngayChakki = hj.ngay_chakki || d.ngay_chakki || "";
     var concept = hj.concept || d.concept || "";
@@ -158,7 +185,7 @@ function doPost(e) {
     if (rowIdx === -1) {
       // 1. TRÁI MỚI TOANH (LÚC VỪA DUYỆT HAPJA) -> THÊM 1 DÒNG VÀO CUỐI
       var newRow = [
-        nhomNDD,                        // 1. Group
+        nhomNDD,                        // 1. Group (đã format: HCM2 - N1T3)
         no,                             // 2. No.
         p.ndd_staff_code || "",         // 3. ID NDD
         p.full_name || "",              // 4. Tên học sinh
@@ -184,7 +211,7 @@ function doPost(e) {
       sheet.appendRow(newRow);
     } else {
       // 2. TRÁI ĐANG HỌC RỚT ĐÀI/CHỐT BB/THÊM GVBB -> NHÍP TRỰC TIẾP VÀO Ô GHI ĐÈ 
-      if (nhomNDD) sheet.getRange(rowIdx, 1).setValue(nhomNDD);
+      if (nhomNDD) sheet.getRange(rowIdx, 1).setValue(nhomNDD); // Group (đã format)
       sheet.getRange(rowIdx, 5).setValue(giaiDoan);
       if (congCu) sheet.getRange(rowIdx, 6).setValue(congCu);
       sheet.getRange(rowIdx, 7).setValue(trangThai);
