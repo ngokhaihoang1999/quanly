@@ -119,7 +119,7 @@ function renderStrategyBoard() {
   const actionsHtml = `
     <div class="cl-actions">
       <button class="cl-btn cl-btn-copy" onclick="copyStrategy()">📋 Copy chiến lược</button>
-      <button class="cl-btn cl-btn-fullscreen" onclick="toggleStrategyFullscreen()">⛶ Toàn màn hình</button>
+      <button class="cl-btn cl-btn-fullscreen" onclick="openStrategyPitchDeck()">✨ Xem trình diễn</button>
     </div>`;
 
   container.innerHTML = `
@@ -271,24 +271,139 @@ function copyStrategy() {
   copyToClipboard(text.trim());
 }
 
-// ── Fullscreen toggle ──────────────────────────────────────────────────────
-function toggleStrategyFullscreen() {
-  const board = document.getElementById('strategyBoard');
-  if (!board) return;
+// ── Pitch Deck (Story Mode) ────────────────────────────────────────────────
+let _deckActiveSlide = 0;
+
+function openStrategyPitchDeck() {
+  if (document.getElementById('strategyPitchDeck')) return;
   
-  if (board.classList.contains('cl-fullscreen')) {
-    board.classList.remove('cl-fullscreen');
-    document.body.style.overflow = '';
-    const closeBtn = document.getElementById('clFsClose');
-    if (closeBtn) closeBtn.remove();
-  } else {
-    board.classList.add('cl-fullscreen');
-    document.body.style.overflow = 'hidden';
-    const btn = document.createElement('button');
-    btn.id = 'clFsClose';
-    btn.className = 'ai-fs-close';
-    btn.innerHTML = '✕';
-    btn.onclick = () => toggleStrategyFullscreen();
-    document.body.appendChild(btn);
+  _deckActiveSlide = 0;
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  const name = p?.full_name || '—';
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'strategyPitchDeck';
+  overlay.className = 'pitch-deck-overlay';
+  
+  // Ambient blobs
+  const blobs = `
+    <div class="ambient-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+    </div>`;
+  
+  // Progress bar
+  let progressHtml = '<div class="deck-progress">';
+  CL_SECTIONS.forEach((_, i) => {
+    progressHtml += `<div class="deck-progress-bar"><div class="deck-progress-fill" id="deck_prog_${i}"></div></div>`;
+  });
+  progressHtml += '</div>';
+
+  // Slides
+  let slidesHtml = '';
+  CL_SECTIONS.forEach((s, i) => {
+    let fHtml = '';
+    s.fields.forEach(f => {
+      const val = _strategyData[f.key]?.trim();
+      if (!val) return; // Only show filled fields
+      
+      const vEsc = _clEsc(val);
+      // Highlight specific tool fields
+      if (f.key.includes('cong_cu')) {
+        fHtml += `<div class="deck-field"><label>${f.label.replace('🔧 ', '')}</label><div class="deck-tool-badge">${vEsc}</div></div>`;
+      } else {
+        fHtml += `<div class="deck-field"><label>${f.label}</label><div class="deck-field-val">${vEsc}</div></div>`;
+      }
+    });
+    
+    if (!fHtml) fHtml = '<div style="color:#64748b; font-size:14px; font-style:italic;">Chưa có dữ liệu</div>';
+    
+    slidesHtml += `
+      <div class="deck-card ${i === 0 ? 'active' : ''}" id="deck_slide_${i}">
+        <div class="deck-card-header">
+          <div class="deck-card-icon" style="color: ${s.color}; box-shadow: 0 0 15px ${s.color}40;">${s.icon}</div>
+          <div class="deck-card-title">${s.label}</div>
+        </div>
+        ${fHtml}
+      </div>`;
+  });
+
+  overlay.innerHTML = `
+    ${blobs}
+    <button class="deck-close" onclick="closeStrategyPitchDeck()">✕</button>
+    <div class="deck-container">
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="font-weight:700; opacity:0.6; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Nhiệm vụ mục tiêu</div>
+        <div style="font-size:15px; font-weight:800; color:#c084fc;">${name}</div>
+      </div>
+      ${progressHtml}
+      <div class="deck-slide-area">
+        ${slidesHtml}
+      </div>
+      <div class="deck-nav-hitbox deck-nav-left" onclick="navDeckSlide(-1)"></div>
+      <div class="deck-nav-hitbox deck-nav-right" onclick="navDeckSlide(1)"></div>
+    </div>`;
+  
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  _updateDeckProgress();
+  
+  // Add keyboard navigation
+  window.addEventListener('keydown', _deckKeyHandler);
+}
+
+function navDeckSlide(dir) {
+  const newIdx = _deckActiveSlide + dir;
+  if (newIdx < 0) {
+    // maybe close deck if swiping left on first slide? Nah
+    return;
   }
+  if (newIdx >= CL_SECTIONS.length) {
+    closeStrategyPitchDeck();
+    return;
+  }
+  
+  const currCard = document.getElementById('deck_slide_' + _deckActiveSlide);
+  const nextCard = document.getElementById('deck_slide_' + newIdx);
+  
+  if (currCard) {
+    currCard.classList.remove('active');
+    currCard.classList.toggle('prev', dir > 0);
+  }
+  if (nextCard) {
+    nextCard.classList.add('active');
+    nextCard.classList.remove('prev');
+  }
+  
+  _deckActiveSlide = newIdx;
+  _updateDeckProgress();
+}
+
+function _updateDeckProgress() {
+  CL_SECTIONS.forEach((_, i) => {
+    const bar = document.getElementById('deck_prog_' + i);
+    if (!bar) return;
+    if (i < _deckActiveSlide) bar.style.width = '100%';
+    else if (i === _deckActiveSlide) bar.style.width = '100%';
+    else bar.style.width = '0%';
+    
+    // Add opacity diff for completed vs active
+    bar.style.opacity = i === _deckActiveSlide ? '1' : (i < _deckActiveSlide ? '0.6' : '0');
+  });
+}
+
+function closeStrategyPitchDeck() {
+  const overlay = document.getElementById('strategyPitchDeck');
+  if (overlay) {
+    overlay.style.animation = 'deckFadeIn 0.25s reverse forwards';
+    setTimeout(() => { overlay.remove(); }, 250);
+  }
+  document.body.style.overflow = '';
+  window.removeEventListener('keydown', _deckKeyHandler);
+}
+
+function _deckKeyHandler(e) {
+  if (e.key === 'ArrowRight' || e.key === ' ') navDeckSlide(1);
+  else if (e.key === 'ArrowLeft') navDeckSlide(-1);
+  else if (e.key === 'Escape') closeStrategyPitchDeck();
 }
