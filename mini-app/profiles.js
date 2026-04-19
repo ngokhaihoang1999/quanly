@@ -271,9 +271,9 @@ async function openProfile(p, cardEl) {
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
-  // Sinka tab: hiện khi phase bb/center và user có quyền edit
+  // Sinka tab: hiện khi phase tu_van (đã lập group TV/BB) trở lên
   const tabSinka = document.getElementById('tabSinka');
-  const canAccessSinka = (hasFullEdit || isProfileGVBB || isProfileNDD) && ['bb','center','completed'].includes(ph);
+  const canAccessSinka = (hasFullEdit || isProfileGVBB || isProfileNDD) && ['tu_van','bb','center','completed','dk_center','tv_group','bb_group'].includes(ph);
   if (tabSinka) tabSinka.style.display = canAccessSinka ? '' : 'none';
   clearFormFields();
   loadInfoSheet(p.id);
@@ -383,6 +383,9 @@ function clearFormFields() {
   ['chips_ton_giao','chips_hon_nhan','chips_quan_he_ndd','chips_khong_gian_song'].forEach(clearChips);
   // Clear Sinka fields
   if (typeof SINKA_FIELDS !== 'undefined') SINKA_FIELDS.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // Reset ĐK BB sub-tab to Thẻ HV + clear fields
+  if (typeof switchSinkaSubtab === 'function') switchSinkaSubtab('sinka');
+  ['dkbb_ho_ten','dkbb_to_ndd','dkbb_id_ndd','dkbb_to_gvbb','dkbb_id_gvbb','dkbb_giai_doan','dkbb_trang_thai','dkbb_muc_tieu','dkbb_quan_he','dkbb_do_tuoi','dkbb_ton_giao','dkbb_noi_o','dkbb_nghe_nghiep','dkbb_ngay_hoc_dau','dkbb_so_lan_gd','dkbb_ngay_mo_kt','dkbb_tuan_chuyen','dkbb_ly_do','dkbb_tong_buoi','dkbb_buoi_kt'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
 }
 
 

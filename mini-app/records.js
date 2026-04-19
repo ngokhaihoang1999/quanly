@@ -911,6 +911,11 @@ async function openChotBBModal() {
 async function saveChotBB() {
   try {
     const gvbb = getStaffCodeFromInput('cbb_gvbb');
+    // GVBB bắt buộc khi Lập Group TV/BB
+    if (!gvbb) {
+      showToast('⚠️ Phải điền GVBB trước khi Lập Group!');
+      return;
+    }
     // 1. Update phase
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
     // 2. Record chot_bb event on timeline
