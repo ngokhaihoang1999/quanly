@@ -418,6 +418,15 @@ async function loadInfoSheet(profileId) {
 
     // Pre-fill fields 19, 21, 22 từ Hapja/profile nếu chưa có
     const p = allProfiles.find(x => x.id === profileId);
+    // Field 8: Kỳ khai giảng — from profiles.semester_id → allSemesters
+    if (!d.t2_que_quan && p?.semester_id && typeof allSemesters !== 'undefined') {
+      const sem = allSemesters.find(s => s.id === p.semester_id);
+      if (sem?.name) {
+        const semFmt = typeof formatSemesterMonth === 'function' ? formatSemesterMonth(sem.name) : sem.name;
+        const queQuanEl = document.getElementById('t2_que_quan');
+        if (queQuanEl) queQuanEl.value = semFmt;
+      }
+    }
     // Field 22: NDD phụ trách — from profile
     if (!d.t2_ndd && p?.ndd_staff_code) {
       const nddEl = document.getElementById('t2_ndd');
