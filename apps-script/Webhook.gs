@@ -302,11 +302,11 @@ function syncAllUnits() {
 }
 
 // ── Sync one unit sheet ──
-// - Match by ID NDD: existing → update in place, new → append at bottom
-// - NEVER delete rows (preserves history when NDD changes group or is removed)
-// - Skip profiles without ID NDD or without Group
+// Matching: ID NDD → Tên (case-insensitive) → Ngày chakki (tiebreaker)
+// Group change: Alive profiles move (clear old sheet, add to new sheet)
+// Non-Alive profiles stay on old sheet (history preserved)
 function syncOneUnit(allData, group, targetId, targetTab) {
-  // 1. Filter master rows by Group (column A), skip rows without ID NDD
+  // 1. Filter master rows by Group, skip without ID NDD
   var masterRows = [];
   for (var i = 1; i < allData.length; i++) {
     var rowGroup = String(allData[i][0] || '').trim();
@@ -316,14 +316,10 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     }
   }
   
-  if (masterRows.length === 0) return;
-  
-  // 2. Read target columns C and D to:
-  //    - Find existing IDs (column C) and their row positions
-  //    - Determine actual last row with data (for appending)
+  // 2. Read target C:N to get IDs, Names, Dates for smart matching
   var targetResult;
   try {
-    targetResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:D');
+    targetResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:N');
   } catch(e) {
     Logger.log('Cannot read target for ' + group + ': ' + e);
     return;
@@ -331,55 +327,96 @@ function syncOneUnit(allData, group, targetId, targetTab) {
   
   var targetData = targetResult.values || [];
   
-  // Build target ID map: ID NDD → sheet row number
-  // Also find the actual last row that has ANY content
-  var targetIdRowMap = {};
-  var lastDataRow = 1; // 1 = header only
+  // Build matching indices
+  var targetIdRowMap = {};    // ID NDD → row number
+  var targetNameMap = {};     // lowercase name → [{row, date}]
+  var lastDataRow = 1;        // actual last row with content
+  
   for (var t = 1; t < targetData.length; t++) {
-    var sheetRow = t + 1; // t=1 → sheet row 2, etc.
-    var colC = String(targetData[t][0] || '').trim();
-    var colD = String(targetData[t][1] || '').trim();
+    var sheetRow = t + 1;
+    var tr = targetData[t] || [];
+    var colC = String(tr[0] || '').trim();   // ID NDD
+    var colD = String(tr[1] || '').trim();   // Tên học sinh
+    var colN = (tr.length > 11) ? String(tr[11] || '') : ''; // Ngày chakki
     
     // Track last row with any content
-    if (colC || colD) {
-      lastDataRow = sheetRow;
-    }
+    if (colC || colD) lastDataRow = sheetRow;
     
-    // Map ID NDD to row
-    if (colC) {
-      targetIdRowMap[colC] = sheetRow;
+    // ID index
+    if (colC) targetIdRowMap[colC] = sheetRow;
+    
+    // Name index (case-insensitive, for fallback matching)
+    if (colD) {
+      var nameKey = colD.toLowerCase();
+      if (!targetNameMap[nameKey]) targetNameMap[nameKey] = [];
+      targetNameMap[nameKey].push({ row: sheetRow, date: colN });
     }
   }
   
-  // 3. Process master rows: update existing or append new
+  // 3. Process master rows: match → update or add at bottom
   var batchData = [];
   var nextAppendRow = lastDataRow + 1;
-  var updated = 0, appended = 0;
+  var processedIds = {};
+  var usedRows = {};  // prevent same target row matched twice
+  var updated = 0, added = 0;
   
   for (var m = 0; m < masterRows.length; m++) {
     var row = masterRows[m];
     var id = String(row[2] || '').trim();
+    var name = String(row[3] || '').trim();
+    var masterDate = String(sanitizeVal(row[13]) || '');
     
-    var targetRow;
-    if (targetIdRowMap[id]) {
-      // ✏️ Existing profile → update in place (same row)
+    var targetRow = null;
+    
+    // Priority 1: Match by ID NDD (exact)
+    if (targetIdRowMap[id] && !usedRows[targetIdRowMap[id]]) {
       targetRow = targetIdRowMap[id];
-      updated++;
-    } else {
-      // ➕ New profile → append at very bottom
-      targetRow = nextAppendRow++;
-      appended++;
     }
     
+    // Priority 2: Match by name (case-insensitive)
+    if (!targetRow && name) {
+      var nameKey = name.toLowerCase();
+      var nameMatches = targetNameMap[nameKey];
+      if (nameMatches) {
+        // Filter out already-used rows
+        var available = [];
+        for (var n = 0; n < nameMatches.length; n++) {
+          if (!usedRows[nameMatches[n].row]) available.push(nameMatches[n]);
+        }
+        
+        if (available.length === 1) {
+          targetRow = available[0].row;
+        } else if (available.length > 1 && masterDate) {
+          // Priority 3: Multiple name matches → compare ngày chakki
+          for (var n = 0; n < available.length; n++) {
+            if (available[n].date === masterDate) {
+              targetRow = available[n].row;
+              break;
+            }
+          }
+          // Still no match → take first available
+          if (!targetRow) targetRow = available[0].row;
+        } else if (available.length > 1) {
+          targetRow = available[0].row;
+        }
+      }
+    }
+    
+    if (targetRow) {
+      usedRows[targetRow] = true;
+      updated++;
+    } else {
+      // Không tìm thấy → thêm dòng mới ở cuối sheet
+      targetRow = nextAppendRow++;
+      added++;
+    }
+    
+    processedIds[id] = true;
+    
     // Build app-controlled column data
-    // C-J (8 cols): ID NDD, Tên, Giai đoạn, Công cụ, Trạng thái, Mục tiêu, Ghi chú, ĐK BB
     var cj = [];
     for (var j = 2; j <= 9; j++) cj.push(sanitizeVal(row[j]));
-    
-    // M-O (3 cols): GVBB, Ngày, ONLINE/OFFLINE
     var mo = [sanitizeVal(row[12]), sanitizeVal(row[13]), sanitizeVal(row[14])];
-    
-    // R-T (3 cols): Lí do, Chủ đề, SĐT
     var rt = [sanitizeVal(row[17]), sanitizeVal(row[18]), sanitizeVal(row[19])];
     
     batchData.push({ range: targetTab + '!C' + targetRow + ':J' + targetRow, values: [cj] });
@@ -387,7 +424,30 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     batchData.push({ range: targetTab + '!R' + targetRow + ':T' + targetRow, values: [rt] });
   }
   
-  // 4. Batch write all changes at once (NO deletion)
+  // 4. Handle Group change: Alive profiles that moved to a different group → clear from THIS sheet
+  var moved = 0;
+  for (var existingId in targetIdRowMap) {
+    if (processedIds[existingId]) continue; // still in this group, skip
+    
+    // Check if this ID exists in master with a DIFFERENT group + Alive status
+    for (var i = 1; i < allData.length; i++) {
+      var mId = String(allData[i][2] || '').trim();
+      var mGroup = String(allData[i][0] || '').trim();
+      var mStatus = String(allData[i][6] || '').trim(); // Trạng thái (column G)
+      
+      if (mId === existingId && mGroup !== group && mStatus === 'Alive') {
+        // Profile moved to another group AND is Alive → clear from this sheet
+        var clearRow = targetIdRowMap[existingId];
+        batchData.push({ range: targetTab + '!C' + clearRow + ':J' + clearRow, values: [['','','','','','','','']] });
+        batchData.push({ range: targetTab + '!M' + clearRow + ':O' + clearRow, values: [['','','']] });
+        batchData.push({ range: targetTab + '!R' + clearRow + ':T' + clearRow, values: [['','','']] });
+        moved++;
+        break;
+      }
+    }
+  }
+  
+  // 5. Batch write all changes at once
   if (batchData.length > 0) {
     Sheets.Spreadsheets.Values.batchUpdate({
       data: batchData,
@@ -395,7 +455,7 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     }, targetId);
   }
   
-  Logger.log(group + ': ' + updated + ' updated, ' + appended + ' appended (total ' + masterRows.length + ')');
+  Logger.log(group + ': ' + updated + ' cập nhật, ' + added + ' thêm mới, ' + moved + ' chuyển đi');
 }
 
 // ── Setup: Create Config tab with headers (run once) ──
