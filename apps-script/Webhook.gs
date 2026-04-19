@@ -302,24 +302,26 @@ function syncAllUnits() {
 }
 
 // ── Sync one unit sheet ──
-// 1 NDD quản lý NHIỀU học sinh → ID NDD KHÔNG phải key duy nhất
-// Match: Tên+ID NDD (combo) → Tên (alone) → Tên+Ngày (tiebreaker)
-// Group change: Alive profiles move (xoá sheet cũ, thêm sheet mới)
+// Profile ID (cột V) = chìa khoá duy nhất do app tạo cho mỗi hồ sơ
+// Tên có thể đổi, NDD có thể đổi → Profile ID không đổi
+// Match: Profile ID → Tên+NDD → Tên+Ngày → Append
+// Mỗi lần match → ghi Profile ID vào cột V target → lần sau luôn chính xác
 function syncOneUnit(allData, group, targetId, targetTab) {
   // 1. Filter master rows by Group, skip without student name
   var masterRows = [];
   for (var i = 1; i < allData.length; i++) {
     var rowGroup = String(allData[i][0] || '').trim();
-    var rowName = String(allData[i][3] || '').trim(); // Tên học sinh = key chính
+    var rowName = String(allData[i][3] || '').trim();
     if (rowGroup === group && rowName) {
       masterRows.push(allData[i]);
     }
   }
   
-  // 2. Read target C:N to get IDs, Names, Dates for smart matching
+  // 2. Read target C:V to get IDs, Names, Dates, Profile IDs
+  //    C=0, D=1, ..., N=11, ..., V=19 (relative to C)
   var targetResult;
   try {
-    targetResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:N');
+    targetResult = Sheets.Spreadsheets.Values.get(targetId, targetTab + '!C:V');
   } catch(e) {
     Logger.log('Cannot read target for ' + group + ': ' + e);
     return;
@@ -327,9 +329,11 @@ function syncOneUnit(allData, group, targetId, targetTab) {
   
   var targetData = targetResult.values || [];
   
-  // Build matching indices
-  // comboMap: "tên|idndd" → row (chính xác nhất)
-  // nameMap:  "tên" → [{row, nddId, date}] (fallback)
+  // Build matching indices:
+  // profileIdMap:  profile_id → row (strongest, permanent)
+  // comboMap:      "tên|idndd" → row
+  // nameMap:       "tên" → [{row, date}]
+  var profileIdMap = {};
   var comboMap = {};
   var nameMap = {};
   var lastDataRow = 1;
@@ -337,32 +341,36 @@ function syncOneUnit(allData, group, targetId, targetTab) {
   for (var t = 1; t < targetData.length; t++) {
     var sheetRow = t + 1;
     var tr = targetData[t] || [];
-    var colC = String(tr[0] || '').trim();   // ID NDD
-    var colD = String(tr[1] || '').trim();   // Tên học sinh
-    var colN = (tr.length > 11) ? String(tr[11] || '') : ''; // Ngày chakki
+    var colC = String(tr[0] || '').trim();    // ID NDD
+    var colD = String(tr[1] || '').trim();    // Tên học sinh
+    var colN = (tr.length > 11) ? String(tr[11] || '') : '';  // Ngày chakki
+    var colV = (tr.length > 19) ? String(tr[19] || '').trim() : '';  // Profile ID
     
     if (colC || colD) lastDataRow = sheetRow;
+    
+    // Profile ID index (strongest match)
+    if (colV) profileIdMap[colV] = sheetRow;
     
     if (colD) {
       var nameLower = colD.toLowerCase();
       
       // Combo key: tên + id ndd
       if (colC) {
-        var comboKey = nameLower + '|' + colC.toLowerCase();
-        if (!comboMap[comboKey]) comboMap[comboKey] = sheetRow; // first match wins
+        var ck = nameLower + '|' + colC.toLowerCase();
+        if (!comboMap[ck]) comboMap[ck] = sheetRow;
       }
       
       // Name-only index
       if (!nameMap[nameLower]) nameMap[nameLower] = [];
-      nameMap[nameLower].push({ row: sheetRow, nddId: colC, date: colN });
+      nameMap[nameLower].push({ row: sheetRow, date: colN });
     }
   }
   
-  // 3. Process master rows: match → update or add at bottom
+  // 3. Process master rows
   var batchData = [];
   var nextAppendRow = lastDataRow + 1;
   var usedRows = {};
-  var processedKeys = {}; // for group-change detection
+  var processedPids = {};  // for group-change detection
   var updated = 0, added = 0;
   
   for (var m = 0; m < masterRows.length; m++) {
@@ -370,19 +378,25 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     var nddId = String(row[2] || '').trim();
     var name = String(row[3] || '').trim();
     var masterDate = String(sanitizeVal(row[13]) || '');
+    var profileId = String(row[21] || '').trim();  // cột V master = Profile ID
     var nameLower = name.toLowerCase();
     
     var targetRow = null;
     
-    // Priority 1: Combo match (Tên + ID NDD) → chính xác nhất
-    if (nddId) {
-      var comboKey = nameLower + '|' + nddId.toLowerCase();
-      if (comboMap[comboKey] && !usedRows[comboMap[comboKey]]) {
-        targetRow = comboMap[comboKey];
+    // ★ Priority 0: Profile ID (cột V) → match chính xác tuyệt đối
+    if (profileId && profileIdMap[profileId] && !usedRows[profileIdMap[profileId]]) {
+      targetRow = profileIdMap[profileId];
+    }
+    
+    // Priority 1: Combo (Tên + ID NDD)
+    if (!targetRow && nddId) {
+      var ck = nameLower + '|' + nddId.toLowerCase();
+      if (comboMap[ck] && !usedRows[comboMap[ck]]) {
+        targetRow = comboMap[ck];
       }
     }
     
-    // Priority 2: Name-only match (khi target không có ID NDD)
+    // Priority 2: Name-only (khi target không có ID NDD)
     if (!targetRow) {
       var nameMatches = nameMap[nameLower];
       if (nameMatches) {
@@ -394,7 +408,7 @@ function syncOneUnit(allData, group, targetId, targetTab) {
         if (available.length === 1) {
           targetRow = available[0].row;
         } else if (available.length > 1) {
-          // Priority 3: Multiple name matches → compare ngày chakki
+          // Priority 3: Trùng tên → so ngày chakki
           if (masterDate) {
             for (var n = 0; n < available.length; n++) {
               if (available[n].date === masterDate) {
@@ -403,7 +417,6 @@ function syncOneUnit(allData, group, targetId, targetTab) {
               }
             }
           }
-          // Still no unique match → take first available
           if (!targetRow) targetRow = available[0].row;
         }
       }
@@ -413,17 +426,13 @@ function syncOneUnit(allData, group, targetId, targetTab) {
       usedRows[targetRow] = true;
       updated++;
     } else {
-      // Không tìm thấy → thêm dòng mới ở cuối sheet
       targetRow = nextAppendRow++;
       added++;
     }
     
-    // Track for group-change detection
-    if (nddId && name) {
-      processedKeys[nameLower + '|' + nddId.toLowerCase()] = true;
-    }
+    if (profileId) processedPids[profileId] = true;
     
-    // Build app-controlled column data
+    // Build app columns
     var cj = [];
     for (var j = 2; j <= 9; j++) cj.push(sanitizeVal(row[j]));
     var mo = [sanitizeVal(row[12]), sanitizeVal(row[13]), sanitizeVal(row[14])];
@@ -432,30 +441,30 @@ function syncOneUnit(allData, group, targetId, targetTab) {
     batchData.push({ range: targetTab + '!C' + targetRow + ':J' + targetRow, values: [cj] });
     batchData.push({ range: targetTab + '!M' + targetRow + ':O' + targetRow, values: [mo] });
     batchData.push({ range: targetTab + '!R' + targetRow + ':T' + targetRow, values: [rt] });
+    
+    // ★ Ghi Profile ID vào cột V → "khoá" dòng này vĩnh viễn
+    if (profileId) {
+      batchData.push({ range: targetTab + '!V' + targetRow, values: [[profileId]] });
+    }
   }
   
-  // 4. Handle Group change: Alive profiles that moved to a different group
+  // 4. Group change: Alive profiles that moved to a different group → clear
   var moved = 0;
-  for (var combo in comboMap) {
-    if (processedKeys[combo]) continue; // still in this group
+  for (var pid in profileIdMap) {
+    if (processedPids[pid]) continue; // still in this group
     
-    // Extract name and nddId from combo key
-    var parts = combo.split('|');
-    var cName = parts[0];
-    var cNddId = parts[1];
-    
-    // Check if this combo exists in master with DIFFERENT group + Alive
+    // Check master: does this Profile ID exist with DIFFERENT group + Alive?
     for (var i = 1; i < allData.length; i++) {
-      var mNddId = String(allData[i][2] || '').trim().toLowerCase();
-      var mName = String(allData[i][3] || '').trim().toLowerCase();
+      var mPid = String(allData[i][21] || '').trim();
       var mGroup = String(allData[i][0] || '').trim();
       var mStatus = String(allData[i][6] || '').trim();
       
-      if (mName === cName && mNddId === cNddId && mGroup !== group && mStatus === 'Alive') {
-        var clearRow = comboMap[combo];
+      if (mPid === pid && mGroup !== group && mStatus === 'Alive') {
+        var clearRow = profileIdMap[pid];
         batchData.push({ range: targetTab + '!C' + clearRow + ':J' + clearRow, values: [['','','','','','','','']] });
         batchData.push({ range: targetTab + '!M' + clearRow + ':O' + clearRow, values: [['','','']] });
         batchData.push({ range: targetTab + '!R' + clearRow + ':T' + clearRow, values: [['','','']] });
+        batchData.push({ range: targetTab + '!V' + clearRow, values: [['']] }); // xoá Profile ID
         moved++;
         break;
       }
