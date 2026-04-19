@@ -101,7 +101,6 @@ function doPost(e) {
           }
         }
       }
-      syncToTargetSheet(sheet);
       return ContentService.createTextOutput(JSON.stringify({"status": "deleted"})).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -123,7 +122,6 @@ function doPost(e) {
         // Set checkboxes for columns J (10) and K (11)
         sheet.getRange(2, 10, newValues.length, 2).insertCheckboxes();
       }
-      syncToTargetSheet(sheet);
       return ContentService.createTextOutput(JSON.stringify({"status": "bulk_success"})).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -227,80 +225,159 @@ function doPost(e) {
       if (lyDo) sheet.getRange(rowIdx, 18).setValue(lyDo);
     }
     
-    syncToTargetSheet(sheet);
     return ContentService.createTextOutput(JSON.stringify({"status": "success"})).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// ── AUTO-SYNC: Copy C2:U from source → target "Data" tab using Sheets API ──
-// Uses Advanced Sheets API to bypass data validation (no format/color/dropdown impact)
-function syncToTargetSheet(sourceSheet) {
+// ═══════════════════════════════════════════════════════════
+// ── MULTI-UNIT SYNC: Master → Unit Sheets (trigger-based) ──
+// ═══════════════════════════════════════════════════════════
+
+// Sanitize cell values for Sheets API
+function sanitizeVal(val) {
+  if (val instanceof Date) {
+    var y = val.getFullYear();
+    var m = String(val.getMonth() + 1).padStart(2, '0');
+    var d = String(val.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+  // Keep booleans as-is for USER_ENTERED mode (checkbox support)
+  return val;
+}
+
+// Main sync function — called by time trigger every 1 minute
+function syncAllUnits() {
   try {
-    var TARGET_ID = '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g';
-    var TARGET_TAB = 'Data';
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var masterSheet = ss.getSheetByName('Trang tính1');
+    var configSheet = ss.getSheetByName('Config');
     
-    SpreadsheetApp.flush();
+    if (!masterSheet || !configSheet) {
+      Logger.log('syncAllUnits: Missing master or Config tab');
+      return;
+    }
     
-    var src = sourceSheet || SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var allData = src.getDataRange().getValues();
+    // Read all master data
+    var allData = masterSheet.getDataRange().getValues();
     if (allData.length < 2) return;
     
-    // Extract C2:U (columns index 2-20), sanitize values
-    var srcData = [];
-    for (var i = 1; i < allData.length; i++) {
-      var row = [];
-      for (var j = 2; j <= 20; j++) {
-        var val = allData[i][j];
-        // Convert Date objects to YYYY-MM-DD string (avoid timezone mess)
-        if (val instanceof Date) {
-          var y = val.getFullYear();
-          var m = String(val.getMonth() + 1).padStart(2, '0');
-          var d = String(val.getDate()).padStart(2, '0');
-          val = y + '-' + m + '-' + d;
-        }
-        // Convert booleans to readable strings
-        else if (val === true) val = 'TRUE';
-        else if (val === false) val = 'FALSE';
-        row.push(val);
-      }
-      srcData.push(row);
-    }
-    if (srcData.length === 0) return;
+    // Read config: [Group, SheetID, TabName]
+    var configData = configSheet.getDataRange().getValues();
     
-    // Overwrite values in target (NO clear — just write over existing cells)
-    // Rows beyond srcData.length are untouched
-    var writeRange = TARGET_TAB + '!C2';
-    Sheets.Spreadsheets.Values.update(
-      { values: srcData },
-      TARGET_ID,
-      writeRange,
-      { valueInputOption: 'RAW' }
-    );
+    for (var c = 1; c < configData.length; c++) { // skip header
+      var group = String(configData[c][0] || '').trim();
+      var targetId = String(configData[c][1] || '').trim();
+      var targetTab = String(configData[c][2] || 'Data').trim();
+      
+      if (!group || !targetId) continue;
+      
+      // Filter master rows by Group (column A, index 0)
+      var filtered = [];
+      for (var i = 1; i < allData.length; i++) {
+        if (String(allData[i][0]).trim() === group) {
+          filtered.push(allData[i]);
+        }
+      }
+      
+      if (filtered.length === 0) continue;
+      
+      // Build column blocks (only app-controlled columns)
+      // Block 1: C-J (index 2-9, 8 cols)
+      // Block 2: M-O (index 12-14, 3 cols)
+      // Block 3: R-T (index 17-19, 3 cols)
+      var blockCJ = [], blockMO = [], blockRT = [];
+      
+      for (var r = 0; r < filtered.length; r++) {
+        var row = filtered[r];
+        
+        // C-J: ID NDD, Tên, Giai đoạn, Công cụ, Trạng thái, Mục tiêu Tháng, Ghi chú, Đăng ký BB
+        var cj = [];
+        for (var j = 2; j <= 9; j++) cj.push(sanitizeVal(row[j]));
+        blockCJ.push(cj);
+        
+        // M-O: GVBB, Ngày, ONLINE/OFFLINE
+        blockMO.push([sanitizeVal(row[12]), sanitizeVal(row[13]), sanitizeVal(row[14])]);
+        
+        // R-T: Lí do nghỉ học, Chủ đề, Số điện thoại
+        blockRT.push([sanitizeVal(row[17]), sanitizeVal(row[18]), sanitizeVal(row[19])]);
+      }
+      
+      var lastRow = filtered.length + 1;
+      
+      // Batch write 3 column blocks via Sheets API
+      // USER_ENTERED mode: TRUE/FALSE → checkbox, dates parsed properly
+      // Only overwrites app columns — team columns (K, L, P, Q, U) untouched
+      try {
+        Sheets.Spreadsheets.Values.batchUpdate({
+          data: [
+            { range: targetTab + '!C2:J' + lastRow, values: blockCJ },
+            { range: targetTab + '!M2:O' + lastRow, values: blockMO },
+            { range: targetTab + '!R2:T' + lastRow, values: blockRT }
+          ],
+          valueInputOption: 'USER_ENTERED'
+        }, targetId);
+        Logger.log('Synced ' + filtered.length + ' rows to ' + group + ' (' + targetId.substring(0,8) + '...)');
+      } catch(writeErr) {
+        Logger.log('Write error for ' + group + ': ' + writeErr.toString());
+      }
+    }
   } catch(e) {
-    Logger.log('syncToTargetSheet error: ' + e.toString());
+    Logger.log('syncAllUnits error: ' + e.toString());
   }
 }
 
-// ── DEBUG: Run manually from Script Editor to test sync ──
+// ── Setup: Create Config tab with headers (run once) ──
+function setupConfig() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var existing = ss.getSheetByName('Config');
+  if (existing) {
+    Logger.log('Config tab already exists!');
+    return;
+  }
+  var config = ss.insertSheet('Config');
+  config.getRange(1, 1, 1, 3).setValues([['Group', 'Sheet ID đích', 'Tab Name']])
+    .setFontWeight('bold').setBackground('#d9ead3');
+  // Example row
+  config.getRange(2, 1, 1, 3).setValues([['HCM2 - N1T3', '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g', 'Data']]);
+  config.setColumnWidth(1, 150);
+  config.setColumnWidth(2, 350);
+  config.setColumnWidth(3, 100);
+  Logger.log('Config tab created! Add your unit sheets here.');
+}
+
+// ── Setup: Install 1-minute trigger (run once) ──
+function setupSyncTrigger() {
+  // Remove old sync triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'syncAllUnits') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  // New trigger: every 1 minute
+  ScriptApp.newTrigger('syncAllUnits')
+    .timeBased()
+    .everyMinutes(1)
+    .create();
+  Logger.log('Trigger installed: syncAllUnits runs every 1 minute.');
+}
+
+// ── DEBUG: Test sync manually ──
 function testSync() {
-  var src = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  Logger.log('Source sheet name: ' + src.getName());
-  Logger.log('Source last row: ' + src.getLastRow());
-  var allData = src.getDataRange().getValues();
-  Logger.log('Source total rows (incl header): ' + allData.length);
-  Logger.log('Source row 2 sample: ' + JSON.stringify(allData[1]));
-  
-  var TARGET_ID = '1jmjxHPD4QtLyjgN8L41LgERl4tEGk2EkfHFo2BkaJ7g';
-  var target = SpreadsheetApp.openById(TARGET_ID);
-  var sheets = target.getSheets();
-  Logger.log('Target sheet tabs: ' + sheets.map(function(s) { return s.getName() + ' (gid=' + s.getSheetId() + ')'; }).join(', '));
-  
-  var tSheet = target.getSheetByName('Data');
-  Logger.log('Found "Data" tab: ' + (tSheet ? 'YES' : 'NO'));
-  
-  // Try the actual sync
-  syncToTargetSheet(src);
-  Logger.log('Sync completed. Check target sheet.');
+  Logger.log('=== Testing syncAllUnits ===');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var config = ss.getSheetByName('Config');
+  if (!config) {
+    Logger.log('No Config tab! Run setupConfig() first.');
+    return;
+  }
+  var configData = config.getDataRange().getValues();
+  Logger.log('Config entries: ' + (configData.length - 1));
+  for (var i = 1; i < configData.length; i++) {
+    Logger.log('  ' + configData[i][0] + ' → ' + configData[i][1]);
+  }
+  syncAllUnits();
+  Logger.log('=== Sync complete ===');
 }
