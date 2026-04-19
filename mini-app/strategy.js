@@ -5,7 +5,7 @@
 
 const CL_SECTIONS = [
   {
-    id: 'boi_canh', icon: '🎭', label: 'Bối cảnh', color: '#8b5cf6',
+    id: 'boi_canh', icon: '🗺️', label: 'Bối cảnh', color: '#8b5cf6',
     fields: [
       { key: 'cl_concept', label: 'Concept đang dùng', placeholder: 'VD: CLB phát triển bản thân, Học viện tâm lý...', type: 'input' },
       { key: 'cl_cach_quen', label: 'Cách quen / Hoàn cảnh gặp', placeholder: 'CLB nào? Online? Bạn giới thiệu? Sự kiện?', type: 'textarea' },
@@ -119,7 +119,7 @@ function renderStrategyBoard() {
   const actionsHtml = `
     <div class="cl-actions">
       <button class="cl-btn cl-btn-copy" onclick="copyStrategy()">📋 Copy chiến lược</button>
-      <button class="cl-btn cl-btn-fullscreen" onclick="openStrategyPitchDeck()">✨ Xem trình diễn</button>
+      <button class="cl-btn cl-btn-fullscreen" onclick="openStrategyPitchDeck()" style="background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(124,106,247,0.3);">✨ Trực quan</button>
     </div>`;
 
   container.innerHTML = `
