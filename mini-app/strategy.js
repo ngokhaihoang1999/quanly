@@ -1,0 +1,292 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// STRATEGY v1 — Chiến lược tiếp cận (Manual Planning Board)
+// Phương án C: Timeline header + Expand sections
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CL_SECTIONS = [
+  {
+    id: 'boi_canh', icon: '🎭', label: 'Bối cảnh', color: '#8b5cf6',
+    fields: [
+      { key: 'cl_concept', label: 'Concept đang dùng', placeholder: 'VD: CLB phát triển bản thân, Học viện tâm lý...', type: 'input' },
+      { key: 'cl_cach_quen', label: 'Cách quen / Hoàn cảnh gặp', placeholder: 'CLB nào? Online? Bạn giới thiệu? Sự kiện?', type: 'textarea' },
+      { key: 'cl_kho_khan', label: 'Khó khăn / Nỗi đau hiện tại', placeholder: 'Trái đang gặp vấn đề gì? Khao khát gì?', type: 'textarea' },
+      { key: 'cl_diem_hai', label: 'Điểm hái trái dự kiến', placeholder: 'Dự đoán ban đầu — nỗi đau sâu nhất có thể khai thác...', type: 'textarea' },
+      { key: 'cl_rao_can', label: 'Rào cản tiềm ẩn', placeholder: 'GĐ phản đối? Bận? Đã theo đạo khác? Người yêu?', type: 'textarea' }
+    ]
+  },
+  {
+    id: 'tv1', icon: '📋', label: 'TV lần 1', color: '#3b82f6',
+    fields: [
+      { key: 'cl_tv1_cong_cu', label: '🔧 Công cụ sẽ dùng', placeholder: 'Enneagram? MBTI? Tính Quả? Bài test tâm lý?', type: 'input' },
+      { key: 'cl_tv1_muc_tieu', label: 'Mục tiêu buổi 1', placeholder: 'VD: Hiểu tính cách, tạo tin tưởng ban đầu...', type: 'textarea' },
+      { key: 'cl_tv1_tam_long', label: 'Chiến lược cày tấm lòng', placeholder: 'Làm gì để trái cảm thấy được quan tâm thật lòng?', type: 'textarea' },
+      { key: 'cl_tv1_khai_thac', label: 'Hướng khai thác thông tin', placeholder: 'Muốn tìm hiểu thêm gì? Gia đình? Quá khứ? Nỗi lo?', type: 'textarea' },
+      { key: 'cl_tv1_dan_dat', label: 'Kế sách dẫn dắt → TV lần 2', placeholder: 'Lý do hẹn gặp tiếp? Giao "bài tập"? Tạo tò mò ra sao?', type: 'textarea' }
+    ]
+  },
+  {
+    id: 'tv2', icon: '📋', label: 'TV lần 2+', color: '#10b981',
+    fields: [
+      { key: 'cl_tv2_cong_cu', label: '🔧 Công cụ sẽ dùng', placeholder: 'Công cụ mới hay đi sâu hơn công cụ cũ?', type: 'input' },
+      { key: 'cl_tv2_muc_tieu', label: 'Mục tiêu buổi 2+', placeholder: 'VD: Xác nhận điểm hái trái, đào sâu nỗi đau...', type: 'textarea' },
+      { key: 'cl_tv2_dao_sau', label: 'Chiến lược đào sâu vấn đề', placeholder: 'Hỏi gì để trái tự nhận ra nhu cầu ẩn sâu?', type: 'textarea' },
+      { key: 'cl_tv2_chot_group', label: 'Chiến lược chốt vào Group TV-BB', placeholder: 'Giới thiệu group là gì (dưới concept)? Dùng concept nào? Ai sẽ hỗ trợ?', type: 'textarea' }
+    ]
+  },
+  {
+    id: 'ky_vong', icon: '🎯', label: 'Kỳ vọng', color: '#f59e0b',
+    fields: [
+      { key: 'cl_timeline', label: 'Thời gian dự kiến chuyển Group', placeholder: 'VD: Sau 2-3 lần TV, trong 2 tuần...', type: 'input' },
+      { key: 'cl_lich_gap', label: 'Lịch gặp dự kiến', placeholder: 'VD: T3 + T6 tối, cuối tuần...', type: 'input' },
+      { key: 'cl_gvbb_du_kien', label: 'GVBB dự kiến', placeholder: 'Ai phụ trách khi vào group? Phong cách phù hợp?', type: 'input' },
+      { key: 'cl_ghi_chu', label: 'Ghi chú khác', placeholder: 'Lưu ý đặc biệt, cần phối hợp ai...', type: 'textarea' }
+    ]
+  },
+  {
+    id: 'rui_ro', icon: '⚠️', label: 'Rủi ro', color: '#ef4444',
+    fields: [
+      { key: 'cl_rui_ro', label: 'Rủi ro lớn nhất', placeholder: 'Bảo an bị lộ? GĐ? Người yêu? Mất hứng? Bận kéo dài?', type: 'textarea' },
+      { key: 'cl_phuong_an', label: 'Phương án xử lý', placeholder: 'Nếu X xảy ra → làm Y...', type: 'textarea' },
+      { key: 'cl_nguoi_ho_tro', label: 'Người hỗ trợ (Lá)', placeholder: 'Ai giúp giữ trái? Ai đóng vai "bạn trong CLB"?', type: 'textarea' }
+    ]
+  }
+];
+
+let _strategyLoaded = false;
+let _strategyData = {};
+
+// ── Render Strategy Board ──────────────────────────────────────────────────
+function renderStrategyBoard() {
+  const container = document.getElementById('strategyContent');
+  if (!container) return;
+
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  const name = p?.full_name || '—';
+
+  // Mini roadmap header (horizontal timeline)
+  let roadmapHtml = `<div class="cl-roadmap">`;
+  CL_SECTIONS.forEach((s, i) => {
+    roadmapHtml += `
+      <div class="cl-roadmap-node" data-section="${s.id}" onclick="scrollToSection('${s.id}')" style="--node-color:${s.color};">
+        <div class="cl-roadmap-icon">${s.icon}</div>
+        <div class="cl-roadmap-label">${s.label}</div>
+      </div>`;
+    if (i < CL_SECTIONS.length - 1) roadmapHtml += `<div class="cl-roadmap-line"></div>`;
+  });
+  roadmapHtml += `</div>`;
+
+  // Sections (accordion cards)
+  let sectionsHtml = '';
+  CL_SECTIONS.forEach(s => {
+    const fieldCount = s.fields.filter(f => _strategyData[f.key]?.trim()).length;
+    const badge = fieldCount ? `<span class="cl-badge">${fieldCount}/${s.fields.length}</span>` : '';
+    
+    let fieldsHtml = '';
+    s.fields.forEach(f => {
+      const val = _strategyData[f.key] || '';
+      if (f.type === 'textarea') {
+        fieldsHtml += `
+          <div class="cl-field">
+            <label>${f.label}</label>
+            <textarea id="${f.key}" placeholder="${f.placeholder}" onblur="_saveStrategyField('${f.key}',this.value)">${val}</textarea>
+          </div>`;
+      } else {
+        fieldsHtml += `
+          <div class="cl-field">
+            <label>${f.label}</label>
+            <input type="text" id="${f.key}" value="${val}" placeholder="${f.placeholder}" onblur="_saveStrategyField('${f.key}',this.value)" />
+          </div>`;
+      }
+    });
+
+    sectionsHtml += `
+      <div class="cl-section" id="cl_sec_${s.id}" data-section="${s.id}">
+        <div class="cl-section-header" onclick="toggleStrategySection('${s.id}')" style="--sec-color:${s.color};">
+          <div class="cl-section-icon" style="background:${s.color};">${s.icon}</div>
+          <div class="cl-section-title">${s.label}</div>
+          ${badge}
+          <div class="cl-section-arrow" id="cl_arrow_${s.id}">▾</div>
+        </div>
+        <div class="cl-section-body" id="cl_body_${s.id}" style="display:none;">
+          ${fieldsHtml}
+        </div>
+      </div>`;
+  });
+
+  // Action buttons
+  const actionsHtml = `
+    <div class="cl-actions">
+      <button class="cl-btn cl-btn-copy" onclick="copyStrategy()">📋 Copy chiến lược</button>
+      <button class="cl-btn cl-btn-fullscreen" onclick="toggleStrategyFullscreen()">⛶ Toàn màn hình</button>
+    </div>`;
+
+  container.innerHTML = `
+    <div class="cl-board" id="strategyBoard">
+      <div class="cl-header">
+        <div class="cl-header-title">🧭 Chiến lược tiếp cận</div>
+        <div class="cl-header-name">${name}</div>
+      </div>
+      ${roadmapHtml}
+      ${sectionsHtml}
+      ${actionsHtml}
+    </div>`;
+}
+
+// ── Toggle section expand/collapse ─────────────────────────────────────────
+function toggleStrategySection(sectionId) {
+  const body = document.getElementById('cl_body_' + sectionId);
+  const arrow = document.getElementById('cl_arrow_' + sectionId);
+  if (!body) return;
+  
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▾' : '▴';
+  
+  // Animate
+  if (!isOpen) {
+    body.style.opacity = '0';
+    body.style.transform = 'translateY(-8px)';
+    requestAnimationFrame(() => {
+      body.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+      body.style.opacity = '1';
+      body.style.transform = 'translateY(0)';
+    });
+  }
+}
+
+// ── Scroll to section from roadmap ─────────────────────────────────────────
+function scrollToSection(sectionId) {
+  const el = document.getElementById('cl_sec_' + sectionId);
+  if (!el) return;
+  
+  // Open section if closed
+  const body = document.getElementById('cl_body_' + sectionId);
+  if (body && body.style.display === 'none') toggleStrategySection(sectionId);
+  
+  // Highlight roadmap node
+  document.querySelectorAll('.cl-roadmap-node').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.cl-roadmap-node[data-section="${sectionId}"]`)?.classList.add('active');
+  
+  // Scroll
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Load strategy data from form_hanh_chinh ────────────────────────────────
+async function loadStrategy() {
+  if (!currentProfileId) return;
+  _strategyLoaded = false;
+  _strategyData = {};
+  
+  try {
+    const res = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${currentProfileId}&select=data`);
+    const rows = await res.json();
+    const d = rows?.[0]?.data || {};
+    
+    // Extract cl_* keys
+    Object.keys(d).forEach(k => {
+      if (k.startsWith('cl_')) _strategyData[k] = d[k];
+    });
+  } catch(e) { console.warn('loadStrategy:', e); }
+  
+  _strategyLoaded = true;
+  renderStrategyBoard();
+}
+
+// ── Save single field (debounced) ──────────────────────────────────────────
+let _strategySaveTimer = null;
+function _saveStrategyField(key, value) {
+  _strategyData[key] = value;
+  
+  // Update roadmap badge
+  _updateSectionBadge(key);
+  
+  // Debounce save
+  clearTimeout(_strategySaveTimer);
+  _strategySaveTimer = setTimeout(() => _saveAllStrategy(), 800);
+}
+
+function _updateSectionBadge(changedKey) {
+  CL_SECTIONS.forEach(s => {
+    if (!s.fields.find(f => f.key === changedKey)) return;
+    const count = s.fields.filter(f => _strategyData[f.key]?.trim()).length;
+    const badge = document.querySelector(`#cl_sec_${s.id} .cl-badge`);
+    if (badge) {
+      badge.textContent = `${count}/${s.fields.length}`;
+      badge.style.display = count ? '' : 'none';
+    } else if (count) {
+      const header = document.querySelector(`#cl_sec_${s.id} .cl-section-header`);
+      if (header) {
+        const arrow = header.querySelector('.cl-section-arrow');
+        const span = document.createElement('span');
+        span.className = 'cl-badge';
+        span.textContent = `${count}/${s.fields.length}`;
+        header.insertBefore(span, arrow);
+      }
+    }
+  });
+}
+
+async function _saveAllStrategy() {
+  if (!currentProfileId) return;
+  try {
+    // Fetch existing, merge cl_* keys
+    const exRes = await sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${currentProfileId}&select=data`);
+    const exRows = await exRes.json();
+    const existing = exRows?.[0]?.data || {};
+    
+    // Merge: keep all non-cl_ keys, overwrite cl_ keys
+    const merged = { ...existing };
+    Object.keys(_strategyData).forEach(k => { merged[k] = _strategyData[k]; });
+    
+    await sbFetch('/rest/v1/form_hanh_chinh', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ profile_id: currentProfileId, data: merged })
+    });
+    showToast('✅ Đã lưu chiến lược');
+  } catch(e) {
+    console.error('saveStrategy:', e);
+    showToast('❌ Lỗi lưu chiến lược');
+  }
+}
+
+// ── Copy Strategy ──────────────────────────────────────────────────────────
+function copyStrategy() {
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  const name = p?.full_name || '—';
+  const v = key => _strategyData[key]?.trim() || '—';
+  
+  let text = `🧭 CHIẾN LƯỢC TIẾP CẬN\n🍎 ${name}\n━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  CL_SECTIONS.forEach(s => {
+    text += `${s.icon} ${s.label.toUpperCase()}\n`;
+    s.fields.forEach(f => {
+      text += `• ${f.label.replace(/🔧 /, '')}: ${v(f.key)}\n`;
+    });
+    text += '\n';
+  });
+  
+  copyToClipboard(text.trim());
+}
+
+// ── Fullscreen toggle ──────────────────────────────────────────────────────
+function toggleStrategyFullscreen() {
+  const board = document.getElementById('strategyBoard');
+  if (!board) return;
+  
+  if (board.classList.contains('cl-fullscreen')) {
+    board.classList.remove('cl-fullscreen');
+    document.body.style.overflow = '';
+    const closeBtn = document.getElementById('clFsClose');
+    if (closeBtn) closeBtn.remove();
+  } else {
+    board.classList.add('cl-fullscreen');
+    document.body.style.overflow = 'hidden';
+    const btn = document.createElement('button');
+    btn.id = 'clFsClose';
+    btn.className = 'ai-fs-close';
+    btn.innerHTML = '✕';
+    btn.onclick = () => toggleStrategyFullscreen();
+    document.body.appendChild(btn);
+  }
+}

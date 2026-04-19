@@ -9,7 +9,26 @@ function switchMindmap(type, btn) {
   _mmCurrentType = type;
   document.querySelectorAll('#mindmapTab .chip').forEach(function(c){c.classList.remove('active');});
   if (btn) btn.classList.add('active');
-  renderMindmap();
+  
+  const strategyEl = document.getElementById('strategyContent');
+  const mmEl = document.getElementById('mmContent');
+  const chatEl = document.getElementById('aiChatCard');
+  const resetBtn = document.getElementById('mmResetBtn');
+  
+  if (type === 'strategy') {
+    if (strategyEl) strategyEl.style.display = 'block';
+    if (mmEl) mmEl.style.display = 'none';
+    if (chatEl) chatEl.style.display = 'none';
+    if (resetBtn) resetBtn.style.display = 'none';
+    if (typeof loadStrategy === 'function' && !_strategyLoaded) loadStrategy();
+    else if (typeof renderStrategyBoard === 'function') renderStrategyBoard();
+  } else {
+    if (strategyEl) strategyEl.style.display = 'none';
+    if (mmEl) mmEl.style.display = 'block';
+    if (chatEl) chatEl.style.display = type === 'collect' ? '' : 'none';
+    if (resetBtn) resetBtn.style.display = type === 'collect' ? '' : 'none';
+    renderMindmap();
+  }
 }
 
 function renderMindmap() {
@@ -18,7 +37,7 @@ function renderMindmap() {
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!p) return;
   if (_mmCurrentType === 'info') renderInfoMM(container, p);
-  else renderCollectMM(container, p);
+  else if (_mmCurrentType === 'collect') renderCollectMM(container, p);
 }
 
 async function renderMarkmap(container, md) {

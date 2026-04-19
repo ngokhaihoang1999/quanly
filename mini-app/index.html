@@ -399,14 +399,20 @@
     <div class="form-card" id="mindmapTab">
       <div class="form-card-header"><div class="form-card-title" id="mmTitle">📚 TƯ DUY</div></div>
       <div class="form-card-body" style="padding:8px;">
-        <div style="display:flex;gap:4px;margin-bottom:10px;align-items:center;">
-          <button class="chip active" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Thông tin cơ bản</button>
-          <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)">📚 Hỗ trợ BB</button>
+        <div style="display:flex;gap:4px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+          <button class="chip active" id="mmBtnStrategy" onclick="switchMindmap('strategy',this)">🧭 Chiến lược</button>
+          <button class="chip" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Thông tin cơ bản</button>
+          <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)" style="display:none;">📚 Hỗ trợ BB</button>
           <span style="flex:1;"></span>
-          <button id="mmResetBtn" onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;" title="Phân tích lại">🔄</button>
+          <button id="mmResetBtn" onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;display:none;" title="Phân tích lại">🔄</button>
         </div>
-        <div id="mindmapContainer" style="width:100%;height:380px;overflow:hidden;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
-        <button onclick="toggleFullscreen('mindmapContainer')" style="margin-top:4px;background:none;border:1px solid var(--border);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">⛶ Toàn màn hình</button>
+        <!-- Strategy Content -->
+        <div id="strategyContent" style="display:block;"></div>
+        <!-- Mindmap Content -->
+        <div id="mmContent" style="display:none;">
+          <div id="mindmapContainer" style="width:100%;height:380px;overflow:hidden;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);position:relative;"></div>
+          <button onclick="toggleFullscreen('mindmapContainer')" style="margin-top:4px;background:none;border:1px solid var(--border);color:var(--text3);font-size:11px;padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;">⛶ Toàn màn hình</button>
+        </div>
         <!-- Lacie Chat -->
         <div id="aiChatCard" style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
           <div class="ai-chat-header" onclick="toggleAIChat()" style="border-radius:var(--radius-sm);">
@@ -853,6 +859,7 @@
 <script src="notes.js?v=2026041518"></script>
 <script src="sinka.js?v=2026041618"></script>
 <script src="dkbb.js?v=2026042001"></script>
+<script src="strategy.js?v=2026042001"></script>
 <script src="lacie.js?v=2026041307"></script>
 <script src="mindmap.js?v=2026041510"></script>
 <script>

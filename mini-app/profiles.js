@@ -180,7 +180,7 @@ async function openProfile(p, cardEl) {
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
   const canEditBB     = hasFullEdit || isProfileGVBB;
-  const canAccessTuDuy = (hasFullEdit || isProfileGVBB) && ['tu_van','bb','center','completed'].includes(ph);
+  const canAccessTuDuy = hasFullEdit || isProfileGVBB || isProfileNDD;
   // Store for use in other functions
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
   window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };
@@ -271,6 +271,24 @@ async function openProfile(p, cardEl) {
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
+  // Hỗ trợ BB sub-tab: only from tu_van phase
+  const mmBtnCollect = document.getElementById('mmBtnCollect');
+  if (mmBtnCollect) mmBtnCollect.style.display = ['tu_van','bb','center','completed'].includes(ph) ? '' : 'none';
+  // Default strategy sub-tab + reset
+  if (canAccessTuDuy) {
+    _mmCurrentType = 'strategy';
+    document.querySelectorAll('#mindmapTab .chip').forEach(c => c.classList.remove('active'));
+    const strategyBtn = document.getElementById('mmBtnStrategy');
+    if (strategyBtn) strategyBtn.classList.add('active');
+    const strategyEl = document.getElementById('strategyContent');
+    const mmEl = document.getElementById('mmContent');
+    const chatEl = document.getElementById('aiChatCard');
+    const resetBtn = document.getElementById('mmResetBtn');
+    if (strategyEl) strategyEl.style.display = 'block';
+    if (mmEl) mmEl.style.display = 'none';
+    if (chatEl) chatEl.style.display = 'none';
+    if (resetBtn) resetBtn.style.display = 'none';
+  }
   // Sinka tab: hiện khi phase tu_van (đã lập group TV/BB) trở lên
   const tabSinka = document.getElementById('tabSinka');
   const canAccessSinka = (hasFullEdit || isProfileGVBB || isProfileNDD) && ['tu_van','bb','center','completed','dk_center','tv_group','bb_group'].includes(ph);
@@ -386,6 +404,8 @@ function clearFormFields() {
   // Reset ĐK BB sub-tab to Thẻ HV + clear fields
   if (typeof switchSinkaSubtab === 'function') switchSinkaSubtab('sinka');
   ['dkbb_ho_ten','dkbb_to_ndd','dkbb_id_ndd','dkbb_to_gvbb','dkbb_id_gvbb','dkbb_giai_doan','dkbb_trang_thai','dkbb_muc_tieu','dkbb_quan_he','dkbb_do_tuoi','dkbb_ton_giao','dkbb_noi_o','dkbb_nghe_nghiep','dkbb_ngay_hoc_dau','dkbb_so_lan_gd','dkbb_ngay_mo_kt','dkbb_tuan_chuyen','dkbb_ly_do','dkbb_tong_buoi','dkbb_buoi_kt'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // Reset strategy
+  if (typeof _strategyLoaded !== 'undefined') { _strategyLoaded = false; _strategyData = {}; }
 }
 
 

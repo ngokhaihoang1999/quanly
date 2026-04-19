@@ -1578,9 +1578,13 @@ function switchFormTab(el, cardId) {
   // Apply directional slide animation to the card content
   if (typeof navSlide === 'function') navSlide(card, dir);
   
-  // Trigger mindmap render when Tư Duy tab is opened
-  if (cardId === 'mindmapTab' && typeof renderMindmap === 'function') {
-    setTimeout(renderMindmap, 50);
+  // Trigger mindmap/strategy render when Tư Duy tab is opened
+  if (cardId === 'mindmapTab') {
+    if (_mmCurrentType === 'strategy' && typeof loadStrategy === 'function') {
+      if (!_strategyLoaded) setTimeout(loadStrategy, 50);
+    } else if (typeof renderMindmap === 'function') {
+      setTimeout(renderMindmap, 50);
+    }
   }
   // Trigger Sinka load when tab is opened (lazy-load)
   if (cardId === 'sinkaTab' && typeof loadSinka === 'function' && currentProfileId) {
