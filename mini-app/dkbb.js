@@ -231,7 +231,7 @@ function copyDKBB() {
   // Save manual fields before copy
   _saveDKBBManualFields();
 
-  const text = `🌿 Những cột cần xuất thông tin để ĐK BB 🌿
+  const text = `🌿 Thông tin ĐK BB 🌿
 
 1/ Họ tên trái: ${v('dkbb_ho_ten')}
 2/ Tổ của NDD: ${v('dkbb_to_ndd')}
