@@ -379,13 +379,19 @@ function switchMainTab(el, tab) {
   if (typeof TabIndicator !== 'undefined') TabIndicator.moveTo(el);
   const dir = typeof navDirectionForMainTab === 'function' ? navDirectionForMainTab(tab) : 1;
   
-  document.querySelectorAll('#mainTabBar .tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
-  ['tab-unit','tab-personal','tab-calendar','tab-priority','tab-staff','tab-structure','tab-reports','tab-notes'].forEach(t=>{
-    const elT = document.getElementById(t);
-    if (elT && (typeof _isTabPinned !== 'function' || !_isTabPinned(t.replace('tab-','')))) {
-      elT.style.display='none';
+  // Short-circuit: only hide previously active tab (instead of all 8)
+  const prevActive = document.querySelector('#mainTabBar .tab.active');
+  const prevTabId = prevActive?.dataset?.tab;
+  if (prevActive) prevActive.classList.remove('active');
+  el.classList.add('active');
+  
+  if (prevTabId && prevTabId !== tab) {
+    const prevEl = document.getElementById('tab-' + prevTabId);
+    if (prevEl && (typeof _isTabPinned !== 'function' || !_isTabPinned(prevTabId))) {
+      prevEl.style.display = 'none';
     }
-  });
+  }
+  
   const tTab = document.getElementById('tab-'+tab);
 
   if (tTab && (typeof _isTabPinned !== 'function' || !_isTabPinned(tab))) {

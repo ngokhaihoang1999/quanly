@@ -45,7 +45,12 @@ function setStatusFilter(filter, el) {
   if (el) el.classList.add('active');
   filterProfiles();
 }
+let _filterDebounce = 0;
 function filterProfiles() {
+  clearTimeout(_filterDebounce);
+  _filterDebounce = setTimeout(_filterProfilesNow, 150);
+}
+function _filterProfilesNow() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   renderProfiles(allProfiles.filter(p => {
     const matchName = p.full_name.toLowerCase().includes(q) || (p.phone_number||'').includes(q);

@@ -202,34 +202,42 @@ function _setupDivider(dividerId, panelId, side) {
     fresh.classList.add('dragging');
     document.body.classList.add('panel-resizing');
 
+    let _dragRaf = 0;
+    let _lastEvX = 0;
     const onMove = ev => {
-      const delta = side === 'left' ? (ev.clientX - startX) : (startX - ev.clientX);
-      const dividerW = 10;
-      const totalAvail = window.innerWidth - dividerW;
-      let newW = Math.max(PANEL_MIN_W, startW + delta);
-      let remain = totalAvail - newW;
-      let otherW = otherStartW;
-      let centerW = remain - otherW;
+      _lastEvX = ev.clientX;
+      if (_dragRaf) return; // throttle to 1 per frame
+      _dragRaf = requestAnimationFrame(() => {
+        _dragRaf = 0;
+        const delta = side === 'left' ? (_lastEvX - startX) : (startX - _lastEvX);
+        const dividerW = 10;
+        const totalAvail = window.innerWidth - dividerW;
+        let newW = Math.max(PANEL_MIN_W, startW + delta);
+        let remain = totalAvail - newW;
+        let otherW = otherStartW;
+        let centerW = remain - otherW;
 
-      if (centerW < CENTER_MIN_W) {
-        centerW = CENTER_MIN_W;
-        otherW = remain - centerW;
-        if (otherW < PANEL_MIN_W) {
-          otherW = PANEL_MIN_W;
-          newW = totalAvail - CENTER_MIN_W - PANEL_MIN_W;
+        if (centerW < CENTER_MIN_W) {
+          centerW = CENTER_MIN_W;
+          otherW = remain - centerW;
+          if (otherW < PANEL_MIN_W) {
+            otherW = PANEL_MIN_W;
+            newW = totalAvail - CENTER_MIN_W - PANEL_MIN_W;
+          }
         }
-      }
 
-      panel.style.width = newW + 'px';
-      const otherPanel = document.getElementById(side === 'left' ? 'panelRight' : 'panelLeft');
-      if (otherPanel && otherPanel.style.display !== 'none') {
-        otherPanel.style.width = otherW + 'px';
-      }
-      _updateTabBarMode();
+        panel.style.width = newW + 'px';
+        const otherPanel = document.getElementById(side === 'left' ? 'panelRight' : 'panelLeft');
+        if (otherPanel && otherPanel.style.display !== 'none') {
+          otherPanel.style.width = otherW + 'px';
+        }
+        _updateTabBarMode();
+      });
     };
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      if (_dragRaf) { cancelAnimationFrame(_dragRaf); _dragRaf = 0; }
       fresh.classList.remove('dragging');
       document.body.classList.remove('panel-resizing');
       _savePanelWidths();
@@ -251,6 +259,7 @@ function _savePanelWidths() {
 }
 
 // Toggle tab labels based on tab bar container width vs actual tab count
+let _tabBarModeCache = { w: 0, count: 0, mode: '' };
 function _updateTabBarMode() {
   const tabBar = document.getElementById('mainTabBar');
   if (!tabBar) return;
@@ -261,13 +270,16 @@ function _updateTabBarMode() {
   const count = visibleTabs.length;
   if (count === 0) return;
 
+  // Skip if nothing changed since last call
+  const newMode = w > count * 90 ? 'wide' : 'compact';
+  if (_tabBarModeCache.w === (w|0) && _tabBarModeCache.count === count && _tabBarModeCache.mode === newMode) return;
+  _tabBarModeCache = { w: w|0, count, mode: newMode };
+
   tabBar.classList.remove('tab-bar--wide', 'tab-bar--dropdown', 'tab-bar--compact');
   const existingDropdown = tabBar.querySelector('.tab-dropdown');
   if (existingDropdown) existingDropdown.remove();
 
-  const wideThreshold = count * 90;
-
-  if (w > wideThreshold) {
+  if (newMode === 'wide') {
     tabBar.classList.add('tab-bar--wide');
   } else {
     tabBar.classList.add('tab-bar--compact');
@@ -310,16 +322,24 @@ function _initVerticalDividers() {
       above.style.height = aboveH + 'px';
       below.style.height = belowH + 'px';
 
+      let _vDragRaf = 0;
+      let _lastEvY = 0;
       const onMove = ev => {
-        const delta = ev.clientY - startY;
-        const newAbove = Math.max(80, aboveH + delta);
-        const newBelow = Math.max(80, belowH - delta);
-        above.style.height = newAbove + 'px';
-        below.style.height = newBelow + 'px';
+        _lastEvY = ev.clientY;
+        if (_vDragRaf) return;
+        _vDragRaf = requestAnimationFrame(() => {
+          _vDragRaf = 0;
+          const delta = _lastEvY - startY;
+          const newAbove = Math.max(80, aboveH + delta);
+          const newBelow = Math.max(80, belowH - delta);
+          above.style.height = newAbove + 'px';
+          below.style.height = newBelow + 'px';
+        });
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        if (_vDragRaf) { cancelAnimationFrame(_vDragRaf); _vDragRaf = 0; }
         div.classList.remove('dragging');
         document.body.classList.remove('panel-resizing');
       };
@@ -329,9 +349,15 @@ function _initVerticalDividers() {
   });
 }
 
+// Throttled resize — at most once per animation frame
+let _resizeRaf = 0;
 window.addEventListener('resize', () => {
-  applyDesktopLayout();
-  _updateTabBarMode();
+  if (_resizeRaf) return;
+  _resizeRaf = requestAnimationFrame(() => {
+    _resizeRaf = 0;
+    applyDesktopLayout();
+    _updateTabBarMode();
+  });
 });
 
 // ============ DESKTOP LAYOUT CONFIG HELPERS ============
