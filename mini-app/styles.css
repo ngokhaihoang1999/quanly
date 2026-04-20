@@ -89,7 +89,8 @@
       70% { transform: scale(1.02) translateY(-5px); }
       100% { opacity: 1; transform: scale(1) translateY(0); }
     }
-    .modal-overlay { position: fixed; inset: 0; background: var(--modal-bg); z-index: 500; display: none; align-items: flex-end; animation: fadeInModal 0.2s; }
+    .modal-overlay { position: fixed; inset: 0; background: var(--modal-bg); z-index: 500; display: none; align-items: flex-end; animation: fadeInModal 0.2s; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    @media (min-width: 1024px) { .modal-overlay { backdrop-filter: none; -webkit-backdrop-filter: none; } }
     .modal-overlay.open { display: flex; }
     .modal { width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; animation: modalBloop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
@@ -747,7 +748,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* backdrop-filter removed for performance */
+  backdrop-filter: blur(4px);
 }
 /* Chat in fullscreen */
 .ai-fullscreen .ai-chat-msgs {
@@ -1010,7 +1011,7 @@
   cursor: pointer; transition: all 0.15s;
   user-select: none; -webkit-user-select: none;
   margin: 0 auto;
-  /* backdrop-filter removed for performance */
+  backdrop-filter: blur(4px);
 }
 [data-theme="light"] .pin-key {
   background: rgba(26,35,126,0.06);
@@ -1853,7 +1854,8 @@
 .alarm-overlay {
   position: fixed; inset: 0; z-index: 99998;
   display: flex; align-items: center; justify-content: center; flex-direction: column;
-  background: rgba(0,0,0,0.75);
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   animation: alarmFadeIn 0.3s ease;
 }
 @keyframes alarmFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -2088,7 +2090,11 @@
   color: #0f172a;
   display: flex; flex-direction: column; overflow: hidden;
   font-family: 'Inter', sans-serif;
-  contain: strict;
+  animation: deckFadeIn 0.3s ease;
+}
+@keyframes deckFadeIn { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+@media (min-width: 1024px) {
+  .pitch-deck-overlay { animation: none; contain: strict; }
 }
 .deck-close {
   position: absolute; top: 16px; left: 16px; z-index: 10002;
@@ -2098,8 +2104,19 @@
   transition: background 0.15s;
 }
 .deck-close:hover { background: rgba(0,0,0,0.15); }
-.ambient-blobs { display: none; }
-.blob { display: none; }
+.ambient-blobs {
+  position: absolute; inset: 0; z-index: 10000; pointer-events: none; overflow: hidden; opacity: 0.9;
+}
+.blob {
+  position: absolute; border-radius: 50%; filter: blur(50px);
+  animation: blobFloat 10s infinite alternate ease-in-out;
+}
+.blob-1 { width: 300px; height: 300px; background: #ffffff; top: -100px; left: -100px; animation-delay: 0s; }
+.blob-2 { width: 250px; height: 250px; background: #7dd3fc; bottom: -50px; right: -100px; animation-delay: -5s; }
+@keyframes blobFloat { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(30px, 50px) scale(1.15); } }
+@media (min-width: 1024px) {
+  .ambient-blobs, .blob { display: none; }
+}
 
 .deck-container {
   flex: 1; position: relative; z-index: 10001;
@@ -2121,20 +2138,28 @@
 
 .deck-card {
   position: absolute; width: 100%; max-width: 400px;
-  background: #fff;
-  border: 1px solid #e2e8f0; border-radius: 24px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.9); border-radius: 24px;
   padding: 32px 24px; 
-  box-shadow: 0 8px 24px rgba(14,165,233,0.12);
-  opacity: 0; transform: translateX(40px); pointer-events: none;
-  display: none;
+  box-shadow: 0 16px 32px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,1);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0; transform: translateX(50px) scale(0.95); pointer-events: none;
 }
 .deck-card.active {
-  opacity: 1; transform: translateX(0); pointer-events: auto; z-index: 2;
-  display: block;
+  opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; z-index: 2;
 }
 .deck-card.prev {
-  opacity: 0; transform: translateX(-40px);
-  display: none;
+  transform: translateX(-50px) scale(0.95);
+}
+@media (min-width: 1024px) {
+  .deck-card {
+    background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none;
+    border-color: #e2e8f0; box-shadow: 0 8px 24px rgba(14,165,233,0.12);
+    transition: none; display: none;
+  }
+  .deck-card.active { display: block; transform: none; }
+  .deck-card.prev { display: none; }
 }
 
 .deck-card-header {

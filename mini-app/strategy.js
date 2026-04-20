@@ -348,11 +348,13 @@ function openStrategyPitchDeck() {
   document.body.style.overflow = 'hidden';
   _updateDeckProgress();
   
-  // Hide heavy content behind overlay to stop GPU compositing it
-  const desktopLayout = document.querySelector('.desktop-layout');
-  if (desktopLayout) desktopLayout.style.display = 'none';
-  const header = document.querySelector('.header');
-  if (header) header.style.display = 'none';
+  // Hide heavy content behind overlay on desktop to stop GPU compositing
+  if (window.innerWidth >= 1024) {
+    const desktopLayout = document.querySelector('.desktop-layout');
+    if (desktopLayout) desktopLayout.style.display = 'none';
+    const header = document.querySelector('.header');
+    if (header) header.style.display = 'none';
+  }
   
   // Add keyboard navigation
   window.addEventListener('keydown', _deckKeyHandler);
@@ -400,7 +402,16 @@ function _updateDeckProgress() {
 
 function closeStrategyPitchDeck() {
   const overlay = document.getElementById('strategyPitchDeck');
-  if (overlay) overlay.remove();
+  if (window.innerWidth >= 1024) {
+    // Desktop: instant close
+    if (overlay) overlay.remove();
+  } else {
+    // Mobile: animated close
+    if (overlay) {
+      overlay.style.animation = 'deckFadeIn 0.25s reverse forwards';
+      setTimeout(() => { overlay.remove(); }, 250);
+    }
+  }
   document.body.style.overflow = '';
   window.removeEventListener('keydown', _deckKeyHandler);
   
