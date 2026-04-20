@@ -350,9 +350,9 @@ function openStrategyPitchDeck() {
   
   // Hide heavy content behind overlay to stop GPU compositing it
   const desktopLayout = document.querySelector('.desktop-layout');
-  if (desktopLayout) desktopLayout.style.visibility = 'hidden';
+  if (desktopLayout) desktopLayout.style.display = 'none';
   const header = document.querySelector('.header');
-  if (header) header.style.visibility = 'hidden';
+  if (header) header.style.display = 'none';
   
   // Add keyboard navigation
   window.addEventListener('keydown', _deckKeyHandler);
@@ -400,18 +400,15 @@ function _updateDeckProgress() {
 
 function closeStrategyPitchDeck() {
   const overlay = document.getElementById('strategyPitchDeck');
-  if (overlay) {
-    overlay.style.animation = 'deckFadeIn 0.25s reverse forwards';
-    setTimeout(() => { overlay.remove(); }, 250);
-  }
+  if (overlay) overlay.remove();
   document.body.style.overflow = '';
   window.removeEventListener('keydown', _deckKeyHandler);
   
   // Restore hidden content
   const desktopLayout = document.querySelector('.desktop-layout');
-  if (desktopLayout) desktopLayout.style.visibility = '';
+  if (desktopLayout) desktopLayout.style.display = '';
   const header = document.querySelector('.header');
-  if (header) header.style.visibility = '';
+  if (header) header.style.display = '';
 }
 
 function _deckKeyHandler(e) {

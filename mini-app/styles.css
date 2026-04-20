@@ -2084,13 +2084,12 @@
    ══════════════════════════════════════════════════════════════════════ */
 .pitch-deck-overlay {
   position: fixed; inset: 0; z-index: 10000;
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); /* Sky gradient */
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
   color: #0f172a;
   display: flex; flex-direction: column; overflow: hidden;
   font-family: 'Inter', sans-serif;
-  animation: deckFadeIn 0.3s ease;
+  contain: strict;
 }
-@keyframes deckFadeIn { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
 .deck-close {
   position: absolute; top: 16px; left: 16px; z-index: 10002;
   background: rgba(0,0,0,0.08); border: none; color: #334155;
@@ -2099,18 +2098,8 @@
   transition: background 0.15s;
 }
 .deck-close:hover { background: rgba(0,0,0,0.15); }
-.ambient-blobs {
-  position: absolute; inset: 0; z-index: 10000; pointer-events: none; overflow: hidden; opacity: 0.5;
-}
-.blob {
-  position: absolute; border-radius: 50%;
-  /* Replaced filter:blur(50px) with cheap radial-gradient — same soft look, no GPU cost */
-  animation: blobFloat 10s infinite alternate ease-in-out;
-  will-change: transform;
-}
-.blob-1 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%); top: -100px; left: -100px; animation-delay: 0s; }
-.blob-2 { width: 250px; height: 250px; background: radial-gradient(circle, rgba(125,211,252,0.6) 0%, transparent 70%); bottom: -50px; right: -100px; animation-delay: -5s; }
-@keyframes blobFloat { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(30px, 50px) scale(1.15); } }
+.ambient-blobs { display: none; }
+.blob { display: none; }
 
 .deck-container {
   flex: 1; position: relative; z-index: 10001;
@@ -2132,19 +2121,20 @@
 
 .deck-card {
   position: absolute; width: 100%; max-width: 400px;
-  background: rgba(255, 255, 255, 0.92); /* Solid-ish white — no backdrop-filter needed */
-  border: 1px solid rgba(255,255,255,0.9); border-radius: 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 24px;
   padding: 32px 24px; 
-  box-shadow: 0 16px 32px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,1);
-  transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-  will-change: transform, opacity;
-  opacity: 0; transform: translateX(50px) scale(0.95); pointer-events: none;
+  box-shadow: 0 8px 24px rgba(14,165,233,0.12);
+  opacity: 0; transform: translateX(40px); pointer-events: none;
+  display: none;
 }
 .deck-card.active {
-  opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; z-index: 2;
+  opacity: 1; transform: translateX(0); pointer-events: auto; z-index: 2;
+  display: block;
 }
 .deck-card.prev {
-  transform: translateX(-50px) scale(0.95);
+  opacity: 0; transform: translateX(-40px);
+  display: none;
 }
 
 .deck-card-header {
