@@ -298,6 +298,8 @@ async function refreshCurrentTab() {
 // Built into sbFetch() — if 2 identical GET requests fire simultaneously,
 // only 1 actual network call is made; both callers receive the same result.
 const _inflight = new Map();
+const _writeTimestamps = new Map();
+const _getCache = new Map();
 
 // ============ SEMESTER (KHAI GIẢNG) ============
 let allSemesters = [];
@@ -806,6 +808,24 @@ async function sbFetch(path, opts={}) {
     throw new Error('Not authenticated');
   }
 
+  // ── Rate limiting: chống spam write cùng endpoint trong 1 giây ──
+  if (isWrite) {
+    const rateKey = (opts.method || '') + ':' + path;
+    const now = Date.now();
+    if (_writeTimestamps.has(rateKey) && now - _writeTimestamps.get(rateKey) < 1000) {
+      console.warn('[sbFetch] Rate limited:', rateKey);
+      throw new Error('Rate limited — vui lòng chờ giây lát');
+    }
+    _writeTimestamps.set(rateKey, now);
+  }
+
+  // ── GET cache (5s TTL): tránh gọi lại cùng endpoint liên tục ──
+  if (!isWrite && _getCache.has(path)) {
+    const cached = _getCache.get(path);
+    if (Date.now() - cached.ts < 5000) return cached.res.clone();
+    _getCache.delete(path);
+  }
+
   // ── In-flight dedup for GET: if same path is already loading, reuse it ──
   if (!isWrite && _inflight.has(path)) {
     return (await _inflight.get(path)).clone();
@@ -831,7 +851,15 @@ async function sbFetch(path, opts={}) {
 
   if (!isWrite) _inflight.set(path, promise);
   const res = await promise;
-  return !isWrite ? res.clone() : res;
+  if (!isWrite) {
+    // Cache successful GET responses
+    try { _getCache.set(path, { ts: Date.now(), res: res.clone() }); } catch(e) {}
+    return res.clone();
+  }
+  // Invalidate related GET caches after write (same table)
+  const table = path.split('?')[0];
+  for (const [k] of _getCache) { if (k.startsWith(table)) _getCache.delete(k); }
+  return res;
 }
 
 
@@ -2952,3 +2980,59 @@ function showStaffCard(code) {
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
   document.body.appendChild(modal);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// OFFLINE DETECTION
+// ══════════════════════════════════════════════════════════════════════════════
+(function() {
+  const banner = document.createElement('div');
+  banner.className = 'offline-banner';
+  banner.textContent = '⚠️ Mất kết nối mạng — một số chức năng có thể không hoạt động';
+  document.body.appendChild(banner);
+  function update() {
+    if (navigator.onLine) { banner.classList.remove('show'); }
+    else { banner.classList.add('show'); }
+  }
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  update();
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SKELETON LOADING HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+function showSkeleton(container, count = 3) {
+  if (!container) return;
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += '<div class="skeleton-card skeleton"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>';
+  }
+  container.innerHTML = html;
+}
+
+function clearSkeleton(container) {
+  if (!container) return;
+  container.querySelectorAll('.skeleton-card').forEach(el => el.remove());
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ERROR BOUNDARY — wrap module entry points
+// ══════════════════════════════════════════════════════════════════════════════
+function safeBind(fnName) {
+  const orig = window[fnName];
+  if (typeof orig !== 'function') return;
+  window[fnName] = async function(...args) {
+    try {
+      return await orig.apply(this, args);
+    } catch(e) {
+      console.error(`[ErrorBoundary] ${fnName}:`, e);
+      if (typeof showToast === 'function') showToast(`⚠️ Lỗi tại ${fnName}`);
+    }
+  };
+}
+// Wrap critical entry points after all scripts load
+window.addEventListener('load', () => {
+  ['loadDashboard', 'loadProfiles', 'filterProfiles', 'openProfile',
+   'loadCalendar', 'loadStructure', 'loadReportsTab', 'openNotifPanel',
+   'loadPriorityTab', 'loadStrategy'].forEach(safeBind);
+});

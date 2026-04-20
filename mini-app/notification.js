@@ -452,5 +452,13 @@ async function saveNotifSettings() {
   } catch(e) { showToast('❌ Lỗi lưu'); console.error(e); }
 }
 
-// ─── AUTO-REFRESH ─────────────────────────────────────────────────────────────
-setInterval(loadNotifCount, 30000);
+// ─── AUTO-REFRESH (visibility-aware) ──────────────────────────────────────────
+let _notifTimer = setInterval(loadNotifCount, 30000);
+document.addEventListener('visibilitychange', () => {
+  clearInterval(_notifTimer);
+  if (!document.hidden) {
+    loadNotifCount(); // Check ngay khi user quay lại
+    _notifTimer = setInterval(loadNotifCount, 30000);
+  }
+  // Khi hidden → không poll gì cả, tiết kiệm quota
+});
