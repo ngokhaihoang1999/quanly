@@ -21,6 +21,7 @@ function doPost(e) {
     }
     
     var pid = data.profile_id || "";
+    var shortId = function(id) { return id ? id.substring(0, 8) : ""; };
     var action = data.action || "upsert";
     
     var arrStr = function(val) { return Array.isArray(val) ? val.join(', ') : (val || ""); };
@@ -84,7 +85,7 @@ function doPost(e) {
       
       return [
         fmtGroup(nhomNDD), rowNum, p.ndd_staff_code || "", p.full_name || "", giaiDoan, congCu, trangThai, fmtMonth(mucTieuThang), ghiChu,
-        dangKyBB, false, "", gvbb, ngayChakki, hinhThuc, phuongThuc, tinh, lyDo, concept, reqDataPhone, bbWeek, itemData.profile_id || ""
+        dangKyBB, false, "", gvbb, ngayChakki, hinhThuc, phuongThuc, tinh, lyDo, concept, reqDataPhone, bbWeek, shortId(itemData.profile_id || "")
       ];
     };
 
@@ -93,7 +94,7 @@ function doPost(e) {
       if (pid !== "") {
         var values = sheet.getDataRange().getValues();
         for (var i = values.length - 1; i >= 1; i--) {
-          if (values[i][21] == pid) {
+          if (values[i][21] == shortId(pid)) {
             sheet.deleteRow(i + 1);
             break;
           }
@@ -180,7 +181,7 @@ function doPost(e) {
     if (pid !== "") {
       var values = sheet.getDataRange().getValues();
       for (var i = 1; i < values.length; i++) {
-        if (values[i][21] == pid) { // Dò đúng mã ID ẩn ở Cột số 22
+        if (values[i][21] == shortId(pid)) { // Dò đúng mã ID ẩn ở Cột số 22 (8 ký tự đầu)
           rowIdx = i + 1;
           break;
         }
@@ -211,7 +212,7 @@ function doPost(e) {
         concept,                        // 19. Chu de
         reqDataPhone,                   // 20. Số điện thoại (giữ số 0)
         "",                             // 21. Tuần chuyển BB
-        pid                             // 22. ID Ẩn
+        shortId(pid)                    // 22. ID Ẩn (8 chars)
       ];
       sheet.appendRow(newRow);
     } else {
