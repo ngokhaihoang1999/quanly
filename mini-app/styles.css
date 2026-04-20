@@ -89,7 +89,7 @@
       70% { transform: scale(1.02) translateY(-5px); }
       100% { opacity: 1; transform: scale(1) translateY(0); }
     }
-    .modal-overlay { position: fixed; inset: 0; background: var(--modal-bg); z-index: 500; display: none; align-items: flex-end; animation: fadeInModal 0.2s; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+    .modal-overlay { position: fixed; inset: 0; background: var(--modal-bg); z-index: 500; display: none; align-items: flex-end; animation: fadeInModal 0.2s; }
     .modal-overlay.open { display: flex; }
     .modal { width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; animation: modalBloop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
@@ -747,7 +747,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
+  /* backdrop-filter removed for performance */
 }
 /* Chat in fullscreen */
 .ai-fullscreen .ai-chat-msgs {
@@ -1010,7 +1010,7 @@
   cursor: pointer; transition: all 0.15s;
   user-select: none; -webkit-user-select: none;
   margin: 0 auto;
-  backdrop-filter: blur(4px);
+  /* backdrop-filter removed for performance */
 }
 [data-theme="light"] .pin-key {
   background: rgba(26,35,126,0.06);

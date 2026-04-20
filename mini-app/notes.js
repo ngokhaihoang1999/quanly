@@ -304,19 +304,27 @@ function _initBoardNotes(container) {
       el.classList.add('board-note-dragging');
       document.body.classList.add('panel-resizing');
 
+      let _raf = 0, _lastX = 0, _lastY = 0;
       const onMove = ev => {
+        _lastX = ev.clientX; _lastY = ev.clientY;
         if (!dragState) return;
-        if (Math.abs(ev.clientX - dragState.startX) > 3 || Math.abs(ev.clientY - dragState.startY) > 3) {
+        if (Math.abs(_lastX - dragState.startX) > 3 || Math.abs(_lastY - dragState.startY) > 3) {
           wasDragged = true;
         }
-        const x = Math.max(0, ev.clientX - dragState.parentLeft - dragState.offX);
-        const y = Math.max(0, ev.clientY - dragState.parentTop - dragState.offY);
-        el.style.left = x + 'px';
-        el.style.top = y + 'px';
+        if (_raf) return;
+        _raf = requestAnimationFrame(() => {
+          _raf = 0;
+          if (!dragState) return;
+          const x = Math.max(0, _lastX - dragState.parentLeft - dragState.offX);
+          const y = Math.max(0, _lastY - dragState.parentTop - dragState.offY);
+          el.style.left = x + 'px';
+          el.style.top = y + 'px';
+        });
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        if (_raf) { cancelAnimationFrame(_raf); _raf = 0; }
         el.classList.remove('board-note-dragging');
         document.body.classList.remove('panel-resizing');
         dragState = null;
@@ -335,15 +343,22 @@ function _initBoardNotes(container) {
       el.style.zIndex = ++_boardZIndex;
       document.body.classList.add('panel-resizing');
 
+      let _raf2 = 0, _lastRX = 0, _lastRY = 0;
       const onMove = ev => {
-        const newW = Math.max(120, startW + (ev.clientX - startX));
-        const newH = Math.max(80, startH + (ev.clientY - startY));
-        el.style.width = newW + 'px';
-        el.style.height = newH + 'px';
+        _lastRX = ev.clientX; _lastRY = ev.clientY;
+        if (_raf2) return;
+        _raf2 = requestAnimationFrame(() => {
+          _raf2 = 0;
+          const newW = Math.max(120, startW + (_lastRX - startX));
+          const newH = Math.max(80, startH + (_lastRY - startY));
+          el.style.width = newW + 'px';
+          el.style.height = newH + 'px';
+        });
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
+        if (_raf2) { cancelAnimationFrame(_raf2); _raf2 = 0; }
         document.body.classList.remove('panel-resizing');
         _saveBoardLayout(container);
       };
