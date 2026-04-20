@@ -348,6 +348,12 @@ function openStrategyPitchDeck() {
   document.body.style.overflow = 'hidden';
   _updateDeckProgress();
   
+  // Hide heavy content behind overlay to stop GPU compositing it
+  const desktopLayout = document.querySelector('.desktop-layout');
+  if (desktopLayout) desktopLayout.style.visibility = 'hidden';
+  const header = document.querySelector('.header');
+  if (header) header.style.visibility = 'hidden';
+  
   // Add keyboard navigation
   window.addEventListener('keydown', _deckKeyHandler);
 }
@@ -400,6 +406,12 @@ function closeStrategyPitchDeck() {
   }
   document.body.style.overflow = '';
   window.removeEventListener('keydown', _deckKeyHandler);
+  
+  // Restore hidden content
+  const desktopLayout = document.querySelector('.desktop-layout');
+  if (desktopLayout) desktopLayout.style.visibility = '';
+  const header = document.querySelector('.header');
+  if (header) header.style.visibility = '';
 }
 
 function _deckKeyHandler(e) {
