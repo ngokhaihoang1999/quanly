@@ -2083,6 +2083,14 @@ async function toggleFruitStatus(profileId, current) {
     } catch(err) { console.warn('Fail to record status change', err); }
 
     showToast(`✅ Đã chuyển sang ${label}`);
+    // Notify stakeholders about status change
+    if ((newStatus === 'dropout' || newStatus === 'pause') && typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+      const notifType = newStatus === 'dropout' ? 'drop_out' : 'pause';
+      const icon = newStatus === 'dropout' ? '🔴' : '⏸️';
+      const pName = allProfiles.find(x => x.id === profileId)?.full_name || '';
+      const stakeholders = await getProfileStakeholders(profileId);
+      createNotification(stakeholders, notifType, `${icon} ${label}`, pName + (reason ? ` — ${reason}` : ''), profileId);
+    }
     filterProfiles();
     loadDashboard();
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleFruitStatus:', e); }

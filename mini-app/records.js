@@ -1008,6 +1008,11 @@ async function chotCenter() {
     })});
     const pName3 = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
     showCelebration('🏛️', `${pName3} nhập học Center!`);
+    // Notify stakeholders about Chốt Center
+    if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+      const stakeholders = await getProfileStakeholders(currentProfileId);
+      createNotification(stakeholders, 'chot_center', '🏛️ Chốt Center', pName3, currentProfileId);
+    }
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
@@ -1351,6 +1356,12 @@ async function confirmMoKT() {
     }
 
     showToast(`📖 Đã xác nhận mở KT cho ${picked.length} buổi!`);
+    // Notify stakeholders about Mở KT
+    if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+      const pName = p?.full_name || '';
+      const stakeholders = await getProfileStakeholders(currentProfileId);
+      createNotification(stakeholders, 'mo_kt', `📖 Mở KT — buổi ${picked.join(', ')}`, pName, currentProfileId);
+    }
     if (p) openProfile(p);
   } catch (e) {
     showToast('❌ Lỗi: ' + e.message);

@@ -16,8 +16,8 @@ function formatTgMessage(eventType: string, title: string, body: string | null):
   const icons: Record<string, string> = {
     hapja_created: '🍎', hapja_approved: '✅', hapja_rejected: '❌',
     chot_tv: '📅', bc_tv: '📝', chot_bb: '🎓', bc_bb: '📋',
-    mo_kt: '📖', drop_out: '🔴', chot_center: '🏛️', reminder: '⏰',
-    lap_group_tv_bb: '🎓',
+    mo_kt: '📖', drop_out: '🔴', pause: '⏸️', chot_center: '🏛️', reminder: '⏰',
+    lap_group_tv_bb: '🎓', bb_reminder: '📚', bb_report_reminder: '✍️',
   };
   const icon = icons[eventType] || '🔔';
   let msg = `${icon} *${title}*`;
@@ -124,9 +124,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Send to each group
+    // Send to each group with contextual footer
+    const groupFooters: Record<string, string> = {
+      bb_reminder: '⏰ Lịch học hôm nay',
+      bb_report_reminder: '📝 Nhắc ghi báo cáo',
+      reminder: '⏰ Lịch hẹn',
+    };
+    const defaultFooter = '📌 Cập nhật hành trình';
+
     for (const gid of groupIds) {
-      const groupMsg = `${message.replace('_Mở Mini App để xem chi tiết_', '_Nhắc nhở tự động_')}`;
+      const footer = groupFooters[event_type] || defaultFooter;
+      const groupMsg = `${message.replace('_Mở Mini App để xem chi tiết_', `_${footer}_`)}`;
       const tgData = await sendTelegramMessage(gid, groupMsg);
       results.push({
         group_chat_id: gid,
