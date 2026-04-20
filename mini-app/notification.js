@@ -156,7 +156,7 @@ function getNotifIcon(type) {
     chot_tv:'📅', bc_tv:'📝',
     lap_group_tv_bb:'🎓', bc_bb:'📋',
     mo_kt:'📖', drop_out:'🔴', pause:'⏸️', chot_center:'🏛️', reminder:'⏰',
-    bb_reminder:'📚', bb_report_reminder:'✍️'
+    bb_reminder:'📚', bb_report_reminder:'✍️', bb_milestone:'⭐'
   };
   return m[type] || '🔔';
 }
@@ -253,7 +253,7 @@ async function _addGvbbForScope(scopeSet) {
 // ─── CREATE NOTIFICATIONS ──────────────────────────────────────────────────────
 const ALL_EVENT_TYPES = [
   'hapja_created','hapja_approved','hapja_rejected',
-  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','pause','chot_center','reminder','bb_reminder','bb_report_reminder'
+  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','pause','chot_center','reminder','bb_reminder','bb_report_reminder','bb_milestone'
 ];
 
 async function getMyPrefs() {
@@ -368,6 +368,7 @@ const NOTIF_EVENT_LABELS = {
   reminder:          { label: 'Nhắc nhở lịch',           icon: '⏰' },
   bb_reminder:       { label: 'Nhắc buổi học BB',        icon: '📚' },
   bb_report_reminder:{ label: 'Nhắc viết BC BB',         icon: '✍️' },
+  bb_milestone:      { label: 'Milestone BB→Center',     icon: '⭐' },
 };
 
 async function openNotifSettings() {

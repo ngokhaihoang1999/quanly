@@ -1470,6 +1470,13 @@ async function toggleBBMilestone(type, isDone) {
         content: { label }
       })});
       showToast(`✅ ${label} — Đã hoàn thành!`);
+      // Notify stakeholders about milestone completion
+      if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+        const msIcons = { pv_gvbb: '🎤', dky_center: '📋', pv_hs: '🎓' };
+        const pName = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
+        const stakeholders = await getProfileStakeholders(currentProfileId);
+        createNotification(stakeholders, 'bb_milestone', `${msIcons[type] || '✅'} ${label}`, pName, currentProfileId);
+      }
       await _refreshCurrentProfile();
     } catch(e) { showToast('❌ Lỗi'); console.error(e); }
   }
@@ -1504,6 +1511,12 @@ async function pickBaiDacBiet() {
       content: { label: `Bài đặc biệt (buổi BB ${picked})`, buoi_thu: picked }
     })});
     showToast(`⭐ Bài đặc biệt buổi BB ${picked} — Đã ghi nhận!`);
+    // Notify stakeholders about Bài đặc biệt
+    if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+      const pName = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
+      const stakeholders = await getProfileStakeholders(currentProfileId);
+      createNotification(stakeholders, 'bb_milestone', `⭐ Bài đặc biệt — buổi BB ${picked}`, pName, currentProfileId);
+    }
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }

@@ -17,7 +17,7 @@ function formatTgMessage(eventType: string, title: string, body: string | null):
     hapja_created: '🍎', hapja_approved: '✅', hapja_rejected: '❌',
     chot_tv: '📅', bc_tv: '📝', chot_bb: '🎓', bc_bb: '📋',
     mo_kt: '📖', drop_out: '🔴', pause: '⏸️', chot_center: '🏛️', reminder: '⏰',
-    lap_group_tv_bb: '🎓', bb_reminder: '📚', bb_report_reminder: '✍️',
+    lap_group_tv_bb: '🎓', bb_reminder: '📚', bb_report_reminder: '✍️', bb_milestone: '⭐',
   };
   const icon = icons[eventType] || '🔔';
   let msg = `${icon} *${title}*`;
