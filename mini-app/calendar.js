@@ -118,8 +118,8 @@ async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
       const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
-      // Don't duplicate if already in calEvents from calendar_events table
-      if (calEvents.find(e => e.event_type === 'hoc_bb' && e.profile_id === p.id && e.event_date === dateStr)) return;
+      // Don't duplicate if already in calEvents from calendar_events table (check staff_code since events are per-stakeholder)
+      if (calEvents.find(e => e.event_type === 'hoc_bb' && e.profile_id === p.id && e.event_date === dateStr && e.staff_code === myCode)) return;
 
       const buoiNum = c.buoi_thu || c.lan_thu || '?';
       calEvents.push({
@@ -146,7 +146,7 @@ async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
       const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
-      if (calEvents.find(e => e.event_type === 'chot_tv' && e.profile_id === p.id && e.event_date === dateStr)) return;
+      if (calEvents.find(e => e.event_type === 'chot_tv' && e.profile_id === p.id && e.event_date === dateStr && e.staff_code === myCode)) return;
 
       const sessNum = sess.session_number || '?';
       calEvents.push({
@@ -976,6 +976,24 @@ async function deleteCalEvent(eventId) {
 
 // ============ AUTO-CREATE CALENDAR EVENTS ============
 // Called from records.js when Chốt TV or creating BB report with buoi_tiep
+
+// Helper: get all role codes for a profile
+async function _getProfileRoleCodes(profileId) {
+  const p = allProfiles.find(x => x.id === profileId);
+  const result = { ndd: null, tvv: null, gvbb: null, others: [] };
+  if (!p) return result;
+  result.ndd = p.ndd_staff_code || null;
+  try {
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,fruit_roles(staff_code,role_type)`);
+    const fgs = await fgRes.json();
+    (fgs || []).forEach(fg => (fg.fruit_roles || []).forEach(r => {
+      if (r.role_type === 'tvv' && r.staff_code) result.tvv = r.staff_code;
+      if (r.role_type === 'gvbb' && r.staff_code) result.gvbb = r.staff_code;
+    }));
+  } catch(e) { console.warn('_getProfileRoleCodes:', e); }
+  return result;
+}
+
 async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, toolStr) {
   const p = allProfiles.find(x => x.id === profileId);
   const pName = p?.full_name || '';
@@ -985,10 +1003,13 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
   const oldTitlePattern = encodeURIComponent(`%Chốt TV lần ${sessionNum}%`);
 
   try {
-    // Delete old event with similar pattern for this session (idempotent update)
+    // Delete old events with similar pattern for this session (idempotent update)
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${oldTitlePattern}`, { method: 'DELETE' });
+    // Also delete old report reminders
+    const reportTitle = encodeURIComponent(`📝 Viết BC TV lần ${sessionNum}%`);
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${reportTitle}`, { method: 'DELETE' });
 
-    // ONLY create calendar event if a date was actually scheduled
+    // ONLY create calendar events if a date was actually scheduled
     if (!scheduledAt) return;
 
     let dateStr, timeStr;
@@ -1002,20 +1023,53 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
       dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
-    
-    // Reminder: 1 hour before the event
-    const reminderAt = new Date(`${dateStr}T${timeStr}:00`);
-    reminderAt.setHours(reminderAt.getHours() - 1);
-    const reminderAtStr = reminderAt.toISOString();
 
-    await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
-      staff_code: myCode, profile_id: profileId, event_type: 'chot_tv',
-      title: titleStr,
-      event_date: dateStr, event_time: timeStr,
-      reminder_at: reminderAtStr,
-      reminder_channels: ['app', 'chat'],
-      is_auto: true, is_system: true
-    })});
+    // Get role codes — NDD + TVV get alarm ON, others get alarm OFF
+    const roles = await _getProfileRoleCodes(profileId);
+    const eventDt = new Date(`${dateStr}T${timeStr}:00`);
+    const preAlarmAt = new Date(eventDt.getTime() - 60 * 60000).toISOString(); // 1h before
+    const postAlarmAt = new Date(eventDt.getTime() + 60 * 60000).toISOString(); // 1h after
+
+    // Determine alarmON recipients (NDD + TVV)
+    const alarmOnCodes = new Set([roles.ndd, roles.tvv].filter(Boolean));
+    // All stakeholders who should see the event
+    const allCodes = new Set([roles.ndd, roles.tvv, roles.gvbb, myCode].filter(Boolean));
+
+    // Report reminder title
+    const reportReminderTitle = `📝 Viết BC TV lần ${sessionNum} — ${pName}`;
+
+    // Post date for report reminder
+    const postDt = new Date(eventDt.getTime() + 60 * 60000);
+    const postDateStr = `${postDt.getFullYear()}-${String(postDt.getMonth()+1).padStart(2,'0')}-${String(postDt.getDate()).padStart(2,'0')}`;
+    const postTimeStr = `${String(postDt.getHours()).padStart(2,'0')}:${String(postDt.getMinutes()).padStart(2,'0')}`;
+
+    // Create events in batch
+    const rows = [];
+    for (const code of allCodes) {
+      const hasAlarm = alarmOnCodes.has(code);
+      // Pre-event: Lịch TV
+      rows.push({
+        staff_code: code, profile_id: profileId, event_type: 'chot_tv',
+        title: titleStr, event_date: dateStr, event_time: timeStr,
+        reminder_at: hasAlarm ? preAlarmAt : null,
+        reminder_channels: hasAlarm ? ['app', 'chat'] : null,
+        is_auto: true, is_system: true, created_by: myCode
+      });
+      // Post-event: Nhắc viết BC (only for alarm-ON people)
+      if (hasAlarm) {
+        rows.push({
+          staff_code: code, profile_id: profileId, event_type: 'chot_tv',
+          title: reportReminderTitle, event_date: postDateStr, event_time: postTimeStr,
+          reminder_at: postAlarmAt,
+          reminder_channels: ['app', 'chat'],
+          is_auto: true, is_system: true, created_by: myCode
+        });
+      }
+    }
+
+    if (rows.length > 0) {
+      await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify(rows) });
+    }
   } catch(e) { console.warn('createCalEventFromChotTV:', e); }
 }
 
@@ -1043,19 +1097,55 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
     const eventTitle = `Học BB buổi ${nextNum} — ${pName}`;
     // Delete old matching upcoming BB event to avoid dupes if they edit the report
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=eq.${encodeURIComponent(eventTitle)}`, { method: 'DELETE' });
+    // Also delete old report reminders
+    const reportTitle = encodeURIComponent(`📝 Viết BC BB buổi ${nextNum}%`);
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=like.${reportTitle}`, { method: 'DELETE' });
 
-    // Reminder: 1 hour before the BB session
-    const reminderAt = new Date(`${dateStr}T${timeStr}:00`);
-    reminderAt.setHours(reminderAt.getHours() - 1);
-    const reminderAtStr = reminderAt.toISOString();
+    // Get role codes — NDD + GVBB get alarm ON, others alarm OFF
+    const roles = await _getProfileRoleCodes(profileId);
+    const eventDt = new Date(`${dateStr}T${timeStr}:00`);
+    const preAlarmAt = new Date(eventDt.getTime() - 60 * 60000).toISOString(); // 1h before
+    const postAlarmAt = new Date(eventDt.getTime() + 60 * 60000).toISOString(); // 1h after
 
-    await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify({
-      staff_code: myCode, profile_id: profileId, event_type: 'hoc_bb',
-      title: eventTitle,
-      event_date: dateStr, event_time: timeStr,
-      reminder_at: reminderAtStr,
-      reminder_channels: ['app', 'chat'],
-      is_auto: true, is_system: true
-    })});
+    // Determine alarmON recipients (NDD + GVBB for BB events)
+    const alarmOnCodes = new Set([roles.ndd, roles.gvbb].filter(Boolean));
+    // All stakeholders who should see the event
+    const allCodes = new Set([roles.ndd, roles.tvv, roles.gvbb, myCode].filter(Boolean));
+
+    // Report reminder title
+    const reportReminderTitle = `📝 Viết BC BB buổi ${nextNum} — ${pName}`;
+
+    // Post date for report reminder
+    const postDt = new Date(eventDt.getTime() + 60 * 60000);
+    const postDateStr = `${postDt.getFullYear()}-${String(postDt.getMonth()+1).padStart(2,'0')}-${String(postDt.getDate()).padStart(2,'0')}`;
+    const postTimeStr = `${String(postDt.getHours()).padStart(2,'0')}:${String(postDt.getMinutes()).padStart(2,'0')}`;
+
+    // Create events in batch
+    const rows = [];
+    for (const code of allCodes) {
+      const hasAlarm = alarmOnCodes.has(code);
+      // Pre-event: Học BB
+      rows.push({
+        staff_code: code, profile_id: profileId, event_type: 'hoc_bb',
+        title: eventTitle, event_date: dateStr, event_time: timeStr,
+        reminder_at: hasAlarm ? preAlarmAt : null,
+        reminder_channels: hasAlarm ? ['app', 'chat'] : null,
+        is_auto: true, is_system: true, created_by: myCode
+      });
+      // Post-event: Nhắc viết BC (only for alarm-ON people)
+      if (hasAlarm) {
+        rows.push({
+          staff_code: code, profile_id: profileId, event_type: 'hoc_bb',
+          title: reportReminderTitle, event_date: postDateStr, event_time: postTimeStr,
+          reminder_at: postAlarmAt,
+          reminder_channels: ['app', 'chat'],
+          is_auto: true, is_system: true, created_by: myCode
+        });
+      }
+    }
+
+    if (rows.length > 0) {
+      await sbFetch('/rest/v1/calendar_events', { method: 'POST', body: JSON.stringify(rows) });
+    }
   } catch(e) { console.warn('createCalEventFromBBReport:', e); }
 }
