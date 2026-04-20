@@ -2115,7 +2115,10 @@
 .blob-2 { width: 250px; height: 250px; background: #7dd3fc; bottom: -50px; right: -100px; animation-delay: -5s; }
 @keyframes blobFloat { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(30px, 50px) scale(1.15); } }
 @media (min-width: 1024px) {
-  .ambient-blobs, .blob { display: none; }
+  .ambient-blobs { opacity: 0.5; }
+  .blob { filter: none; }
+  .blob-1 { background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%); }
+  .blob-2 { background: radial-gradient(circle, rgba(125,211,252,0.6) 0%, transparent 70%); }
 }
 
 .deck-container {
@@ -2154,12 +2157,11 @@
 }
 @media (min-width: 1024px) {
   .deck-card {
-    background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: rgba(255,255,255,0.92); backdrop-filter: none; -webkit-backdrop-filter: none;
     border-color: #e2e8f0; box-shadow: 0 8px 24px rgba(14,165,233,0.12);
-    transition: none; display: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    will-change: transform, opacity;
   }
-  .deck-card.active { display: block; transform: none; }
-  .deck-card.prev { display: none; }
 }
 
 .deck-card-header {

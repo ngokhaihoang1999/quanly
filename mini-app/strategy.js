@@ -348,12 +348,12 @@ function openStrategyPitchDeck() {
   document.body.style.overflow = 'hidden';
   _updateDeckProgress();
   
-  // Hide heavy content behind overlay on desktop to stop GPU compositing
+  // Hide heavy content behind overlay on desktop to reduce GPU compositing
   if (window.innerWidth >= 1024) {
     const desktopLayout = document.querySelector('.desktop-layout');
-    if (desktopLayout) desktopLayout.style.display = 'none';
+    if (desktopLayout) desktopLayout.style.visibility = 'hidden';
     const header = document.querySelector('.header');
-    if (header) header.style.display = 'none';
+    if (header) header.style.visibility = 'hidden';
   }
   
   // Add keyboard navigation
@@ -402,24 +402,18 @@ function _updateDeckProgress() {
 
 function closeStrategyPitchDeck() {
   const overlay = document.getElementById('strategyPitchDeck');
-  if (window.innerWidth >= 1024) {
-    // Desktop: instant close
-    if (overlay) overlay.remove();
-  } else {
-    // Mobile: animated close
-    if (overlay) {
-      overlay.style.animation = 'deckFadeIn 0.25s reverse forwards';
-      setTimeout(() => { overlay.remove(); }, 250);
-    }
+  if (overlay) {
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.remove(); }, 200);
   }
   document.body.style.overflow = '';
   window.removeEventListener('keydown', _deckKeyHandler);
   
   // Restore hidden content
   const desktopLayout = document.querySelector('.desktop-layout');
-  if (desktopLayout) desktopLayout.style.display = '';
+  if (desktopLayout) desktopLayout.style.visibility = '';
   const header = document.querySelector('.header');
-  if (header) header.style.display = '';
+  if (header) header.style.visibility = '';
 }
 
 function _deckKeyHandler(e) {
