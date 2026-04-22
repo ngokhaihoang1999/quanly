@@ -487,6 +487,22 @@ async function saveInfoSheet() {
     // 1. Save info sheet (with sk_* preserved)
     await sbFetch('/rest/v1/form_hanh_chinh', { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ profile_id: currentProfileId, data: data }) });
 
+    // 1b. Refresh _currentInfoSheet so mindmap "Thông tin cơ bản" uses fresh data
+    window._currentInfoSheet = {
+      gioi_tinh: data.t2_gioi_tinh, nam_sinh: data.t2_nam_sinh, nghe_nghiep: data.t2_nghe_nghiep,
+      ton_giao: data.t2_ton_giao, hon_nhan: data.t2_hon_nhan, dia_chi: data.t2_dia_chi,
+      ky_khai_giang: data.t2_ky_khai_giang, tinh_cach: data.t2_tinh_cach, so_thich: data.t2_so_thich,
+      du_dinh: data.t2_du_dinh, nguoi_quan_trong: data.t2_nguoi_quan_trong,
+      quan_diem: data.t2_quan_diem, sdt: data.t2_sdt,
+      chuyen_cu: data.t2_chuyen_cu, nguoi_than: data.t2_nguoi_than, luu_y: data.t2_luu_y,
+      khong_gian_song: data.t2_khong_gian_song, quan_he_ndd: data.t2_quan_he_ndd,
+      que_quan: data.t2_que_quan
+    };
+    // Also invalidate AI mindmap cache so "Hỗ trợ BB" re-generates with new data
+    if (typeof _mmCache !== 'undefined' && currentProfileId) delete _mmCache[currentProfileId];
+    // Re-render mindmap if currently viewing info tab
+    if (typeof _mmCurrentType !== 'undefined' && _mmCurrentType === 'info' && typeof renderMindmap === 'function') renderMindmap();
+
     // 2. Sync key fields to profiles table (name, birth_year, gender, phone)
     const profilePatch = {};
     if (data.t2_ho_ten)    profilePatch.full_name    = data.t2_ho_ten;
