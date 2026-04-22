@@ -97,11 +97,18 @@ function openAIParseModal(formType) {
   const old = document.getElementById('aiParseModal');
   if (old) old.remove();
 
-  const labels = {
-    thong_tin: 'Phiếu Thông tin',
-    tu_van: 'Báo cáo Tư vấn',
-    bien_ban: 'Báo cáo BB',
-    chien_luoc: 'Chiến lược'
+  const descriptions = {
+    thong_tin: 'Dán text bất kỳ — đoạn giới thiệu, tin nhắn, ghi chú — AI sẽ tự bóc tách thông tin vào <b>Phiếu Thông tin</b>.',
+    tu_van: 'Dán text bất kỳ — form TV, đoạn văn, ghi chú sau buổi tư vấn — AI sẽ tự bóc tách thông tin vào <b>Báo cáo Tư vấn</b>.',
+    bien_ban: 'Dán text bất kỳ — ghi chú sau buổi học, nhận xét về HS — AI sẽ tự bóc tách thông tin vào <b>Báo cáo BB</b>.',
+    chien_luoc: 'Dán text bất kỳ — ý tưởng tiếp cận, phân tích trái — AI sẽ tự bóc tách thông tin vào <b>Chiến lược</b>.'
+  };
+
+  const placeholders = {
+    thong_tin: 'Ví dụ: Em ấy tên Hoa, sinh năm 95, làm kế toán ở quận 7. Tính cách hướng nội, thích đọc sách self-help, chưa lập gia đình...',
+    tu_van: 'Ví dụ: Lần 1, dùng Enneagram. Bạn ấy thuộc type 4, rất nhạy cảm. Khai thác được chuyện gia đình có mâu thuẫn. Phản hồi tích cực, muốn tìm hiểu thêm...',
+    bien_ban: 'Ví dụ: Buổi 3, học về gia đình. HS chú ý lắng nghe, hỏi nhiều câu hỏi. Phát hiện HS có nỗi đau về mối quan hệ với ba. Buổi sau dự kiến học về tha thứ...',
+    chien_luoc: 'Ví dụ: Quen qua CLB đọc sách. Bạn ấy đang gặp khó khăn về định hướng nghề nghiệp. Dự kiến dùng MBTI lần 1, khai thác sâu nỗi đau gia đình lần 2...'
   };
 
   const overlay = document.createElement('div');
@@ -114,11 +121,11 @@ function openAIParseModal(formType) {
   <div class="modal-handle"></div>
   <div class="modal-title">✨ AI nhập nhanh</div>
   <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);line-height:1.6;">
-    Dán text bất kỳ — tin nhắn, ghi chú, đoạn giới thiệu — AI sẽ tự bóc tách thông tin vào <b>${labels[formType] || formType}</b>.
+    ${descriptions[formType] || ''}
   </div>
   <div class="field-group">
     <label>Dán text vào đây</label>
-    <textarea id="aiParseInput" placeholder="Ví dụ: Em ấy tên Hoa, sinh năm 95, làm kế toán ở quận 7. Tính cách hướng nội, thích đọc sách self-help..."
+    <textarea id="aiParseInput" placeholder="${placeholders[formType] || ''}"
       style="resize:vertical;min-height:140px;font-size:13px;line-height:1.5;"></textarea>
   </div>
   <div id="aiParseStatus" style="display:none;padding:12px;text-align:center;border-radius:var(--radius-sm);margin-bottom:8px;"></div>
@@ -127,8 +134,6 @@ function openAIParseModal(formType) {
   </button>
   <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;font-size:11px;color:var(--text3);">
     <span>⏱ ~2-3 giây</span>
-    <span>·</span>
-    <span>~16đ/lần</span>
     <span>·</span>
     <span>🔒 AI không bịa thông tin</span>
   </div>
