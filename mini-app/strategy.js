@@ -125,7 +125,10 @@ function renderStrategyBoard() {
   container.innerHTML = `
     <div class="cl-board" id="strategyBoard">
       <div class="cl-header">
-        <div class="cl-header-title">🧭 Chiến lược tiếp cận</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="cl-header-title">🧭 Chiến lược tiếp cận</div>
+          <button onclick="openAIParseModal('chien_luoc')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;">✨ AI nhập nhanh</button>
+        </div>
         <div class="cl-header-name">${name}</div>
       </div>
       ${roadmapHtml}

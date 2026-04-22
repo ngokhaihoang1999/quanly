@@ -171,7 +171,7 @@
 
     <!-- PHIẾU THÔNG TIN (1 duy nhất) -->
     <div class="form-card" id="infoSheet">
-      <div class="form-card-header"><div class="form-card-title">📋 PHIẾU THÔNG TIN</div><div style="display:flex;gap:6px;align-items:center;"><button onclick="copyInfoSheet()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Copy phiếu thông tin">📋</button><div class="form-card-meta">23 mục</div></div></div>
+      <div class="form-card-header"><div class="form-card-title">📋 PHIẾU THÔNG TIN</div><div style="display:flex;gap:6px;align-items:center;"><button onclick="openAIParseModal('thong_tin')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;" title="AI nhập nhanh">✨ AI</button><button onclick="copyInfoSheet()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Copy phiếu thông tin">📋</button><div class="form-card-meta">23 mục</div></div></div>
       <div class="form-card-body">
         <div class="field-group"><label>1. Họ và tên đầy đủ</label><input type="text" id="t2_ho_ten" placeholder="..." /></div>
         <div class="grid-2">
@@ -219,7 +219,7 @@
 
     <!-- TV TAB -->
     <div class="form-card" id="tuVan">
-      <div class="form-card-header"><div class="form-card-title">💬 TƯ VẤN</div><div id="tvCount" class="form-card-meta"></div></div>
+      <div class="form-card-header"><div class="form-card-title">💬 TƯ VẤN</div><div style="display:flex;gap:6px;align-items:center;"><button onclick="openAIParseModal('tu_van')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;" title="AI nhập nhanh">✨ AI</button><div id="tvCount" class="form-card-meta"></div></div></div>
       <div class="form-card-body">
         <button class="add-record-btn" onclick="openBaoCaoTV()" style="margin-bottom:12px;">📝 Viết Báo cáo Tư vấn</button>
         <div id="tvList"></div>
@@ -228,7 +228,7 @@
 
     <!-- BB TAB -->
     <div class="form-card" id="bienBan">
-      <div class="form-card-header"><div class="form-card-title">📖 BB</div><div id="bbCount" class="form-card-meta"></div></div>
+      <div class="form-card-header"><div class="form-card-title">📖 BB</div><div style="display:flex;gap:6px;align-items:center;"><button onclick="openAIParseModal('bien_ban')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;" title="AI nhập nhanh">✨ AI</button><div id="bbCount" class="form-card-meta"></div></div></div>
       <div class="form-card-body">
         <button class="add-record-btn" onclick="openAddRecordModal('bien_ban')" style="margin-bottom:12px;">📝 Viết Báo cáo BB</button>
         <div id="bbList"></div>
@@ -868,6 +868,7 @@
 <script src="dkbb.js?v=2026042016"></script>
 <script src="strategy.js?v=2026042016"></script>
 <script src="lacie.js?v=2026042016"></script>
+<script src="ai-parse.js?v=2026042216"></script>
 <script src="mindmap.js?v=2026042016"></script>
 <!-- ── Init (MUST be last — depends on all modules) ── -->
 <script src="init.js?v=2026042016"></script>
