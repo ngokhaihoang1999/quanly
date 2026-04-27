@@ -22,6 +22,8 @@ function latestActivityLabel(rec, sess) {
     else if (rt === 'pv_gvbb')     label = '🎤 PV GVBB';
     else if (rt === 'dky_center')   label = '📋 ĐKý Center';
     else if (rt === 'pv_hs')       label = '🎓 PV HS';
+    else if (rt === 'btvn')        label = '📝 BTVN';
+    else if (rt === 'team_meeting') label = '🤝 Team Meeting';
     else label = rt;
   } else {
     actDate = sess.created_at;
@@ -1083,19 +1085,34 @@ async function chotCenter() {
 // ══════════════════════════════════════════════════════════════════════════════
 // ADD / EDIT RECORD MODAL
 // ══════════════════════════════════════════════════════════════════════════════
-window.addBTVNQA = function() {
+function addBTVNQA() {
   const container = document.getElementById('btvn_qa_container');
   if (!container) return;
   const i = container.querySelectorAll('.qa-block').length;
   const div = document.createElement('div');
   div.className = 'qa-block';
-  div.style = 'border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;background:var(--surface2);';
+  div.style.cssText = 'border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;background:var(--surface2);';
   div.innerHTML = `
     <div class="field-group"><label>Câu hỏi ${i+1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;"></textarea></div>
     <div class="field-group"><label>Câu trả lời</label><textarea class="btvn-a" placeholder="Trái quả trả lời..." style="min-height:80px;"></textarea></div>
   `;
   container.appendChild(div);
-};
+}
+
+function _setKTToggle(val) {
+  const yesBtn = document.getElementById('rm_kt_yes');
+  const noBtn = document.getElementById('rm_kt_no');
+  const hidden = document.getElementById('rm_has_kt_content');
+  if (!yesBtn || !noBtn || !hidden) return;
+  hidden.value = val;
+  if (val === 'yes') {
+    yesBtn.style.border = '2px solid var(--green)'; yesBtn.style.background = 'rgba(34,197,94,0.12)'; yesBtn.style.color = 'var(--green)';
+    noBtn.style.border = '2px solid var(--border)'; noBtn.style.background = 'var(--surface2)'; noBtn.style.color = 'var(--text2)';
+  } else {
+    noBtn.style.border = '2px solid #f59e0b'; noBtn.style.background = 'rgba(245,158,11,0.12)'; noBtn.style.color = '#f59e0b';
+    yesBtn.style.border = '2px solid var(--border)'; yesBtn.style.background = 'var(--surface2)'; yesBtn.style.color = 'var(--text2)';
+  }
+}
 
 async function openAddRecordModal(type, existingContent = null, readOnly = false) {
   currentRecordType = type;
@@ -1127,12 +1144,12 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
   document.getElementById('recordModalTitle').textContent = titleText;
   const body = document.getElementById('recordModalBody');
   const c = existingContent || {};
-  // Default report_date: existing or today
   const _today = new Date().toISOString().split('T')[0];
   const _reportDate = c.report_date || _today;
+
   if (isTV) {
     body.innerHTML = `
-      <div class="field-group"><label>📅 Ngày buổi Tư vấn</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay. Đổi nếu buổi TV diễn ra ngày khác.</div></div>
+      <div class="field-group"><label>📅 Ngày buổi Tư vấn</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
       <div class="field-group"><label>Lần thứ</label><input type="text" id="rm_lan_thu" placeholder="1, 2, 3..." value="${c.lan_thu||''}"/></div>
       <div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" list="datalist_tools" placeholder="Chọn hoặc nhập công cụ..." autocomplete="off" value="${c.ten_cong_cu||''}"/></div>
       <div class="field-group"><label>Kết quả test công cụ</label><textarea id="rm_ket_qua_test" placeholder="...">${c.ket_qua_test||''}</textarea></div>
@@ -1141,22 +1158,16 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div class="field-group"><label>Điểm hái trái</label><textarea id="rm_diem_hai" placeholder="...">${c.diem_hai||''}</textarea></div>
       <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
   } else if (isBB) {
-    // Parse existing buoi_tiep to date/time values (support old DD/MM/YYYY and ISO formats)
     const parseBuoiTiep = (val) => {
       if (!val) return { date: '', time: '' };
-      // ISO format: YYYY-MM-DDTHH:mm or datetime-local
       const isoMatch = val.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
       if (isoMatch) return { date: `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`, time: `${isoMatch[4]}:${isoMatch[5]}` };
-      // Old format: DD/MM/YYYY HH:mm
-      const oldMatch = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{2})/);
-      if (oldMatch) return { date: `${oldMatch[3]}-${String(oldMatch[2]).padStart(2,'0')}-${String(oldMatch[1]).padStart(2,'0')}`, time: `${String(oldMatch[4]).padStart(2,'0')}:${oldMatch[5]}` };
       return { date: '', time: '' };
     };
     const bt = parseBuoiTiep(c.buoi_tiep);
-    // Determine initial KT state: true, false, or null (not yet chosen)
     const _ktState = c.has_kt_content === true ? 'yes' : c.has_kt_content === false ? 'no' : 'none';
     body.innerHTML = `
-      <div class="field-group"><label>📅 Ngày buổi BB</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay. Đổi nếu buổi BB diễn ra ngày khác.</div></div>
+      <div class="field-group"><label>📅 Ngày buổi BB</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
       <div class="field-group"><label>Buổi thứ</label><input type="text" id="rm_buoi_thu" placeholder="1, 2, 3..." value="${c.buoi_thu||''}"/></div>
       <div class="field-group"><label>Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung||''}</textarea></div>
       <div class="field-group"><label>Phản ứng của HS trong và sau buổi học</label><textarea id="rm_phan_ung" placeholder="...">${c.phan_ung||''}</textarea></div>
@@ -1169,21 +1180,20 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
           <div class="field-group"><label style="font-size:11px;">Ngày</label><input type="date" id="rm_buoi_tiep_date" value="${bt.date}"/></div>
           <div class="field-group"><label style="font-size:11px;">Giờ</label><input type="time" id="rm_buoi_tiep_time" value="${bt.time}"/></div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Bạn có thể thay đổi thời gian này sau đó</div>
       </div>
       <div style="padding:10px 0;">
         <label style="font-size:13px;font-weight:700;margin-bottom:8px;display:block;">📖 Nội dung Kinh Thánh <span style="color:var(--red);">*</span></label>
         <div id="rm_kt_toggle" style="display:flex;gap:8px;">
-          <button type="button" onclick="_setKTToggle('yes')" id="rm_kt_yes" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;border:2px solid ${_ktState==='yes'?'var(--green)':'var(--border)'};background:${_ktState==='yes'?'rgba(34,197,94,0.12)':'var(--surface2)'};color:${_ktState==='yes'?'var(--green)':'var(--text2)'}">📖 Có nội dung KT</button>
-          <button type="button" onclick="_setKTToggle('no')" id="rm_kt_no" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;border:2px solid ${_ktState==='no'?'#f59e0b':'var(--border)'};background:${_ktState==='no'?'rgba(245,158,11,0.12)':'var(--surface2)'};color:${_ktState==='no'?'#f59e0b':'var(--text2)'}">📕 Không có KT</button>
+          <button type="button" onclick="_setKTToggle('yes')" id="rm_kt_yes" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${_ktState==='yes'?'var(--green)':'var(--border)'};background:${_ktState==='yes'?'rgba(34,197,94,0.12)':'var(--surface2)'};color:${_ktState==='yes'?'var(--green)':'var(--text2)'}">📖 Có nội dung KT</button>
+          <button type="button" onclick="_setKTToggle('no')" id="rm_kt_no" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${_ktState==='no'?'#f59e0b':'var(--border)'};background:${_ktState==='no'?'rgba(245,158,11,0.12)':'var(--surface2)'};color:${_ktState==='no'?'#f59e0b':'var(--text2)'}">📕 Không có KT</button>
         </div>
         <input type="hidden" id="rm_has_kt_content" value="${_ktState}" />
       </div>
       <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   } else if (isTeamMeeting) {
     body.innerHTML = `
-      <div class="field-group"><label>📅 Ngày họp</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
-      <div class="field-group"><label>Ghi chú cuộc họp</label><textarea id="rm_meeting_notes" placeholder="Tóm tắt ngắn gọn nội dung họp về trái quả này..." style="min-height:100px;">${c.meeting_notes||''}</textarea></div>
+      <div class="field-group"><label>📅 Ngày họp</label><input type="date" id="rm_report_date" value="${_reportDate}"/></div>
+      <div class="field-group"><label>Ghi chú cuộc họp</label><textarea id="rm_meeting_notes" placeholder="Tóm tắt nội dung họp về trái quả này..." style="min-height:150px;">${c.meeting_notes||''}</textarea></div>
     `;
   } else if (isBTVN) {
     let bbOptions = '<option value="">-- Chọn Báo cáo BB --</option>';
@@ -1207,41 +1217,21 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
     `).join('');
 
     body.innerHTML = `
-      <div class="field-group"><label>📅 Ngày nộp bài tập</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
-      <div class="field-group"><label>Báo cáo BB tương ứng</label><select id="rm_bb_record_id">${bbOptions}</select></div>
+      <div class="field-group"><label>Bài tập theo buổi BB nào?</label>
+        <select id="rm_bb_id" style="width:100%;padding:10px;border-radius:8px;background:var(--surface2);color:var(--text1);border:1px solid var(--border);">${bbOptions}</select>
+      </div>
       <div id="btvn_qa_container">${qaHtml}</div>
-      <button type="button" onclick="addBTVNQA()" style="margin-top:8px;padding:6px 12px;background:var(--bg2);border:1px dashed var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);width:100%;font-weight:600;">+ Thêm câu hỏi và câu trả lời</button>
+      <button type="button" class="btn secondary" onclick="addBTVNQA()" style="width:100%;margin-top:5px;">➕ Thêm câu hỏi và trả lời</button>
     `;
   }
-  document.getElementById('addRecordModal').classList.add('open');
-  // Apply read-only state after rendering fields
-  setTimeout(() => {
-    const modal = document.getElementById('addRecordModal');
-    const saveBtn = modal ? modal.querySelector('.save-btn') : null;
-    const inputs = modal ? modal.querySelectorAll('input, textarea, select') : [];
-    if (readOnly) {
-      inputs.forEach(el => { el.disabled = true; el.style.opacity = '0.8'; });
-      if (saveBtn) saveBtn.style.display = 'none';
-    } else {
-      inputs.forEach(el => { el.disabled = false; el.style.opacity = ''; });
-      if (saveBtn) saveBtn.style.display = '';
-    }
-  }, 50);
-}
 
-// KT toggle helper
-function _setKTToggle(val) {
-  const yesBtn = document.getElementById('rm_kt_yes');
-  const noBtn = document.getElementById('rm_kt_no');
-  const hidden = document.getElementById('rm_has_kt_content');
-  if (!yesBtn || !noBtn || !hidden) return;
-  hidden.value = val;
-  if (val === 'yes') {
-    yesBtn.style.border = '2px solid var(--green)'; yesBtn.style.background = 'rgba(34,197,94,0.12)'; yesBtn.style.color = 'var(--green)';
-    noBtn.style.border = '2px solid var(--border)'; noBtn.style.background = 'var(--surface2)'; noBtn.style.color = 'var(--text2)';
+  document.getElementById('recordModal').style.display = 'flex';
+  if (readOnly) {
+    const inputs = body.querySelectorAll('input, textarea, select, button');
+    inputs.forEach(el => { if (el.id !== 'rm_kt_yes' && el.id !== 'rm_kt_no') el.disabled = true; });
+    document.getElementById('btnSaveRecord').style.display = 'none';
   } else {
-    noBtn.style.border = '2px solid #f59e0b'; noBtn.style.background = 'rgba(245,158,11,0.12)'; noBtn.style.color = '#f59e0b';
-    yesBtn.style.border = '2px solid var(--border)'; yesBtn.style.background = 'var(--surface2)'; yesBtn.style.color = 'var(--text2)';
+    document.getElementById('btnSaveRecord').style.display = 'block';
   }
 }
 
@@ -1253,37 +1243,36 @@ async function saveRecord() {
 
   const reportDate = document.getElementById('rm_report_date')?.value || '';
   let data = {};
+
   if (isTV) {
     data = {
-      report_date:   reportDate,
-      lan_thu:       document.getElementById('rm_lan_thu')?.value,
-      ten_cong_cu:   document.getElementById('rm_ten_cong_cu')?.value,
-      ket_qua_test:  document.getElementById('rm_ket_qua_test')?.value,
-      van_de:        document.getElementById('rm_van_de')?.value,
-      phan_hoi:      document.getElementById('rm_phan_hoi')?.value,
-      diem_hai:      document.getElementById('rm_diem_hai')?.value,
-      de_xuat:       document.getElementById('rm_de_xuat')?.value,
+      report_date: reportDate,
+      lan_thu: document.getElementById('rm_lan_thu')?.value,
+      ten_cong_cu: document.getElementById('rm_ten_cong_cu')?.value,
+      ket_qua_test: document.getElementById('rm_ket_qua_test')?.value,
+      van_de: document.getElementById('rm_van_de')?.value,
+      phan_hoi: document.getElementById('rm_phan_hoi')?.value,
+      diem_hai: document.getElementById('rm_diem_hai')?.value,
+      de_xuat: document.getElementById('rm_de_xuat')?.value,
     };
   } else if (isBB) {
-    // Validate KT toggle: must be 'yes' or 'no'
     const ktVal = document.getElementById('rm_has_kt_content')?.value;
     if (ktVal !== 'yes' && ktVal !== 'no') {
-      showToast('⚠️ Phải chọn "Có KT" hoặc "Không KT" trước khi lưu!');
+      showToast('⚠️ Phải chọn trạng thái Kinh Thánh!');
       return;
     }
-    // Build ISO datetime from date + time pickers
-    const btDate = document.getElementById('rm_buoi_tiep_date')?.value; // YYYY-MM-DD
-    const btTime = document.getElementById('rm_buoi_tiep_time')?.value; // HH:mm
+    const btDate = document.getElementById('rm_buoi_tiep_date')?.value;
+    const btTime = document.getElementById('rm_buoi_tiep_time')?.value;
     const buoiTiepISO = btDate ? (btTime ? `${btDate}T${btTime}:00` : `${btDate}T00:00:00`) : null;
     data = {
-      report_date:   reportDate,
-      buoi_thu:      document.getElementById('rm_buoi_thu')?.value,
-      noi_dung:      document.getElementById('rm_noi_dung')?.value,
-      phan_ung:      document.getElementById('rm_phan_ung')?.value,
-      khai_thac:     document.getElementById('rm_khai_thac')?.value,
-      tuong_tac:     document.getElementById('rm_tuong_tac')?.value,
-      de_xuat_cs:    document.getElementById('rm_de_xuat_cs')?.value,
-      buoi_tiep:     buoiTiepISO,
+      report_date: reportDate,
+      buoi_thu: document.getElementById('rm_buoi_thu')?.value,
+      noi_dung: document.getElementById('rm_noi_dung')?.value,
+      phan_ung: document.getElementById('rm_phan_ung')?.value,
+      khai_thac: document.getElementById('rm_khai_thac')?.value,
+      tuong_tac: document.getElementById('rm_tuong_tac')?.value,
+      de_xuat_cs: document.getElementById('rm_de_xuat_cs')?.value,
+      buoi_tiep: buoiTiepISO,
       noi_dung_tiep: document.getElementById('rm_noi_dung_tiep')?.value,
       has_kt_content: ktVal === 'yes',
     };
@@ -1293,100 +1282,84 @@ async function saveRecord() {
       meeting_notes: document.getElementById('rm_meeting_notes')?.value
     };
   } else if (isBTVN) {
-    const bbId = document.getElementById('rm_bb_record_id')?.value;
+    const bbId = document.getElementById('rm_bb_id')?.value;
     if (!bbId) {
       showToast('⚠️ Phải chọn báo cáo BB tương ứng!');
       return;
     }
-    const qas = [];
+    const qasArr = [];
     document.querySelectorAll('.qa-block').forEach(block => {
       const q = block.querySelector('.btvn-q')?.value;
       const a = block.querySelector('.btvn-a')?.value;
-      if (q || a) qas.push({ q, a });
+      if (q || a) qasArr.push({ q, a });
     });
     data = {
       report_date: reportDate,
       bb_record_id: bbId,
-      qas: qas
+      qas: qasArr
     };
   }
+
   try {
-    // Validation for new records (not edits)
-    if (!currentRecordId) {
-      if (isTV) {
-        const lanThu = parseInt(data.lan_thu);
-        if (lanThu) {
-          // Check if Chốt TV lần N exists
-          const checkRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=eq.${lanThu}&select=id&limit=1`);
-          const checkData = await checkRes.json();
-          if (checkData.length === 0) {
-            showToast(`⚠️ Chưa có Chốt TV lần ${lanThu}. Hãy chốt TV trước!`);
-            return;
-          }
+    if (!currentRecordId && isTV) {
+      const lanThu = parseInt(data.lan_thu);
+      if (lanThu) {
+        const checkRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=eq.${lanThu}&select=id&limit=1`);
+        const checkData = await checkRes.json();
+        if (checkData.length === 0) {
+          showToast(`⚠️ Chưa có Chốt TV lần ${lanThu}. Hãy chốt TV trước!`);
+          return;
         }
       }
     }
 
     if (currentRecordId) {
       await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify({ content: data }) });
-      showToast('✅ Đã cập nhật phiếu!');
+      showToast('✅ Đã cập nhật!');
     } else {
-      await sbFetch('/rest/v1/records', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
+      await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
       showToast('✅ Đã thêm!');
 
-      // === Auto-triggers for NEW records ===
       const p = allProfiles.find(x => x.id === currentProfileId);
       const pName = p?.full_name || '';
+
       if (isTV) {
-        // Complete "viet_bc_tv" priority task
         if (typeof completePriorityTask === 'function') completePriorityTask(currentProfileId, 'viet_bc_tv');
-        // Notification
         if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
-          const stakeholders = await getProfileStakeholders(currentProfileId);
-          createNotification(stakeholders, 'bc_tv', `📝 BC TV lần ${data.lan_thu}`, pName, currentProfileId);
+          const stks = await getProfileStakeholders(currentProfileId);
+          createNotification(stks, 'bc_tv', `📝 BC TV lần ${data.lan_thu}`, pName, currentProfileId);
         }
-      } else {
-        // BB report: complete current "viet_bc_bb" priority
+      } else if (isBB) {
         if (typeof completePriorityTask === 'function') completePriorityTask(currentProfileId, 'viet_bc_bb');
-
-        // Calendar: add Học BB next session event
         if (data.buoi_tiep && typeof createCalEventFromBBReport === 'function') {
-          const nextNum = (parseInt(data.buoi_thu) || 1) + 1;
-          createCalEventFromBBReport(currentProfileId, nextNum, data.buoi_tiep);
+          createCalEventFromBBReport(currentProfileId, (parseInt(data.buoi_thu)||1)+1, data.buoi_tiep);
         }
-
-        // Priority: create next "viet_bc_bb" task — visible 1 hour AFTER next BB session
         if (data.buoi_tiep && typeof createPriorityTask === 'function') {
-          const myCode = getEffectiveStaffCode();
-          const buoiTime = new Date(data.buoi_tiep);
-          const visibleAt = new Date(buoiTime.getTime() + 60 * 60 * 1000).toISOString(); // +1h
-          createPriorityTask(
-            myCode, currentProfileId, 'viet_bc_bb',
-            `Viết BC BB buổi ${(parseInt(data.buoi_thu) || 0) + 1} — ${pName}`,
-            null, visibleAt
-          );
+          const vAt = new Date(new Date(data.buoi_tiep).getTime() + 3600000).toISOString();
+          createPriorityTask(getEffectiveStaffCode(), currentProfileId, 'viet_bc_bb', `Viết BC BB buổi ${(parseInt(data.buoi_thu)||0)+1} — ${pName}`, null, vAt);
         }
-
-        // Notification
         if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
-          const stakeholders = await getProfileStakeholders(currentProfileId);
-          createNotification(stakeholders, 'bc_bb', `📋 BC BB buổi ${data.buoi_thu}`, pName, currentProfileId);
+          const stks = await getProfileStakeholders(currentProfileId);
+          createNotification(stks, 'bc_bb', `📋 BC BB buổi ${data.buoi_thu}`, pName, currentProfileId);
+        }
+      } else if (isBTVN || isTeamMeeting) {
+        if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
+          const stks = await getProfileStakeholders(currentProfileId);
+          const title = isBTVN ? '📝 Có cập nhật Bài tập về nhà mới' : '🤝 Ghi nhận Team Meeting mới';
+          createNotification(stks, 'system', title, pName, currentProfileId);
         }
       }
     }
     
-    // Auto-sync TV records updates to Google Sheets
     if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
-
     closeModal('addRecordModal');
-    currentRecordId = null;
     await _refreshCurrentProfile();
-  } catch { showToast('❌ Lỗi'); }
+  } catch(e) { showToast('❌ Lỗi lưu dữ liệu'); console.error(e); }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════
 // NOTES (Sticky Notes)
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════
 async function loadNotes(profileId) {
   const listEl = document.getElementById('notesList');
   const countEl = document.getElementById('noteCount');

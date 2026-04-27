@@ -94,16 +94,31 @@ async function loadDashboard() {
     if (unitStaffCodes.length > 0) {
       const codeFilter = unitStaffCodes.map(c => `"${c}"`).join(',');
       const urRes = await sbFetch(`/rest/v1/fruit_roles?staff_code=in.(${codeFilter})&select=*,fruit_groups(profile_id,telegram_group_id,telegram_group_title,level,profiles(full_name,phase,ndd_staff_code,fruit_status,is_kt_opened),fruit_roles(staff_code,role_type))`);
-      const allUnitRoles = await urRes.json();
-      // Apply semester filter to unit roles
-      unitRoles = allUnitRoles.filter(r => inSem(r.fruit_groups?.profile_id));
-      unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
+      if (urRes.ok) {
+        const allUnitRoles = await urRes.json();
+        if (Array.isArray(allUnitRoles)) {
+          // Apply semester filter to unit roles
+          unitRoles = allUnitRoles.filter(r => inSem(r.fruit_groups?.profile_id));
+          unitFruits = new Set(unitRoles.map(r => r.fruit_groups?.profile_id).filter(Boolean)).size;
+        } else {
+          console.error('unitRoles is not an array:', allUnitRoles);
+        }
+      } else {
+        const err = await urRes.text();
+        console.error('Failed to fetch unit roles:', err);
+      }
 
       // Approved Hapja by unit members (filtered by semester) — used for Hapja cumulative metric
       const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc${semF}`);
-      approvedHapjaList = await ahRes.json();
-      // Persist to window so popup can always access it regardless of closure
-      window._approvedHapjaList = approvedHapjaList;
+      if (ahRes.ok) {
+        approvedHapjaList = await ahRes.json();
+        if (!Array.isArray(approvedHapjaList)) approvedHapjaList = [];
+        // Persist to window so popup can always access it regardless of closure
+        window._approvedHapjaList = approvedHapjaList;
+      } else {
+        const err = await ahRes.text();
+        console.error('Failed to fetch approved hapjas:', err);
+      }
 
       // Build profile maps (All = Alive+Dropout, Alive = only alive)
       unitRoles.forEach(r => {
@@ -130,7 +145,12 @@ async function loadDashboard() {
 
       // Pending + revision hapja for section below
       const uhRes = await sbFetch(`/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20${semF}`);
-      unitHapja = (await uhRes.json()).length;
+      if (uhRes.ok) {
+        const uhData = await uhRes.json();
+        unitHapja = Array.isArray(uhData) ? uhData.length : 0;
+      } else {
+        console.error('Failed to fetch pending hapjas');
+      }
     }
 
     const myUnitProfilesAll   = Array.from(unitProfilesMapAll.values());
@@ -424,7 +444,9 @@ async function loadDashboard() {
       hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=eq.${myCode}&select=*&order=created_at.desc&limit=20${semF}`;
     }
     const hRes = await sbFetch(hapjaQuery);
-    const hapjas = await hRes.json();
+    if (hRes.ok) {
+      const hapjas = await hRes.json();
+      if (!Array.isArray(hapjas)) throw new Error('Data error: hapjas is not an array');
     document.getElementById('dashHapjaTitle').textContent = '📋 Check Hapja đang xử lý';
     const hList = document.getElementById('dashHapjaList');
     if (hapjas.length === 0) {
@@ -444,6 +466,10 @@ async function loadDashboard() {
         }
         return `<div class="dash-list-item" style="cursor:pointer;" onclick="openHapjaDetail('${h.id}')"><div class="dash-dot ${statusDot}"></div><div class="profile-info"><div class="profile-name">${warnIcon}${h.full_name}${statusBadge}</div><div class="profile-meta">📆 ${date} · NDD: ${h.data?.ndd_staff_code||h.created_by}</div></div><div class="profile-arrow">›</div></div>`;
       }).join('');
+    }
+
+    } else {
+      console.error('Failed to fetch hapjas');
     }
 
     // ── SECTION 2: CÁ NHÂN ──
