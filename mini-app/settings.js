@@ -415,8 +415,13 @@ async function saveMyStaffProfile() {
 
 // ── Staff Card Popup ──
 function showStaffCard(code) {
+  // Handle tg: prefix (unregistered staff) — show name only, no card
+  if (code && code.startsWith('tg:')) {
+    showToast('👤 ' + code.replace('tg:', '') + ' (ngoài hệ thống)');
+    return;
+  }
   var s = allStaff.find(function(x){ return x.staff_code === code; });
-  if (!s) { showToast('Khong tim thay: ' + code); return; }
+  if (!s) { showToast('⚠️ Không tìm thấy TĐ: ' + code); return; }
   var existing = document.getElementById('staffCardModal');
   if (existing) existing.remove();
   var avatar = getNameInitial(s.nickname || s.full_name || s.staff_code);
@@ -442,7 +447,7 @@ function showStaffCard(code) {
           '</div>' +
         '</div>' +
       '</div>' +
-      (unit ? '<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:10px;">&\\#127962; ' + unit + '</div>' : '') +
+      (unit ? '<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:10px;">🏢 ' + unit + '</div>' : '') +
       ((s.gender||s.birth_year) ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">' + (s.gender||'') + bStr + '</div>' : '') +
       (s.motto ? '<div style="font-size:13px;font-style:italic;color:var(--accent);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:10px;">💪 ' + s.motto + '</div>' : '') +
       (s.bio ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;">' + s.bio + '</div>' : '') +
