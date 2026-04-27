@@ -242,10 +242,7 @@ export async function handleGroupChat(update: any) {
 
   // /link_profile — Gắn hồ sơ cho group
   if (text.startsWith('/link_profile')) {
-    if (!canLinkProfile(pos)) {
-      await sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
-      return;
-    }
+    // Any registered staff in a group chat has full access
     const fruitName = text.replace('/link_profile', '').trim();
     if (!fruitName) {
       await sendText(chatId, `⚠️ Cú pháp: \`/link_profile [tên trái]\``);
@@ -267,10 +264,7 @@ export async function handleGroupChat(update: any) {
 
   // /assign_role — Gắn vai trò trong group
   if (text.startsWith('/assign_role')) {
-    if (!canAssignRole(pos)) {
-      await sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
-      return;
-    }
+    // Any registered staff in a group chat has full access
     const parts = text.split(/\s+/);
     if (parts.length < 3) {
       await sendText(chatId, `⚠️ Cú pháp: \`/assign_role [mã_JD] [ndd/tvv/gvbb/la]\``);

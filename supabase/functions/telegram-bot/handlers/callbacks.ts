@@ -22,6 +22,8 @@ export async function handleCallback(update: any, staffData: any) {
   const telegramId = cbQuery.from.id;
   const pos = staffData.position || 'td';
   const isAdmin = pos === 'admin' || staffData.staff_code === ADMIN_STAFF_CODE;
+  const chatType = cbQuery.message.chat.type || 'private';
+  const isGroupChat = chatType === 'group' || chatType === 'supergroup';
 
   // ============ PRIVATE MENU BUTTON CALLBACKS ============
 
@@ -522,7 +524,8 @@ Mở Mini App → tab 📜 Thẻ HV → bấm 📄 Word`,
 
   // menu_link_profile — Gắn hồ sơ
   if (cbData === 'menu_link_profile') {
-    if (!canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
+    // In group chat: any registered staff has full access
+    if (!isGroupChat && !canLinkProfile(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối.`);
     // Lấy danh sách profile BB chưa gắn group (exclude -Date.now() placeholders)
     const { data: linkedGroups } = await supabase.from('fruit_groups')
       .select('profile_id').not('profile_id', 'is', null)
@@ -582,7 +585,8 @@ Mở Mini App → tab 📜 Thẻ HV → bấm 📄 Word`,
 
   // menu_assign_role — Xác nhận GVBB (detects ALL group members by probing staff telegram_ids)
   if (cbData === 'menu_assign_role') {
-    if (!canAssignRole(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền xác nhận GVBB.`);
+    // In group chat: any registered staff has full access
+    if (!isGroupChat && !canAssignRole(pos)) return sendText(chatId, `⛔ Quyền truy cập bị từ chối. Chức vụ hiện tại không có quyền xác nhận GVBB.`);
     
     // 1) Get group admins (these are always visible)
     const admins = await getChatAdmins(chatId);

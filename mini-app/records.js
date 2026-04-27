@@ -18,6 +18,10 @@ function latestActivityLabel(rec, sess) {
     else if (rt === 'drop_out')    label = '🔴 Drop-out';
     else if (rt === 'pause')       label = '⏸️ Pause';
     else if (rt === 'alive')       label = '🟢 Khôi phục Alive';
+    else if (rt === 'bai_dac_biet') label = `⭐ Bài đặc biệt${c?.buoi_thu ? ' (buổi '+c.buoi_thu+')' : ''}`;
+    else if (rt === 'pv_gvbb')     label = '🎤 PV GVBB';
+    else if (rt === 'dky_center')   label = '📋 ĐKý Center';
+    else if (rt === 'pv_hs')       label = '🎓 PV HS';
     else label = rt;
   } else {
     actDate = sess.created_at;
@@ -983,12 +987,11 @@ async function saveChotBB() {
 
 async function chotCenter() {
   if (!currentProfileId) return;
-  const pos = getCurrentPosition();
   const myCode = getEffectiveStaffCode();
   const p = allProfiles.find(x => x.id === currentProfileId);
   const isNDD = p?.ndd_staff_code === myCode;
-  const isAdmin = pos === 'admin';
-  const isGYJN = pos === 'gyjn' || pos === 'bgyjn';
+  // Use DB-driven permission check — covers NDD, admin, GYJN, BGYJN, SGN Jondo, etc.
+  const canEdit = hasPermission('edit_profile') || isNDD;
   let isGVBB = false;
   try {
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id,fruit_roles(staff_code,role_type)`);
@@ -997,8 +1000,8 @@ async function chotCenter() {
       if (r.role_type === 'gvbb' && r.staff_code === myCode) isGVBB = true;
     }));
   } catch(e) {}
-  if (!isNDD && !isAdmin && !isGYJN && !isGVBB) {
-    showToast('⚠️ Chỉ NDD/GYJN/BGYJN/GVBB được chốt Center'); return;
+  if (!canEdit && !isGVBB) {
+    showToast('⚠️ Không có quyền chốt Center'); return;
   }
   if (!await showConfirmAsync('Xác nhận trái quả nhập học Center?')) return;
   try {
