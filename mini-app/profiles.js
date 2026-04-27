@@ -156,7 +156,7 @@ async function openProfile(p, cardEl) {
       }
       (fg.fruit_roles||[]).forEach(r => {
         if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
-        if (r.role_type==='tvv') rolesInfo.tvv.push(r.staff_code);
+        if (r.role_type==='tvv') rolesInfo.tvv.push({ code: r.staff_code, displayName: r.display_name || null });
         if (r.role_type==='gvbb' && !rolesInfo.gvbb) {
           rolesInfo.gvbb = r.staff_code;
           rolesInfo.gvbbDisplayName = r.display_name || null;
@@ -172,19 +172,20 @@ async function openProfile(p, cardEl) {
 
 
   const nddCode    = p.ndd_staff_code || rolesInfo.ndd || null;
-  const tvvCode    = rolesInfo.tvv.length ? rolesInfo.tvv[0] : null; // primary TVV
+  const tvvCode    = rolesInfo.tvv.length ? rolesInfo.tvv[0].code : null; // primary TVV
   const gvbbCode   = rolesInfo.gvbb || null;
   const nddDisplay = nddCode ? getStaffLabel(nddCode) : '—';
+  // TVV: handle tg: prefix with display_name fallback (same as GVBB)
   const tvvDisplay = rolesInfo.tvv.length
-    ? rolesInfo.tvv.map(c => getStaffLabel(c)).join(', ') : '—';
+    ? rolesInfo.tvv.map(t => t.code.startsWith('tg:') ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code)).join(', ') : '—';
   // GVBB: if staff_code starts with 'tg:' → show display_name (unregistered user)
   const gvbbDisplay = gvbbCode
-    ? (gvbbCode.startsWith('tg:') ? (rolesInfo.gvbbDisplayName || gvbbCode) : getStaffLabel(gvbbCode))
+    ? (gvbbCode.startsWith('tg:') ? (rolesInfo.gvbbDisplayName || gvbbCode.replace('tg:','')) : getStaffLabel(gvbbCode))
     : '—';
 
   // Per-profile role of current user
   const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);
-  const isProfileTVV  = rolesInfo.tvv.includes(myCode2);
+  const isProfileTVV  = rolesInfo.tvv.some(t => t.code === myCode2);
   const isProfileGVBB = rolesInfo.gvbb === myCode2;
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
@@ -1004,8 +1005,10 @@ async function promptEditRole(profileId, roleType) {
     const raw = document.getElementById('_editRoleInput').value.trim();
     if (!raw) { showToast('⚠️ Nhập tên hoặc mã TĐ'); return; }
     try {
-      const registered = isStaffRegistered(raw);
-      const staffCode = registered ? getStaffCodeFromInput('_editRoleInput') : `tg:${raw}`;
+      // Parse code first (handles "ABC - Name" datalist format), then check registration
+      const parsedCode = getStaffCodeFromInput('_editRoleInput');
+      const registered = isStaffRegistered(parsedCode);
+      const staffCode = registered ? parsedCode : `tg:${raw}`;
       const displayName = registered ? null : raw;
       if (!registered) {
         const ok = typeof showConfirmAsync === 'function'
