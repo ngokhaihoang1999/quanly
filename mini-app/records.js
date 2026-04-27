@@ -457,7 +457,7 @@ async function viewRecord(recordId, recordType) {
       addSection('💭', 'Phản hồi của trái', c.phan_hoi);
       addSection('🎯', 'Điểm hái trái', c.diem_hai);
       addSection('📋', 'Đề xuất TVV', c.de_xuat);
-    } else {
+    } else if (isBB) {
       // ── BB Report ──
       let buoiTiepDisplay = '';
       if (c.buoi_tiep) {
@@ -523,7 +523,7 @@ async function viewRecord(recordId, recordType) {
       addCopyLine('💭', 'Phản hồi của trái', c.phan_hoi);
       addCopyLine('🎯', 'Điểm hái trái', c.diem_hai);
       addCopyLine('📋', 'Đề xuất TVV', c.de_xuat);
-    } else {
+    } else if (isBB) {
       let buoiTiepCopy = '';
       if (c.buoi_tiep) { try { buoiTiepCopy = shinDateTime(c.buoi_tiep); } catch(e) {} }
       copyText += `📖 BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}\n`;
@@ -1194,17 +1194,17 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
         const _buoi = r.content?.buoi_thu ? `Buổi ${r.content.buoi_thu}` : 'BB không rõ buổi';
         const d = r.content?.report_date || r.created_at.split('T')[0];
         const selected = (c.bb_record_id === r.id) ? 'selected' : '';
-        return \`<option value="\${r.id}" \${selected}>\${_buoi} (Ngày \${shinDate(d)})</option>\`;
+        return `<option value="${r.id}" ${selected}>${_buoi} (Ngày ${shinDate(d)})</option>`;
       }).join('');
     } catch(e) {}
 
     const qas = (c.qas && c.qas.length > 0) ? c.qas : [{q:'', a:''}];
-    let qaHtml = qas.map((qa, i) => \`
+    let qaHtml = qas.map((qa, i) => `
       <div class="qa-block" style="border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;background:var(--surface2);">
-        <div class="field-group"><label>Câu hỏi \${i+1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;">\${qa.q||''}</textarea></div>
-        <div class="field-group"><label>Câu trả lời</label><textarea class="btvn-a" placeholder="Trái quả trả lời..." style="min-height:80px;">\${qa.a||''}</textarea></div>
+        <div class="field-group"><label>Câu hỏi ${i+1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;">${qa.q||''}</textarea></div>
+        <div class="field-group"><label>Câu trả lời</label><textarea class="btvn-a" placeholder="Trái quả trả lời..." style="min-height:80px;">${qa.a||''}</textarea></div>
       </div>
-    \`).join('');
+    `).join('');
 
     body.innerHTML = `
       <div class="field-group"><label>📅 Ngày nộp bài tập</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
