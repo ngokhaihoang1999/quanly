@@ -1027,12 +1027,20 @@ async function promptEditRole(profileId, roleType) {
         fgId = (await newFgRes.json())[0]?.id;
       }
       if (!fgId) { showToast('❌ Lỗi tạo group'); return; }
-      // Delete old role of same type
-      await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&role_type=eq.${roleType}`, { method:'DELETE' });
-      // Insert new role
+      // Delete old role of same type from ALL fruit_groups for this profile
+      const allFgIds = fgs.map(fg => fg.id).filter(Boolean);
+      for (const gid of allFgIds) {
+        await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${gid}&role_type=eq.${roleType}`, { method:'DELETE' });
+      }
+      // Insert new role with return=representation to verify success
       const roleData = { fruit_group_id: fgId, staff_code: staffCode, role_type: roleType, assigned_by: getEffectiveStaffCode() };
       if (displayName) roleData.display_name = displayName;
-      await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
+      const insertRes = await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify(roleData) });
+      if (!insertRes.ok) {
+        const errText = await insertRes.text();
+        console.error('Role insert failed:', errText);
+        showToast('❌ Lỗi lưu role'); return;
+      }
       overlay.remove();
       showToast(`✅ Đã đổi ${label}`);
       await _refreshCurrentProfile();
