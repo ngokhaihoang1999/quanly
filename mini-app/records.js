@@ -70,10 +70,6 @@ async function loadJourney(profileId, currentPhase) {
     } else if (cp === 'bb') {
       // BB milestones + conditional Chốt Center — rendered after records fetch
     }
-    // Team Meeting: small optional button, only from phase tu_van onwards
-    if (['tu_van','bb','center','completed'].includes(cp)) {
-      btnHtml += `<button class="add-record-btn" onclick="openAddRecordModal('team_meeting')" style="flex:1 1 45%;min-width:110px;font-size:12px;padding:8px 6px;background:var(--surface2);color:var(--text1);border:1px dashed var(--border);">🤝 Team Meeting</button>`;
-    }
     // Undo button — visible for any phase past Chakki
     if (!['new','chakki','completed'].includes(cp)) {
       const phaseLabels = { tu_van_hinh:'Chốt TV 2', tu_van:'Lập Group', bb:'Mở KT', center:'Chốt Center' };
