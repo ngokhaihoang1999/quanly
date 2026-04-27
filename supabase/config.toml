@@ -8,3 +8,15 @@ port = 54322
 
 [studio]
 port = 54323
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[functions.validate-mindmap]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.bb-reminder]
+verify_jwt = false

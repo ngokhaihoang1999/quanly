@@ -23,6 +23,7 @@ import { handlePrivateChat } from "./handlers/private.ts";
 
 // ============ MAIN REQUEST HANDLER ============
 
+
 Deno.serve(async (req) => {
   try {
     const update = await req.json();
