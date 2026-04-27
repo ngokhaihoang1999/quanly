@@ -133,10 +133,11 @@ async function openProfile(p, cardEl) {
   let realGroupInviteLink = '';
   let latestInfo = '';
   try {
-    const [fgRes, rRes, sRes] = await Promise.all([
+    const [fgRes, rRes, sRes, dkRes] = await Promise.all([
       sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type,display_name)`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
-      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`)
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
     ]);
     // ── Parse fruit_groups ──
     const fgs = await fgRes.json();
@@ -164,7 +165,10 @@ async function openProfile(p, cardEl) {
     });
     // ── Parse latest activity ──
     latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
-  } catch(e) {}
+    // ── Parse ĐK Center milestone ──
+    const dkRows = await dkRes.json();
+    window._hasDKCenter = !!(dkRows && dkRows.length > 0);
+  } catch(e) { window._hasDKCenter = false; }
 
 
   const nddCode    = p.ndd_staff_code || rolesInfo.ndd || null;
@@ -212,6 +216,12 @@ async function openProfile(p, cardEl) {
     ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
+  // ĐK Center tag: show when milestone dky_center exists AND phase BB/center/completed
+  const showDKCenter = window._hasDKCenter && ['bb', 'center', 'completed'].includes(ph);
+  const dkCenterHtml = showDKCenter
+    ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:#8b5cf6;color:white;">📋 ĐK Center</span>`
+    : '';
+
   // Avatar: animated style system
   const avatarRaw = p.avatar_color || '';
   const canEditColor = hasFullEdit || isProfileNDD;
@@ -240,6 +250,7 @@ async function openProfile(p, cardEl) {
             ${statusBtn}
             <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
             ${ktHtml}
+            ${dkCenterHtml}
             ${semTag}
             ${p.birth_year ? `<span style="font-size:11px;color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px;color:var(--text2);">${p.gender}</span>` : '')}
 
@@ -275,6 +286,8 @@ async function openProfile(p, cardEl) {
   const showTabTV = canEditTV && !!tvvCode;
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
+  const tabBTVN = document.getElementById('tabBTVN');
+  if (tabBTVN) tabBTVN.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
   // Hỗ trợ BB sub-tab: only from tu_van phase
   const mmBtnCollect = document.getElementById('mmBtnCollect');
@@ -303,6 +316,7 @@ async function openProfile(p, cardEl) {
   loadJourney(p.id, ph);
   loadRecords(p.id, 'tu_van', 'tvList', 'tvCount');
   loadRecords(p.id, 'bien_ban', 'bbList', 'bbCount');
+  loadRecords(p.id, 'btvn', 'btvnList', 'btvnCount');
   loadNotes(p.id);
   // Sinka: lazy-load khi mở tab (trigger trong switchFormTab)
 

@@ -106,6 +106,21 @@ const AI_PARSE_PROMPTS = {
   "hj_noi_lo_lang": "nỗi lo lắng",
   "hj_su_quan_tam": "sự quan tâm, sở thích, kênh youtube xem...",
   "hj_sdt": "số điện thoại"
+}`,
+
+  btvn: AI_PARSE_PREFIX + `\n\nTrích xuất thông tin bài tập về nhà (BTVN) thành JSON. Từ hình ảnh hoặc text, liệt kê các câu hỏi (q) và câu trả lời của trái quả (a).
+Lưu ý: "qas" là mảng danh sách các câu hỏi và câu trả lời.
+{
+  "qas": [
+    {
+      "q": "Câu hỏi 1",
+      "a": "Câu trả lời 1"
+    },
+    {
+      "q": "Câu hỏi 2",
+      "a": "Câu trả lời 2"
+    }
+  ]
 }`
 };
 
@@ -123,7 +138,8 @@ function openAIParseModal(formType) {
     tu_van: 'Dán text bất kỳ — form TV, đoạn văn, ghi chú sau buổi tư vấn — AI sẽ tự bóc tách thông tin vào <b>Báo cáo Tư vấn</b>.',
     bien_ban: 'Dán text bất kỳ — ghi chú sau buổi học, nhận xét về HS — AI sẽ tự bóc tách thông tin vào <b>Báo cáo BB</b>.',
     chien_luoc: 'Dán text bất kỳ — ý tưởng tiếp cận, phân tích trái — AI sẽ tự bóc tách thông tin vào <b>Chiến lược</b>.',
-    hapja: 'Dán text bất kỳ — ghi chú sau khi gặp trái mới, đoạn giới thiệu — AI sẽ tự bóc tách thông tin vào <b>Phiếu Check Hapja</b>.'
+    hapja: 'Dán text bất kỳ — ghi chú sau khi gặp trái mới, đoạn giới thiệu — AI sẽ tự bóc tách thông tin vào <b>Phiếu Check Hapja</b>.',
+    btvn: 'Dán text hoặc chọn ảnh chụp (OCR) — tin nhắn, ảnh bài tập — AI sẽ tự trích xuất Câu hỏi & Câu trả lời.'
   };
 
   const placeholders = {
@@ -131,7 +147,8 @@ function openAIParseModal(formType) {
     tu_van: 'Ví dụ: Lần 1, dùng Enneagram. Bạn ấy thuộc type 4, rất nhạy cảm. Khai thác được chuyện gia đình có mâu thuẫn. Phản hồi tích cực, muốn tìm hiểu thêm...',
     bien_ban: 'Ví dụ: Buổi 3, học về gia đình. HS chú ý lắng nghe, hỏi nhiều câu hỏi. Phát hiện HS có nỗi đau về mối quan hệ với ba. Buổi sau dự kiến học về tha thứ...',
     chien_luoc: 'Ví dụ: Quen qua CLB đọc sách. Bạn ấy đang gặp khó khăn về định hướng nghề nghiệp. Dự kiến dùng MBTI lần 1, khai thác sâu nỗi đau gia đình lần 2...',
-    hapja: 'Ví dụ: Bạn tên Mai, sinh năm 2000, sinh viên ở Bình Thạnh. Quen qua bạn cùng lớp. Tính cách vui vẻ, thích xem phim. Hiện đang lo lắng về tương lai, chưa có định hướng rõ...'
+    hapja: 'Ví dụ: Bạn tên Mai, sinh năm 2000, sinh viên ở Bình Thạnh. Quen qua bạn cùng lớp. Tính cách vui vẻ, thích xem phim. Hiện đang lo lắng về tương lai, chưa có định hướng rõ...',
+    btvn: 'Ví dụ: Câu 1: Em thấy Đức Chúa Trời là ai? - Dạ là Đấng Tạo Hóa. Câu 2: Em nghĩ sao về tội lỗi? - Em thấy mình có nhiều lỗi lầm...'
   };
 
   const overlay = document.createElement('div');
@@ -147,9 +164,10 @@ function openAIParseModal(formType) {
     ${descriptions[formType] || ''}
   </div>
   <div class="field-group">
-    <label>Dán text vào đây</label>
+    <label>Dán text${formType === 'btvn' ? ' hoặc tải ảnh lên' : ''} vào đây</label>
     <textarea id="aiParseInput" placeholder="${placeholders[formType] || ''}"
       style="resize:vertical;min-height:140px;font-size:13px;line-height:1.5;"></textarea>
+    ${formType === 'btvn' ? `<input type="file" id="aiParseImage" accept="image/*" style="margin-top:8px;font-size:12px;width:100%;" />` : ''}
   </div>
   <div id="aiParseStatus" style="display:none;padding:12px;text-align:center;border-radius:var(--radius-sm);margin-bottom:8px;"></div>
   <button class="save-btn" id="aiParseBtn" onclick="executeAIParse('${formType}')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));">
@@ -213,8 +231,19 @@ async function executeAIParse(formType) {
   if (!textarea || !btn) return;
 
   var text = textarea.value.trim();
-  if (!text) { showToast('⚠️ Dán text trước rồi bấm phân tích'); return; }
-  if (text.length < 10) { showToast('⚠️ Text quá ngắn, cần ít nhất vài câu'); return; }
+  var imageInput = document.getElementById('aiParseImage');
+  var base64Image = null;
+  
+  if (imageInput && imageInput.files && imageInput.files[0]) {
+    base64Image = await new Promise((resolve) => {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.readAsDataURL(imageInput.files[0]);
+    });
+  }
+
+  if (!text && !base64Image) { showToast('⚠️ Cần dán text hoặc chọn ảnh'); return; }
+  if (text && text.length < 10 && !base64Image) { showToast('⚠️ Text quá ngắn, cần ít nhất vài câu'); return; }
 
   // Validate business rules before proceeding
   var rulesOk = await _validateAIParseRules(formType);
@@ -226,15 +255,24 @@ async function executeAIParse(formType) {
   status.style.display = 'block';
   status.style.background = 'var(--bg2)';
   status.style.color = 'var(--text2)';
-  status.innerHTML = '🔍 Đang gửi text đến AI... (~2-3 giây)';
+  status.innerHTML = '🔍 Đang gửi dữ liệu đến AI... (~2-5 giây)';
 
   try {
     var sysPrompt = AI_PARSE_PROMPTS[formType];
     if (!sysPrompt) throw new Error('Loại form không hợp lệ: ' + formType);
 
+    var userContent = [];
+    if (text) userContent.push({ type: "text", text: text });
+    if (base64Image) {
+      userContent.push({ type: "image_url", image_url: { url: base64Image } });
+      sysPrompt += '\n\nPhân tích thông tin từ cả chữ và (nếu có) hình ảnh được cung cấp.';
+    }
+    // If only text, keep original string format just in case API wrapper prefers it
+    var msgContent = base64Image ? userContent : text;
+
     var data = await callAIProxy([
       { role: 'system', content: sysPrompt },
-      { role: 'user', content: text }
+      { role: 'user', content: msgContent }
     ], { temperature: 0.1, max_tokens: 800 });
 
     var raw = (data.choices && data.choices[0] && data.choices[0].message)
@@ -276,6 +314,8 @@ async function executeAIParse(formType) {
       filledCount = fillRecordModal('tu_van', json);
     } else if (formType === 'bien_ban') {
       filledCount = fillRecordModal('bien_ban', json);
+    } else if (formType === 'btvn') {
+      filledCount = fillRecordModal('btvn', json);
     } else if (formType === 'chien_luoc') {
       filledCount = fillStrategyForm(json);
     } else if (formType === 'hapja') {
@@ -400,9 +440,30 @@ function fillRecordModal(type, json) {
   // Use setTimeout to wait for modal DOM to render
   var count = 0;
   var fillFn = function() {
-    Object.keys(json).forEach(function(key) {
-      if (json[key] && _setField(key, json[key])) count++;
-    });
+    if (type === 'btvn') {
+      if (json.qas && Array.isArray(json.qas)) {
+        var container = document.getElementById('btvn_qa_container');
+        if (container) {
+          container.innerHTML = ''; // clear all
+          json.qas.forEach(function(qa) {
+            if (typeof addBTVNQA === 'function') addBTVNQA();
+            var blocks = container.querySelectorAll('.qa-block');
+            var last = blocks[blocks.length - 1];
+            if (last) {
+              var qInput = last.querySelector('.btvn-q');
+              var aInput = last.querySelector('.btvn-a');
+              if (qInput) { qInput.value = qa.q || ''; _highlightField(qInput); }
+              if (aInput) { aInput.value = qa.a || ''; _highlightField(aInput); }
+              count++;
+            }
+          });
+        }
+      }
+    } else {
+      Object.keys(json).forEach(function(key) {
+        if (json[key] && _setField(key, json[key])) count++;
+      });
+    }
     return count;
   };
 

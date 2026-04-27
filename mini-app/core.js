@@ -325,6 +325,46 @@ function getStaffCodeFromInput(id) {
   return val;
 }
 
+// Check if a staff code from input is registered in the system
+function isStaffRegistered(code) {
+  if (!code) return false;
+  return (allStaff || []).some(s => s.staff_code === code);
+}
+
+// Show/hide unregistered staff warning badge next to input
+function _showStaffWarning(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const code = getStaffCodeFromInput(inputId);
+  const warnId = inputId + '_warn';
+  let warn = document.getElementById(warnId);
+  if (!code) {
+    if (warn) warn.remove();
+    return;
+  }
+  if (isStaffRegistered(code)) {
+    if (warn) warn.remove();
+    return;
+  }
+  // Show warning
+  if (!warn) {
+    warn = document.createElement('div');
+    warn.id = warnId;
+    warn.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:4px;padding:6px 10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:6px;font-size:11px;color:#f59e0b;font-weight:600;cursor:pointer;';
+    warn.innerHTML = '⚠️ <span>TVV/GVBB này chưa được đăng ký trong hệ thống</span>';
+    warn.title = 'Mã JD này chưa có trong danh sách TĐ. Vẫn có thể sử dụng nhưng một số tính năng sẽ bị hạn chế.';
+    el.closest('.field-group')?.appendChild(warn);
+  }
+}
+
+// Auto-attach warning listener to staff inputs when they lose focus
+document.addEventListener('focusout', e => {
+  const el = e.target;
+  if (el.tagName === 'INPUT' && el.getAttribute('data-list') === 'staffSuggest') {
+    setTimeout(() => _showStaffWarning(el.id), 300);
+  }
+}, true);
+
 function setStaffInputValue(id, code) {
   const el = document.getElementById(id);
   if (!el) return;

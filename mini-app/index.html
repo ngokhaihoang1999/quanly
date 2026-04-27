@@ -164,6 +164,7 @@
       <div class="form-tab" onclick="switchFormTab(this,'journeyTab')">📅 Giai đoạn</div>
       <div class="form-tab" onclick="switchFormTab(this,'tuVan')" id="tabTV" style="display:none;">💬 TV</div>
       <div class="form-tab" onclick="switchFormTab(this,'bienBan')" id="tabBB" style="display:none;">📖 BB</div>
+      <div class="form-tab" onclick="switchFormTab(this,'btvnTab')" id="tabBTVN" style="display:none;">📝 BTVN</div>
       <div class="form-tab" onclick="switchFormTab(this,'notesTab')">🗒️ Ghi chú</div>
       <div class="form-tab" onclick="switchFormTab(this,'sinkaTab')" id="tabSinka" style="display:none;">📜 Thẻ HV</div>
       <div class="form-tab" onclick="switchFormTab(this,'mindmapTab')" id="tabMindmap" style="display:none;">📚 Tư Duy</div>
@@ -213,6 +214,7 @@
         </div>
         <div id="groupStatusBox" style="display:none;margin-bottom:12px;padding:14px;border-radius:var(--radius-sm);"></div>
         <div id="phaseButtons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <button class="add-record-btn" onclick="openAddRecordModal('team_meeting')" style="margin-bottom:12px;background:var(--bg2);color:var(--text1);border:1px dashed var(--border);">🤝 Họp Team</button>
         <div id="timelineList"></div>
       </div>
     </div>
@@ -232,6 +234,15 @@
       <div class="form-card-body">
         <button class="add-record-btn" onclick="openAddRecordModal('bien_ban')" style="margin-bottom:12px;">📝 Viết Báo cáo BB</button>
         <div id="bbList"></div>
+      </div>
+    </div>
+
+    <!-- BTVN TAB -->
+    <div class="form-card" id="btvnTab">
+      <div class="form-card-header"><div class="form-card-title">📝 BÀI TẬP VỀ NHÀ</div><div style="display:flex;gap:6px;align-items:center;"><button onclick="openAIParseModal('btvn')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;" title="AI nhập nhanh">✨ AI nhập nhanh</button><div id="btvnCount" class="form-card-meta"></div></div></div>
+      <div class="form-card-body">
+        <button class="add-record-btn" onclick="openAddRecordModal('btvn')" style="margin-bottom:12px;">📝 Viết Báo cáo Bài tập</button>
+        <div id="btvnList"></div>
       </div>
     </div>
 
@@ -574,7 +585,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">🎓 Lập Group TV - BB</div>
   <div style="padding:8px 0;font-size:12px;color:var(--text2);line-height:1.5;">Sau khi Lập Group hãy tạo Group Telegram, thêm bot vào Group, cho bot quyền Admin, sau đó gõ <code>/start</code> và làm theo hướng dẫn.</div>
-  <div class="field-group"><label>GVBB phụ trách (tuỳ chọn)</label><input type="text" id="cbb_gvbb" data-list="staffSuggest" placeholder="Có thể gắn sau..." /></div>
+  <div class="field-group"><label>GVBB phụ trách <span style="color:var(--red);">*</span></label><input type="text" id="cbb_gvbb" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." /></div>
   <button class="save-btn" style="background:var(--green);" onclick="saveChotBB()">🎓 Lập Group</button>
   <button onclick="closeModal('chotBBModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
