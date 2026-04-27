@@ -219,7 +219,7 @@ async function openProfile(p, cardEl) {
   // ĐK Center tag: show when milestone dky_center exists AND phase BB/center/completed
   const showDKCenter = window._hasDKCenter && ['bb', 'center', 'completed'].includes(ph);
   const dkCenterHtml = showDKCenter
-    ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:#8b5cf6;color:white;">📋 ĐK Center</span>`
+    ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:#22c55e;color:white;">📋 ĐK Center</span>`
     : '';
 
   // Avatar: animated style system
@@ -272,8 +272,8 @@ async function openProfile(p, cardEl) {
       <!-- Bottom: roles grid + latest -->
       <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
         <div><span style="color:var(--text3);">NDD:</span> ${nddCode ? `<b onclick="showStaffCard('${nddCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</b>` : `<b>${nddDisplay||'---'}</b>`}</div>
-        <div><span style="color:var(--text3);">TVV:</span> ${tvvCode ? `<b onclick="showStaffCard('${tvvCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${tvvDisplay}</b>` : `<b>${tvvDisplay||'---'}</b>`}</div>
-        <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>` : `<b>${gvbbDisplay||'---'}</b>`}</div>
+        <div><span style="color:var(--text3);">TVV:</span> ${tvvCode ? `<b onclick="showStaffCard('${tvvCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${tvvDisplay}</b>` : `<b>${tvvDisplay||'---'}</b>`}${hasFullEdit ? ` <span onclick="event.stopPropagation();promptEditRole('${p.id}','tvv')" style="cursor:pointer;font-size:12px;" title="Đổi TVV">✏️</span>` : ''}</div>
+        <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>` : `<b>${gvbbDisplay||'---'}</b>`}${hasFullEdit ? ` <span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer;font-size:12px;" title="Đổi GVBB">✏️</span>` : ''}</div>
         ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
       </div>
       </div>
@@ -980,4 +980,59 @@ function showGroupConnectGuide() {
     </div>`;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
+}
+
+// ── Inline edit TVV/GVBB role ──
+async function promptEditRole(profileId, roleType) {
+  const label = roleType === 'tvv' ? 'TVV' : 'GVBB';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `<div style="background:var(--surface,#fff);border-radius:16px;padding:24px;min-width:300px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text1,#333);">✏️ Đổi ${label}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Nhập mã TĐ hoặc tên ${label} mới:</div>
+    <input type="text" id="_editRoleInput" list="allStaffDatalist" placeholder="Mã TĐ hoặc tên..." autocomplete="off"
+      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface2,#f5f5f5);color:var(--text1,#333);font-size:14px;"/>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+      <button id="_editRoleCancel" style="padding:8px 16px;border-radius:8px;background:var(--surface2,#eee);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:13px;cursor:pointer;">Hủy</button>
+      <button id="_editRoleSave" style="padding:8px 16px;border-radius:8px;background:var(--accent,#3b82f6);border:none;color:white;font-size:13px;font-weight:600;cursor:pointer;">Lưu</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#_editRoleCancel').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#_editRoleSave').onclick = async () => {
+    const raw = document.getElementById('_editRoleInput').value.trim();
+    if (!raw) { showToast('⚠️ Nhập tên hoặc mã TĐ'); return; }
+    try {
+      const registered = isStaffRegistered(raw);
+      const staffCode = registered ? getStaffCodeFromInput('_editRoleInput') : `tg:${raw}`;
+      const displayName = registered ? null : raw;
+      if (!registered) {
+        const ok = typeof showConfirmAsync === 'function'
+          ? await showConfirmAsync(`⚠️ "${raw}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`)
+          : confirm(`⚠️ "${raw}" chưa đăng ký.\n\nVẫn tiếp tục?`);
+        if (!ok) return;
+      }
+      // Find or create fruit_group
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id`);
+      const fgs = await fgRes.json();
+      let fgId = fgs[0]?.id;
+      if (!fgId) {
+        const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+          telegram_group_id: null, profile_id: profileId, level: 'tu_van'
+        })});
+        fgId = (await newFgRes.json())[0]?.id;
+      }
+      if (!fgId) { showToast('❌ Lỗi tạo group'); return; }
+      // Delete old role of same type
+      await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&role_type=eq.${roleType}`, { method:'DELETE' });
+      // Insert new role
+      const roleData = { fruit_group_id: fgId, staff_code: staffCode, role_type: roleType, assigned_by: getEffectiveStaffCode() };
+      if (displayName) roleData.display_name = displayName;
+      await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
+      overlay.remove();
+      showToast(`✅ Đã đổi ${label}`);
+      await _refreshCurrentProfile();
+    } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+  };
 }

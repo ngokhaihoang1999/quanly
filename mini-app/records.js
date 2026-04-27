@@ -70,6 +70,10 @@ async function loadJourney(profileId, currentPhase) {
     } else if (cp === 'bb') {
       // BB milestones + conditional Chốt Center — rendered after records fetch
     }
+    // Team Meeting: small optional button, only from phase tu_van onwards
+    if (['tu_van','bb','center','completed'].includes(cp)) {
+      btnHtml += `<button class="add-record-btn" onclick="openAddRecordModal('team_meeting')" style="flex:1 1 45%;min-width:110px;font-size:12px;padding:8px 6px;background:var(--surface2);color:var(--text1);border:1px dashed var(--border);">🤝 Team Meeting</button>`;
+    }
     // Undo button — visible for any phase past Chakki
     if (!['new','chakki','completed'].includes(cp)) {
       const phaseLabels = { tu_van_hinh:'Chốt TV 2', tu_van:'Lập Group', bb:'Mở KT', center:'Chốt Center' };
@@ -386,7 +390,11 @@ async function loadJourney(profileId, currentPhase) {
             </div>
           </div>`;
         } else if (e.isMajor) {
-          // ── MAJOR EVENT: left column only ──
+          // ── MAJOR EVENT: left column only ── (with date edit)
+          const canEditDate = e._type === 'record' && e._id;
+          const dateEditBtn = canEditDate
+            ? `<button onclick="event.stopPropagation();editEventDate('${e._id}')" title="Đổi ngày" class="tl-edit-btn" style="font-size:11px;">📅</button>`
+            : '';
           html += `<div class="tl-item tl-major" ${clickAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
             <div class="tl-left">
               <span class="tl-icon">${e.icon}</span>
@@ -394,7 +402,7 @@ async function loadJourney(profileId, currentPhase) {
                 <span class="tl-label">${e.text}</span>
                 ${d ? `<span class="tl-date">${d}</span>` : ''}
               </div>
-              ${delBtn}
+              <div class="tl-btn-group">${dateEditBtn}${delBtn}</div>
             </div>
             <div class="tl-right"></div>
           </div>`;
@@ -839,9 +847,24 @@ async function saveScheduleTV() {
           fgId = newFgs[0]?.id;
         }
         if (fgId) {
-          await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify({
-            fruit_group_id: fgId, staff_code: tvv, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
-          })});
+          // Handle unregistered TVV (same pattern as GVBB)
+          const tvvRegistered = isStaffRegistered(tvv);
+          const tvvCode = tvvRegistered ? tvv : `tg:${tvv}`;
+          const tvvDisplayName = tvvRegistered ? null : tvv;
+          if (!tvvRegistered) {
+            const ok = typeof showConfirmAsync === 'function'
+              ? await showConfirmAsync(`⚠️ TVV "${tvv}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`)
+              : confirm(`⚠️ TVV "${tvv}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`);
+            if (!ok) {
+              if (btn) { btn.disabled = false; btn.textContent = '✅ Chốt Tư Vấn'; }
+              return;
+            }
+          }
+          const roleData = {
+            fruit_group_id: fgId, staff_code: tvvCode, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
+          };
+          if (tvvDisplayName) roleData.display_name = tvvDisplayName;
+          await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
           // TVV bổ sung → cập nhật priority task chot_tv_1
           if (typeof updateChotTV1Task === 'function') {
             const pp = allProfiles.find(x => x.id === currentProfileId);
@@ -1225,13 +1248,15 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
     `;
   }
 
-  document.getElementById('recordModal').style.display = 'flex';
+  document.getElementById('addRecordModal').classList.add('open');
+  // Toggle save button visibility based on readOnly
+  const saveBtn = document.querySelector('#addRecordModal .save-btn');
   if (readOnly) {
     const inputs = body.querySelectorAll('input, textarea, select, button');
     inputs.forEach(el => { if (el.id !== 'rm_kt_yes' && el.id !== 'rm_kt_no') el.disabled = true; });
-    document.getElementById('btnSaveRecord').style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
   } else {
-    document.getElementById('btnSaveRecord').style.display = 'block';
+    if (saveBtn) saveBtn.style.display = 'block';
   }
 }
 
@@ -1735,5 +1760,41 @@ async function deleteBBMilestone(recordId) {
     await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
     showToast('🗑️ Đã hủy');
     await _refreshCurrentProfile();
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
+
+// ── Edit date for a major timeline event ──
+async function editEventDate(recordId) {
+  try {
+    const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=id,content,record_type,created_at`);
+    const rows = await res.json();
+    if (!rows[0]) { showToast('⚠️ Không tìm thấy sự kiện'); return; }
+    const r = rows[0];
+    const currentDate = r.content?.report_date || r.created_at?.split('T')[0] || '';
+    // Use a simple date prompt overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `<div style="background:var(--surface,#fff);border-radius:16px;padding:24px;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text1,#333);">📅 Đổi ngày sự kiện</div>
+      <input type="date" id="_editDateInput" value="${currentDate}" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface2,#f5f5f5);color:var(--text1,#333);font-size:14px;"/>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+        <button id="_editDateCancel" style="padding:8px 16px;border-radius:8px;background:var(--surface2,#eee);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:13px;cursor:pointer;">Hủy</button>
+        <button id="_editDateSave" style="padding:8px 16px;border-radius:8px;background:var(--accent,#3b82f6);border:none;color:white;font-size:13px;font-weight:600;cursor:pointer;">Lưu</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_editDateCancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('#_editDateSave').onclick = async () => {
+      const newDate = document.getElementById('_editDateInput').value;
+      if (!newDate) { showToast('⚠️ Chọn ngày'); return; }
+      try {
+        const updatedContent = { ...(r.content || {}), report_date: newDate };
+        await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'PATCH', body: JSON.stringify({ content: updatedContent }) });
+        overlay.remove();
+        showToast('✅ Đã đổi ngày');
+        await _refreshCurrentProfile();
+      } catch(e) { showToast('❌ Lỗi đổi ngày'); console.error(e); }
+    };
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
