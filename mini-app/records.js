@@ -1265,7 +1265,6 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
     if (saveBtn) saveBtn.style.display = 'none';
   } else {
     if (saveBtn) saveBtn.style.display = 'block';
-    C: \Users\ADMIN\OneDrive\Desktop\quan_ly\docs\encoding - guide.md
   }
 }
 
