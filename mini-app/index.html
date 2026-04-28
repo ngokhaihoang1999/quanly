@@ -17,8 +17,8 @@
     <div class="header-right">
       <div class="badge" id="staffBadge">---</div>
       <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo">🔔<span class="notif-badge" id="notifBadge" style="display:none;">0</span></button>
-      <button class="theme-toggle" id="settingsBtn" onclick="openPersonalizationPanel()" title="Cài đặt" style="display:flex;">⚙︁E/button>
-      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Light/Dark" style="display:none;">☀️/button>
+      <button class="theme-toggle" id="settingsBtn" onclick="openPersonalizationPanel()" title="Cài đặt" style="display:flex;">⚙️</button>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Light/Dark" style="display:none;">☀️</button>
     </div>
   </div>
   <div class="view-as-bar" id="viewAsBar">
@@ -37,18 +37,18 @@
   <div class="semester-bar" id="semesterBar">
     <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap;">📅 Kỳ:</span>
     <select id="semesterSelect" onchange="switchSemester(this.value)" style="flex:1;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text1);"></select>
-    <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙︁EQuản lý</button>
+    <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙️ Quản lý</button>
     <button id="refreshTabBtn" onclick="refreshCurrentTab()" title="Tải lại dữ liệu tab hiện tại" style="font-size:14px;padding:2px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--text2);cursor:pointer;line-height:1;transition:transform 0.3s;">🔄</button>
   </div>
   <div class="tab-bar tab-bar--compact" id="mainTabBar">
-    <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')"><span class="tab-icon">🏢</span><span class="tab-label">Đơn vềE/span></div>
+    <div class="tab active" data-tab="unit" onclick="switchMainTab(this,'unit')"><span class="tab-icon">🏢</span><span class="tab-label">Đơn vị</span></div>
     <div class="tab" data-tab="personal" onclick="switchMainTab(this,'personal')"><span class="tab-icon">👤</span><span class="tab-label">Cá nhân</span></div>
     <div class="tab" data-tab="priority" onclick="switchMainTab(this,'priority')"><span class="tab-icon">⚡</span><span class="tab-label">Ưu tiên</span></div>
     <div class="tab" data-tab="calendar" onclick="switchMainTab(this,'calendar')"><span class="tab-icon">📅</span><span class="tab-label">Lịch</span></div>
     <div class="tab" data-tab="notes" onclick="switchMainTab(this,'notes')"><span class="tab-icon">📝</span><span class="tab-label">Notes</span></div>
-    <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')"><span class="tab-icon">🏗️/span><span class="tab-label">Cơ cấu</span></div>
+    <div class="tab" data-tab="structure" onclick="switchMainTab(this,'structure')"><span class="tab-icon">🏗️</span><span class="tab-label">Cơ cấu</span></div>
     <div class="tab" data-tab="reports" id="tabReportsBtn" onclick="switchMainTab(this,'reports')" style="display:none;"><span class="tab-icon">📊</span><span class="tab-label">Báo cáo</span></div>
-    <div class="tab" data-tab="staff" id="tabStaffBtn" onclick="switchMainTab(this,'staff')" style="display:none;"><span class="tab-icon">👥</span><span class="tab-label">TāE/span></div>
+    <div class="tab" data-tab="staff" id="tabStaffBtn" onclick="switchMainTab(this,'staff')" style="display:none;"><span class="tab-icon">👥</span><span class="tab-label">Nhân sự</span></div>
   </div>
 </div>
 
@@ -58,10 +58,10 @@
   <div id="panelCenter" class="desktop-panel">
     <div class="content" id="mainContent">
 
-  <!-- ĐƠN VềE-->
+  <!-- ĐƠN VỊ -->
   <div id="tab-unit">
     <div class="section-header" style="cursor:pointer;" onclick="toggleDashMetrics()">
-      <div class="section-title" id="dashUnitTitle">🏢 Đơn vềE/div>
+      <div class="section-title" id="dashUnitTitle">🏢 Đơn vị</div>
       <span id="dashToggleIcon" style="font-size:16px;transition:transform 0.3s;">▲</span>
     </div>
     <div id="dashUnitMetrics" class="dash-collapsible"></div>
@@ -73,7 +73,7 @@
       <div id="dashHapjaList"><div class="empty-state"><div class="empty-sub">Đang tải...</div></div></div>
     </div>
 
-    <div class="section-header" style="margin-top:16px;"><div class="section-title">📁 HềEsơ Trái quả</div><div class="section-count" id="profileCount">--</div></div>
+    <div class="section-header" style="margin-top:16px;"><div class="section-title">📁 Hồ sơ Trái quả</div><div class="section-count" id="profileCount">--</div></div>
     <div style="display:flex;gap:6px;margin-bottom:8px;" id="statusFilter">
       <div class="chip active" onclick="setStatusFilter('all',this)">Tất cả</div>
       <div class="chip" onclick="setStatusFilter('alive',this)">🟢 Alive</div>
@@ -87,7 +87,7 @@
     </div>
   </div>
 
-  <!-- CÁENHÁE -->
+  <!-- CÁ NHÂN -->
   <div id="tab-personal" style="display:none;">
     <div class="section-header"><div class="section-title">👤 Cá nhân</div></div>
     <div id="dashPersonalMetrics"></div>
@@ -95,13 +95,13 @@
     <div id="dashMyList"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-sub">Đang tải...</div></div></div>
   </div>
 
-  <!-- TāE-->
+  <!-- TỔ -->
   <div id="tab-staff" style="display:none;">
     <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã JD..." id="staffSearchInput" oninput="filterStaff()" /></div>
-    <div class="section-header"><div class="section-title">Tất cả TāE/div><div class="section-count" id="staffCount">--</div></div>
+    <div class="section-header"><div class="section-title">Tất cả Nhân sự</div><div class="section-count" id="staffCount">--</div></div>
     <div id="staffList"><div class="staff-card skeleton" style="height:68px;"></div></div>
-    <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">➕ Đăng ký TāEmới</button>
-    <button class="sync-sheet-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="display:none;">🔄 Tái đồng bềEtoàn bềEData ➁ESheet</button>
+    <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">➕ Đăng ký Nhân sự mới</button>
+    <button class="sync-sheet-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="display:none;">🔄 Tái đồng bộ toàn bộ Data ➔ Sheet</button>
   </div>
 
   <!-- LỊCH -->
@@ -120,7 +120,7 @@
   <!-- ƯU TIÊN -->
   <div id="tab-priority" style="display:none;">
     <div class="section-header"><div class="section-title">⚡ Ưu tiên xử lý</div></div>
-    <div id="priorityList"><div class="empty-state"><div class="empty-icon">✁E/div><div class="empty-sub">Không có việc ưu tiên</div></div></div>
+    <div id="priorityList"><div class="empty-state"><div class="empty-icon">⚡</div><div class="empty-sub">Không có việc ưu tiên</div></div></div>
   </div>
 
   <!-- NOTES -->
@@ -139,10 +139,10 @@
   <!-- CẤU TRÚC -->
   <div id="tab-structure" style="display:none;">
     <div class="section-header">
-      <div class="section-title">Cơ cấu tềEchức</div>
+      <div class="section-title">Cơ cấu tổ chức</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button id="btnStaffWithoutTeam" onclick="showStaffWithoutTeam()" style="display:none;padding:6px 12px;font-size:11px;font-weight:600;border-radius:8px;border:1px solid rgba(248,113,113,0.4);background:rgba(248,113,113,0.12);color:var(--red);cursor:pointer;">⚠️TāEtự do</button>
-        <button id="btnManagePositions" onclick="openPositionManager()" style="display:none;padding:6px 12px;font-size:11px;font-weight:600;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">⚙︁EChức vụ</button>
+        <button id="btnStaffWithoutTeam" onclick="showStaffWithoutTeam()" style="display:none;padding:6px 12px;font-size:11px;font-weight:600;border-radius:8px;border:1px solid rgba(248,113,113,0.4);background:rgba(248,113,113,0.12);color:var(--red);cursor:pointer;">⚠️Nhân sự tự do</button>
+        <button id="btnManagePositions" onclick="openPositionManager()" style="display:none;padding:6px 12px;font-size:11px;font-weight:600;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;">⚙️ Chức vụ</button>
         <button id="btnAddArea" onclick="openAddAreaModal()" style="padding:6px 12px;font-size:11px;font-weight:600;border-radius:8px;border:1px solid var(--accent);background:rgba(124,106,247,0.12);color:var(--accent);cursor:pointer;">➕ Khu vực</button>
       </div>
     </div>
@@ -156,7 +156,7 @@
 
   <!-- DETAIL VIEW -->
   <div id="detailView" class="detail-view">
-    <button class="back-btn" onclick="backToList()">ↁEQuay lại</button>
+    <button class="back-btn" onclick="backToList()">⬅️ Quay lại</button>
     <div id="profileSummaryCard" style="padding:0 0 12px;"></div>
     <datalist id="staffSuggest"></datalist>
     <div class="form-tabs" id="profileTabs">
@@ -174,25 +174,25 @@
     <div class="form-card" id="infoSheet">
       <div class="form-card-header"><div class="form-card-title">📋 PHIẾU THÔNG TIN</div><div style="display:flex;gap:6px;align-items:center;"><button onclick="openAIParseModal('thong_tin')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;" title="AI nhập nhanh">✨ AI nhập nhanh</button><button onclick="copyInfoSheet()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;color:var(--text2);" title="Copy phiếu thông tin">📋</button><div class="form-card-meta">23 mục</div></div></div>
       <div class="form-card-body">
-        <div class="field-group"><label>1. HềEvà tên đầy đủ</label><input type="text" id="t2_ho_ten" placeholder="..." /></div>
+        <div class="field-group"><label>1. Họ và tên đầy đủ</label><input type="text" id="t2_ho_ten" placeholder="..." /></div>
         <div class="grid-2">
           <div class="field-group"><label>2. Giới tính</label><select id="t2_gioi_tinh"><option value="">Chọn...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
           <div class="field-group"><label>3. Năm sinh</label><input type="text" id="t2_nam_sinh" placeholder="YYYY" /></div>
         </div>
-        <div class="field-group"><label>4. NghềEnghiệp</label><input type="text" id="t2_nghe_nghiep" placeholder="..." /></div>
+        <div class="field-group"><label>4. Nghề nghiệp</label><input type="text" id="t2_nghe_nghiep" placeholder="..." /></div>
         <div class="field-group"><label>5. Thời gian làm việc</label><input type="text" id="t2_thoi_gian_lam_viec" placeholder="Ca sáng, chiều, tối..." /></div>
-        <div class="field-group"><label>6. SềEđiện thoại</label><input type="text" id="t2_sdt" placeholder="..." /></div>
-        <div class="field-group"><label>7. Địa chềEhiện tại</label><input type="text" id="t2_dia_chi" placeholder="..." /></div>
+        <div class="field-group"><label>6. Số điện thoại</label><input type="text" id="t2_sdt" placeholder="..." /></div>
+        <div class="field-group"><label>7. Địa chỉ hiện tại</label><input type="text" id="t2_dia_chi" placeholder="..." /></div>
         <div class="field-group"><label>8. Kỳ khai giảng</label><input type="text" id="t2_ky_khai_giang" placeholder="VD: KGT04..." /></div>
         <div class="field-group"><label>9. Khung rảnh</label><input type="text" id="t2_khung_ranh" placeholder="..." /></div>
-        <div class="field-group"><label>10. SềEthích</label><input type="text" id="t2_so_thich" placeholder="..." /></div>
+        <div class="field-group"><label>10. Sở thích</label><input type="text" id="t2_so_thich" placeholder="..." /></div>
         <div class="field-group"><label>11. Tính cách</label><input type="text" id="t2_tinh_cach" placeholder="..." /></div>
         <div class="field-group"><label>12. Dự định</label><input type="text" id="t2_du_dinh" placeholder="..." /></div>
         <div class="field-group"><label>13. Chuyện cũ</label><input type="text" id="t2_chuyen_cu" placeholder="..." /></div>
         <div class="field-group"><label>14. Người thân</label><input type="text" id="t2_nguoi_than" placeholder="..." /></div>
         <div class="field-group"><label>15. Người quan trọng</label><input type="text" id="t2_nguoi_quan_trong" placeholder="..." /></div>
         <div class="field-group"><label>16. Quan điểm</label><input type="text" id="t2_quan_diem" placeholder="..." /></div>
-        <div class="field-group"><label>17. Concept / VềEbọc</label><input type="text" id="t2_concept" placeholder="..." /></div>
+        <div class="field-group"><label>17. Concept / Vỏ bọc</label><input type="text" id="t2_concept" placeholder="..." /></div>
         <div class="field-group"><label>18. Lưu ý</label><textarea id="t2_luu_y" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>19. Hình thức tiếp cận</label><input type="text" id="t2_hinh_thuc" placeholder="..." /></div>
         <div class="field-group"><label>20. Kết nối</label><input type="text" id="t2_ket_noi" placeholder="..." /></div>
@@ -209,8 +209,8 @@
       <div class="form-card-header"><div class="form-card-title">📅 HÀNH TRÌNH</div></div>
       <div class="form-card-body">
         <div id="ktStatusBox" style="display:none;margin-bottom:12px;padding:12px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);align-items:center;justify-content:space-between;">
-          <div style="font-size:13px;color:var(--text2);">Tình trạng: <span id="ktStatusText" style="font-weight:700;">Chưa mềEKT</span></div>
-          <button id="btnMoKT" onclick="confirmMoKT()" style="padding:6px 14px;border-radius:20px;background:#8b5cf6;color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;">📖 Xác nhận mềEKT</button>
+          <div style="font-size:13px;color:var(--text2);">Tình trạng: <span id="ktStatusText" style="font-weight:700;">Chưa mở KT</span></div>
+          <button id="btnMoKT" onclick="confirmMoKT()" style="padding:6px 14px;border-radius:20px;background:#8b5cf6;color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;">📖 Xác nhận mở KT</button>
         </div>
         <div id="groupStatusBox" style="display:none;margin-bottom:12px;padding:14px;border-radius:var(--radius-sm);"></div>
         <div id="phaseButtons" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
@@ -281,102 +281,102 @@
 
         <!-- SECTION 1: NDD -->
         <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border-radius:var(--radius-sm);">1. Người dẫn dắt</div>
-        <div class="field-group"><label>1) Tên/BềEKhu vực/SềEliên lạc</label><input type="text" id="sk_ndd_ten_bo_kv_sdt" placeholder="Tên / BềE/ Khu vực / SĐT..." /></div>
+        <div class="field-group"><label>1) Tên/Bộ/Khu vực/Số liên lạc</label><input type="text" id="sk_ndd_ten_bo_kv_sdt" placeholder="Tên / Bộ / Khu vực / SĐT..." /></div>
         <div class="field-group"><label>2) ❗️Mã định danh trong SCJ</label><input type="text" id="sk_ndd_ma_dinh_danh" placeholder="Mã JD..." /></div>
         <div class="field-group"><label>3) Hình thức truyền đạo</label><input type="text" id="sk_hinh_thuc_truyen_dao" placeholder="gia đình/người quen/offline/CLB/online..." /></div>
-        <div class="field-group"><label>4) Mối quan hềEvới trái quả</label><input type="text" id="sk_moi_quan_he" placeholder="Thời điểm gặp lần đầu..." /></div>
-        <div class="field-group"><label>5) Concept thuộc thềE/label><input type="text" id="sk_concept_thuoc_the" placeholder="..." /></div>
+        <div class="field-group"><label>4) Mối quan hệvới trái quả</label><input type="text" id="sk_moi_quan_he" placeholder="Thời điểm gặp lần đầu..." /></div>
+        <div class="field-group"><label>5) Concept thuộc thể</label><input type="text" id="sk_concept_thuoc_the" placeholder="..." /></div>
         <div class="field-group"><label>6) Concept thuộc linh</label><input type="text" id="sk_concept_thuoc_linh" placeholder="..." /></div>
 
         <!-- SECTION 2: HS -->
         <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#22c55e,#14b8a6);color:white;border-radius:var(--radius-sm);">2. Thông tin cơ bản của học viên</div>
-        <div class="field-group"><label>1) Tên/Giới tính/Tuổi</label><input type="text" id="sk_ten_gt_tuoi" placeholder="HềEtên / Nam-Nữ / Năm sinh..." /></div>
+        <div class="field-group"><label>1) Tên/Giới tính/Tuổi</label><input type="text" id="sk_ten_gt_tuoi" placeholder="Họ tên / Nam-Nữ / Năm sinh..." /></div>
         <div class="field-group"><label>2) Quốc tịch</label><input type="text" id="sk_quoc_tich" value="Việt Nam" /></div>
-        <div class="field-group"><label>3) SềEthích/SềEtrường/SềEliên lạc</label><input type="text" id="sk_so_thich_sdt" placeholder="..." /></div>
+        <div class="field-group"><label>3) Sở thích/Sở trường/Số liên lạc</label><input type="text" id="sk_so_thich_sdt" placeholder="..." /></div>
         <div class="field-group"><label>4) Ngày tháng năm sinh</label><input type="text" id="sk_ngay_sinh" placeholder="DD/MM/YYYY hoặc năm sinh..." /></div>
-        <div class="field-group"><label>5) Địa chềEnhà (Địa chềEđang sống)</label><input type="text" id="sk_dia_chi" placeholder="..." /></div>
-        <div class="field-group"><label>6) Nơi làm việc (Công việc, VềEtrí)</label><input type="text" id="sk_noi_lam_viec" placeholder="..." /></div>
+        <div class="field-group"><label>5) Địa chỉ nhà (Địa chỉ đang sống)</label><input type="text" id="sk_dia_chi" placeholder="..." /></div>
+        <div class="field-group"><label>6) Nơi làm việc (Công việc, Vị trí)</label><input type="text" id="sk_noi_lam_viec" placeholder="..." /></div>
         <div class="field-group"><label>7) Lịch trình</label><input type="text" id="sk_lich_trinh" placeholder="..." /></div>
-        <div class="field-group"><label>8) Tình trạng hôn nhân</label><input type="text" id="sk_hon_nhan" placeholder="Độc thân/kết hôn/ly hôn/tái hôn/ềEgóa..." /></div>
+        <div class="field-group"><label>8) Tình trạng hôn nhân</label><input type="text" id="sk_hon_nhan" placeholder="Độc thân/kết hôn/ly hôn/tái hôn/ở góa..." /></div>
         <div class="field-group"><label>9) Có bạn khác giới không / Thời gian chơi</label><input type="text" id="sk_ban_khac_gioi" placeholder="..." /></div>
-        <div class="field-group"><label>10) Có học lại hay không?</label><select id="sk_hoc_lai"><option value="">Chọn...</option><option value="Nhập học mới">Nhập học mới</option><option value="Học lại - Sơ">Học lại  ESơ</option><option value="Học lại - Trung">Học lại  ETrung</option><option value="Học lại - Cao">Học lại  ECao</option><option value="Rớt không được vào nhà thềE>Rớt không được vào nhà thềE/option></select></div>
+        <div class="field-group"><label>10) Có học lại hay không?</label><select id="sk_hoc_lai"><option value="">Chọn...</option><option value="Nhập học mới">Nhập học mới</option><option value="Học lại - Sơ">Học lại - Sơ</option><option value="Học lại - Trung">Học lại - Trung</option><option value="Học lại - Cao">Học lại  ECao</option><option value="Rớt không được vào nhà thờ">Rớt không được vào nhà thờ</option></select></div>
         <div class="field-group" id="sk_hoc_lai_lydo_wrap" style="display:none;"><label>↳ Lý do rớt / chi tiết học lại</label><input type="text" id="sk_hoc_lai_lydo" placeholder="Lý do..." /></div>
 
         <!-- SECTION 3: GIA ĐÌNH -->
         <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#f59e0b,#f97316);color:white;border-radius:var(--radius-sm);">3. Gia đình/Bối cảnh trưởng thành</div>
-        <div class="field-group"><label>1) Các thành viên trong gia đình</label><textarea id="sk_thanh_vien_gd" placeholder="Sống cùng GāEhay không, có theo đạo không?..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>1) Các thành viên trong gia đình</label><textarea id="sk_thanh_vien_gd" placeholder="Sống cùng GĐ hay không, có theo đạo không?..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>2) Quá trình trưởng thành, hoàn cảnh gia đình</label><textarea id="sk_qua_trinh_truong_thanh" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
-        <div class="field-group"><label>3) Mức đềEgia đình can thiệp đến học viên</label><input type="text" id="sk_muc_do_gd_can_thiep" placeholder="..." /></div>
+        <div class="field-group"><label>3) Mức độ gia đình can thiệp đến học viên</label><input type="text" id="sk_muc_do_gd_can_thiep" placeholder="..." /></div>
 
         <!-- SECTION 4: TÍNH CÁCH -->
         <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#8b5cf6,#a855f7);color:white;border-radius:var(--radius-sm);">4. Tính cách</div>
         <div class="field-group"><label>1) Khuynh hướng (Enneagram, MBTI)</label><input type="text" id="sk_enneagram_mbti" placeholder="..." /></div>
         <div class="field-group"><label>2) Khuynh hướng sẽ phù hợp với tính cách</label><input type="text" id="sk_phu_hop_tinh_cach" placeholder="..." /></div>
-        <div class="field-group"><label>3) Những yếu tềEcó thềEmua được tấm lòng</label><textarea id="sk_mua_tam_long" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
-        <div class="field-group"><label>4) Mối quan tâm và lo lắng thuộc thềE/label><textarea id="sk_quan_tam_thuoc_the" placeholder="Các công cụ đã tư vấn..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>3) Những yếu tố có thể mua được tấm lòng</label><textarea id="sk_mua_tam_long" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>4) Mối quan tâm và lo lắng thuộc thể/label><textarea id="sk_quan_tam_thuoc_the" placeholder="Các công cụ đã tư vấn..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>5) Mối quan tâm và lo lắng thuộc linh</label><textarea id="sk_quan_tam_thuoc_linh" placeholder="Có tư vấn hay không?..." style="resize:vertical;min-height:60px;"></textarea></div>
 
-        <!-- SECTION 5: TÁE HƯỚNG THẦN -->
+        <!-- SECTION 5: TÂM HƯỚNG THẦN -->
         <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:white;border-radius:var(--radius-sm);">5. Tâm hướng Thần</div>
         <div class="field-group"><label>1) Tôn giáo</label><input type="text" id="sk_ton_giao" placeholder="..." /></div>
-        <div class="field-group"><label>2) Giáo phái/tên nhà thềEthời gian theo đạo/chức trách</label><textarea id="sk_giao_phai" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>2) Giáo phái/tên nhà thờ/thời gian theo đạo/chức trách</label><textarea id="sk_giao_phai" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>3) Lý do bắt đầu theo đạo</label><input type="text" id="sk_ly_do_theo_dao" placeholder="..." /></div>
         <div class="field-group"><label>4) Có tin vào sự tồn tại của thần linh hay không?</label><input type="text" id="sk_tin_than_linh" placeholder="..." /></div>
-        <div class="field-group"><label>5) Nhận thức vềEtín ngưỡng, Cơ đốc giáo, tôn giáo</label><textarea id="sk_nhan_thuc_tin_nguong" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
-        <div class="field-group"><label>6) Mức đềEquan tâm đến Kinh Thánh</label><select id="sk_muc_do_quan_tam_kt"><option value="">Chọn...</option><option value="Cao">Cao</option><option value="Trung bình">Trung bình</option><option value="Thấp">Thấp</option></select></div>
+        <div class="field-group"><label>5) Nhận thức về tín ngưỡng, Cơ đốc giáo, tôn giáo</label><textarea id="sk_nhan_thuc_tin_nguong" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>6) Mức độ quan tâm đến Kinh Thánh</label><select id="sk_muc_do_quan_tam_kt"><option value="">Chọn...</option><option value="Cao">Cao</option><option value="Trung bình">Trung bình</option><option value="Thấp">Thấp</option></select></div>
 
-        <!-- SUPPLEMENT: GVBB / NDD / LÁE-->
-        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#ef4444,#f97316);color:white;border-radius:var(--radius-sm);">🔸 Hạng mục ghi chép bềEsung</div>
+        <!-- SUPPLEMENT: GVBGVBB / NDD / LÁ-->
+        <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#ef4444,#f97316);color:white;border-radius:var(--radius-sm);">🔸 Hạng mục ghi chép bổ sung</div>
 
         <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">1. Người sẽ trao đổi với đội ngũ khai giảng</div>
-        <div class="field-group"><label>Tên/BềESềEliên lạc</label><input type="text" id="sk_nguoi_trao_doi" placeholder="..." /></div>
+        <div class="field-group"><label>Tên/Bộ/Số liên lạc</label><input type="text" id="sk_nguoi_trao_doi" placeholder="..." /></div>
         <div class="field-group"><label>Đã xác nhận học center chưa?</label><select id="sk_xac_nhan_center"><option value="">Chọn...</option><option value="Đã xác nhận">Đã xác nhận</option><option value="Chưa xác nhận">Chưa xác nhận</option></select></div>
 
         <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">2. Thông tin GVBB</div>
-        <div class="field-group"><label>1) Tên/BềEKhu vực/SềEliên lạc</label><input type="text" id="sk_gvbb_ten" placeholder="..." /></div>
-        <div class="field-group"><label>2) Concept thuộc thềE/label><input type="text" id="sk_gvbb_concept_the" placeholder="..." /></div>
+        <div class="field-group"><label>1) Tên/Bộ/Khu vực/Số liên lạc</label><input type="text" id="sk_gvbb_ten" placeholder="..." /></div>
+        <div class="field-group"><label>2) Concept thuộc thể</label><input type="text" id="sk_gvbb_concept_the" placeholder="..." /></div>
         <div class="field-group"><label>3) Concept thuộc linh</label><input type="text" id="sk_gvbb_concept_linh" placeholder="..." /></div>
-        <div class="field-group"><label>4) ❗️Mã sềEđịnh danh tại SCJ</label><input type="text" id="sk_gvbb_ma_dinh_danh" placeholder="Mã JD..." /></div>
+        <div class="field-group"><label>4) ❗️Mã số định danh tại SCJ</label><input type="text" id="sk_gvbb_ma_dinh_danh" placeholder="Mã JD..." /></div>
         <div class="field-group"><label>5) Phương pháp kết nối</label><input type="text" id="sk_gvbb_ket_noi" placeholder="..." /></div>
         <div class="field-group"><label>6) Thời điểm lần đầu gặp</label><input type="text" id="sk_gvbb_lan_dau" placeholder="..." /></div>
 
         <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">3. Lá</div>
-        <div class="field-group"><label>1) Tên/BềEKhu vực/SềEliên lạc</label><input type="text" id="sk_la_ten" placeholder="..." /></div>
-        <div class="field-group"><label>2) Concept thuộc thềE/label><input type="text" id="sk_la_concept_the" placeholder="..." /></div>
+        <div class="field-group"><label>1) Tên/Bộ/Khu vực/Số liên lạc</label><input type="text" id="sk_la_ten" placeholder="..." /></div>
+        <div class="field-group"><label>2) Concept thuộc thể</label><input type="text" id="sk_la_concept_the" placeholder="..." /></div>
         <div class="field-group"><label>3) Concept thuộc linh</label><input type="text" id="sk_la_concept_linh" placeholder="..." /></div>
         <div class="field-group"><label>4) Phương pháp kết nối</label><input type="text" id="sk_la_ket_noi" placeholder="..." /></div>
         <div class="field-group"><label>5) Thời điểm lần đầu gặp</label><input type="text" id="sk_la_lan_dau" placeholder="..." /></div>
 
         <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">4. Lá khác</div>
-        <div class="field-group"><label>Tên/BềEVai trò/Có thềEgặp ềEcenter hay không</label><textarea id="sk_la_khac" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>Tên/Bộ/Vai trò/Có thể gặp ở center hay không</label><textarea id="sk_la_khac" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
 
         <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">5. Thông tin xác nhận</div>
-        <div class="field-group"><label>1) SềElần BB (Tên bài học gần nhất)</label><input type="text" id="sk_so_lan_bb" placeholder="..." /></div>
+        <div class="field-group"><label>1) Số lần BB (Tên bài học gần nhất)</label><input type="text" id="sk_so_lan_bb" placeholder="..." /></div>
         <div class="field-group"><label>2) Lý do mong muốn học center (Điểm hái trái)</label><textarea id="sk_ly_do_center" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>3) ĐềEcập quá trình học kéo dài 8~9 tháng</label><input type="text" id="sk_8_9_thang" placeholder="..." /></div>
         <div class="field-group"><label>4) Thứ và thời gian sẽ học</label><input type="text" id="sk_thu_gio_hoc" placeholder="..." /></div>
-        <div class="field-group"><label>5) Bảo an  Enhững người xung quanh đã biết</label><textarea id="sk_bao_an_ai_biet" placeholder="Ai biết vềEviệc học KT? Có thềEgây ảnh hưởng?..." style="resize:vertical;min-height:60px;"></textarea></div>
+        <div class="field-group"><label>5) Bảo an  Enhững người xung quanh đã biết</label><textarea id="sk_bao_an_ai_biet" placeholder="Ai biết về việc học KT? Có thể gây ảnh hưởng?..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>6) Chiến lược concept với người xung quanh</label><textarea id="sk_chien_luoc_concept" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>7) Địa điểm sẽ học qua Zoom</label><input type="text" id="sk_dia_diem_zoom" placeholder="..." /></div>
         <div class="field-group"><label>8) Đã từng học trên Zoom chưa</label><select id="sk_da_hoc_zoom"><option value="">Chọn...</option><option value="Đã từng">Đã từng</option><option value="Chưa từng">Chưa từng</option></select></div>
-        <div class="field-group"><label>9) Dự kiến ngày nhập ngũ</label><input type="text" id="sk_du_kien_nhap_ngu" placeholder="Có thềEhoãn được không?..." /></div>
+        <div class="field-group"><label>9) Dự kiến ngày nhập ngũ</label><input type="text" id="sk_du_kien_nhap_ngu" placeholder="Có thể hoãn được không?..." /></div>
         <div class="field-group"><label>10) Mối nguy hiểm lớn nhất</label><textarea id="sk_moi_nguy_hiem" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
 
         <button class="save-btn" onclick="saveSinka()" style="margin-top:12px;">💾 Lưu Giấy Sinka</button>
       </div>
       <!-- Sub-tab: ĐK BB -->
       <div class="form-card-body" id="dkbbContent" style="display:none;">
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);">🔄 Tự động điền từ dữ liệu hồ sơ. ChềE3 trường cần điền tay.</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-sm);">🔄 Tự động điền từ dữ liệu hồ sơ. Chỉ 3 trường cần điền tay.</div>
 
         <div style="font-size:14px;font-weight:700;margin:8px 0;padding:8px 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border-radius:var(--radius-sm);">🌿 Thông tin ĐK BB</div>
 
-        <div class="field-group"><label>1. HềEtên trái</label><input type="text" id="dkbb_ho_ten" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>1. Họ tên trái</label><input type="text" id="dkbb_ho_ten" disabled style="opacity:0.85;" /></div>
         <div class="grid-2">
-          <div class="field-group"><label>2. TổNDD</label><input type="text" id="dkbb_to_ndd" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>2. Tổ NDD</label><input type="text" id="dkbb_to_ndd" disabled style="opacity:0.85;" /></div>
           <div class="field-group"><label>3. ID NDD</label><input type="text" id="dkbb_id_ndd" disabled style="opacity:0.85;" /></div>
         </div>
         <div class="grid-2">
-          <div class="field-group"><label>4. TổGVBB</label><input type="text" id="dkbb_to_gvbb" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>4. Tổ GVBB</label><input type="text" id="dkbb_to_gvbb" disabled style="opacity:0.85;" /></div>
           <div class="field-group"><label>5. ID GVBB</label><input type="text" id="dkbb_id_gvbb" disabled style="opacity:0.85;" /></div>
         </div>
         <div class="grid-2">
@@ -384,22 +384,22 @@
           <div class="field-group"><label>7. Trạng thái</label><input type="text" id="dkbb_trang_thai" disabled style="opacity:0.85;" /></div>
         </div>
         <div class="field-group"><label>8. Mục tiêu tháng</label><input type="text" id="dkbb_muc_tieu" disabled style="opacity:0.85;" /></div>
-        <div class="field-group"><label>9. Quan hềEvới NDD (Onl/Off/Gia đình/Người quen)</label><input type="text" id="dkbb_quan_he" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>9. Quan hệvới NDD (Onl/Off/Gia đình/Người quen)</label><input type="text" id="dkbb_quan_he" disabled style="opacity:0.85;" /></div>
         <div class="grid-2">
           <div class="field-group"><label>10. ĐềEtuổi</label><input type="text" id="dkbb_do_tuoi" disabled style="opacity:0.85;" /></div>
-          <div class="field-group"><label>11. Tôn giáo ✏︁E/label><input type="text" id="dkbb_ton_giao" placeholder="Điền tay..." /></div>
+          <div class="field-group"><label>11. Tôn giáo ✏️</label><input type="text" id="dkbb_ton_giao" placeholder="Điền tay..." /></div>
         </div>
-        <div class="field-group"><label>12. Nơi ềE/label><input type="text" id="dkbb_noi_o" disabled style="opacity:0.85;" /></div>
-        <div class="field-group"><label>13. NghềEnghiệp</label><input type="text" id="dkbb_nghe_nghiep" disabled style="opacity:0.85;" /></div>
-        <div class="field-group"><label>14. Ngày học đầu tiên ✏︁E/label><input type="text" id="dkbb_ngay_hoc_dau" placeholder="Điền tay..." /></div>
-        <div class="field-group"><label>15. SềElần GD/tuần ✏︁E/label><input type="text" id="dkbb_so_lan_gd" placeholder="Điền tay..." /></div>
-        <div class="field-group"><label>16. Ngày mềEKT</label><input type="text" id="dkbb_ngay_mo_kt" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>12. Nơi ở</label><input type="text" id="dkbb_noi_o" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>13. Nghề nghiệp</label><input type="text" id="dkbb_nghe_nghiep" disabled style="opacity:0.85;" /></div>
+        <div class="field-group"><label>14. Ngày học đầu tiên ✏️</label><input type="text" id="dkbb_ngay_hoc_dau" placeholder="Điền tay..." /></div>
+        <div class="field-group"><label>15. Số lần GD/tuần ✏️</label><input type="text" id="dkbb_so_lan_gd" placeholder="Điền tay..." /></div>
+        <div class="field-group"><label>16. Ngày mở KT</label><input type="text" id="dkbb_ngay_mo_kt" disabled style="opacity:0.85;" /></div>
         <div class="field-group"><label>17. Tuần chuyển BB</label><select id="dkbb_tuan_chuyen" onchange="saveDKBBWeek()"><option value="">Chọn...</option><option>Week 1</option><option>Week 2</option><option>Week 3</option><option>Week 4</option><option>Week 5</option><option>Week 6</option><option>Week 7</option><option>Week 8</option></select></div>
         <div class="field-group"><label>18. Lý do dropped/pause</label><input type="text" id="dkbb_ly_do" disabled style="opacity:0.85;" /></div>
 
         <div style="font-size:14px;font-weight:700;margin:16px 0 8px;padding:8px 12px;background:linear-gradient(135deg,#22c55e,#14b8a6);color:white;border-radius:var(--radius-sm);">📊 Báo cáo BB</div>
         <div class="grid-2">
-          <div class="field-group"><label>* Tổng sềEbuổi đã học</label><input type="text" id="dkbb_tong_buoi" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>* Tổng số buổi đã học</label><input type="text" id="dkbb_tong_buoi" disabled style="opacity:0.85;" /></div>
           <div class="field-group"><label>* Buổi có nội dung KT</label><input type="text" id="dkbb_buoi_kt" disabled style="opacity:0.85;" /></div>
         </div>
       </div>
@@ -412,7 +412,7 @@
         <div style="display:flex;gap:4px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
           <button class="chip active" id="mmBtnStrategy" onclick="switchMindmap('strategy',this)">🧭 Chiến lược</button>
           <button class="chip" id="mmBtnInfo" onclick="switchMindmap('info',this)">👤 Thông tin cơ bản</button>
-          <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)" style="display:none;">📚 HềEtrợ BB</button>
+          <button class="chip" id="mmBtnCollect" onclick="switchMindmap('collect',this)" style="display:none;">📚 Hỗ trợ BB</button>
           <span style="flex:1;"></span>
           <button id="mmResetBtn" onclick="clearMindmapCache(currentProfileId);renderMindmap();" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px;display:none;" title="Phân tích lại">🔄</button>
         </div>
@@ -429,7 +429,7 @@
             <div class="ai-chat-avatar">👼</div>
             <div style="flex:1;">
               <div class="ai-chat-name">Lacie 💫</div>
-              <div class="ai-chat-status">Trợ lý AI · Bấm đềEmềE/div>
+              <div class="ai-chat-status">Trợ lý AI · Bấm để mở</div>
             </div>
             <span class="ai-chat-arrow" id="aiChatArrow">▾</span>
             <button class="ai-chat-fs-btn" onclick="event.stopPropagation();toggleFullscreen('aiChatCard')" title="Toàn màn hình">⛶</button>
@@ -439,7 +439,7 @@
               <div class="ai-msg ai-msg-system">Trợ lý AI cho hồ sơ này. Mọi người cùng thấy.</div>
             </div>
             <div class="ai-chat-input-area">
-              <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hỏi vềEbạn này..." onkeydown="if(event.key==='Enter')sendAIChat();" />
+              <input type="text" id="aiChatInput" class="ai-chat-input" placeholder="Hỏi về bạn này..." onkeydown="if(event.key==='Enter')sendAIChat();" />
               <button class="ai-chat-send" onclick="sendAIChat()">➤</button>
             </div>
           </div>
@@ -466,8 +466,8 @@
 <div id="personalizationPanel" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.5);" onclick="if(event.target===this)closePersonalizationPanel()">
   <div style="position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:20px;max-height:80vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:16px;font-weight:700;">⚙︁ECài đặt</div>
-      <button onclick="closePersonalizationPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">✁E/button>
+      <div style="font-size:16px;font-weight:700;">⚙️ Cài đặt</div>
+      <button onclick="closePersonalizationPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);">❌</button>
     </div>
     <div id="personalizationBody"></div>
   </div>
@@ -480,12 +480,12 @@
   <div class="modal-handle" style="margin-top:12px;"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;"><div class="modal-title" style="padding:0;">🍎 BẢNG THÔNG TIN VỀ TRÁI</div><button onclick="openAIParseModal('hapja')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:white;font-weight:600;" title="AI nhập nhanh">✨ AI nhập nhanh</button></div>
   <div style="overflow-y:auto; overflow-x:hidden; padding:0 16px 16px;">
-    <div class="field-group"><label>*Tên NDD <span style="color:var(--red);">*</span></label><input type="text" id="hj_ndd" data-list="staffSuggest" placeholder="Tìm mã hoặc tên TāE.." /></div>
+    <div class="field-group"><label>*Tên NDD <span style="color:var(--red);">*</span></label><input type="text" id="hj_ndd" data-list="staffSuggest" placeholder="Tìm mã hoặc tên Tổ viên.." /></div>
     <div class="field-group"><label>*Ngày chakki <span style="color:var(--red);">*</span></label><input type="date" id="hj_ngay_chakki" /></div>
     <div class="field-group"><label>*Concept <span style="color:var(--red);">*</span></label><input type="text" id="hj_concept" placeholder="..." /></div>
     
-    <div class="field-group"><label>1. HềEtên cá(Năm sinh) & Giới tính <span style="color:var(--red);">*</span></label>
-      <input type="text" id="hj_full_name" placeholder="HềEvà tên..." style="margin-bottom:6px;" />
+    <div class="field-group"><label>1. Họ tên cá(Năm sinh) & Giới tính <span style="color:var(--red);">*</span></label>
+      <input type="text" id="hj_full_name" placeholder="Họ và tên..." style="margin-bottom:6px;" />
       <div class="grid-2">
         <input type="number" id="hj_birth_year" placeholder="Năm sinh (YYYY)..." />
         <select id="hj_gender"><option value="">Chọn giới tính...</option><option>Nam</option><option>Nữ</option><option>Khác</option></select>
@@ -494,7 +494,7 @@
     
     <div class="field-group"><label>2. Hình thức chakki <span style="color:var(--red);">*</span></label>
       <input type="text" id="hj_hinh_thuc" placeholder="Hình thức chakki..." style="margin-bottom:6px;" />
-      <label style="font-size:11px;color:var(--text2);margin-bottom:4px;display:block;">-> Mức đềEthân thiết mối quan hềE</label>
+      <label style="font-size:11px;color:var(--text2);margin-bottom:4px;display:block;">-> Mức độ thân thiết mối quan hệ</label>
       <select id="hj_than_thiet">
         <option value="">Chọn mức đềE..</option>
         <option value="Cao">Cao</option>
@@ -503,8 +503,8 @@
       </select>
     </div>
     
-    <div class="field-group"><label>3. Nơi ềE/label><input type="text" id="hj_noi_o" placeholder="..." /></div>
-    <div class="field-group"><label>4. NghềEnghiệp/Nơi ềElàm việc</label><input type="text" id="hj_nghe_nghiep" placeholder="VD: Sinh viên..." /></div>
+    <div class="field-group"><label>3. Nơi ở</label><input type="text" id="hj_noi_o" placeholder="..." /></div>
+    <div class="field-group"><label>4. Nghề nghiệp/Nơi ềElàm việc</label><input type="text" id="hj_nghe_nghiep" placeholder="VD: Sinh viên..." /></div>
     
     <div class="field-group"><label>5. Tính cách</label>
       <input type="text" id="hj_tinh_cach_cong_cu" placeholder="- Theo công cụ (TSH, hình vẽ..):" style="margin-bottom:6px;" />
@@ -526,15 +526,15 @@
     
     <div class="field-group"><label>7. Hoàn cảnh</label>
       <input type="text" id="hj_hoan_canh_hien_tai" placeholder="- Hiện tại:" style="margin-bottom:6px;"/>
-      <input type="text" id="hj_hoc_ki" placeholder="- Kì nghềEHọc kì:" />
+      <input type="text" id="hj_hoc_ki" placeholder="- Kỳ nghỉHọc kì:" />
     </div>
     
     <div class="field-group"><label>8. Nỗi lo lắng</label>
       <input type="text" id="hj_noi_lo_lang" placeholder="- Nỗi lo lắng:" style="margin-bottom:6px;" />
-      <textarea id="hj_su_quan_tam" placeholder="- Sự quan tâm (ex. xem kênh youtube nào? SềEthích?)" style="resize:vertical;min-height:50px;"></textarea>
+      <textarea id="hj_su_quan_tam" placeholder="- Sự quan tâm (ex. xem kênh youtube nào? Sở thích?)" style="resize:vertical;min-height:50px;"></textarea>
     </div>
     
-    <div class="field-group"><label>9. SềEđiện thoại</label><input type="tel" id="hj_sdt" placeholder="..." /></div>
+    <div class="field-group"><label>9. Số điện thoại</label><input type="tel" id="hj_sdt" placeholder="..." /></div>
     
     <div class="field-group"><label>10. Hẹn lịch TV</label><input type="datetime-local" id="hj_hen_tv" /></div>
     
@@ -550,9 +550,9 @@
   <div class="modal-handle"></div>
   <div class="modal-title">📅 Chốt Tư Vấn</div>
   <div style="background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;color:white;">
-    <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">Buổi TV sềE/div>
+    <div style="font-size:11px;opacity:0.8;margin-bottom:4px;">Buổi TV số</div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="document.getElementById('stv_session_num').value=Math.max(1,+document.getElementById('stv_session_num').value-1)" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;width:32px;height:32px;font-size:18px;cursor:pointer;">∁E/button>
+      <button onclick="document.getElementById('stv_session_num').value=Math.max(1,+document.getElementById('stv_session_num').value-1)" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;width:32px;height:32px;font-size:18px;cursor:pointer;">➖</button>
       <input type="number" id="stv_session_num" min="1" style="font-size:18px;font-weight:700;text-align:center;padding:10px 4px;" />
       <button onclick="document.getElementById('stv_session_num').value=+document.getElementById('stv_session_num').value+1" style="background:rgba(255,255,255,0.2);border:none;color:white;border-radius:6px;width:32px;height:32px;font-size:18px;cursor:pointer;">➕</button>
     </div>
@@ -560,9 +560,9 @@
       <label style="color:rgba(255,255,255,0.8);">Thời gian</label>
       <div style="display:flex;gap:8px;">
         <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:3px;">Ngày</div><input type="date" id="stv_date" style="width:100%;padding:10px 8px;font-size:14px;" /></div>
-        <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:3px;">GiềE/div><input type="time" id="stv_time" style="width:100%;padding:10px 8px;font-size:14px;" /></div>
+        <div style="flex:1;"><div style="font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:3px;">Giờ</div><input type="time" id="stv_time" style="width:100%;padding:10px 8px;font-size:14px;" /></div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px;">💡 Bạn có thềEthay đổi thời gian này sau đó</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px;">💡 Bạn có thể thay đổi thời gian này sau đó</div>
     </div>
   </div>
   <div class="field-group">
@@ -573,7 +573,7 @@
     <label>👤 TVV phụ trách</label>
     <input type="text" id="stv_tvv" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
-  <button class="save-btn" onclick="saveScheduleTV()" style="margin-top:4px;">✁EChốt Tư Vấn</button>
+  <button class="save-btn" onclick="saveScheduleTV()" style="margin-top:4px;">✅ Chốt Tư Vấn</button>
   <button onclick="closeModal('scheduleTVModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:6px;width:100%;text-align:center;">Huỷ</button>
 </div>
 </div>
@@ -628,10 +628,10 @@
 <div class="modal-overlay" id="addStaffModal">
 <div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title">👤 Thêm TāEmới</div>
-  <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5;">Nhập mã JD (mỗi dòng 1 mã). TāEsẽ tự kết nối bot bằng cách đăng nhập mã JD.</div>
+  <div class="modal-title">👤 Thêm Nhân sự mới</div>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5;">Nhập mã JD (mỗi dòng 1 mã). Nhân sự sẽ tự kết nối bot bằng cách đăng nhập mã JD.</div>
   <div class="field-group"><label>Mã JD <span style="color:var(--red);">*</span></label><textarea id="new_staff_codes" placeholder="VD:&#10;000142-NKH&#10;000143-ABC&#10;000144-XYZ" style="resize:vertical;min-height:100px;font-family:monospace;font-size:13px;"></textarea></div>
-  <button class="save-btn" onclick="addStaffBulk()">➁EThêm TāE/button>
+  <button class="save-btn" onclick="addStaffBulk()">➕ Thêm Nhân sự</button>
   <button onclick="closeModal('addStaffModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
 </div>
@@ -653,7 +653,7 @@
 <div class="modal-overlay" id="structureModal">
 <div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title" id="structureModalTitle">Thêm đơn vềE/div>
+  <div class="modal-title" id="structureModalTitle">Thêm đơn vị</div>
   <input type="hidden" id="struct_type" />
   <div class="field-group"><label>Tên</label><input type="text" id="struct_name" placeholder="Nhập tên..." /></div>
   <div class="field-group" id="struct_parent_wrap" style="display:none;">
@@ -677,7 +677,7 @@
 <div class="modal-overlay" id="editStructModal">
 <div class="modal">
   <div class="modal-handle"></div>
-  <div class="modal-title" id="editStructTitle">✏︁EChỉnh sửa</div>
+  <div class="modal-title" id="editStructTitle">✏️ Chỉnh sửa</div>
   <input type="hidden" id="edit_struct_id" />
   <input type="hidden" id="edit_struct_type" />
   <div class="field-group"><label>Tên</label><input type="text" id="edit_struct_name" placeholder="Nhập tên..." /></div>
@@ -690,10 +690,10 @@
     <input type="text" id="edit_mgr2" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." />
   </div>
   <div id="edit_members_wrap" style="display:none;">
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">👥 Thành viên Tổ/div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">👥 Thành viên Tổ</div>
     <div id="edit_members_list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:40vh;overflow-y:auto;"></div>
     <div style="display:flex;gap:8px;">
-      <input type="text" id="edit_add_member" data-list="teamAddDatalist" placeholder="Thêm TāEvào Tổ.." style="flex:1;" />
+      <input type="text" id="edit_add_member" data-list="teamAddDatalist" placeholder="Thêm thành viên vào Tổ.." style="flex:1;" />
       <button onclick="addMemberToTeam()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;">➕</button>
     </div>
   </div>
@@ -709,7 +709,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">🔴 Ghi nhận Drop-out</div>
   <div class="field-group"><label>Lý do drop-out</label><input type="text" id="dropout_reason" list="datalist_dropout_reasons" placeholder="Chọn hoặc nhập lý do..." autocomplete="off" /></div>
-  <div class="field-group"><label>Chi tiết bềEsung</label><textarea id="dropout_reason_detail" placeholder="Ghi thêm chi tiết (nếu có)..." style="resize:vertical;min-height:60px;"></textarea></div>
+  <div class="field-group"><label>Chi tiết bổ sung</label><textarea id="dropout_reason_detail" placeholder="Ghi thêm chi tiết (nếu có)..." style="resize:vertical;min-height:60px;"></textarea></div>
   <button class="save-btn" style="background:var(--red);" onclick="confirmDropout()">🔴 Xác nhận Drop-out</button>
   <button onclick="closeModal('dropoutModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Huỷ</button>
 </div>
@@ -734,7 +734,7 @@
   <div class="field-group"><label>Tiêu đềE<span style="color:var(--red);">*</span></label><input type="text" id="ev_title" placeholder="Tên sự kiện..." /></div>
   <div class="grid-2">
     <div class="field-group"><label>Ngày <span style="color:var(--red);">*</span></label><input type="date" id="ev_date" /></div>
-    <div class="field-group"><label>GiềE/label><input type="time" id="ev_time" /></div>
+    <div class="field-group"><label>Giờ</label><input type="time" id="ev_time" /></div>
   </div>
   <div class="field-group"><label>Ghi chú</label><input type="text" id="ev_note" placeholder="Ghi chú ngắn..." /></div>
   <input type="hidden" id="ev_editing_id" />
@@ -743,27 +743,27 @@
 </div>
 </div>
 
-<!-- MODAL: QUẢN LÁECHỨC VỤ -->
+<!-- MODAL: QUẢN LÝCHỨC VỤ -->
 <div class="modal-overlay" id="positionManagerModal"><div class="modal" style="max-height:90vh;">
   <div class="modal-handle"></div>
-  <div class="modal-title">⚙︁EQuản lý Chức vụ</div>
+  <div class="modal-title">⚙️ Quản lý Chức vụ</div>
   <div id="positionListView">
     <div style="margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Quản trềE/div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Quản trị</div>
       <div id="posMgmtList"></div>
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin:12px 0 6px;">Chuyên môn</div>
       <div id="posSpecList"></div>
     </div>
-    <button class="add-record-btn" onclick="openPositionForm(null)" style="margin-top:8px;">➁ETạo Chức vụ mới</button>
+    <button class="add-record-btn" onclick="openPositionForm(null)" style="margin-top:8px;">➕ Tạo Chức vụ mới</button>
     <button onclick="closeModal('positionManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Đóng</button>
   </div>
   <div id="positionFormView" style="display:none;">
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div class="field-group"><label>Mã code (không đổi sau tạo)</label><input type="text" id="pos_code" placeholder="vd: truong_phong" /></div>
-      <div class="field-group"><label>Tên hiển thềE/label><input type="text" id="pos_name" placeholder="vd: Trưởng phòng" /></div>
+      <div class="field-group"><label>Tên hiển thị/label><input type="text" id="pos_name" placeholder="vd: Trưởng phòng" /></div>
       <div class="grid-2">
-        <div class="field-group"><label>Phân loại</label><select id="pos_category"><option value="management">Quản trềE/option><option value="specialist">Chuyên môn</option></select></div>
-        <div class="field-group"><label>Phạm vi (Scope)</label><select id="pos_scope"><option value="system">Toàn hềEthống</option><option value="area">Khu vực</option><option value="group">Nhóm</option><option value="team">Tổ/option></select></div>
+        <div class="field-group"><label>Phân loại</label><select id="pos_category"><option value="management">Quản trị</option><option value="specialist">Chuyên môn</option></select></div>
+        <div class="field-group"><label>Phạm vi (Scope)</label><select id="pos_scope"><option value="system">Toàn hệ thống</option><option value="area">Khu vực</option><option value="group">Nhóm</option><option value="team">Tổ</option></select></div>
       </div>
       <div class="grid-2">
         <div class="field-group"><label>Cấp bậc (0-100)</label><input type="number" id="pos_level" min="0" max="100" value="10" /></div>
@@ -776,7 +776,7 @@
       <input type="hidden" id="pos_editing_id" />
       <button class="save-btn" onclick="savePosition()">💾 Lưu Chức vụ</button>
       <button id="pos_delete_btn" class="delete-profile-btn" onclick="deletePosition()" style="display:none;">🗑️Xoá Chức vụ</button>
-      <button onclick="showPositionList()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">ↁEQuay lại</button>
+      <button onclick="showPositionList()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;">⬅️ Quay lại</button>
     </div>
   </div>
 </div></div>
@@ -788,11 +788,11 @@
   <div class="modal-title">📅 Quản lý Khai Giảng</div>
   <div id="semesterListBody" style="max-height:30vh;overflow-y:auto;margin-bottom:12px;"></div>
   <div style="border-top:1px solid var(--border);padding-top:12px;">
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">➁ETạo Khai Giảng mới</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">➕ Tạo Khai Giảng mới</div>
     <div class="field-group"><label>Tên kỳ</label><input type="text" id="newSemName" placeholder="VD: Tháng 4/2026" /></div>
     <div class="field-group"><label>Ghi chú (tuỳ chọn)</label><input type="text" id="newSemDesc" placeholder="Mô tả ngắn..." /></div>
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:8px 0;"><input type="checkbox" id="newSemActive" checked /> Đặt làm kỳ hoạt động chính</label>
-    <button class="save-btn" onclick="createSemester()">➁ETạo Khai Giảng</button>
+    <button class="save-btn" onclick="createSemester()">➕ Tạo Khai Giảng</button>
   </div>
   <button onclick="closeModal('semesterManagerModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;margin-top:4px;width:100%;text-align:center;">Đóng</button>
 </div>
@@ -818,7 +818,7 @@
   <div class="field-group"><label>🔗 Gắn hồ sơ (tuỳ chọn)</label><input type="text" id="pnote_link_profile" placeholder="Tìm tên trái quả..." data-profile-id="" /></div>
   <div class="field-group"><label>📅 Gắn vào lịch (tuỳ chọn)</label><input type="date" id="pnote_cal_date" /></div>
   <div class="field-group" style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 12px;">
-    <label>🔔 Nhắc nhềE(tuỳ chọn)</label>
+    <label>🔔 Nhắc nhở (tuỳ chọn)</label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <input type="date" id="pnote_alarm_date" />
       <input type="time" id="pnote_alarm_time" />
@@ -842,7 +842,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">📤 Share ghi chú</div>
   <input type="hidden" id="shareNoteId" />
-  <div class="field-group"><label>TāEnhận <span style="color:var(--red);">*</span></label><input type="text" id="shareNoteStaff" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." /></div>
+  <div class="field-group"><label>Người nhận <span style="color:var(--red);">*</span></label><input type="text" id="shareNoteStaff" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." /></div>
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:8px 0;"><input type="checkbox" id="shareNoteCanEdit" /> Cho phép sửa</label>
   <button class="save-btn" onclick="addNoteShare()" style="margin-bottom:12px;">📤 Share</button>
   <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Đã share cho:</div>
@@ -883,7 +883,7 @@
 <!-- ── Init (MUST be last  Edepends on all modules) ── -->
 <script src="init.js?v=2026042801"></script>
 <script>
-// Lazy-load markmap CDN  EchềEload khi mềEtab Tư Dưy lần đầu tiên
+// Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;
 window._lazyMarkmap = function() {
   if (window._markmapLoaded) return Promise.resolve();
@@ -906,11 +906,11 @@ window._lazyMarkmap = function() {
   <option value="Rắn và hoa">
   <option value="Enneagram">
   <option value="6 hình">
-  <option value="BềEcá gia đình">
+  <option value="Bể cá gia đình">
   <option value="Cái bắt">
   <option value="Cái cây">
   <option value="Chiêm tinh/Bản đềEsao">
-  <option value="Thần sềEhọc">
+  <option value="Thần số học">
   <option value="Cô gái dưới mưa">
   <option value="Life Graph">
   <option value="Tarot">
@@ -924,18 +924,18 @@ window._lazyMarkmap = function() {
   <option value="Echo Color">
 </datalist>
 
-<!-- ── Datalist: Lý do nghềEhọc (chuẩn hoá) ── -->
+<!-- ── Datalist: Lý do nghỉ học (chuẩn hoá) ── -->
 <datalist id="datalist_dropout_reasons">
   <option value="Mất liên lạc">
   <option value="Thời gian">
   <option value="Trầm cảm">
   <option value="Thái đềEkhông tốt">
-  <option value="BềEngăn cản/ảnh hưởng">
+  <option value="Bị ngăn cản/ảnh hưởng">
   <option value="Cấn KT">
   <option value="Ngăn cản công ty">
-  <option value="Tài chính (và lềEphí)">
+  <option value="Tài chính (và lệ phí)">
   <option value="Chưa đủ tuổi">
-  <option value="NghềEnghiệp (Đa cấp/bitcoin/chính phủ)">
+  <option value="Nghề nghiệp (Đa cấp/bitcoin/chính phủ)">
   <option value="LGBT">
   <option value="Xin chuyển khoá sau">
   <option value="Khác">
