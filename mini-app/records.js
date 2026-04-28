@@ -10,24 +10,24 @@ function latestActivityLabel(rec, sess) {
   if (recTime >= sessTime) {
     const { record_type: rt, content: c } = rec;
     actDate = rec.created_at;
-    if (rt === 'tu_van') label = `Báo cáo TV lần ${c?.lan_thu || ''}`;
-    else if (rt === 'bien_ban') label = `Báo cáo BB buổi ${c?.buoi_thu || ''}`;
-    else if (rt === 'chot_bb') label = '🎓 Chốt BB';
+    if (rt === 'tu_van')      label = `Báo cáo TV lần ${c?.lan_thu||''}`;
+    else if (rt === 'bien_ban')    label = `Báo cáo BB buổi ${c?.buoi_thu||''}`;
+    else if (rt === 'chot_bb')     label = '🎓 Chốt BB';
     else if (rt === 'chot_center') label = '🏛️ Chốt Center';
-    else if (rt === 'mo_kt') label = '📖 Đã mở KT';
-    else if (rt === 'drop_out') label = '🔴 Drop-out';
-    else if (rt === 'pause') label = '⏸️ Pause';
-    else if (rt === 'alive') label = '🟢 Khôi phục Alive';
-    else if (rt === 'bai_dac_biet') label = `⭐ Bài đặc biệt${c?.buoi_thu ? ' (buổi ' + c.buoi_thu + ')' : ''}`;
-    else if (rt === 'pv_gvbb') label = '🎤 PV GVBB';
-    else if (rt === 'dky_center') label = '📋 ĐKý Center';
-    else if (rt === 'pv_hs') label = '🎓 PV HS';
-    else if (rt === 'btvn') label = '📝 BTVN';
+    else if (rt === 'mo_kt')       label = '📖 Đã mở KT';
+    else if (rt === 'drop_out')    label = '🔴 Drop-out';
+    else if (rt === 'pause')       label = '⏸️ Pause';
+    else if (rt === 'alive')       label = '🟢 Khôi phục Alive';
+    else if (rt === 'bai_dac_biet') label = `⭐ Bài đặc biệt${c?.buoi_thu ? ' (buổi '+c.buoi_thu+')' : ''}`;
+    else if (rt === 'pv_gvbb')     label = '🎤 PV GVBB';
+    else if (rt === 'dky_center')   label = '📋 ĐKý Center';
+    else if (rt === 'pv_hs')       label = '🎓 PV HS';
+    else if (rt === 'btvn')        label = '📝 BTVN';
     else if (rt === 'team_meeting') label = '🤝 Team Meeting';
     else label = rt;
   } else {
     actDate = sess.created_at;
-    label = `Chốt TV lần ${sess.session_number}${sess.tool ? ' (' + sess.tool + ')' : ''}`;
+    label = `Chốt TV lần ${sess.session_number}${sess.tool ? ' ('+sess.tool+')' : ''}`;
   }
   const ago = getTimeAgo(actDate);
   return ago ? `${label} · ${ago}` : label;
@@ -43,24 +43,24 @@ async function loadJourney(profileId, currentPhase) {
   if (!phBtnEl || !tlEl) return;
 
   const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
-  const isDropout = ['dropout', 'pause'].includes(allProfiles.find(x => x.id === profileId)?.fruit_status);
+  const isDropout = ['dropout','pause'].includes(allProfiles.find(x => x.id === profileId)?.fruit_status);
 
   // Fetch group info (for tu_van/BB/center phase — after Lập Group)
   let bbGroupInfo = null;
-  if (['tu_van', 'bb', 'center', 'completed'].includes(cp)) {
+  if (['tu_van','bb','center','completed'].includes(cp)) {
     try {
       const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title,invite_link`);
       const fgs = await fgRes.json();
       // Find real group (not null, not -Date.now() placeholder)
-      bbGroupInfo = (fgs || []).find(g => g.telegram_group_id && g.telegram_group_id > -1000000000000) || null;
-    } catch (e) { }
+      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id && g.telegram_group_id > -1000000000000) || null;
+    } catch(e) {}
   }
 
   // Phase action buttons
   let btnHtml = '';
   if (phBtnEl) phBtnEl.style.display = isDropout ? 'none' : 'flex'; // Force display or hide
   if (!isDropout) {
-    if (['new', 'chakki'].includes(cp)) {
+    if (['new','chakki'].includes(cp)) {
       btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt Tư vấn lần tiếp theo</button>`;
     } else if (cp === 'tu_van_hinh') {
       btnHtml = `<button class="add-record-btn" onclick="openScheduleTVModal()" style="flex:1;">📅 Chốt TV tiếp</button>
@@ -71,9 +71,9 @@ async function loadJourney(profileId, currentPhase) {
       // BB milestones + conditional Chốt Center — rendered after records fetch
     }
     // Undo button — visible for any phase past Chakki
-    if (!['new', 'chakki', 'completed'].includes(cp)) {
-      const phaseLabels = { tu_van_hinh: 'Chốt TV 2', tu_van: 'Lập Group', bb: 'Mở KT', center: 'Chốt Center' };
-      btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[cp] || cp}'" style="
+    if (!['new','chakki','completed'].includes(cp)) {
+      const phaseLabels = { tu_van_hinh:'Chốt TV 2', tu_van:'Lập Group', bb:'Mở KT', center:'Chốt Center' };
+      btnHtml += `<button onclick="undoLastPhaseChange()" title="Hoàn tác '${phaseLabels[cp]||cp}'" style="
         flex:0 0 auto;padding:10px 14px;border-radius:var(--radius-sm);border:1px dashed var(--text3);
         background:transparent;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap;
         transition:all 0.2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
@@ -89,7 +89,7 @@ async function loadJourney(profileId, currentPhase) {
   const btnMoKT = document.getElementById('btnMoKT');
   const pData = allProfiles.find(x => x.id === profileId);
   if (ktBox && pData) {
-    if (['tu_van', 'bb', 'center', 'completed'].includes(cp)) {
+    if (['tu_van','bb','center','completed'].includes(cp)) {
       ktBox.style.display = 'flex';
       if (pData.is_kt_opened) {
         ktText.textContent = 'Đã mở KT';
@@ -108,7 +108,7 @@ async function loadJourney(profileId, currentPhase) {
   // ── Group Status Box (only shown when connected — provides "Mở Group" button) ──
   const groupBox = document.getElementById('groupStatusBox');
   if (groupBox) {
-    if (['tu_van', 'bb', 'center', 'completed'].includes(cp) && !isDropout && bbGroupInfo) {
+    if (['tu_van','bb','center','completed'].includes(cp) && !isDropout && bbGroupInfo) {
       groupBox.style.display = 'block';
       const gTitle = bbGroupInfo.telegram_group_title || 'Group Trái quả';
       const gid = bbGroupInfo.telegram_group_id;
@@ -154,9 +154,9 @@ async function loadJourney(profileId, currentPhase) {
     if (cp === 'bb' && !isDropout) {
       const BB_MS = [
         { type: 'bai_dac_biet', icon: '⭐', label: 'Bài đặc biệt' },
-        { type: 'pv_gvbb', icon: '🎤', label: 'PV GVBB' },
-        { type: 'dky_center', icon: '📝', label: 'ĐKý Center' },
-        { type: 'pv_hs', icon: '🎓', label: 'PV HS' }
+        { type: 'pv_gvbb',      icon: '🎤', label: 'PV GVBB' },
+        { type: 'dky_center',   icon: '📝', label: 'ĐKý Center' },
+        { type: 'pv_hs',        icon: '🎓', label: 'PV HS' }
       ];
       const msRecs = recs.filter(r => BB_MS.some(m => m.type === r.record_type));
       const msDone = new Set(msRecs.map(r => r.record_type));
@@ -203,7 +203,7 @@ async function loadJourney(profileId, currentPhase) {
     sessions.forEach(s => {
       events.push({
         date: s.created_at, icon: '📅',
-        text: `Chốt TV lần ${s.session_number}${s.tool ? ' (' + s.tool + ')' : ''}`,
+        text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`,
         sortDate: new Date(s.created_at).getTime(),
         deletable: false, _type: 'session', _id: s.id, _num: s.session_number,
         _session: s, isMajor: true
@@ -215,32 +215,32 @@ async function loadJourney(profileId, currentPhase) {
       let icon, text, isMajor = false;
       let _buoiThu = null;
 
-      if (r.record_type === 'tu_van') { const n = r.content?.lan_thu || ''; icon = '📝'; text = `Báo cáo TV${n ? ' lần ' + n : ''}`; }
-      else if (r.record_type === 'bien_ban') {
+      if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
+      else if (r.record_type === 'bien_ban')    { 
         _buoiThu = r.content?.buoi_thu;
         const _hasKT = r.content?.has_kt_content;
-        icon = '📋'; text = `Báo cáo BB${_buoiThu ? ' buổi ' + _buoiThu : ''}${_hasKT ? ' 📖' : ''}`;
+        icon='📋'; text=`Báo cáo BB${_buoiThu?' buổi '+_buoiThu:''}${_hasKT ? ' 📖' : ''}`;
       }
-      else if (r.record_type === 'chot_bb') { icon = '🎓'; text = 'Lập Group TV - BB'; isMajor = true; }
-      else if (r.record_type === 'chot_center') { icon = '🏛️'; text = 'Chốt Center'; isMajor = true; }
+      else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Lập Group TV - BB'; isMajor = true; }
+      else if (r.record_type === 'chot_center') { icon='🏛️'; text='Chốt Center'; isMajor = true; }
       else if (r.record_type === 'bai_dac_biet') { return; } // handled via split-row on bien_ban
-      else if (r.record_type === 'pv_gvbb') { icon = '🎤'; text = 'PV GVBB'; isMajor = true; }
-      else if (r.record_type === 'dky_center') { icon = '📝'; text = 'ĐKý Center'; isMajor = true; }
-      else if (r.record_type === 'pv_hs') { icon = '🎓'; text = 'PV HS'; isMajor = true; }
+      else if (r.record_type === 'pv_gvbb')     { icon='🎤'; text='PV GVBB'; isMajor = true; }
+      else if (r.record_type === 'dky_center')   { icon='📝'; text='ĐKý Center'; isMajor = true; }
+      else if (r.record_type === 'pv_hs')        { icon='🎓'; text='PV HS'; isMajor = true; }
       else if (r.record_type === 'btvn') {
         const bbId = r.content?.bb_record_id;
         const bb = bbId ? recs.find(x => x.id === bbId) : null;
         const bLabel = bb ? ` (Buổi ${bb.content?.buoi_thu || '?'})` : '';
-        icon = '📝'; text = `Bài tập về nhà${bLabel}`;
+        icon='📝'; text=`Bài tập về nhà${bLabel}`;
       }
-      else if (r.record_type === 'team_meeting') { icon = '🤝'; text = 'Team Meeting'; isMajor = true; }
-      else if (r.record_type === 'mo_kt') { return; }
-      else if (r.record_type === 'note') { return; }
+      else if (r.record_type === 'team_meeting') { icon='🤝'; text='Team Meeting'; isMajor = true; }
+      else if (r.record_type === 'mo_kt')       { return; }
+      else if (r.record_type === 'note')        { return; }
       else if (r.record_type === 'phase_change') { return; }
-      else if (r.record_type === 'drop_out') { icon = '🔴'; text = `Drop-out: ${r.content?.reason || 'Không có lý do'}`; isMajor = true; }
-      else if (r.record_type === 'pause') { icon = '⏸️'; text = `Pause: ${r.content?.reason || 'Tạm dừng'}`; isMajor = true; }
-      else if (r.record_type === 'alive') { icon = '🟢'; text = 'Khôi phục Alive'; isMajor = true; }
-      else { icon = '📌'; text = r.record_type; }
+      else if (r.record_type === 'drop_out')    { icon='🔴'; text=`Drop-out: ${r.content?.reason||'Không có lý do'}`; isMajor = true; }
+      else if (r.record_type === 'pause')         { icon='⏸️'; text=`Pause: ${r.content?.reason||'Tạm dừng'}`; isMajor = true; }
+      else if (r.record_type === 'alive')       { icon='🟢'; text='Khôi phục Alive'; isMajor = true; }
+      else { icon='📌'; text=r.record_type; }
 
       // Check if this bien_ban has a matching KT
       let hasKT = false, ktRecordId = null;
@@ -274,7 +274,7 @@ async function loadJourney(profileId, currentPhase) {
     });
 
     // Sort descending: newest (top) → oldest (bottom)
-    events.sort((a, b) => b.sortDate - a.sortDate);
+    events.sort((a,b) => b.sortDate - a.sortDate);
 
     // No separate KT events needed — KT is annotated on the matching bien_ban
     const finalEvents = [...events];
@@ -315,7 +315,7 @@ async function loadJourney(profileId, currentPhase) {
     if (finalEvents.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
-      const hoverIn = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.add('visible'))`;
+      const hoverIn  = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.add('visible'))`;
       const hoverOut = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.remove('visible'))`;
 
       let html = '<div class="tl-container">';
@@ -421,7 +421,7 @@ async function loadJourney(profileId, currentPhase) {
       html += '</div>';
       tlEl.innerHTML = html;
     }
-  } catch (e) { console.error('Journey error:', e); }
+  } catch(e) { console.error('Journey error:', e); }
 }
 
 // ── View a report record (polished read-only popup matching Telegram style) ──
@@ -467,7 +467,7 @@ async function viewRecord(recordId, recordType) {
       // ── BB Report ──
       let buoiTiepDisplay = '';
       if (c.buoi_tiep) {
-        try { buoiTiepDisplay = shinDateTime(c.buoi_tiep); } catch (e) { }
+        try { buoiTiepDisplay = shinDateTime(c.buoi_tiep); } catch(e) {}
       }
       const header = `<div style="text-align:center;padding:12px 0 8px;">
         <div style="font-size:16px;font-weight:800;color:var(--green);">📖 BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}</div>
@@ -507,7 +507,7 @@ async function viewRecord(recordId, recordType) {
       if (c.qas && c.qas.length > 0) {
         c.qas.forEach((qa, i) => {
           sections += `<div style="margin-bottom:14px;background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);">
-            <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:4px;">Q${i + 1}: ${qa.q}</div>
+            <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:4px;">Q${i+1}: ${qa.q}</div>
             <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;">${qa.a}</div>
           </div>`;
         });
@@ -531,7 +531,7 @@ async function viewRecord(recordId, recordType) {
       addCopyLine('📋', 'Đề xuất TVV', c.de_xuat);
     } else if (isBB) {
       let buoiTiepCopy = '';
-      if (c.buoi_tiep) { try { buoiTiepCopy = shinDateTime(c.buoi_tiep); } catch (e) { } }
+      if (c.buoi_tiep) { try { buoiTiepCopy = shinDateTime(c.buoi_tiep); } catch(e) {} }
       copyText += `📖 BÁO CÁO BB — Buổi ${c.buoi_thu || '?'}\n`;
       copyText += `🍎 ${pName}\n━━━━━━━━━━━━━━━━━━━━━\n`;
       copyText += `📅 Ngày: ${date}\n\n`;
@@ -553,14 +553,14 @@ async function viewRecord(recordId, recordType) {
       copyText += `📅 Ngày nộp: ${date}\n\n`;
       if (c.qas && c.qas.length > 0) {
         c.qas.forEach((qa, i) => {
-          copyText += `Q${i + 1}: ${qa.q}\nA: ${qa.a}\n\n`;
+          copyText += `Q${i+1}: ${qa.q}\nA: ${qa.a}\n\n`;
         });
       }
     }
 
     // Show in a read-only popup
     showReportPopup(sections, recordId, recordType, copyText.trim());
-  } catch (e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
 
 // ── Polished report popup ──
@@ -599,7 +599,7 @@ async function editRecord(recordId, recordType) {
       currentRecordId = rows[0].id; // set ID so saveRecord does PATCH
       openAddRecordModal(recordType, rows[0].content, false); // false = editable
     }
-  } catch (e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
 
 // ── Helper: refresh current profile view and global UI ──
@@ -620,43 +620,43 @@ async function _refreshCurrentProfile() {
 async function deleteEventSession(sessionId, sessionNum) {
   if (!await showConfirmAsync(`Xóa "Chốt TV lần ${sessionNum}"?\n\nChú ý: Hành động này có thể làm thay đổi giai đoạn hệ thống nếu đó là mốc chuyển giai đoạn.`)) return;
   try {
-    await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'DELETE' });
     const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&limit=1&order=session_number.desc`);
     const rem = await remRes.json();
     if (rem.length === 0) {
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'chakki' }) });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     } else if (rem[0].session_number === 1) {
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'chakki' }) });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     }
     showToast('✅ Đã xóa Chốt TV');
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi xóa'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
 }
 
 // ── Delete single BC record (newest of current phase only) ──
 async function deleteEventRecord(recordId, recordType) {
-  const labels = { tu_van: 'Báo cáo TV', bien_ban: 'Báo cáo BB' };
+  const labels = { tu_van:'Báo cáo TV', bien_ban:'Báo cáo BB' };
   const label = labels[recordType] || recordType;
   if (!await showConfirmAsync(`Xóa "${label}" mới nhất?`)) return;
   try {
-    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
     showToast(`✅ Đã xóa ${label}`);
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi xóa'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
 }
 
 async function deleteEventRecordKt(recordId) {
   if (!await showConfirmAsync('Hủy trạng thái Đã mở KT?')) return;
   try {
     if (recordId && recordId !== 'undefined' && recordId !== 'null') {
-      await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
+      await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
     } else {
-      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method: 'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
     }
-
+    
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ is_kt_opened: false, phase: 'tu_van' })
+       method: 'PATCH',
+       body: JSON.stringify({ is_kt_opened: false, phase: 'tu_van' })
     });
     const idx = allProfiles.findIndex(x => x.id === currentProfileId);
     if (idx >= 0) {
@@ -665,7 +665,7 @@ async function deleteEventRecordKt(recordId) {
     }
     showToast('✅ Đã hủy Mở KT');
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi xóa'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -682,28 +682,28 @@ async function undoLastPhaseChange() {
     actionFn = async () => {
       // Just safely drop session > 1 and bc > 1. A bit tricky with JSON queries, so we delete ALL sessions/bc > 1 or just rely on API limit if needed, but for simplicity:
       // Actually, standard undo deletes EVERYTHING of that phase. Since it's Chakki vs TV, maybe just clear all.
-      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van`, { method: 'DELETE' });
-      await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=gt.1`, { method: 'DELETE' });
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'chakki' }) });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=gt.1`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     };
   } else if (phase === 'tu_van') {
     confirmMsg = '↩️ Hoàn tác về Tư vấn hình?\n\n⚠️ Sẽ xóa TẤT CẢ:\n• Sự kiện Lập Group\n• Tất cả Báo cáo BB\n\n(Báo cáo TV và Chốt TV được giữ nguyên)\nHành động này không thể hoàn tác!';
     actionFn = async () => {
-      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban`, { method: 'DELETE' });
-      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_bb`, { method: 'DELETE' });
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'tu_van_hinh' }) });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_bb`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van_hinh' }) });
     };
   } else if (phase === 'bb') {
     confirmMsg = '↩️ Hoàn tác về Tư vấn?\n\n⚠️ Sẽ hủy trạng thái Đã mở KT (Báo cáo BB được giữ nguyên).\nHành động này không thể hoàn tác!';
     actionFn = async () => {
-      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method: 'DELETE' });
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'tu_van', is_kt_opened: false }) });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van', is_kt_opened: false }) });
     };
   } else if (phase === 'center') {
     confirmMsg = '↩️ Hoàn tác về BB?\n\n⚠️ Sẽ xóa sự kiện Chốt Center.\n(Báo cáo BB được giữ nguyên)\nHành động này không thể hoàn tác!';
     actionFn = async () => {
-      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_center`, { method: 'DELETE' });
-      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'bb' }) });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_center`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'bb' }) });
     };
   } else {
     showToast('⚠️ Không có gì để hoàn tác'); return;
@@ -714,7 +714,7 @@ async function undoLastPhaseChange() {
     await actionFn();
     showToast('↩️ Đã hoàn tác thành công!');
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi hoàn tác'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi hoàn tác'); console.error(e); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -736,8 +736,8 @@ async function openScheduleTVModal(existingSession) {
       const dt = existingSession.scheduled_at || existingSession.created_at;
       if (dt) {
         const d = new Date(dt);
-        const pad = n => String(n).padStart(2, '0');
-        el('stv_date').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const pad = n => String(n).padStart(2,'0');
+        el('stv_date').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
         el('stv_time').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
     }
@@ -754,7 +754,7 @@ async function openScheduleTVModal(existingSession) {
       const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
       const ss = await sRes.json();
       if (ss[0]) nextNum = (ss[0].session_number || 0) + 1;
-    } catch (e) { }
+    } catch(e) {}
     // ⚠️ Kiểm tra: nếu đây là lần 2+, phải có Báo cáo TV lần (nextNum-1) rồi mới chốt tiếp
     if (nextNum > 1) {
       try {
@@ -766,7 +766,7 @@ async function openScheduleTVModal(existingSession) {
           showToast(`⚠️ Phải có Báo cáo TV lần ${prevLan} trước khi chốt TV lần ${nextNum}!`);
           return;
         }
-      } catch (e) { console.warn('Check BC TV order:', e); }
+      } catch(e) { console.warn('Check BC TV order:', e); }
     }
     if (el('stv_session_num')) el('stv_session_num').value = nextNum;
     if (el('stv_tool')) el('stv_tool').value = '';
@@ -786,7 +786,7 @@ async function editSession(sessionId) {
     const res = await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}&select=*`);
     const rows = await res.json();
     if (rows[0]) openScheduleTVModal(rows[0]);
-  } catch (e) { showToast('❌ Lỗi tải phiên TV'); }
+  } catch(e) { showToast('❌ Lỗi tải phiên TV'); }
 }
 
 async function saveScheduleTV() {
@@ -811,25 +811,21 @@ async function saveScheduleTV() {
   try {
     if (editingSessionId) {
       // UPDATE existing session
-      await sbFetch(`/rest/v1/consultation_sessions?id=eq.${editingSessionId}`, {
-        method: 'PATCH', body: JSON.stringify({
-          session_number: num, tool,
-          scheduled_at: dt || null, tvv_staff_code: tvv || null
-        })
-      });
+      await sbFetch(`/rest/v1/consultation_sessions?id=eq.${editingSessionId}`, { method:'PATCH', body: JSON.stringify({
+        session_number: num, tool,
+        scheduled_at: dt || null, tvv_staff_code: tvv || null
+      })});
     } else {
       // CREATE new session
-      await sbFetch('/rest/v1/consultation_sessions', {
-        method: 'POST', body: JSON.stringify({
-          profile_id: currentProfileId, session_number: num, tool,
-          scheduled_at: dt || null, tvv_staff_code: tvv || null,
-          created_by: getEffectiveStaffCode()
-        })
-      });
+      await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
+        profile_id: currentProfileId, session_number: num, tool,
+        scheduled_at: dt || null, tvv_staff_code: tvv || null,
+        created_by: getEffectiveStaffCode()
+      })});
 
       const p = allProfiles.find(x => x.id === currentProfileId);
       if (num > 1 && p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
-        await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'tu_van_hinh' }) });
+        await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van_hinh' })});
       }
     }
 
@@ -840,11 +836,9 @@ async function saveScheduleTV() {
         const fgs = await fgRes.json();
         let fgId = fgs[0]?.id;
         if (!fgId) {
-          const newFgRes = await sbFetch('/rest/v1/fruit_groups', {
-            method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify({
-              telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
-            })
-          });
+          const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+            telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
+          })});
           const newFgs = await newFgRes.json();
           fgId = newFgs[0]?.id;
         }
@@ -866,14 +860,14 @@ async function saveScheduleTV() {
             fruit_group_id: fgId, staff_code: tvvCode, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
           };
           if (tvvDisplayName) roleData.display_name = tvvDisplayName;
-          await sbFetch('/rest/v1/fruit_roles', { method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates' }, body: JSON.stringify(roleData) });
+          await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
           // TVV bổ sung → cập nhật priority task chot_tv_1
           if (typeof updateChotTV1Task === 'function') {
             const pp = allProfiles.find(x => x.id === currentProfileId);
             updateChotTV1Task(currentProfileId, pp?.full_name || '', true, !!dt);
           }
         }
-      } catch (e) { console.warn('Assign role fail:', e); }
+      } catch(e) { console.warn('Assign role fail:', e); }
     }
 
     closeModal('scheduleTVModal');
@@ -922,7 +916,7 @@ async function saveScheduleTV() {
 
     editingSessionId = null;
     await _refreshCurrentProfile();
-  } catch (e) {
+  } catch(e) {
     showToast('❌ Lỗi: ' + (e.message || 'Hệ thống bận'));
     console.error('saveScheduleTV:', e);
   } finally {
@@ -932,10 +926,10 @@ async function saveScheduleTV() {
 
 async function completeSession(sessionId) {
   try {
-    await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method: 'PATCH', body: JSON.stringify({ status: 'completed' }) });
+    await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'PATCH', body: JSON.stringify({ status: 'completed' })});
     showToast('✅ Đã hoàn thành buổi tư vấn');
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
 async function openBaoCaoTV() {
@@ -952,7 +946,7 @@ async function openBaoCaoTV() {
         if (toolEl && !toolEl.value) toolEl.value = sessions[0].tool || '';
       }, 100);
     }
-  } catch (e) { console.warn('Could not auto-fill session info:', e); }
+  } catch(e) { console.warn('Could not auto-fill session info:', e); }
 }
 
 function createTVFromSession(sessionId, num, tool) {
@@ -986,7 +980,7 @@ async function openChotBBModal() {
       showToast('⚠️ Phải có Báo cáo TV trước khi Lập Group!');
       return;
     }
-  } catch (e) { console.warn('Check BC TV for Chot BB:', e); }
+  } catch(e) { console.warn('Check BC TV for Chot BB:', e); }
   document.getElementById('cbb_gvbb').value = '';
   document.getElementById('chotBBModal').classList.add('open');
 }
@@ -1008,24 +1002,20 @@ async function saveChotBB() {
       if (!confirm(`⚠️ GVBB "${gvbbRaw}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục Lập Group?`)) return;
     }
     // 1. Update phase
-    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'tu_van' }) });
+    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
     // 2. Record chot_bb event on timeline
-    await sbFetch('/rest/v1/records', {
-      method: 'POST', body: JSON.stringify({
-        profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Lập Group TV - BB', phase: 'tu_van' }
-      })
-    });
+    await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
+      profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Lập Group TV - BB', phase: 'tu_van' }
+    })});
     // 3. Save GVBB to fruit_roles
     try {
       const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
       const fgs = await fgRes.json();
       let fgId = fgs[0]?.id;
       if (!fgId) {
-        const newFgRes = await sbFetch('/rest/v1/fruit_groups', {
-          method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify({
-            telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
-          })
-        });
+        const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+          telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
+        })});
         fgId = (await newFgRes.json())[0]?.id;
       }
       if (fgId) {
@@ -1033,9 +1023,9 @@ async function saveChotBB() {
           fruit_group_id: fgId, staff_code: gvbb, role_type: 'gvbb', assigned_by: getEffectiveStaffCode()
         };
         if (gvbbDisplayName) roleData.display_name = gvbbDisplayName;
-        await sbFetch('/rest/v1/fruit_roles', { method: 'POST', headers: { 'Prefer': 'resolution=ignore-duplicates' }, body: JSON.stringify(roleData) });
+        await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
       }
-    } catch (e) { console.warn('Assign GVBB fail:', e); }
+    } catch(e) { console.warn('Assign GVBB fail:', e); }
     closeModal('chotBBModal');
     const pName2 = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
     showCelebration('🎓', `Lập Group TV-BB — ${pName2}!`);
@@ -1073,7 +1063,7 @@ async function saveChotBB() {
     await _refreshCurrentProfile();
     const tbBtn = document.getElementById('tabBB');
     if (tbBtn && typeof switchFormTab === 'function') switchFormTab(tbBtn, 'bienBan');
-  } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
 async function chotCenter() {
@@ -1087,21 +1077,19 @@ async function chotCenter() {
   try {
     const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id,fruit_roles(staff_code,role_type)`);
     const fgs = await fgRes.json();
-    (fgs || []).forEach(fg => (fg.fruit_roles || []).forEach(r => {
+    (fgs||[]).forEach(fg => (fg.fruit_roles||[]).forEach(r => {
       if (r.role_type === 'gvbb' && r.staff_code === myCode) isGVBB = true;
     }));
-  } catch (e) { }
+  } catch(e) {}
   if (!canEdit && !isGVBB) {
     showToast('⚠️ Không có quyền chốt Center'); return;
   }
   if (!await showConfirmAsync('Xác nhận trái quả nhập học Center?')) return;
   try {
-    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method: 'PATCH', body: JSON.stringify({ phase: 'center' }) });
-    await sbFetch('/rest/v1/records', {
-      method: 'POST', body: JSON.stringify({
-        profile_id: currentProfileId, record_type: 'chot_center', content: { label: 'Chốt Center', phase: 'center' }
-      })
-    });
+    await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'center' })});
+    await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
+      profile_id: currentProfileId, record_type: 'chot_center', content: { label: 'Chốt Center', phase: 'center' }
+    })});
     const pName3 = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
     showCelebration('🏛️', `${pName3} nhập học Center!`);
     // Notify stakeholders about Chốt Center
@@ -1110,7 +1098,7 @@ async function chotCenter() {
       createNotification(stakeholders, 'chot_center', '🏛️ Chốt Center', pName3, currentProfileId);
     }
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1124,7 +1112,7 @@ function addBTVNQA() {
   div.className = 'qa-block';
   div.style.cssText = 'border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;background:var(--surface2);';
   div.innerHTML = `
-    <div class="field-group"><label>Câu hỏi ${i + 1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;"></textarea></div>
+    <div class="field-group"><label>Câu hỏi ${i+1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;"></textarea></div>
     <div class="field-group"><label>Câu trả lời</label><textarea class="btvn-a" placeholder="Trái quả trả lời..." style="min-height:80px;"></textarea></div>
   `;
   container.appendChild(div);
@@ -1181,13 +1169,13 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
   if (isTV) {
     body.innerHTML = `
       <div class="field-group"><label>📅 Ngày buổi Tư vấn</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
-      <div class="field-group"><label>Lần thứ</label><input type="text" id="rm_lan_thu" placeholder="1, 2, 3..." value="${c.lan_thu || ''}"/></div>
-      <div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" list="datalist_tools" placeholder="Chọn hoặc nhập công cụ..." autocomplete="off" value="${c.ten_cong_cu || ''}"/></div>
-      <div class="field-group"><label>Kết quả test công cụ</label><textarea id="rm_ket_qua_test" placeholder="...">${c.ket_qua_test || ''}</textarea></div>
-      <div class="field-group"><label>Vấn đề / Nhu cầu / Thông tin khai thác được</label><textarea id="rm_van_de" style="min-height:100px;" placeholder="...">${c.van_de || ''}</textarea></div>
-      <div class="field-group"><label>Phản hồi / Cảm nhận của trái sau tư vấn</label><textarea id="rm_phan_hoi" placeholder="...">${c.phan_hoi || ''}</textarea></div>
-      <div class="field-group"><label>Điểm hái trái</label><textarea id="rm_diem_hai" placeholder="...">${c.diem_hai || ''}</textarea></div>
-      <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat || ''}</textarea></div>`;
+      <div class="field-group"><label>Lần thứ</label><input type="text" id="rm_lan_thu" placeholder="1, 2, 3..." value="${c.lan_thu||''}"/></div>
+      <div class="field-group"><label>Tên công cụ tư vấn</label><input type="text" id="rm_ten_cong_cu" list="datalist_tools" placeholder="Chọn hoặc nhập công cụ..." autocomplete="off" value="${c.ten_cong_cu||''}"/></div>
+      <div class="field-group"><label>Kết quả test công cụ</label><textarea id="rm_ket_qua_test" placeholder="...">${c.ket_qua_test||''}</textarea></div>
+      <div class="field-group"><label>Vấn đề / Nhu cầu / Thông tin khai thác được</label><textarea id="rm_van_de" style="min-height:100px;" placeholder="...">${c.van_de||''}</textarea></div>
+      <div class="field-group"><label>Phản hồi / Cảm nhận của trái sau tư vấn</label><textarea id="rm_phan_hoi" placeholder="...">${c.phan_hoi||''}</textarea></div>
+      <div class="field-group"><label>Điểm hái trái</label><textarea id="rm_diem_hai" placeholder="...">${c.diem_hai||''}</textarea></div>
+      <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
   } else if (isBB) {
     const parseBuoiTiep = (val) => {
       if (!val) return { date: '', time: '' };
@@ -1199,12 +1187,12 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
     const _ktState = c.has_kt_content === true ? 'yes' : c.has_kt_content === false ? 'no' : 'none';
     body.innerHTML = `
       <div class="field-group"><label>📅 Ngày buổi BB</label><input type="date" id="rm_report_date" value="${_reportDate}"/><div style="font-size:11px;color:var(--text3);margin-top:3px;">💡 Mặc định là hôm nay.</div></div>
-      <div class="field-group"><label>Buổi thứ</label><input type="text" id="rm_buoi_thu" placeholder="1, 2, 3..." value="${c.buoi_thu || ''}"/></div>
-      <div class="field-group"><label>Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung || ''}</textarea></div>
-      <div class="field-group"><label>Phản ứng của HS trong và sau buổi học</label><textarea id="rm_phan_ung" placeholder="...">${c.phan_ung || ''}</textarea></div>
-      <div class="field-group"><label>Khai thác mới về HS</label><textarea id="rm_khai_thac" placeholder="...">${c.khai_thac || ''}</textarea></div>
-      <div class="field-group"><label>Tương tác với HS đáng chú ý</label><textarea id="rm_tuong_tac" placeholder="...">${c.tuong_tac || ''}</textarea></div>
-      <div class="field-group"><label>Đề xuất hướng chăm sóc tiếp theo</label><textarea id="rm_de_xuat_cs" placeholder="...">${c.de_xuat_cs || ''}</textarea></div>
+      <div class="field-group"><label>Buổi thứ</label><input type="text" id="rm_buoi_thu" placeholder="1, 2, 3..." value="${c.buoi_thu||''}"/></div>
+      <div class="field-group"><label>Nội dung buổi học</label><textarea id="rm_noi_dung" style="min-height:100px;" placeholder="...">${c.noi_dung||''}</textarea></div>
+      <div class="field-group"><label>Phản ứng của HS trong và sau buổi học</label><textarea id="rm_phan_ung" placeholder="...">${c.phan_ung||''}</textarea></div>
+      <div class="field-group"><label>Khai thác mới về HS</label><textarea id="rm_khai_thac" placeholder="...">${c.khai_thac||''}</textarea></div>
+      <div class="field-group"><label>Tương tác với HS đáng chú ý</label><textarea id="rm_tuong_tac" placeholder="...">${c.tuong_tac||''}</textarea></div>
+      <div class="field-group"><label>Đề xuất hướng chăm sóc tiếp theo</label><textarea id="rm_de_xuat_cs" placeholder="...">${c.de_xuat_cs||''}</textarea></div>
       <div class="field-group">
         <label>📅 Buổi gặp tiếp theo</label>
         <div class="grid-2">
@@ -1215,16 +1203,16 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div style="padding:10px 0;">
         <label style="font-size:13px;font-weight:700;margin-bottom:8px;display:block;">📖 Nội dung Kinh Thánh <span style="color:var(--red);">*</span></label>
         <div id="rm_kt_toggle" style="display:flex;gap:8px;">
-          <button type="button" onclick="_setKTToggle('yes')" id="rm_kt_yes" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${_ktState === 'yes' ? 'var(--green)' : 'var(--border)'};background:${_ktState === 'yes' ? 'rgba(34,197,94,0.12)' : 'var(--surface2)'};color:${_ktState === 'yes' ? 'var(--green)' : 'var(--text2)'}">📖 Có nội dung KT</button>
-          <button type="button" onclick="_setKTToggle('no')" id="rm_kt_no" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${_ktState === 'no' ? '#f59e0b' : 'var(--border)'};background:${_ktState === 'no' ? 'rgba(245,158,11,0.12)' : 'var(--surface2)'};color:${_ktState === 'no' ? '#f59e0b' : 'var(--text2)'}">📕 Không có KT</button>
+          <button type="button" onclick="_setKTToggle('yes')" id="rm_kt_yes" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${_ktState==='yes'?'var(--green)':'var(--border)'};background:${_ktState==='yes'?'rgba(34,197,94,0.12)':'var(--surface2)'};color:${_ktState==='yes'?'var(--green)':'var(--text2)'}">📖 Có nội dung KT</button>
+          <button type="button" onclick="_setKTToggle('no')" id="rm_kt_no" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${_ktState==='no'?'#f59e0b':'var(--border)'};background:${_ktState==='no'?'rgba(245,158,11,0.12)':'var(--surface2)'};color:${_ktState==='no'?'#f59e0b':'var(--text2)'}">📕 Không có KT</button>
         </div>
         <input type="hidden" id="rm_has_kt_content" value="${_ktState}" />
       </div>
-      <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep || ''}</textarea></div>`;
+      <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
   } else if (isTeamMeeting) {
     body.innerHTML = `
       <div class="field-group"><label>📅 Ngày họp</label><input type="date" id="rm_report_date" value="${_reportDate}"/></div>
-      <div class="field-group"><label>Ghi chú cuộc họp</label><textarea id="rm_meeting_notes" placeholder="Tóm tắt nội dung họp về trái quả này..." style="min-height:150px;">${c.meeting_notes || ''}</textarea></div>
+      <div class="field-group"><label>Ghi chú cuộc họp</label><textarea id="rm_meeting_notes" placeholder="Tóm tắt nội dung họp về trái quả này..." style="min-height:150px;">${c.meeting_notes||''}</textarea></div>
     `;
   } else if (isBTVN) {
     let bbOptions = '<option value="">-- Chọn Báo cáo BB --</option>';
@@ -1237,13 +1225,13 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
         const selected = (c.bb_record_id === r.id) ? 'selected' : '';
         return `<option value="${r.id}" ${selected}>${_buoi} (Ngày ${shinDate(d)})</option>`;
       }).join('');
-    } catch (e) { }
+    } catch(e) {}
 
-    const qas = (c.qas && c.qas.length > 0) ? c.qas : [{ q: '', a: '' }];
+    const qas = (c.qas && c.qas.length > 0) ? c.qas : [{q:'', a:''}];
     let qaHtml = qas.map((qa, i) => `
       <div class="qa-block" style="border:1px solid var(--border);padding:10px;border-radius:8px;margin-bottom:10px;background:var(--surface2);">
-        <div class="field-group"><label>Câu hỏi ${i + 1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;">${qa.q || ''}</textarea></div>
-        <div class="field-group"><label>Câu trả lời</label><textarea class="btvn-a" placeholder="Trái quả trả lời..." style="min-height:80px;">${qa.a || ''}</textarea></div>
+        <div class="field-group"><label>Câu hỏi ${i+1}</label><textarea class="btvn-q" placeholder="Nội dung câu hỏi..." style="min-height:60px;">${qa.q||''}</textarea></div>
+        <div class="field-group"><label>Câu trả lời</label><textarea class="btvn-a" placeholder="Trái quả trả lời..." style="min-height:80px;">${qa.a||''}</textarea></div>
       </div>
     `).join('');
 
@@ -1347,10 +1335,10 @@ async function saveRecord() {
     }
 
     if (currentRecordId) {
-      await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method: 'PATCH', body: JSON.stringify({ content: data }) });
+      await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify({ content: data }) });
       showToast('✅ Đã cập nhật!');
     } else {
-      await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
+      await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
       showToast('✅ Đã thêm!');
 
       const p = allProfiles.find(x => x.id === currentProfileId);
@@ -1365,11 +1353,11 @@ async function saveRecord() {
       } else if (isBB) {
         if (typeof completePriorityTask === 'function') completePriorityTask(currentProfileId, 'viet_bc_bb');
         if (data.buoi_tiep && typeof createCalEventFromBBReport === 'function') {
-          createCalEventFromBBReport(currentProfileId, (parseInt(data.buoi_thu) || 1) + 1, data.buoi_tiep);
+          createCalEventFromBBReport(currentProfileId, (parseInt(data.buoi_thu)||1)+1, data.buoi_tiep);
         }
         if (data.buoi_tiep && typeof createPriorityTask === 'function') {
           const vAt = new Date(new Date(data.buoi_tiep).getTime() + 3600000).toISOString();
-          createPriorityTask(getEffectiveStaffCode(), currentProfileId, 'viet_bc_bb', `Viết BC BB buổi ${(parseInt(data.buoi_thu) || 0) + 1} — ${pName}`, null, vAt);
+          createPriorityTask(getEffectiveStaffCode(), currentProfileId, 'viet_bc_bb', `Viết BC BB buổi ${(parseInt(data.buoi_thu)||0)+1} — ${pName}`, null, vAt);
         }
         if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
           const stks = await getProfileStakeholders(currentProfileId);
@@ -1383,11 +1371,11 @@ async function saveRecord() {
         }
       }
     }
-
+    
     if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
     closeModal('addRecordModal');
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi lưu dữ liệu'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi lưu dữ liệu'); console.error(e); }
 }
 
 // ════════════════════════════════════════
@@ -1423,7 +1411,7 @@ async function loadNotes(profileId) {
         <div class="sticky-note-body">${body}</div>
       </div>`;
     }).join('');
-  } catch (e) { console.error('loadNotes:', e); }
+  } catch(e) { console.error('loadNotes:', e); }
 }
 
 async function saveNote() {
@@ -1455,10 +1443,10 @@ async function saveNote() {
     titleEl.value = '';
     bodyEl.value = '';
     loadNotes(currentProfileId);
-
+    
     // Auto-sync notes updates to Google Sheets
     if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
-  } catch (e) { showToast('❌ Lỗi lưu ghi chú'); }
+  } catch(e) { showToast('❌ Lỗi lưu ghi chú'); }
 }
 
 function editNote(noteId, title, body) {
@@ -1480,7 +1468,7 @@ async function deleteNote(noteId) {
     await sbFetch(`/rest/v1/records?id=eq.${noteId}`, { method: 'DELETE' });
     showToast('🗑️ Đã xoá ghi chú');
     if (currentProfileId) loadNotes(currentProfileId);
-  } catch (e) { showToast('❌ Lỗi xoá'); }
+  } catch(e) { showToast('❌ Lỗi xoá'); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1620,7 +1608,7 @@ function showKTSessionPicker(unconfirmed, confirmedSessions, allSessions) {
     });
     confirmBtn.addEventListener('click', () => {
       overlay.remove();
-      resolve([...selected].sort((a, b) => a - b));
+      resolve([...selected].sort((a,b) => a-b));
     });
     overlay.addEventListener('click', e => {
       if (e.target === overlay) { overlay.remove(); resolve([]); }
@@ -1634,9 +1622,9 @@ function showKTSessionPicker(unconfirmed, confirmedSessions, allSessions) {
 
 const BB_MS_LABELS = {
   bai_dac_biet: 'Bài đặc biệt',
-  pv_gvbb: 'PV GVBB',
-  dky_center: 'ĐKý Center',
-  pv_hs: 'PV HS'
+  pv_gvbb:      'PV GVBB',
+  dky_center:   'ĐKý Center',
+  pv_hs:        'PV HS'
 };
 
 async function toggleBBMilestone(type, isDone) {
@@ -1649,7 +1637,7 @@ async function toggleBBMilestone(type, isDone) {
       await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.${type}`, { method: 'DELETE' });
       showToast('↩️ Đã hủy');
       await _refreshCurrentProfile();
-    } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+    } catch(e) { showToast('❌ Lỗi'); console.error(e); }
     return;
   }
 
@@ -1660,12 +1648,10 @@ async function toggleBBMilestone(type, isDone) {
     const label = BB_MS_LABELS[type];
     if (!await showConfirmAsync(`Xác nhận "${label}" đã hoàn thành?`)) return;
     try {
-      await sbFetch('/rest/v1/records', {
-        method: 'POST', body: JSON.stringify({
-          profile_id: currentProfileId, record_type: type,
-          content: { label }
-        })
-      });
+      await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
+        profile_id: currentProfileId, record_type: type,
+        content: { label }
+      })});
       showToast(`✅ ${label} — Đã hoàn thành!`);
       // Notify stakeholders about milestone completion
       if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
@@ -1675,7 +1661,7 @@ async function toggleBBMilestone(type, isDone) {
         createNotification(stakeholders, 'bb_milestone', `${msIcons[type] || '✅'} ${label}`, pName, currentProfileId);
       }
       await _refreshCurrentProfile();
-    } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+    } catch(e) { showToast('❌ Lỗi'); console.error(e); }
   }
 }
 
@@ -1691,7 +1677,7 @@ async function pickBaiDacBiet() {
     // Fetch existing bai_dac_biet
     const bdRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bai_dac_biet&select=id,content`);
     const bdRecords = await bdRes.json();
-    const doneSessions = new Set((bdRecords || []).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
+    const doneSessions = new Set((bdRecords||[]).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
     const allSessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
     const available = allSessions.filter(n => !doneSessions.has(n));
 
@@ -1703,12 +1689,10 @@ async function pickBaiDacBiet() {
     const picked = await showBDBSessionPicker(available, doneSessions, allSessions);
     if (!picked) return;
 
-    await sbFetch('/rest/v1/records', {
-      method: 'POST', body: JSON.stringify({
-        profile_id: currentProfileId, record_type: 'bai_dac_biet',
-        content: { label: `Bài đặc biệt (buổi BB ${picked})`, buoi_thu: picked }
-      })
-    });
+    await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
+      profile_id: currentProfileId, record_type: 'bai_dac_biet',
+      content: { label: `Bài đặc biệt (buổi BB ${picked})`, buoi_thu: picked }
+    })});
     showToast(`⭐ Bài đặc biệt buổi BB ${picked} — Đã ghi nhận!`);
     // Notify stakeholders about Bài đặc biệt
     if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
@@ -1717,7 +1701,7 @@ async function pickBaiDacBiet() {
       createNotification(stakeholders, 'bb_milestone', `⭐ Bài đặc biệt — buổi BB ${picked}`, pName, currentProfileId);
     }
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
 function showBDBSessionPicker(available, doneSessions, allSessions) {
@@ -1772,7 +1756,7 @@ async function deleteBBMilestone(recordId) {
     await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
     showToast('🗑️ Đã hủy');
     await _refreshCurrentProfile();
-  } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 
 // ── Edit date for a major timeline event ──
@@ -1806,7 +1790,7 @@ async function editEventDate(recordId) {
         overlay.remove();
         showToast('✅ Đã đổi ngày');
         await _refreshCurrentProfile();
-      } catch (e) { showToast('❌ Lỗi đổi ngày'); console.error(e); }
+      } catch(e) { showToast('❌ Lỗi đổi ngày'); console.error(e); }
     };
-  } catch (e) { showToast('❌ Lỗi'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
