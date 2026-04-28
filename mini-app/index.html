@@ -251,7 +251,7 @@
       <div class="form-card-body">
         <div id="notesList"></div>
         <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
-          <div class="field-group"><label>Tiêu đềE(tuỳ chọn)</label><input type="text" id="note_title" placeholder="Tiêu đềEngắn..." /></div>
+          <div class="field-group"><label>Tiêu đề(tuỳ chọn)</label><input type="text" id="note_title" placeholder="Tiêu đềngắn..." /></div>
           <div class="field-group"><label>Nội dung</label><textarea id="note_body" placeholder="Ghi chú..." style="resize:vertical;min-height:80px;"></textarea></div>
           <button class="save-btn" id="noteSaveBtn" onclick="saveNote()" style="margin-top:4px;">📌 Thêm ghi chú</button>
         </div>
@@ -353,7 +353,7 @@
         <div style="font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px;">5. Thông tin xác nhận</div>
         <div class="field-group"><label>1) Số lần BB (Tên bài học gần nhất)</label><input type="text" id="sk_so_lan_bb" placeholder="..." /></div>
         <div class="field-group"><label>2) Lý do mong muốn học center (Điểm hái trái)</label><textarea id="sk_ly_do_center" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
-        <div class="field-group"><label>3) ĐềEcập quá trình học kéo dài 8~9 tháng</label><input type="text" id="sk_8_9_thang" placeholder="..." /></div>
+        <div class="field-group"><label>3) Đề cập quá trình học kéo dài 8~9 tháng</label><input type="text" id="sk_8_9_thang" placeholder="..." /></div>
         <div class="field-group"><label>4) Thứ và thời gian sẽ học</label><input type="text" id="sk_thu_gio_hoc" placeholder="..." /></div>
         <div class="field-group"><label>5) Bảo an  Enhững người xung quanh đã biết</label><textarea id="sk_bao_an_ai_biet" placeholder="Ai biết về việc học KT? Có thể gây ảnh hưởng?..." style="resize:vertical;min-height:60px;"></textarea></div>
         <div class="field-group"><label>6) Chiến lược concept với người xung quanh</label><textarea id="sk_chien_luoc_concept" placeholder="..." style="resize:vertical;min-height:60px;"></textarea></div>
@@ -386,7 +386,7 @@
         <div class="field-group"><label>8. Mục tiêu tháng</label><input type="text" id="dkbb_muc_tieu" disabled style="opacity:0.85;" /></div>
         <div class="field-group"><label>9. Quan hệvới NDD (Onl/Off/Gia đình/Người quen)</label><input type="text" id="dkbb_quan_he" disabled style="opacity:0.85;" /></div>
         <div class="grid-2">
-          <div class="field-group"><label>10. ĐềEtuổi</label><input type="text" id="dkbb_do_tuoi" disabled style="opacity:0.85;" /></div>
+          <div class="field-group"><label>10. Độ tuổi</label><input type="text" id="dkbb_do_tuoi" disabled style="opacity:0.85;" /></div>
           <div class="field-group"><label>11. Tôn giáo ✏️</label><input type="text" id="dkbb_ton_giao" placeholder="Điền tay..." /></div>
         </div>
         <div class="field-group"><label>12. Nơi ở</label><input type="text" id="dkbb_noi_o" disabled style="opacity:0.85;" /></div>
@@ -496,7 +496,7 @@
       <input type="text" id="hj_hinh_thuc" placeholder="Hình thức chakki..." style="margin-bottom:6px;" />
       <label style="font-size:11px;color:var(--text2);margin-bottom:4px;display:block;">-> Mức độ thân thiết mối quan hệ</label>
       <select id="hj_than_thiet">
-        <option value="">Chọn mức đềE..</option>
+        <option value="">Chọn mức độ..</option>
         <option value="Cao">Cao</option>
         <option value="Trung bình">Trung bình</option>
         <option value="Thấp">Thấp</option>
@@ -504,7 +504,7 @@
     </div>
     
     <div class="field-group"><label>3. Nơi ở</label><input type="text" id="hj_noi_o" placeholder="..." /></div>
-    <div class="field-group"><label>4. Nghề nghiệp/Nơi ềElàm việc</label><input type="text" id="hj_nghe_nghiep" placeholder="VD: Sinh viên..." /></div>
+    <div class="field-group"><label>4. Nghề nghiệp/Nơi ởlàm việc</label><input type="text" id="hj_nghe_nghiep" placeholder="VD: Sinh viên..." /></div>
     
     <div class="field-group"><label>5. Tính cách</label>
       <input type="text" id="hj_tinh_cach_cong_cu" placeholder="- Theo công cụ (TSH, hình vẽ..):" style="margin-bottom:6px;" />
@@ -641,7 +641,7 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title" id="addNoteTitle">🗒️Ghi chú</div>
-  <div class="field-group"><label>Tiêu đềE(tuỳ chọn)</label><input type="text" id="note_title" placeholder="Tiêu đềEngắn..." /></div>
+  <div class="field-group"><label>Tiêu đề(tuỳ chọn)</label><input type="text" id="note_title" placeholder="Tiêu đềngắn..." /></div>
   <div class="field-group"><label>Nội dung</label><textarea id="note_body" placeholder="Ghi chú..." style="resize:vertical;min-height:100px;"></textarea></div>
   <input type="hidden" id="note_editing_id" />
   <button class="save-btn" onclick="saveNote()">💾 Lưu ghi chú</button>
@@ -731,7 +731,7 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title" id="addEventTitle">📅 Thêm sự kiện</div>
-  <div class="field-group"><label>Tiêu đềE<span style="color:var(--red);">*</span></label><input type="text" id="ev_title" placeholder="Tên sự kiện..." /></div>
+  <div class="field-group"><label>Tiêu đề<span style="color:var(--red);">*</span></label><input type="text" id="ev_title" placeholder="Tên sự kiện..." /></div>
   <div class="grid-2">
     <div class="field-group"><label>Ngày <span style="color:var(--red);">*</span></label><input type="date" id="ev_date" /></div>
     <div class="field-group"><label>Giờ</label><input type="time" id="ev_time" /></div>
@@ -803,7 +803,7 @@
 <div class="modal">
   <div class="modal-handle"></div>
   <div class="modal-title" id="pnoteModalTitle">📝 Ghi chú mới</div>
-  <div class="field-group"><label>Tiêu đềE(tuỳ chọn)</label><input type="text" id="pnote_title" placeholder="Tiêu đềEngắn..." /></div>
+  <div class="field-group"><label>Tiêu đề(tuỳ chọn)</label><input type="text" id="pnote_title" placeholder="Tiêu đềngắn..." /></div>
   <div class="field-group"><label>Nội dung <span style="color:var(--red);">*</span></label><textarea id="pnote_content" placeholder="Ghi chú..." style="resize:vertical;min-height:100px;"></textarea></div>
   <div class="field-group">
     <label>Màu sắc</label>
@@ -909,7 +909,7 @@ window._lazyMarkmap = function() {
   <option value="Bể cá gia đình">
   <option value="Cái bắt">
   <option value="Cái cây">
-  <option value="Chiêm tinh/Bản đềEsao">
+  <option value="Chiêm tinh/Bản đồsao">
   <option value="Thần số học">
   <option value="Cô gái dưới mưa">
   <option value="Life Graph">
@@ -929,7 +929,7 @@ window._lazyMarkmap = function() {
   <option value="Mất liên lạc">
   <option value="Thời gian">
   <option value="Trầm cảm">
-  <option value="Thái đềEkhông tốt">
+  <option value="Thái độkhông tốt">
   <option value="Bị ngăn cản/ảnh hưởng">
   <option value="Cấn KT">
   <option value="Ngăn cản công ty">
