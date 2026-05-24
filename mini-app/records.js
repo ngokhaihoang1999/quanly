@@ -741,7 +741,10 @@ async function openScheduleTVModal(existingSession) {
         el('stv_time').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
     }
-    if (el('stv_tvv')) el('stv_tvv').value = existingSession.tvv_staff_code || '';
+    if (el('stv_tvv')) {
+      setStaffInputValue('stv_tvv', existingSession.tvv_staff_code);
+      _showStaffWarning('stv_tvv');
+    }
     const subtitleEl = el('stv_subtitle');
     if (subtitleEl) subtitleEl.textContent = p ? `Trái: ${p.full_name} · Chỉnh sửa lần ${existingSession.session_number}` : `Chỉnh sửa`;
     const btn = document.querySelector('#scheduleTVModal .save-btn');

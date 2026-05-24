@@ -813,19 +813,110 @@ Mở Mini App → tab 📜 Thẻ HV → bấm 📄 Word`,
     if (!canApproveHapja(pos)) { await sendText(chatId, `⛔ Không có quyền duyệt.`); return; }
     const hapjaId = cbData.replace('approve_hapja_', '');
     const { data: hapja } = await supabase.from('check_hapja').select('*').eq('id', hapjaId).single();
-    if (!hapja || hapja.status !== 'pending') { await sendText(chatId, `⚠️ Phiếu không tồn tại hoặc đã xử lý.`); return; }
+    if (!hapja || !['pending', 'revision_submitted'].includes(hapja.status)) {
+      await sendText(chatId, `⚠️ Phiếu không tồn tại hoặc đã xử lý.`);
+      return;
+    }
+
+    // Lock and update status atomically first
+    const { data: updatedHapja, error: lockErr } = await supabase.from('check_hapja')
+      .update({
+        status: 'approved',
+        approved_by: staffData.staff_code,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', hapjaId)
+      .in('status', ['pending', 'revision_submitted'])
+      .select();
+
+    if (lockErr || !updatedHapja || updatedHapja.length === 0) {
+      await sendText(chatId, `⚠️ Phiếu đã được xử lý bởi người khác hoặc đã được duyệt!`);
+      return;
+    }
+
+    const h = updatedHapja[0];
+    const nddCode = h.data?.ndd_staff_code || h.created_by;
+    const d = h.data || {};
+
+    // 1. Create profile
     const { data: newProfile } = await supabase.from('profiles').insert({
-      full_name: hapja.full_name, birth_year: hapja.birth_year, gender: hapja.gender,
-      created_by: hapja.created_by, phase: 'chakki'
+      full_name: h.full_name,
+      birth_year: h.birth_year,
+      gender: h.gender,
+      phone_number: d.sdt || '',
+      ndd_staff_code: nddCode,
+      created_by: h.created_by,
+      phase: 'chakki',
+      semester_id: h.semester_id || null
     }).select().single();
-    await supabase.from('check_hapja').update({
-      status: 'approved', approved_by: staffData.staff_code,
-      approved_at: new Date().toISOString(), profile_id: newProfile?.id
-    }).eq('id', hapjaId);
-    await sendText(chatId, `✅ Đã duyệt phiếu Check Hapja cho *${hapja.full_name}*!\nHồ sơ Trái quả đã được tạo tự động.`);
-    const { data: creator } = await supabase.from('staff').select('telegram_id').eq('staff_code', hapja.created_by).single();
+
+    if (newProfile) {
+      const newPid = newProfile.id;
+
+      // Update check_hapja with profile_id
+      await supabase.from('check_hapja').update({ profile_id: newPid }).eq('id', hapjaId);
+
+      // 2. Create fruit_group + NDD role
+      if (nddCode) {
+        try {
+          const { data: newFg } = await supabase.from('fruit_groups').insert({
+            telegram_group_id: null,
+            profile_id: newPid,
+            level: 'tu_van'
+          }).select().single();
+
+          if (newFg) {
+            await supabase.from('fruit_roles').insert({
+              fruit_group_id: newFg.id,
+              staff_code: nddCode,
+              role_type: 'ndd',
+              assigned_by: staffData.staff_code
+            });
+          }
+        } catch(e) { console.warn('Bot NDD role creation fail:', e); }
+      }
+
+      // 3. Create form_hanh_chinh
+      try {
+        const infoData = {
+          t2_ho_ten: h.full_name || '',
+          t2_gioi_tinh: h.gender || '',
+          t2_nam_sinh: h.birth_year || '',
+          t2_sdt: d.sdt || '',
+          t2_nghe_nghiep: d.nghe_nghiep || '',
+          t2_tinh_cach: d.tinh_cach_cong_cu || d.tinh_cach || '',
+          t2_dia_chi: d.noi_o || '',
+          t2_ky_khai_giang: '',
+          t2_khung_ranh: d.tg_ranh || '',
+          t2_so_thich: d.su_quan_tam || '',
+          t2_chuyen_cu: d.hoan_canh_hien_tai || d.hoan_canh || '',
+          t2_luu_y: d.noi_lo_lang || d.noi_lo || '',
+          t2_hinh_thuc: d.hinh_thuc || '',
+          t2_ngay_chakki: d.ngay_chakki || '',
+          t2_concept: d.concept || '',
+          t2_ndd: nddCode
+        };
+        await supabase.from('form_hanh_chinh').insert({
+          profile_id: newPid,
+          data: infoData
+        });
+      } catch(e) { console.warn('Bot form_hanh_chinh creation fail:', e); }
+
+      // 4. Create consultation session
+      try {
+        await supabase.from('consultation_sessions').insert({
+          profile_id: newPid,
+          session_number: 1,
+          scheduled_at: d.hen_tv || null,
+          created_by: staffData.staff_code
+        });
+      } catch(e) { console.warn('Bot session creation fail:', e); }
+    }
+
+    await sendText(chatId, `✅ Đã duyệt phiếu Check Hapja cho *${h.full_name}*!\nHồ sơ Trái quả đã được tạo tự động.`);
+    const { data: creator } = await supabase.from('staff').select('telegram_id').eq('staff_code', h.created_by).single();
     if (creator?.telegram_id) {
-      await sendText(creator.telegram_id, `✅ Phiếu Check Hapja cho *${hapja.full_name}* đã được *duyệt*!`);
+      await sendText(creator.telegram_id, `✅ Yêu cầu duyệt phiếu Check Hapja cho *${h.full_name}* đã thành công!`);
     }
     return;
   }

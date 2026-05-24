@@ -407,21 +407,49 @@ async function requestHapjaRevision(id) {
 }
 
 async function approveHapja(id) {
+  if (window._approvingHapja) return;
+  window._approvingHapja = true;
+
+  const buttons = document.querySelectorAll('#hapjaDetailActions button');
+  buttons.forEach(btn => btn.disabled = true);
+
   try {
-    const hRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&select=*`);
-    const hapjas = await hRes.json();
-    if (!hapjas.length || !['pending','revision_submitted'].includes(hapjas[0].status)) { showToast('⚠️ Phiếu đã xử lý'); return; }
-    const h = hapjas[0];
+    // Atomically lock and update status first
+    const lockRes = await sbFetch(`/rest/v1/check_hapja?id=eq.${id}&status=in.(pending,revision_submitted)`, {
+      method: 'PATCH',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        status: 'approved',
+        approved_by: getEffectiveStaffCode(),
+        approved_at: new Date().toISOString()
+      })
+    });
+    if (!lockRes.ok) {
+      throw new Error('Lỗi máy chủ khi khoá phiếu');
+    }
+    const lockedRows = await lockRes.json();
+    if (!lockedRows || lockedRows.length === 0) {
+      showToast('⚠️ Phiếu đã được xử lý bởi người khác hoặc đã được duyệt!');
+      closeModal('hapjaDetailModal');
+      return;
+    }
+
+    const h = lockedRows[0];
     const nddCode = h.data?.ndd_staff_code || h.created_by;
     const d = h.data || {};
+
     // Create profile with NDD + phase chakki + phone
     const pRes = await sbFetch('/rest/v1/profiles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
       full_name: h.full_name, birth_year: h.birth_year, gender: h.gender,
       phone_number: d.sdt || '', ndd_staff_code: nddCode, created_by: h.created_by, phase: 'chakki',
       semester_id: h.semester_id || currentSemesterId || null
     })});
+    if (!pRes.ok) {
+      throw new Error('Lỗi tạo hồ sơ');
+    }
     const newProfile = await pRes.json();
     const newPid = newProfile?.[0]?.id;
+
     // Create fruit_group + NDD role
     if (newPid && nddCode) {
       try {
@@ -436,8 +464,15 @@ async function approveHapja(id) {
         }
       } catch(e) { console.warn('NDD role creation:', e); }
     }
+
     // Auto-create form_hanh_chinh (Phiếu Thông tin) from Hapja data
     if (newPid) {
+      // Link profile to check_hapja
+      await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ profile_id: newPid })
+      });
+
       try {
         const infoData = {
           t2_ho_ten: h.full_name || '',
@@ -454,6 +489,7 @@ async function approveHapja(id) {
           t2_luu_y: d.noi_lo_lang || d.noi_lo || '',
           t2_hinh_thuc: d.hinh_thuc || '',
           t2_ngay_chakki: d.ngay_chakki || '',
+          t2_concept: d.concept || '',
           t2_ndd: nddCode ? (typeof getStaffLabel === 'function' ? getStaffLabel(nddCode) : nddCode) : '',
         };
         await sbFetch('/rest/v1/form_hanh_chinh', { method:'POST', body: JSON.stringify({ profile_id: newPid, data: infoData }) });
@@ -469,8 +505,7 @@ async function approveHapja(id) {
         })});
       } catch (e) { console.warn('Chot TV lan 1 fallback:', e); }
     }
-    await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'approved', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString(), profile_id: newPid }) });
-    
+
     // Auto-sync into Google Sheets via Webhook
     if (typeof syncToGoogleSheet === 'function' && newPid) {
       setTimeout(() => syncToGoogleSheet(newPid), 1000); // delay 1s to ensure form data is saved
@@ -482,7 +517,6 @@ async function approveHapja(id) {
     // === Auto-triggers for Hapja approval ===
     if (newPid) {
       // Priority: Smart task cho NDD — title tuỳ theo đã có lịch hẹn TV chưa
-      // (TVV chưa thể biết lúc này — sẽ được điền khi Chốt TV → updateChotTV1Task tự cập nhật)
       if (typeof createPriorityTask === 'function' && nddCode) {
         const hasSchedule = !!(d.hen_tv); // Đã hẹn lịch TV từ phiếu Hapja
         const taskTitle = hasSchedule
@@ -497,7 +531,11 @@ async function approveHapja(id) {
     }
 
     loadDashboard(); loadProfiles();
-  } catch(e) { showToast('❌ Lỗi khi duyệt'); console.error(e); }
+  } catch(e) { showToast('❌ Lỗi khi duyệt: ' + e.message); console.error(e); }
+  finally {
+    window._approvingHapja = false;
+    buttons.forEach(btn => btn.disabled = false);
+  }
 }
 async function deleteHapja(id) {
   if (!await showConfirmAsync('Xác nhận xoá phiếu Check Hapja?')) return;
