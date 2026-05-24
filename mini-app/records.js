@@ -807,6 +807,19 @@ async function saveScheduleTV() {
   }
   const tvv = getStaffCodeFromInput('stv_tvv');
 
+  if (tvv) {
+    const tvvRegistered = isStaffRegistered(tvv);
+    if (!tvvRegistered) {
+      const ok = typeof showConfirmAsync === 'function'
+        ? await showConfirmAsync(`⚠️ TVV "${tvv}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`)
+        : confirm(`⚠️ TVV "${tvv}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`);
+      if (!ok) {
+        if (btn) { btn.disabled = false; btn.textContent = editingSessionId ? '💾 Cập nhật Chốt TV' : '✅ Chốt Tư Vấn'; }
+        return;
+      }
+    }
+  }
+
   if (!tool) { showToast('⚠️ Nhập công cụ tư vấn'); return; }
 
   if (btn) { btn.disabled = true; btn.textContent = '⌛ Đang lưu...'; }
@@ -832,50 +845,63 @@ async function saveScheduleTV() {
       }
     }
 
-    // Assign TVV role if provided (both create & edit)
-    if (tvv) {
-      try {
-        const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
-        const fgs = await fgRes.json();
-        let fgId = fgs[0]?.id;
-        if (!fgId) {
-          const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-            telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
-          })});
-          const newFgs = await newFgRes.json();
-          fgId = newFgs[0]?.id;
+    // Sync TVV roles in fruit_roles to match the TVVs across all sessions of this profile
+    try {
+      const sessionsRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=tvv_staff_code`);
+      const sessions = await sessionsRes.json();
+      const uniqueTvvs = [...new Set((sessions || []).map(s => s.tvv_staff_code).filter(Boolean))];
+
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
+      const fgs = await fgRes.json();
+      let fgId = fgs[0]?.id;
+      if (!fgId) {
+        const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+          telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
+        })});
+        const newFgs = await newFgRes.json();
+        fgId = newFgs[0]?.id;
+      }
+
+      if (fgId) {
+        // Fetch existing TVV roles in the group
+        const existingRolesRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&role_type=eq.tvv&select=id,staff_code`);
+        const existingRoles = await existingRolesRes.json();
+
+        // Target list of staff_code in fruit_roles
+        const targetStaffCodes = uniqueTvvs.map(t => isStaffRegistered(t) ? t : `tg:${t}`);
+
+        // Roles to delete and insert
+        const toDelete = existingRoles.filter(r => !targetStaffCodes.includes(r.staff_code));
+        const toInsert = targetStaffCodes.filter(code => !existingRoles.some(r => r.staff_code === code));
+
+        // Delete no longer needed roles
+        for (const r of toDelete) {
+          await sbFetch(`/rest/v1/fruit_roles?id=eq.${r.id}`, { method: 'DELETE' });
         }
-        if (fgId) {
-          // Handle unregistered TVV (same pattern as GVBB)
-          const tvvRegistered = isStaffRegistered(tvv);
-          const tvvCode = tvvRegistered ? tvv : `tg:${tvv}`;
-          const tvvDisplayName = tvvRegistered ? null : tvv;
-          if (!tvvRegistered) {
-            const ok = typeof showConfirmAsync === 'function'
-              ? await showConfirmAsync(`⚠️ TVV "${tvv}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`)
-              : confirm(`⚠️ TVV "${tvv}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`);
-            if (!ok) {
-              if (btn) { btn.disabled = false; btn.textContent = '✅ Chốt Tư Vấn'; }
-              return;
-            }
+
+        // Insert new roles
+        for (const code of toInsert) {
+          const rawCode = code.startsWith('tg:') ? code.slice(3) : code;
+          const isReg = isStaffRegistered(rawCode);
+          const roleData = {
+            fruit_group_id: fgId,
+            staff_code: code,
+            role_type: 'tvv',
+            assigned_by: getEffectiveStaffCode()
+          };
+          if (!isReg) {
+            roleData.display_name = rawCode;
           }
-          const existRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&staff_code=eq.${tvvCode}&role_type=eq.tvv&select=id`);
-          const existRows = await existRes.json();
-          if (!existRows || existRows.length === 0) {
-            const roleData = {
-              fruit_group_id: fgId, staff_code: tvvCode, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
-            };
-            if (tvvDisplayName) roleData.display_name = tvvDisplayName;
-            await sbFetch('/rest/v1/fruit_roles', { method:'POST', body: JSON.stringify(roleData) });
-          }
-          // TVV bổ sung → cập nhật priority task chot_tv_1
-          if (typeof updateChotTV1Task === 'function') {
-            const pp = allProfiles.find(x => x.id === currentProfileId);
-            updateChotTV1Task(currentProfileId, pp?.full_name || '', true, !!dt);
-          }
+          await sbFetch('/rest/v1/fruit_roles', { method: 'POST', body: JSON.stringify(roleData) });
         }
-      } catch(e) { console.warn('Assign role fail:', e); }
-    }
+
+        // TVV bổ sung → cập nhật priority task chot_tv_1
+        if (typeof updateChotTV1Task === 'function') {
+          const pp = allProfiles.find(x => x.id === currentProfileId);
+          updateChotTV1Task(currentProfileId, pp?.full_name || '', true, !!dt);
+        }
+      }
+    } catch(e) { console.warn('Sync TVV roles fail:', e); }
 
     closeModal('scheduleTVModal');
     if (editingSessionId) {

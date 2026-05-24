@@ -1000,13 +1000,13 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
   const myCode = getEffectiveStaffCode();
   const toolText = toolStr ? ` (${toolStr})` : '';
   const titleStr = `Chốt TV lần ${sessionNum}${toolText} — ${pName}`;
-  const oldTitlePattern = encodeURIComponent(`%Chốt TV lần ${sessionNum}%`);
+  const oldTitlePattern = encodeURIComponent(`*Chốt TV lần ${sessionNum}*`);
 
   try {
     // Delete old events with similar pattern for this session (idempotent update)
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${oldTitlePattern}`, { method: 'DELETE' });
     // Also delete old report reminders
-    const reportTitle = encodeURIComponent(`📝 Viết BC TV lần ${sessionNum}%`);
+    const reportTitle = encodeURIComponent(`*Viết BC TV lần ${sessionNum}*`);
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${reportTitle}`, { method: 'DELETE' });
 
     // ONLY create calendar events if a date was actually scheduled
@@ -1098,7 +1098,7 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
     // Delete old matching upcoming BB event to avoid dupes if they edit the report
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=eq.${encodeURIComponent(eventTitle)}`, { method: 'DELETE' });
     // Also delete old report reminders
-    const reportTitle = encodeURIComponent(`📝 Viết BC BB buổi ${nextNum}%`);
+    const reportTitle = encodeURIComponent(`*Viết BC BB buổi ${nextNum}*`);
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=like.${reportTitle}`, { method: 'DELETE' });
 
     // Get role codes — NDD + GVBB get alarm ON, others alarm OFF

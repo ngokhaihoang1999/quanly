@@ -988,13 +988,10 @@ async function promptEditRole(profileId, roleType) {
   const label = roleType === 'tvv' ? 'TVV' : 'GVBB';
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
-  // Build datalist options from allStaff
-  const dlOptions = (allStaff||[]).map(s => `<option value="${s.staff_code} - ${s.display_name||s.full_name||''}">`).join('');
   overlay.innerHTML = `<div style="background:var(--surface,#fff);border-radius:16px;padding:24px;min-width:300px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
     <div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text1,#333);">✏️ Đổi ${label}</div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Nhập mã TĐ hoặc tên ${label} mới:</div>
-    <datalist id="_editRoleDatalist">${dlOptions}</datalist>
-    <input type="text" id="_editRoleInput" list="_editRoleDatalist" placeholder="Mã TĐ hoặc tên..."
+    <input type="text" id="_editRoleInput" data-list="staffSuggest" placeholder="Mã TĐ hoặc tên..."
       style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface2,#f5f5f5);color:var(--text1,#333);font-size:14px;"/>
     <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
       <button id="_editRoleCancel" style="padding:8px 16px;border-radius:8px;background:var(--surface2,#eee);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:13px;cursor:pointer;">Hủy</button>
