@@ -859,11 +859,15 @@ async function saveScheduleTV() {
               return;
             }
           }
-          const roleData = {
-            fruit_group_id: fgId, staff_code: tvvCode, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
-          };
-          if (tvvDisplayName) roleData.display_name = tvvDisplayName;
-          await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
+          const existRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&staff_code=eq.${tvvCode}&role_type=eq.tvv&select=id`);
+          const existRows = await existRes.json();
+          if (!existRows || existRows.length === 0) {
+            const roleData = {
+              fruit_group_id: fgId, staff_code: tvvCode, role_type: 'tvv', assigned_by: getEffectiveStaffCode()
+            };
+            if (tvvDisplayName) roleData.display_name = tvvDisplayName;
+            await sbFetch('/rest/v1/fruit_roles', { method:'POST', body: JSON.stringify(roleData) });
+          }
           // TVV bổ sung → cập nhật priority task chot_tv_1
           if (typeof updateChotTV1Task === 'function') {
             const pp = allProfiles.find(x => x.id === currentProfileId);
@@ -1022,11 +1026,15 @@ async function saveChotBB() {
         fgId = (await newFgRes.json())[0]?.id;
       }
       if (fgId) {
-        const roleData = {
-          fruit_group_id: fgId, staff_code: gvbb, role_type: 'gvbb', assigned_by: getEffectiveStaffCode()
-        };
-        if (gvbbDisplayName) roleData.display_name = gvbbDisplayName;
-        await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'resolution=ignore-duplicates'}, body: JSON.stringify(roleData) });
+        const existRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&staff_code=eq.${gvbb}&role_type=eq.gvbb&select=id`);
+        const existRows = await existRes.json();
+        if (!existRows || existRows.length === 0) {
+          const roleData = {
+            fruit_group_id: fgId, staff_code: gvbb, role_type: 'gvbb', assigned_by: getEffectiveStaffCode()
+          };
+          if (gvbbDisplayName) roleData.display_name = gvbbDisplayName;
+          await sbFetch('/rest/v1/fruit_roles', { method:'POST', body: JSON.stringify(roleData) });
+        }
       }
     } catch(e) { console.warn('Assign GVBB fail:', e); }
     closeModal('chotBBModal');
