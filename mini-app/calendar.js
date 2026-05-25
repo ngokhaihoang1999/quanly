@@ -1053,7 +1053,8 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
         title: titleStr, event_date: dateStr, event_time: timeStr,
         reminder_at: hasAlarm ? preAlarmAt : null,
         reminder_channels: hasAlarm ? ['app', 'chat'] : null,
-        is_auto: true, is_system: true, created_by: myCode
+        is_auto: true, is_system: true, created_by: myCode,
+        unique_key: `chot_tv_${sessionNum}_${profileId}_${code}`
       });
       // Post-event: Nhắc viết BC (only for alarm-ON people)
       if (hasAlarm) {
@@ -1062,7 +1063,8 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
           title: reportReminderTitle, event_date: postDateStr, event_time: postTimeStr,
           reminder_at: postAlarmAt,
           reminder_channels: ['app', 'chat'],
-          is_auto: true, is_system: true, created_by: myCode
+          is_auto: true, is_system: true, created_by: myCode,
+          unique_key: `bc_tv_${sessionNum}_${profileId}_${code}`
         });
       }
     }
@@ -1130,7 +1132,8 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
         title: eventTitle, event_date: dateStr, event_time: timeStr,
         reminder_at: hasAlarm ? preAlarmAt : null,
         reminder_channels: hasAlarm ? ['app', 'chat'] : null,
-        is_auto: true, is_system: true, created_by: myCode
+        is_auto: true, is_system: true, created_by: myCode,
+        unique_key: `hoc_bb_${nextNum}_${profileId}_${code}`
       });
       // Post-event: Nhắc viết BC (only for alarm-ON people)
       if (hasAlarm) {
@@ -1139,7 +1142,8 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
           title: reportReminderTitle, event_date: postDateStr, event_time: postTimeStr,
           reminder_at: postAlarmAt,
           reminder_channels: ['app', 'chat'],
-          is_auto: true, is_system: true, created_by: myCode
+          is_auto: true, is_system: true, created_by: myCode,
+          unique_key: `bc_bb_${nextNum}_${profileId}_${code}`
         });
       }
     }
