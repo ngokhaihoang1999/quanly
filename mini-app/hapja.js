@@ -665,6 +665,7 @@ async function deleteRecord(id, type) {
     if (p) loadJourney(p.id, p.phase || 'chakki');
     loadRecords(currentProfileId, 'tu_van', 'tvList', 'tvCount');
     loadRecords(currentProfileId, 'bien_ban', 'bbList', 'bbCount');
+  } catch { showToast('❌ Lỗi'); }
 }
 
 function copyHapjaDetail() {

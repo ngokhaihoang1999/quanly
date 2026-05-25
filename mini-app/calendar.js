@@ -282,6 +282,9 @@ function renderCalendarGrid() {
     // BB sessions
     const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb' && !e.title.includes('Viết BC')).length;
     if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
+    // Reminders
+    const reminderCount = dayEvents.filter(e => (e.event_type === 'chot_tv' || e.event_type === 'hoc_bb') && e.title.includes('Viết BC')).length;
+    if (reminderCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#f59e0b;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${reminderCount} nhắc nhở</span>`);
     // Custom events
     const customEvents = dayEvents.filter(e => e.event_type === 'custom');
     customEvents.slice(0, 2).forEach(e => {
