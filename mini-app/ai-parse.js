@@ -89,10 +89,12 @@ const AI_PARSE_PROMPTS = {
 
   hapja: AI_PARSE_PREFIX + `\n\nTrích xuất thông tin cho phiếu Check Hapja (thông tin ban đầu về trái quả mới) thành JSON. Chỉ điền field có dữ liệu:
 {
+  "hj_ndd": "Tên hoặc mã NDD (Người dẫn dắt). Ví dụ: Maize",
+  "hj_ngay_chakki": "Ngày chakki (Định dạng YYYY-MM-DD. LƯU Ý: Nếu có năm Shin, quy đổi sang Dương lịch: Năm Dương Lịch = Năm Shin + 1983. Ví dụ: Shin 43.05.26 -> 2026-05-26)",
+  "hj_concept": "concept/lý do tiếp cận",
   "hj_full_name": "họ và tên đầy đủ",
   "hj_birth_year": "năm sinh YYYY (4 chữ số)",
   "hj_gender": "Nam hoặc Nữ hoặc Khác",
-  "hj_concept": "concept/lý do tiếp cận",
   "hj_hinh_thuc": "hình thức chakki (gặp trực tiếp, online...)",
   "hj_than_thiet": "Cao hoặc Trung bình hoặc Thấp (mức thân thiết)",
   "hj_noi_o": "nơi ở hiện tại",
@@ -105,7 +107,8 @@ const AI_PARSE_PROMPTS = {
   "hj_hoc_ki": "kì nghỉ hoặc học kì",
   "hj_noi_lo_lang": "nỗi lo lắng",
   "hj_su_quan_tam": "sự quan tâm, sở thích, kênh youtube xem...",
-  "hj_sdt": "số điện thoại"
+  "hj_sdt": "số điện thoại",
+  "hj_hen_tv": "Hẹn lịch TV (Định dạng YYYY-MM-DDTHH:mm. LƯU Ý: Quy đổi năm Shin + 1983. Ví dụ: Shin 43.05.26 06:20 -> 2026-05-26T06:20)"
 }`,
 
   btvn: AI_PARSE_PREFIX + `\n\nTrích xuất thông tin bài tập về nhà (BTVN) thành JSON. Từ hình ảnh hoặc text, liệt kê các câu hỏi (q) và câu trả lời của trái quả (a).
@@ -370,7 +373,30 @@ function _setField(elId, value) {
     return false;
   }
 
+  // Suggestion list resolution for staffSuggest inputs (e.g. NDD lookup)
+  if (el.tagName === 'INPUT' && el.getAttribute('data-list') === 'staffSuggest') {
+    var lowerVal = value.trim().toLowerCase();
+    if (typeof allStaff !== 'undefined' && Array.isArray(allStaff)) {
+      var match = allStaff.find(function(s) {
+        return s.staff_code.toLowerCase() === lowerVal ||
+          (s.nickname && s.nickname.toLowerCase() === lowerVal) ||
+          s.full_name.toLowerCase() === lowerVal ||
+          (s.nickname && (s.nickname.toLowerCase() + ' (' + s.staff_code.toLowerCase() + ')').includes(lowerVal)) ||
+          (s.full_name.toLowerCase() + ' (' + s.staff_code.toLowerCase() + ')').includes(lowerVal);
+      });
+      if (match) {
+        el.value = match.full_name + ' (' + match.staff_code + ')';
+        _highlightField(el);
+        return true;
+      }
+    }
+  }
+
   // Handle input/textarea
+  if (el.type === 'datetime-local' && value) {
+    value = value.trim().replace(' ', 'T');
+    if (value.length === 10) value += 'T00:00';
+  }
   el.value = value;
   _highlightField(el);
   return true;
@@ -522,11 +548,11 @@ function fillHapjaForm(json) {
   var count = 0;
   var fillFn = function() {
     var filled = 0;
-    // Text / number / tel fields
-    var textFields = ['hj_full_name', 'hj_birth_year', 'hj_concept', 'hj_hinh_thuc',
+    // Text / number / tel / date / datetime-local fields
+    var textFields = ['hj_ndd', 'hj_ngay_chakki', 'hj_concept', 'hj_full_name', 'hj_birth_year', 'hj_hinh_thuc',
       'hj_noi_o', 'hj_nghe_nghiep', 'hj_tinh_cach_cong_cu',
       'hj_than_tinh_chi_tiet', 'hj_hoan_canh_hien_tai', 'hj_hoc_ki',
-      'hj_noi_lo_lang', 'hj_su_quan_tam', 'hj_sdt'];
+      'hj_noi_lo_lang', 'hj_su_quan_tam', 'hj_sdt', 'hj_hen_tv'];
     textFields.forEach(function(key) {
       if (json[key] && _setField(key, json[key])) filled++;
     });
