@@ -177,10 +177,10 @@ async function openProfile(p, cardEl) {
   const nddDisplay = nddCode ? getStaffLabel(nddCode) : '—';
   // TVV: handle tg: prefix with display_name fallback (same as GVBB)
   const tvvDisplay = rolesInfo.tvv.length
-    ? rolesInfo.tvv.map(t => t.code.startsWith('tg:') ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code)).join(', ') : '—';
+    ? rolesInfo.tvv.map(t => (t.code && typeof t.code === 'string' && t.code.startsWith('tg:')) ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code || '')).join(', ') : '—';
   // GVBB: if staff_code starts with 'tg:' → show display_name (unregistered user)
   const gvbbDisplay = gvbbCode
-    ? (gvbbCode.startsWith('tg:') ? (rolesInfo.gvbbDisplayName || gvbbCode.replace('tg:','')) : getStaffLabel(gvbbCode))
+    ? ((typeof gvbbCode === 'string' && gvbbCode.startsWith('tg:')) ? (rolesInfo.gvbbDisplayName || gvbbCode.replace('tg:','')) : getStaffLabel(gvbbCode))
     : '—';
 
   // Per-profile role of current user
@@ -233,7 +233,7 @@ async function openProfile(p, cardEl) {
   const avatarClick = canEditColor ? `onclick="openAvatarStylePicker('${p.id}','${encodeURIComponent(avatarRaw)}')"` : '';
 
   // Khoá/Mở Khai Giảng - Tag Semester
-  const semName = p.semester_id ? (allSemesters.find(s => s.id === p.semester_id)?.name || 'Kỳ ẩn') : 'Chưa có kỳ (Kỳ cũ)';
+  const semName = p.semester_id ? ((typeof allSemesters !== 'undefined' && allSemesters && typeof allSemesters.find === 'function') ? (allSemesters.find(s => s.id === p.semester_id)?.name || 'Kỳ ẩn') : 'Kỳ ẩn') : 'Chưa có kỳ (Kỳ cũ)';
   const canEditSem = hasPermission('edit_profile') || hasPermission('manage_semester') || isProfileNDD;
   const semTag = `<span ${canEditSem ? `onclick="event.stopPropagation();promptChangeSemester('${p.id}', '${p.semester_id||''}')" style="cursor:pointer;"` : 'style="opacity:0.8;"'} class="semester-badge" title="Nhấn để Đổi Khai Giảng cho Trái này">📅 ${semName}</span>`;
 
