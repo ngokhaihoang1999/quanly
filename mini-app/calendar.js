@@ -77,6 +77,36 @@ async function loadCalendar() {
   // Also fetch TV/BB records with scheduled dates to merge as virtual events
   await _mergeRecordMilestones(startStr, endStr, myCode, scope);
 
+  // Client-side deduplication of system events to prevent displaying duplicate cards for different stakeholders
+  const uniqueEvents = [];
+  const seen = new Set();
+
+  // Sort to prioritize keeping the event belonging to the current user (myCode), then with active alarms
+  calEvents.sort((a, b) => {
+    const aIsMine = a.staff_code === myCode ? 1 : 0;
+    const bIsMine = b.staff_code === myCode ? 1 : 0;
+    if (aIsMine !== bIsMine) return bIsMine - aIsMine;
+
+    const aHasAlarm = (a.reminder_at && !a.reminder_sent) ? 1 : 0;
+    const bHasAlarm = (b.reminder_at && !b.reminder_sent) ? 1 : 0;
+    return bHasAlarm - aHasAlarm;
+  });
+
+  calEvents.forEach(ev => {
+    if (ev.is_system) {
+      // System events can be duplicated for different staff members
+      // Deduplicate by profile_id + event_type + event_date + title
+      const key = `${ev.profile_id || ''}_${ev.event_type}_${ev.event_date}_${ev.title}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueEvents.push(ev);
+      }
+    } else {
+      uniqueEvents.push(ev);
+    }
+  });
+  calEvents = uniqueEvents;
+
   renderCalendarGrid();
   // Auto-select today or keep selected date
   const today = new Date();
