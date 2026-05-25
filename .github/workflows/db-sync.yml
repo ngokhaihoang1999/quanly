@@ -35,10 +35,14 @@ jobs:
             20240401000001 20240402000000 \
             20240417000001 \
             20240418000000 \
-            20260416 20260416000001 \
+            20260416000000 20260416000001 20260420000000 \
           ; do
             supabase migration repair "$v" --status applied --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
           done
+
+          # Repair old 8-digit versions to reverted to remove them from remote database history
+          supabase migration repair 20260416 --status reverted --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
+          supabase migration repair 20260420 --status reverted --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
 
           # Also handle the deleted concept_the migration
           supabase migration repair 20240417000000 --status reverted --linked --password $SUPABASE_DB_PASSWORD 2>/dev/null || true
