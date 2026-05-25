@@ -277,10 +277,10 @@ function renderCalendarGrid() {
     
     const parts = [];
     // TV sessions
-    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv').length;
+    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv' && !e.title.includes('Viết BC')).length;
     if (tvCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#8b5cf6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tvCount} ca TV</span>`);
     // BB sessions
-    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb').length;
+    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb' && !e.title.includes('Viết BC')).length;
     if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
     // Custom events
     const customEvents = dayEvents.filter(e => e.event_type === 'custom');

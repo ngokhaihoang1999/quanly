@@ -1,4 +1,5 @@
 // ============ CHECK HAPJA ============
+let _currentHapjaDetail = null;
 function canCreateHapja(pos) { return hasPermission('create_hapja'); }
 function openCreateHapjaModal() {
   document.getElementById('createHapjaModal').classList.add('open');
@@ -135,6 +136,7 @@ async function openHapjaDetail(id) {
     const hapjas = await hRes.json();
     if (!hapjas.length) { showToast('⚠️ Không tìm thấy phiếu'); return; }
     const h = hapjas[0];
+    _currentHapjaDetail = h;
     const d = h.data || {};
     const date = shinDate(h.created_at);
     const myCode = getEffectiveStaffCode();
@@ -154,9 +156,20 @@ async function openHapjaDetail(id) {
 
     const body = document.getElementById('hapjaDetailBody');
     
-    // Build title with status
+    // Build title with status and copy button
     const titleEl = document.getElementById('hapjaDetailTitle');
-    if (titleEl) titleEl.innerHTML = `📋 Chi tiết Check Hapja <span style="font-size:12px;padding:3px 8px;border-radius:20px;background:${statusInfo.color};color:white;font-weight:600;margin-left:6px;">${statusInfo.label}</span>`;
+    if (titleEl) {
+      titleEl.style.paddingRight = '16px';
+      titleEl.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span>📋 Chi tiết Check Hapja</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${statusInfo.color};color:white;font-weight:600;">${statusInfo.label}</span>
+          </div>
+          <button onclick="copyHapjaDetail()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--text);font-weight:600;display:flex;align-items:center;gap:4px;" title="Copy toàn bộ form Hapja">📋 Copy</button>
+        </div>
+      `;
+    }
     
     // Feedback indicator (compact ⚠️ icon → click to popup)
     let feedbackHtml = '';
@@ -652,5 +665,61 @@ async function deleteRecord(id, type) {
     if (p) loadJourney(p.id, p.phase || 'chakki');
     loadRecords(currentProfileId, 'tu_van', 'tvList', 'tvCount');
     loadRecords(currentProfileId, 'bien_ban', 'bbList', 'bbCount');
-  } catch { showToast('❌ Lỗi'); }
+}
+
+function copyHapjaDetail() {
+  const getVal = (key) => {
+    const el = document.getElementById(`hjd_${key}`);
+    if (el) return el.value?.trim() || '—';
+    // Fallback to loaded details if not in edit mode
+    if (_currentHapjaDetail) {
+      if (['full_name', 'birth_year', 'gender'].includes(key)) {
+        return _currentHapjaDetail[key] || '—';
+      }
+      const d = _currentHapjaDetail.data || {};
+      return d[key] || '—';
+    }
+    return '—';
+  };
+
+  const nddCode = getVal('ndd_staff_code');
+  const nddLabel = typeof getStaffLabel === 'function' ? getStaffLabel(nddCode) : nddCode;
+  
+  let henTvVal = getVal('hen_tv');
+  if (henTvVal && henTvVal !== '—' && typeof shinDateTime === 'function') {
+    try {
+      henTvVal = shinDateTime(henTvVal);
+    } catch(e) {}
+  }
+
+  const text = `🍎 BẢNG THÔNG TIN VỀ TRÁI (CHECK HAPJA)
+- NDD: ${nddLabel}
+- Ngày Chakki: ${getVal('ngay_chakki')}
+- Concept: ${getVal('concept')}
+1. Họ và tên: ${getVal('full_name')} (${getVal('birth_year')}) - ${getVal('gender')}
+2. Hình thức chakki: ${getVal('hinh_thuc')}
+- Mức độ thân thiết: ${getVal('than_thiet')}
+3. Nơi ở: ${getVal('noi_o')}
+4. Nghề nghiệp/Nơi làm việc: ${getVal('nghe_nghiep')}
+5. Tính cách:
+- Theo công cụ: ${getVal('tinh_cach_cong_cu')}
+- Kết nối qua tin nhắn: ${getVal('tinh_cach_ket_noi')}
+6. Thần tính: ${getVal('than_tinh_co_khong')} (${getVal('than_tinh_chi_tiet')})
+7. Hoàn cảnh:
+- Hiện tại: ${getVal('hoan_canh_hien_tai')}
+- Kỳ nghỉ/Học kỳ: ${getVal('hoc_ki')}
+8. Nỗi lo lắng: ${getVal('noi_lo_lang')}
+- Sự quan tâm: ${getVal('su_quan_tam')}
+9. Số điện thoại: ${getVal('sdt')}
+10. Hẹn lịch TV: ${henTvVal}`;
+
+  if (typeof copyToClipboard === 'function') {
+    copyToClipboard(text);
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('✅ Đã copy thông tin Hapja!');
+    }).catch(err => {
+      showToast('❌ Không thể copy!');
+    });
+  }
 }
