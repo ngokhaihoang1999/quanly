@@ -1184,7 +1184,7 @@ function initFloatingChat() {
   updateFloatingChatUI();
 }
 
-// Bind drag and drop functionality with boundary checks and click distinction
+// Bind drag and drop functionality with GPU translation, boundary checks, and click distinction
 function makeFloatingHeadDraggable(head) {
   let startX = 0, startY = 0;
   let initialX = 0, initialY = 0;
@@ -1216,20 +1216,8 @@ function makeFloatingHeadDraggable(head) {
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
     
-    let nextX = initialX + dx;
-    let nextY = initialY + dy;
-    
-    const rect = head.getBoundingClientRect();
-    const maxX = window.innerWidth - rect.width;
-    const maxY = window.innerHeight - rect.height;
-    
-    if (nextX < 0) nextX = 0;
-    if (nextX > maxX) nextX = maxX;
-    if (nextY < 0) nextY = 0;
-    if (nextY > maxY) nextY = maxY;
-    
-    head.style.left = nextX + 'px';
-    head.style.top = nextY + 'px';
+    // GPU-accelerated dragging to prevent reflow lag
+    head.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
     
     if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
       head.dataset.dragged = '1';
@@ -1246,9 +1234,27 @@ function makeFloatingHeadDraggable(head) {
     const isClick = (head.dataset.dragged !== '1') && (duration < 300);
     delete head.dataset.dragged;
 
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    head.style.transform = '';
+
+    let finalX = initialX + dx;
+    let finalY = initialY + dy;
+    
     const rect = head.getBoundingClientRect();
-    localStorage.setItem('cj_floating_chat_pos_x', rect.left);
-    localStorage.setItem('cj_floating_chat_pos_y', rect.top);
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+    
+    if (finalX < 0) finalX = 0;
+    if (finalX > maxX) finalX = maxX;
+    if (finalY < 0) finalY = 0;
+    if (finalY > maxY) finalY = maxY;
+    
+    head.style.left = finalX + 'px';
+    head.style.top = finalY + 'px';
+
+    localStorage.setItem('cj_floating_chat_pos_x', finalX);
+    localStorage.setItem('cj_floating_chat_pos_y', finalY);
     
     const win = document.getElementById('cjFloatingChatWindow');
     if (win && win.style.display === 'flex') {
@@ -1265,6 +1271,7 @@ function makeFloatingHeadDraggable(head) {
       head.releasePointerCapture(e.pointerId);
       isDragging = false;
       head.style.cursor = 'grab';
+      head.style.transform = '';
       delete head.dataset.dragged;
     }
   });
@@ -1297,7 +1304,13 @@ function expandFloatingChat() {
 
 function collapseFloatingChat() {
   const win = document.getElementById('cjFloatingChatWindow');
-  if (win) win.style.display = 'none';
+  if (win) {
+    win.style.display = 'none';
+    win.style.height = '';
+    win.style.width = '';
+    win.style.top = '';
+    win.style.left = '';
+  }
   if (window._floatingActiveChatSubscription) {
     window._floatingActiveChatSubscription.unsubscribe();
     window._floatingActiveChatSubscription = null;
@@ -1311,11 +1324,47 @@ function closeActiveFloatingChat() {
   }
 }
 
+// Visual Viewport keyboard/dimensions adjustment for mobile platforms
+function adjustFloatingLayoutForViewport() {
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (!win || win.style.display !== 'flex') return;
+  
+  const isMobile = window.innerWidth <= 600;
+  if (isMobile) {
+    const vv = window.visualViewport;
+    if (vv) {
+      win.style.height = vv.height + 'px';
+      win.style.top = vv.offsetTop + 'px';
+      win.style.left = vv.offsetLeft + 'px';
+      win.style.width = vv.width + 'px';
+      
+      const msgArea = document.getElementById('cjFloatingChatMessages');
+      if (msgArea) {
+        msgArea.scrollTop = msgArea.scrollHeight;
+      }
+    }
+  } else {
+    win.style.height = '';
+    win.style.width = '';
+  }
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', adjustFloatingLayoutForViewport);
+  window.visualViewport.addEventListener('scroll', adjustFloatingLayoutForViewport);
+}
+
 // Calculate and position the expanded window near the bubble head without overflowing
 function positionFloatingChatWindow() {
   const head = document.getElementById('cjFloatingChatHead');
   const win = document.getElementById('cjFloatingChatWindow');
   if (!head || !win) return;
+  
+  const isMobile = window.innerWidth <= 600;
+  if (isMobile) {
+    adjustFloatingLayoutForViewport();
+    return;
+  }
   
   const headRect = head.getBoundingClientRect();
   const winWidth = 330;
@@ -1345,6 +1394,8 @@ function positionFloatingChatWindow() {
   win.style.top = top + 'px';
   win.style.right = 'auto';
   win.style.bottom = 'auto';
+  win.style.width = '';
+  win.style.height = '';
 }
 
 // Pin a chat profile to floating stack
@@ -1361,7 +1412,7 @@ function pinChatToFloating(profileId) {
   }
   
   window._activeFloatingProfileId = pid;
-  showToast('📌 Đã ghim nổi cuộc thảo luận');
+  showToast('💬 Đã ghim bong bóng chat');
   expandFloatingChat();
   updateFloatingChatUI();
 }
@@ -1388,20 +1439,12 @@ function unpinChatFromFloating(profileId) {
   }
 }
 
-// Re-render the floating bubble stack and switcher row
-async function updateFloatingChatUI() {
+// Render floating UI elements using currently available memory cache (synchronous, 0ms latency)
+function renderFloatingChatUIElements() {
   const head = document.getElementById('cjFloatingChatHead');
   const win = document.getElementById('cjFloatingChatWindow');
   if (!head) return;
-  
-  if (!window._pinnedChatProfileIds || window._pinnedChatProfileIds.length === 0) {
-    head.style.display = 'none';
-    if (win) win.style.display = 'none';
-    collapseFloatingChat();
-    return;
-  }
-  
-  await ensureFloatingProfilesLoaded();
+
   head.style.display = 'flex';
   
   const backHead = document.getElementById('cjFloatingChatHeadBack');
@@ -1485,12 +1528,34 @@ async function updateFloatingChatUI() {
   }
 }
 
+// Update the floating bubble stack and switcher row instantly + load profiles in background
+function updateFloatingChatUI() {
+  const head = document.getElementById('cjFloatingChatHead');
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (!head) return;
+  
+  if (!window._pinnedChatProfileIds || window._pinnedChatProfileIds.length === 0) {
+    head.style.display = 'none';
+    if (win) win.style.display = 'none';
+    collapseFloatingChat();
+    return;
+  }
+  
+  // 1. Draw UI instantly using whatever is loaded in window.allProfiles cache (lag-free)
+  renderFloatingChatUIElements();
+  
+  // 2. Fetch missing items in background and redraw only on completion
+  ensureFloatingProfilesLoaded().then(() => {
+    renderFloatingChatUIElements();
+  });
+}
+
 // Switch active chat in floating mode
 async function selectFloatingChat(profileId) {
   window._activeFloatingProfileId = profileId;
   setupFloatingChatRealtime(profileId);
   await loadFloatingChatMessages(profileId);
-  await updateFloatingChatUI();
+  updateFloatingChatUI();
 }
 
 // Load message history for floating panel
