@@ -96,6 +96,7 @@ async function executeTourStep() {
   // Clear previous highlights
   if (currentHighlightedEl) {
     currentHighlightedEl.classList.remove('tour-highlight');
+    currentHighlightedEl.classList.remove('tour-highlight-static');
   }
 
   const targetEl = document.querySelector(step.element);
@@ -113,6 +114,11 @@ async function executeTourStep() {
   // Highlight target element
   currentHighlightedEl = targetEl;
   targetEl.classList.add('tour-highlight');
+  // Only apply relative position if static, to preserve fixed/absolute layouts
+  const computedPos = window.getComputedStyle(targetEl).position;
+  if (computedPos === 'static') {
+    targetEl.classList.add('tour-highlight-static');
+  }
 
   // Render tooltip content
   const isFirst = currentTourIndex === 0;
@@ -203,6 +209,7 @@ function exitAppTour() {
 function endAppTour(completed = false) {
   if (currentHighlightedEl) {
     currentHighlightedEl.classList.remove('tour-highlight');
+    currentHighlightedEl.classList.remove('tour-highlight-static');
     currentHighlightedEl = null;
   }
   
