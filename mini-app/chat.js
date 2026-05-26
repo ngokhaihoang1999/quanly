@@ -269,10 +269,9 @@ async function parseMentionsAndNotify(message, profileId) {
     const sender = getEffectiveStaffCode();
     
     // Notify mentioned users
-    // Use 'reminder' (⏰) or 'chot_tv' (📅) which routes user to the profile detail page in notifications.js
     await createNotification(
       mentions, 
-      'reminder', 
+      'chat_mention', 
       `💬 Bạn được nhắc tới trong Thảo luận`, 
       `Trái: ${pName} · Từ ${sender}: ${message}`, 
       profileId

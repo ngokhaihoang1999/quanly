@@ -86,6 +86,11 @@ function getNotifNavFn(n) {
   switch (n.event_type) {
     case 'hapja_created':
       return `${markRead};${closePanel};switchMainTab(document.querySelector('[data-tab=\\'unit\\']'),'unit');setTimeout(()=>{ const el=document.getElementById('pendingHapjaSection'); if(el) el.scrollIntoView({behavior:'smooth'}); },300);`;
+    case 'chat_mention':
+      if (n.profile_id) {
+        return `${markRead};${closePanel};openProfileById('${n.profile_id}', null, 'chatTab');`;
+      }
+      return markRead;
     case 'hapja_approved':
     case 'hapja_rejected':
     case 'chot_tv':
@@ -156,10 +161,12 @@ function getNotifIcon(type) {
     chot_tv:'📅', bc_tv:'📝',
     lap_group_tv_bb:'🎓', bc_bb:'📋',
     mo_kt:'📖', drop_out:'🔴', pause:'⏸️', chot_center:'🏛️', reminder:'⏰',
-    bb_reminder:'📚', bb_report_reminder:'✍️', bb_milestone:'⭐'
+    bb_reminder:'📚', bb_report_reminder:'✍️', bb_milestone:'⭐',
+    chat_mention:'💬'
   };
   return m[type] || '🔔';
 }
+
 
 // getTimeAgo() → moved to utils.js
 
@@ -253,8 +260,10 @@ async function _addGvbbForScope(scopeSet) {
 // ─── CREATE NOTIFICATIONS ──────────────────────────────────────────────────────
 const ALL_EVENT_TYPES = [
   'hapja_created','hapja_approved','hapja_rejected',
-  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','pause','chot_center','reminder','bb_reminder','bb_report_reminder','bb_milestone'
+  'chot_tv','bc_tv','lap_group_tv_bb','bc_bb','mo_kt','drop_out','pause','chot_center','reminder','bb_reminder','bb_report_reminder','bb_milestone',
+  'chat_mention'
 ];
+
 
 async function getMyPrefs() {
   if (_notifPrefsCache) return _notifPrefsCache;
@@ -369,7 +378,9 @@ const NOTIF_EVENT_LABELS = {
   bb_reminder:       { label: 'Nhắc buổi học BB',        icon: '📚' },
   bb_report_reminder:{ label: 'Nhắc viết BC BB',         icon: '✍️' },
   bb_milestone:      { label: 'Milestone BB→Center',     icon: '⭐' },
+  chat_mention:      { label: 'Nhắc tới trong Thảo luận', icon: '💬' },
 };
+
 
 async function openNotifSettings() {
   notifPanelOpen = false;

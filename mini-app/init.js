@@ -195,11 +195,20 @@ function _getDeepLinkProfileId() {
 
 let _deepLinkHandled = false;
 function _handleDeepLink() {
-  var pid = _getDeepLinkProfileId();
-  if (!pid || _deepLinkHandled) return;
+  var param = _getDeepLinkProfileId();
+  if (!param || _deepLinkHandled) return;
   _deepLinkHandled = true;
+  
+  let pid = param;
+  let tabId = null;
+  if (param.includes('_')) {
+    const parts = param.split('_');
+    pid = parts[0];
+    tabId = parts[1];
+  }
+  
   if (typeof openProfileById === 'function' && allProfiles && allProfiles.length > 0) {
-    openProfileById(pid);
+    openProfileById(pid, null, tabId);
   }
 }
 

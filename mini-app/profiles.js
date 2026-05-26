@@ -60,7 +60,7 @@ function _filterProfilesNow() {
 }
 
 // ============ PROFILE DETAIL ============
-async function openProfileById(id, evt) {
+async function openProfileById(id, evt, initialTabId) {
   if (!id || id==='undefined') return;
   // Find the card element: use the event target (exact click) instead of querySelector (which grabs first match in DOM)
   let cardEl = null;
@@ -97,9 +97,9 @@ async function openProfileById(id, evt) {
       p.gvbb_staff_code = gvbb || '';
     } catch(e) { showToast('❌ Lỗi mở hồ sơ'); return; }
   }
-  openProfile(p, cardEl);
+  openProfile(p, cardEl, initialTabId);
 }
-async function openProfile(p, cardEl) {
+async function openProfile(p, cardEl, initialTabId) {
   currentProfileId = p.id;
   // Animated profile transition
   if (typeof ProfileTransition !== 'undefined') {
@@ -322,18 +322,17 @@ async function openProfile(p, cardEl) {
   // Sinka: lazy-load khi mở tab (trigger trong switchFormTab)
 
   // ── Smart default tab theo phase ──────────────────────────────────────────
-  // Phase tu_van_hinh hoặc chakki mà đã có TVV → mở tab TV để viết BC
-  // Phase tu_van (Group TV) → mở tab BB (và Tư Duy nếu accessible)
-  // Còn lại → Giai đoạn
-  let defaultTabId = 'journeyTab';    // mặc định Giai đoạn
+  let defaultTabId = initialTabId || 'journeyTab';    // mặc định Giai đoạn
   let defaultTabEl = null;
 
-  if (['tu_van_hinh','chakki','new'].includes(ph) && showTabTV) {
-    // Có TVV → mở tab TV để viết báo cáo
-    defaultTabId = 'tuVan';
-  } else if (ph === 'tu_van' && canEditBB) {
-    // Đã vào Group TV (phase 3) → mở BB
-    defaultTabId = 'bienBan';
+  if (!initialTabId) {
+    if (['tu_van_hinh','chakki','new'].includes(ph) && showTabTV) {
+      // Có TVV → mở tab TV để viết báo cáo
+      defaultTabId = 'tuVan';
+    } else if (ph === 'tu_van' && canEditBB) {
+      // Đã vào Group TV (phase 3) → mở BB
+      defaultTabId = 'bienBan';
+    }
   }
 
   document.querySelectorAll('#profileTabs .form-tab').forEach(t => t.classList.remove('active'));
@@ -347,6 +346,10 @@ async function openProfile(p, cardEl) {
   if (defaultTabEl && defaultCard && defaultCard.style.display !== 'none' && defaultTabEl.style.display !== 'none') {
     defaultTabEl.classList.add('active');
     defaultCard.classList.add('active');
+    if (defaultTabId === 'chatTab') {
+      if (typeof markChatAsRead === 'function') markChatAsRead(p.id);
+      if (typeof loadProfileChat === 'function') loadProfileChat(p.id);
+    }
   } else {
     // Fallback: Giai đoạn
     const journeyTabEl = [...document.querySelectorAll('#profileTabs .form-tab')]

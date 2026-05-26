@@ -12,17 +12,24 @@ const corsHeaders = {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // Format a nice Telegram message per event type
-function formatTgMessage(eventType: string, title: string, body: string | null): string {
+function formatTgMessage(eventType: string, title: string, body: string | null, profileId?: string | null): string {
   const icons: Record<string, string> = {
     hapja_created: '🍎', hapja_approved: '✅', hapja_rejected: '❌',
     chot_tv: '📅', bc_tv: '📝', chot_bb: '🎓', bc_bb: '📋',
     mo_kt: '📖', drop_out: '🔴', pause: '⏸️', chot_center: '🏛️', reminder: '⏰',
     lap_group_tv_bb: '🎓', bb_reminder: '📚', bb_report_reminder: '✍️', bb_milestone: '⭐',
+    chat_mention: '💬',
   };
   const icon = icons[eventType] || '🔔';
   let msg = `${icon} *${title}*`;
   if (body) msg += `\n${body}`;
-  msg += `\n\n_Mở Mini App để xem chi tiết_`;
+  
+  if (profileId) {
+    const startAppParam = eventType === 'chat_mention' ? `${profileId}_chatTab` : profileId;
+    msg += `\n\n[🔗 Mở Mini App để xem chi tiết](https://t.me/quanlyhcm_bot/app?startapp=${startAppParam})`;
+  } else {
+    msg += `\n\n_Mở Mini App để xem chi tiết_`;
+  }
   return msg;
 }
 
@@ -54,7 +61,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const message = formatTgMessage(event_type, title || '', body || '');
+    const message = formatTgMessage(event_type, title || '', body || '', profile_id);
     const results: any[] = [];
 
     // ── 1. Send to individual staff (private chat) ──
@@ -134,7 +141,16 @@ Deno.serve(async (req: Request) => {
 
     for (const gid of groupIds) {
       const footer = groupFooters[event_type] || defaultFooter;
-      const groupMsg = `${message.replace('_Mở Mini App để xem chi tiết_', `_${footer}_`)}`;
+      let groupMsg = message;
+      if (profile_id) {
+        const startAppParam = event_type === 'chat_mention' ? `${profile_id}_chatTab` : profile_id;
+        groupMsg = message.replace(
+          `[🔗 Mở Mini App để xem chi tiết](https://t.me/quanlyhcm_bot/app?startapp=${startAppParam})`,
+          `_${footer}_\n[🔗 Mở Mini App](https://t.me/quanlyhcm_bot/app?startapp=${startAppParam})`
+        );
+      } else {
+        groupMsg = message.replace('_Mở Mini App để xem chi tiết_', `_${footer}_`);
+      }
       const tgData = await sendTelegramMessage(gid, groupMsg);
       results.push({
         group_chat_id: gid,
