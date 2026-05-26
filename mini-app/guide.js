@@ -144,8 +144,10 @@ function positionTourTooltip(targetEl) {
   const rect = targetEl.getBoundingClientRect();
   const winW = window.innerWidth;
   const winH = window.innerHeight;
-  const tooltipW = 280;
-  const tooltipH = 150; // estimate max height
+  
+  // Measure actual rendered tooltip dimensions
+  const tooltipW = tourTooltipEl.offsetWidth || 280;
+  const tooltipH = tourTooltipEl.offsetHeight || 150;
 
   let top = 0;
   let left = 0;

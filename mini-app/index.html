@@ -6,9 +6,9 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026052620" />
-  <link rel="stylesheet" href="avatar.css?v=2026052620" />
-  <link rel="stylesheet" href="reports.css?v=2026052620" />
+  <link rel="stylesheet" href="styles.css?v=2026052622" />
+  <link rel="stylesheet" href="avatar.css?v=2026052622" />
+  <link rel="stylesheet" href="reports.css?v=2026052622" />
 </head>
 <body>
 <div class="header">
@@ -38,6 +38,7 @@
     <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap;">📅 Kỳ:</span>
     <select id="semesterSelect" onchange="switchSemester(this.value)" style="flex:1;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text1);"></select>
     <button id="semesterManageBtn" onclick="openSemesterManager()" style="display:none;font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;">⚙️ Quản lý</button>
+    <button id="guideBtn" onclick="startAppTour()" title="Hướng dẫn sử dụng" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--accent);cursor:pointer;white-space:nowrap;font-weight:600;display:flex;align-items:center;gap:4px;margin-right:4px;">❓ Hướng dẫn</button>
     <button id="refreshTabBtn" onclick="refreshCurrentTab()" title="Tải lại dữ liệu tab hiện tại" style="font-size:14px;padding:2px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;color:var(--text2);cursor:pointer;line-height:1;transition:transform 0.3s;">🔄</button>
   </div>
   <div class="tab-bar tab-bar--compact" id="mainTabBar">
@@ -903,40 +904,40 @@
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="utils.js?v=2026052620"></script>
-<script src="combobox.js?v=2026052620"></script>
-<script src="webhook.js?v=2026052620"></script>
-<script src="avatar.js?v=2026052620"></script>
-<script src="reports.js?v=2026052620"></script>
-<script src="transitions.js?v=2026052620"></script>
+<script src="utils.js?v=2026052622"></script>
+<script src="combobox.js?v=2026052622"></script>
+<script src="webhook.js?v=2026052622"></script>
+<script src="avatar.js?v=2026052622"></script>
+<script src="reports.js?v=2026052622"></script>
+<script src="transitions.js?v=2026052622"></script>
 <!-- ── Core + Extracted Modules (dependency order) ── -->
-<script src="core.js?v=2026052620"></script>
-<script src="pin.js?v=2026052620"></script>
-<script src="permissions.js?v=2026052620"></script>
-<script src="desktop.js?v=2026052620"></script>
-<script src="settings.js?v=2026052620"></script>
-<script src="fruit-actions.js?v=2026052620"></script>
+<script src="core.js?v=2026052622"></script>
+<script src="pin.js?v=2026052622"></script>
+<script src="permissions.js?v=2026052622"></script>
+<script src="desktop.js?v=2026052622"></script>
+<script src="settings.js?v=2026052622"></script>
+<script src="fruit-actions.js?v=2026052622"></script>
 <!-- ── Feature Modules ── -->
-<script src="dashboard.js?v=2026052620"></script>
-<script src="profiles.js?v=2026052620"></script>
-<script src="hapja.js?v=2026052620"></script>
-<script src="records.js?v=2026052620"></script>
-<script src="staff.js?v=2026052620"></script>
-<script src="structure.js?v=2026052620"></script>
-<script src="calendar.js?v=2026052620"></script>
-<script src="notification.js?v=2026052620"></script>
-<script src="priority.js?v=2026052620"></script>
-<script src="notes.js?v=2026052620"></script>
-<script src="sinka.js?v=2026052620"></script>
-<script src="dkbb.js?v=2026052620"></script>
-<script src="strategy.js?v=2026052620"></script>
-<script src="lacie.js?v=2026052620"></script>
-<script src="ai-parse.js?v=2026052620"></script>
-<script src="mindmap.js?v=2026052620"></script>
-<script src="chat.js?v=2026052620"></script>
-<script src="guide.js?v=2026052620"></script>
+<script src="dashboard.js?v=2026052622"></script>
+<script src="profiles.js?v=2026052622"></script>
+<script src="hapja.js?v=2026052622"></script>
+<script src="records.js?v=2026052622"></script>
+<script src="staff.js?v=2026052622"></script>
+<script src="structure.js?v=2026052622"></script>
+<script src="calendar.js?v=2026052622"></script>
+<script src="notification.js?v=2026052622"></script>
+<script src="priority.js?v=2026052622"></script>
+<script src="notes.js?v=2026052622"></script>
+<script src="sinka.js?v=2026052622"></script>
+<script src="dkbb.js?v=2026052622"></script>
+<script src="strategy.js?v=2026052622"></script>
+<script src="lacie.js?v=2026052622"></script>
+<script src="ai-parse.js?v=2026052622"></script>
+<script src="mindmap.js?v=2026052622"></script>
+<script src="chat.js?v=2026052622"></script>
+<script src="guide.js?v=2026052622"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=2026052620"></script>
+<script src="init.js?v=2026052622"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;

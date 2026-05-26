@@ -4,7 +4,7 @@
 Write-Host "Checking recent GitHub Actions runs..." -ForegroundColor Cyan
 
 $repo = "ngokhaihoang1999/quanly"
-$url = "https://api.github.com/repos/$repo/actions/runs?per_page=5"
+$url = "https://api.github.com/repos/$repo/actions/runs?per_page=15"
 
 try {
     $response = curl.exe -s -L $url
