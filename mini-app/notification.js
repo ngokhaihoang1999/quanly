@@ -393,7 +393,7 @@ const NOTIF_EVENT_LABELS = {
   bb_report_reminder:{ label: 'Nhắc viết BC BB',         icon: '✍️' },
   bb_milestone:      { label: 'Mốc tiến độ BB (Bài đặc biệt, PV, ĐK Center)', icon: '⭐' },
   chat_mention:      { label: 'Nhắc tới trong Thảo luận', icon: '💬' },
-  new_btvn:          { label: 'Bài tập về nhà mới',       icon: '📝' },
+  new_btvn:          { label: 'Báo cáo BTVN học sinh',    icon: '📝' },
   new_team_meeting:  { label: 'Ghi nhận Họp Team mới',    icon: '🤝' },
 };
 
