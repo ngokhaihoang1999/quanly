@@ -77,7 +77,7 @@ const JONDO_STEPS_DATA = [
         <li>Bấm nút <b>➕ (FAB)</b> ở góc dưới bên phải màn hình chính.</li>
         <li>Điền đầy đủ thông tin ban đầu của học viên (Họ tên, năm sinh, TVV phụ trách, v.v.).</li>
         <li>Sau khi gửi, phiếu sẽ nằm ở trạng thái <i>Chờ duyệt</i> trong mục <b>Check Hapja</b>.</li>
-        <li><b>Người đại diện (NDD)</b> sẽ vào xem xét thông tin và bấm duyệt. Khi được duyệt, hồ sơ (Profile) chính thức của học viên sẽ tự động được hệ thống tạo lập.</li>
+        <li><b>Cấp quản lý được phân quyền (như Tổ trưởng, Nhóm trưởng, Khu vực trưởng)</b> sẽ vào xem xét thông tin và bấm duyệt. Khi được duyệt, hồ sơ (Profile) chính thức của học viên sẽ tự động được hệ thống tạo lập.</li>
       </ul>
       <div class="guide-illustration">
         <div class="guide-ill-row"><span class="guide-ill-badge">FAB ➕</span><div class="guide-ill-bar fill"></div></div>
@@ -118,9 +118,9 @@ const JONDO_STEPS_DATA = [
       <p><b>Theo dõi sát sao tình hình học viên:</b></p>
       <ul>
         <li>Trong hồ sơ học viên, chọn mục <b>Nhật ký tư vấn (TV)</b>.</li>
-        <li>Nhấn <b>➕ Thêm ghi nhận</b> để nhập báo cáo sau mỗi buổi tư vấn hoặc gặp gỡ học viên.</li>
+        <li>Người thực hiện tư vấn (TVV) sẽ nhấn <b>➕ Thêm ghi nhận</b> để nhập báo cáo sau mỗi buổi tư vấn.</li>
         <li>Báo cáo bao gồm: Ngày tư vấn, nội dung trao đổi, đánh giá mức độ tiếp thu, và các ghi chú tâm lý đặc biệt.</li>
-        <li>NDD và Tổ trưởng sẽ đọc các báo cáo này để cùng thảo luận hướng hỗ trợ tốt nhất cho học viên.</li>
+        <li>Người dẫn dắt (NDD) và Tổ trưởng sẽ theo dõi sát sao nội dung này để cùng thảo luận hướng hỗ trợ tốt nhất.</li>
       </ul>
       <div class="guide-illustration">
         <div class="guide-ill-row"><span class="guide-ill-badge">Gặp gỡ 🤝</span><div class="guide-ill-bar fill"></div></div>
@@ -137,7 +137,7 @@ const JONDO_STEPS_DATA = [
     content: `
       <p><b>Phối hợp hỗ trợ đồng bộ:</b></p>
       <ul>
-        <li>Mỗi học viên có một <b>Nhóm hỗ trợ (Group TV-BB)</b> gồm Tư vấn viên (TVV), Người đại diện (NDD) và Giáo viên (GVBB).</li>
+        <li>Mỗi học viên có một <b>Nhóm hỗ trợ (Group TV-BB)</b> gồm Tư vấn viên (TVV), Người dẫn dắt (NDD), Giáo viên (GVBB) và Lá (nếu có).</li>
         <li>Trong Profile, bấm vào biểu tượng Telegram hoặc nút <b>Liên kết Group</b> để gắn link nhóm Telegram hỗ trợ.</li>
         <li>Khi liên kết thành công, mọi thông báo quan trọng của học viên (báo cáo BTVN mới, cập nhật mốc tiến độ) sẽ tự động gửi thẳng vào group Telegram này thông qua Telegram Bot của hệ thống, giúp các nhân sự không bị bỏ lỡ thông tin.</li>
       </ul>
@@ -157,12 +157,12 @@ const JONDO_STEPS_DATA = [
     content: `
       <p><b>Kiểm soát tiến độ hoàn thành hồ sơ:</b></p>
       <ul>
-        <li>Tiến độ của một Jondo được đánh giá qua 4 mốc quan trọng trong Profile:</li>
+        <li>Tiến độ của một Jondo được đánh giá qua 4 mốc quan trọng (được ghi nhận bởi Giáo viên BB hoặc nhân sự phụ trách):</li>
         <li>1. <b>Bài đặc biệt:</b> Bài viết hoặc thu hoạch đặc biệt của học viên.</li>
         <li>2. <b>Phỏng vấn GVBB:</b> Đánh giá chuyên môn từ Giáo viên hướng dẫn.</li>
         <li>3. <b>Đăng ký Center:</b> Đăng ký cơ sở học tập chính thức cho học viên.</li>
         <li>4. <b>Phỏng vấn Học viên:</b> Buổi phỏng vấn cuối cùng kiểm tra chất lượng.</li>
-        <li>Khi hoàn thành mốc nào, tích chọn mốc đó trong Profile để hệ thống cập nhật tiến độ tổng quan.</li>
+        <li>Khi hoàn thành mốc nào, nhân sự phụ trách sẽ bấm ghi nhận mốc đó trong dòng thời gian của hồ sơ.</li>
       </ul>
       <div class="guide-illustration">
         <div class="guide-ill-row"><span class="guide-ill-badge">Mốc 1</span><span>Bài đặc biệt 📝</span><div class="guide-ill-bar fill"></div></div>
