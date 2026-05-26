@@ -79,10 +79,14 @@ const JONDO_STEPS_DATA = [
         <li>Sau khi gửi, phiếu sẽ nằm ở trạng thái <i>Chờ duyệt</i> trong mục <b>Check Hapja</b>.</li>
         <li><b>Cấp quản lý được phân quyền (như Tổ trưởng, Nhóm trưởng, Khu vực trưởng)</b> sẽ vào xem xét thông tin và bấm duyệt. Khi được duyệt, hồ sơ (Profile) chính thức của học viên sẽ tự động được hệ thống tạo lập.</li>
       </ul>
-      <div class="guide-illustration">
-        <div class="guide-ill-row"><span class="guide-ill-badge">FAB ➕</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Phiếu Hapja 📋</span><div class="guide-ill-bar"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Duyệt ➔ Profile 👤</span><div class="guide-ill-bar fill"></div></div>
+      <div class="guide-flowchart">
+        <div class="guide-flow-step"><span>FAB ➕</span><small>Tạo phiếu</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Phiếu Hapja 📋</span><small>Chờ duyệt</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Duyệt ✅</span><small>Bởi quản lý</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Tạo Profile 👤</span><small>Mở hồ sơ</small></div>
       </div>
     `
   },
@@ -101,10 +105,12 @@ const JONDO_STEPS_DATA = [
         <li>⏸️ <b>Pause:</b> Học viên tạm dừng học (do bận, ốm, chuyển khóa). Cần theo dõi để kích hoạt lại.</li>
         <li>🔴 <b>Drop-out:</b> Học viên đã nghỉ học hẳn. Khi chuyển trạng thái này, cần chọn lý do cụ thể (tài chính, thời gian, mất liên lạc, v.v.) để hệ thống thống kê.</li>
       </ul>
-      <div class="guide-illustration">
-        <div class="guide-ill-row"><span style="color:var(--green)">🟢 Alive (Hoạt động)</span><div class="guide-ill-bar fill" style="background:var(--green)"></div></div>
-        <div class="guide-ill-row"><span style="color:var(--yellow)">⏸️ Pause (Tạm dừng)</span><div class="guide-ill-bar fill" style="background:var(--yellow)"></div></div>
-        <div class="guide-ill-row"><span style="color:var(--red)">🔴 Drop-out (Nghỉ học)</span><div class="guide-ill-bar fill" style="background:var(--red)"></div></div>
+      <div class="guide-flowchart">
+        <div class="guide-flow-step"><span style="color:var(--green)">Alive 🟢</span><small>Hoạt động</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span style="color:var(--yellow)">Pause ⏸️</span><small>Tạm dừng</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span style="color:var(--red)">Drop-out 🔴</span><small>Nghỉ học</small></div>
       </div>
     `
   },
@@ -122,9 +128,12 @@ const JONDO_STEPS_DATA = [
         <li>Báo cáo bao gồm: Ngày tư vấn, nội dung trao đổi, đánh giá mức độ tiếp thu, và các ghi chú tâm lý đặc biệt.</li>
         <li>Người dẫn dắt (NDD) và Tổ trưởng sẽ theo dõi sát sao nội dung này để cùng thảo luận hướng hỗ trợ tốt nhất.</li>
       </ul>
-      <div class="guide-illustration">
-        <div class="guide-ill-row"><span class="guide-ill-badge">Gặp gỡ 🤝</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Báo cáo TV 💬</span><div class="guide-ill-bar fill"></div></div>
+      <div class="guide-flowchart">
+        <div class="guide-flow-step"><span>Gặp gỡ 🤝</span><small>Lên lịch TV</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Tư vấn 💬</span><small>Thực hiện TV</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Báo cáo TV 📝</span><small>Ghi nhận buổi TV</small></div>
       </div>
     `
   },
@@ -141,10 +150,14 @@ const JONDO_STEPS_DATA = [
         <li>Trong Profile, bấm vào biểu tượng Telegram hoặc nút <b>Liên kết Group</b> để gắn link nhóm Telegram hỗ trợ.</li>
         <li>Khi liên kết thành công, mọi thông báo quan trọng của học viên (báo cáo BTVN mới, cập nhật mốc tiến độ) sẽ tự động gửi thẳng vào group Telegram này thông qua Telegram Bot của hệ thống, giúp các nhân sự không bị bỏ lỡ thông tin.</li>
       </ul>
-      <div class="guide-illustration">
-        <div class="guide-ill-row"><span class="guide-ill-badge">Nhân sự 👥</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Group Telegram 💬</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Bot thông báo 🤖</span><div class="guide-ill-bar fill"></div></div>
+      <div class="guide-flowchart">
+        <div class="guide-flow-step"><span>Phân sự 👥</span><small>TVV, NDD, GVBB</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Group Telegram 💬</span><small>Tạo group</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Liên kết 🔗</span><small>Gắn link group</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Bot Auto 🤖</span><small>Báo cáo tự động</small></div>
       </div>
     `
   },
@@ -164,32 +177,40 @@ const JONDO_STEPS_DATA = [
         <li>4. <b>Phỏng vấn Học viên:</b> Buổi phỏng vấn cuối cùng kiểm tra chất lượng.</li>
         <li>Khi hoàn thành mốc nào, nhân sự phụ trách sẽ bấm ghi nhận mốc đó trong dòng thời gian của hồ sơ.</li>
       </ul>
-      <div class="guide-illustration">
-        <div class="guide-ill-row"><span class="guide-ill-badge">Mốc 1</span><span>Bài đặc biệt 📝</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Mốc 2</span><span>Phỏng vấn GVBB 🗣️</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Mốc 3</span><span>Đăng ký Center 🏢</span><div class="guide-ill-bar"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Mốc 4</span><span>Phỏng vấn Học viên 🤝</span><div class="guide-ill-bar"></div></div>
+      <div class="guide-flowchart">
+        <div class="guide-flow-step"><span>Bài đặc biệt ⭐</span><small>Mốc 1</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>PV GVBB 🎤</span><small>Mốc 2</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>ĐKý Center 📝</span><small>Mốc 3</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>PV Học viên 🎓</span><small>Mốc 4</small></div>
       </div>
     `
   },
   {
     step: 6,
-    title: "6. Chốt Center (Thẻ Sinka) 🏢",
+    title: "6. Điền Sinka & Chốt Center 🏛️",
     label: "Chốt Center",
-    icon: "🏢",
-    keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "hoàn thành"],
+    icon: "🏛️",
+    keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "thẻ hv", "hoàn thành"],
     content: `
-      <p><b>Hoàn tất quy trình Jondo chuyển lên Center:</b></p>
+      <p><b>Hoàn tất hồ sơ Jondo chuyển lên lớp Center:</b></p>
       <ul>
-        <li>Khi học viên đạt đủ điều kiện và hoàn thành các mốc tiến độ, vào tab <b>Thẻ Sinka</b> trong Profile.</li>
-        <li>Điền đầy đủ thông tin hành chính nhập học chi tiết của học viên.</li>
-        <li>Bấm <b>Xuất file Word (Thẻ học viên)</b> để tải xuống mẫu thẻ nhập học chính thức được tự động điền toàn bộ dữ liệu.</li>
-        <li>Sau khi chốt Sinka thành công, trạng thái Jondo sẽ được cập nhật hoàn thành chuyển sang Center.</li>
+        <li><b>Phiếu Sinka (Thẻ HV):</b> Đây là báo cáo thông tin tổng hợp của học viên, được điền <i>xuyên suốt và liên tục</i> ngay sau khi bước vào giai đoạn Lập group TV-BB (phase <code>tu_van</code> trở đi).</li>
+        <li><b>Điều kiện Chốt Center:</b> Sau khi học viên hoàn thành đầy đủ cả 4 mốc tiến độ quan trọng ở giai đoạn học BB (Bài đặc biệt, PV GVBB, ĐK Center, PV Học viên), nút <b>🏛️ Chốt Center</b> sẽ hiển thị.</li>
+        <li><b>Hoàn thành:</b> Nhấn nút để chính thức chốt hồ sơ chuyển sang giai đoạn Center. Bạn có thể vào tab <b>Thẻ HV</b> để kiểm tra thông tin Sinka đã tích lũy và bấm <b>Xuất file Word (Thẻ học viên)</b> để tải xuống mẫu thẻ nhập học chính thức.</li>
       </ul>
-      <div class="guide-illustration">
-        <div class="guide-ill-row"><span class="guide-ill-badge">Form Sinka 📝</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Xuất file Word 📄</span><div class="guide-ill-bar fill"></div></div>
-        <div class="guide-ill-row"><span class="guide-ill-badge">Center 🏢</span><div class="guide-ill-bar fill"></div></div>
+      <div class="guide-flowchart">
+        <div class="guide-flow-step"><span>Lập Group TV-BB 🤝</span><small>Giai đoạn TV</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Điền Sinka 📝</span><small>Tích lũy liên tục</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Đủ 4 mốc BB ⭐</span><small>Giai đoạn BB</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Chốt Center 🏛️</span><small>Bấm nút chuyển phase</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Xuất Word 📄</span><small>Thẻ học viên</small></div>
       </div>
     `
   }
@@ -215,6 +236,63 @@ const WIKI_ITEMS = [
     title: "Làm thế nào để sửa lỗi hiển thị dữ liệu sai kỳ học?",
     keywords: ["kỳ học", "tháng", "sai dữ liệu", "reload", "tải lại", "cập nhật"],
     content: "Hãy kiểm tra xem bộ chọn <b>📅 Kỳ</b> ở trên cùng có đang chọn đúng Kỳ hiện tại của bạn không. Dữ liệu sẽ tự động lọc theo kỳ. Nếu dữ liệu chưa được cập nhật mới nhất, hãy bấm nút <b>🔄 (Tải lại)</b> ở góc phải thanh kỳ học để tải lại dữ liệu tab hiện tại."
+  }
+];
+
+const PROFILE_TABS_DATA = [
+  {
+    id: "info",
+    title: "1. Thông tin",
+    icon: "ℹ️",
+    desc: "<b>Quản lý thông tin hành chính & liên hệ:</b> Nơi xem và cập nhật thông tin cá nhân (họ tên, năm sinh, SĐT), người kết nối, TVV phụ trách, nhóm/tổ quản lý và ghi chú cơ bản của học viên."
+  },
+  {
+    id: "stage",
+    title: "2. Giai đoạn",
+    icon: "🗓️",
+    desc: "<b>Theo dõi vòng đời học tập (5 Phase):</b> Quản lý quá trình chuyển giai đoạn từ Chakki ➔ TV Hình ➔ Tư vấn ➔ BB ➔ Center. Chứa các nút chuyển phase quan trọng như <i>Lập group TV-BB</i>, <i>Mở KT</i> và <i>Chốt Center</i>."
+  },
+  {
+    id: "tv",
+    title: "3. TV (Tư vấn)",
+    icon: "💬",
+    desc: "<b>Quản lý lịch hẹn & báo cáo tư vấn:</b> Lưu trữ lịch hẹn và nội dung chi tiết các buổi tư vấn (sử dụng công cụ test tâm lý như Enneagram, MBTI, phân tích điểm hại và đề xuất hướng đi tiếp theo của TVV)."
+  },
+  {
+    id: "bb",
+    title: "4. BB (Học tập)",
+    icon: "📖",
+    desc: "<b>Theo dõi 12 buổi học BB & 4 Mốc tiến độ:</b> Ghi nhận báo cáo sau mỗi buổi học của GVBB (phản ứng, khai thác mới). Đây cũng là nơi hiển thị 4 nút tích mốc tiến độ hồ sơ (Bài đặc biệt, PV GVBB, ĐK Center, PV HS) trước khi chốt Center."
+  },
+  {
+    id: "btvn",
+    title: "5. BTVN (Bài tập)",
+    icon: "📝",
+    desc: "<b>Giao và chấm bài tập về nhà:</b> GVBB hoặc nhân sự phụ trách giao bài tập kèm hạn nộp. Hệ thống tự động thông báo và ghi nhận trạng thái làm bài/nộp bài của học viên."
+  },
+  {
+    id: "notes",
+    title: "6. Ghi chú",
+    icon: "🗒️",
+    desc: "<b>Ghi chú nội bộ:</b> Không gian lưu trữ các ghi nhận nhanh, thông tin nhạy cảm hoặc nhắc nhở riêng của nhóm hỗ trợ để phối hợp chăm sóc học viên đồng bộ."
+  },
+  {
+    id: "discuss",
+    title: "7. Thảo luận",
+    icon: "💬",
+    desc: "<b>Kênh chat nội bộ nhóm hỗ trợ:</b> Nơi trao đổi trực tiếp giữa TVV, NDD, GVBB và các Lá phụ trách học viên để thảo luận nhanh các vấn đề phát sinh mà không cần nhắn qua ứng dụng ngoài."
+  },
+  {
+    id: "sinkacard",
+    title: "8. Thẻ HV (Sinka)",
+    icon: "📜",
+    desc: "<b>Báo cáo tổng hợp & Thẻ nhập học Sinka:</b> Được điền xuyên suốt ngay sau khi lập group TV-BB để tích lũy thông tin hành chính chi tiết. Hỗ trợ tự động điền dữ liệu từ hồ sơ và xuất file Word mẫu Thẻ Học viên Center chính thức."
+  },
+  {
+    id: "mindmap",
+    title: "9. Tư Duy",
+    icon: "🗺️",
+    desc: "<b>Sơ đồ mindmap trực quan:</b> Tổng hợp tóm tắt tâm lý, nhu cầu, công cụ tư vấn và định hướng chăm sóc dưới dạng sơ đồ tư duy hình cây trực quan (lazy-load Markmap CDN)."
   }
 ];
 
@@ -254,6 +332,7 @@ function openGuideCenter() {
         <!-- Navigation Tabs -->
         <div class="guide-tabs" id="guideTabs">
           <div class="guide-tab-btn active" id="gtab_jondo" onclick="switchGuideTab('jondo')">📋 Quản lý Jondo</div>
+          <div class="guide-tab-btn" id="gtab_tabs" onclick="switchGuideTab('tabs')">🗂️ 9 Tab Hồ Sơ</div>
           <div class="guide-tab-btn" id="gtab_help" onclick="switchGuideTab('help')">💡 Hỏi đáp & Trợ giúp</div>
         </div>
 
@@ -275,7 +354,22 @@ function openGuideCenter() {
           </div>
         </div>
 
-        <!-- Tab 2: FAQ & Tour launcher -->
+        <!-- Tab 2: 9 Tab Hồ sơ -->
+        <div id="guidePane_tabs" style="display:none;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; padding:4px 0;">
+            ${PROFILE_TABS_DATA.map(item => `
+              <div class="guide-profile-tab-card">
+                <div class="guide-profile-tab-header">
+                  <span class="icon">${item.icon}</span>
+                  <span class="title">${item.title}</span>
+                </div>
+                <div class="desc">${item.desc}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Tab 3: FAQ & Tour launcher -->
         <div id="guidePane_help" style="display:none;">
           <div style="display:flex; flex-direction:column; gap:8px;">
             ${WIKI_ITEMS.map((item, index) => `
@@ -321,9 +415,11 @@ function openGuideCenter() {
 function switchGuideTab(tab) {
   activeGuideTab = tab;
   document.getElementById('guidePane_jondo').style.display = tab === 'jondo' ? 'block' : 'none';
+  document.getElementById('guidePane_tabs').style.display = tab === 'tabs' ? 'block' : 'none';
   document.getElementById('guidePane_help').style.display = tab === 'help' ? 'block' : 'none';
 
   document.getElementById('gtab_jondo').classList.toggle('active', tab === 'jondo');
+  document.getElementById('gtab_tabs').classList.toggle('active', tab === 'tabs');
   document.getElementById('gtab_help').classList.toggle('active', tab === 'help');
   
   // Clear search query
@@ -391,14 +487,12 @@ function onGuideSearch(query) {
   if (!q) {
     if (stepper) stepper.style.display = 'flex';
     if (tabs) tabs.style.display = 'flex';
-    // Restore current active step or jondo pane
+    // Restore active pane
+    document.getElementById('guidePane_jondo').style.display = activeGuideTab === 'jondo' ? 'block' : 'none';
+    document.getElementById('guidePane_tabs').style.display = activeGuideTab === 'tabs' ? 'block' : 'none';
+    document.getElementById('guidePane_help').style.display = activeGuideTab === 'help' ? 'block' : 'none';
     if (activeGuideTab === 'jondo') {
-      document.getElementById('guidePane_jondo').style.display = 'block';
-      document.getElementById('guidePane_help').style.display = 'none';
       selectGuideStep(activeGuideStep);
-    } else {
-      document.getElementById('guidePane_jondo').style.display = 'none';
-      document.getElementById('guidePane_help').style.display = 'block';
     }
     return;
   }
@@ -407,6 +501,7 @@ function onGuideSearch(query) {
   if (stepper) stepper.style.display = 'none';
   if (tabs) tabs.style.display = 'none';
   document.getElementById('guidePane_jondo').style.display = 'block';
+  document.getElementById('guidePane_tabs').style.display = 'none';
   document.getElementById('guidePane_help').style.display = 'none';
   
   // Search Jondo steps
@@ -416,6 +511,13 @@ function onGuideSearch(query) {
            item.keywords.some(k => k.includes(q));
   });
   
+  // Search Profile tabs
+  const matchedTabs = PROFILE_TABS_DATA.filter(item => {
+    return item.title.toLowerCase().includes(q) || 
+           item.desc.toLowerCase().includes(q) ||
+           (item.id && item.id.toLowerCase().includes(q));
+  });
+  
   // Search FAQs Wiki
   const matchedWiki = WIKI_ITEMS.filter(item => {
     return item.title.toLowerCase().includes(q) || 
@@ -423,12 +525,12 @@ function onGuideSearch(query) {
            item.keywords.some(k => k.includes(q));
   });
   
-  if (matchedSteps.length === 0 && matchedWiki.length === 0) {
+  if (matchedSteps.length === 0 && matchedWiki.length === 0 && matchedTabs.length === 0) {
     panel.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">🔍</div>
         <div class="empty-title">Không tìm thấy kết quả</div>
-        <div class="empty-sub">Hãy thử gõ từ khóa khác như "hapja", "dropout", "sinka", "telegram"...</div>
+        <div class="empty-sub">Hãy thử gõ từ khóa khác như "hapja", "dropout", "sinka", "telegram", "sơ đồ"...</div>
       </div>
     `;
     return;
@@ -446,6 +548,23 @@ function onGuideSearch(query) {
         </div>
       `;
     });
+  }
+
+  if (matchedTabs.length > 0) {
+    html += `<div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:0.5px;margin-top:10px;">9 Tab Hồ sơ Trái quả (${matchedTabs.length})</div>`;
+    html += `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; margin-top:6px;">`;
+    matchedTabs.forEach(item => {
+      html += `
+        <div class="guide-profile-tab-card" style="margin-bottom:0;">
+          <div class="guide-profile-tab-header">
+            <span class="icon">${item.icon}</span>
+            <span class="title">${item.title}</span>
+          </div>
+          <div class="desc">${item.desc}</div>
+        </div>
+      `;
+    });
+    html += `</div>`;
   }
   
   if (matchedWiki.length > 0) {
