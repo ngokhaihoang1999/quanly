@@ -6,9 +6,9 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026052612" />
-  <link rel="stylesheet" href="avatar.css?v=2026052612" />
-  <link rel="stylesheet" href="reports.css?v=2026052612" />
+  <link rel="stylesheet" href="styles.css?v=2026052613" />
+  <link rel="stylesheet" href="avatar.css?v=2026052613" />
+  <link rel="stylesheet" href="reports.css?v=2026052613" />
 </head>
 <body>
 <div class="header">
@@ -272,23 +272,32 @@
             <span>✏️ Đang chỉnh sửa tin nhắn... (nhấn ESC để huỷ)</span>
             <button onclick="cancelEditChatMessage()" style="background:none; border:none; color:var(--red); font-weight:600; cursor:pointer; font-size:11px;">Huỷ</button>
           </div>
-          <div style="display:flex; gap:6px; align-items:center; width:100%;">
+          <!-- Chat Tag Suggestions Dropdown -->
+          <div id="chatTagSuggestions" class="chat-tag-suggestions" style="display:none; position:absolute; bottom:100%; left:0; right:0; max-height:220px; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 -4px 20px rgba(0,0,0,0.15); padding:6px; z-index:20; flex-direction:column; gap:2px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);"></div>
+          
+          <!-- Controls row -->
+          <div class="chat-controls-row" style="display:flex; align-items:center; width:100%; gap:6px;">
             <div class="chat-category-select-wrapper">
-              <select id="chat_category" class="chat-category-select" style="padding:9px 6px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:12px; cursor:pointer;">
+              <select id="chat_category" class="chat-category-select" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:12px; cursor:pointer; height:32px; font-weight:500;">
                 <option value="general">💬 Thường</option>
                 <option value="warning">⚠️ Cảnh báo</option>
                 <option value="strategy">🧭 Chiến lược</option>
                 <option value="important">🔔 Quan trọng</option>
               </select>
             </div>
-            <input type="text" id="profileChatInput" placeholder="Nhập tin nhắn... tag @JD để thông báo" class="chat-text-input" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px;" onkeydown="if(event.key==='Enter') sendProfileChatMessage(); else if(event.key==='Escape') cancelEditChatMessage();" />
-            <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="uploadChatImage(this)" />
-            <button type="button" class="chat-image-trigger" id="chatImageTrigger" onclick="document.getElementById('chatImageInput').click()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:36px; height:36px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Gửi hình ảnh">📎</button>
-            <button type="button" class="chat-emoji-trigger" onclick="toggleChatEmojiPicker()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:36px; height:36px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">😀</button>
-            <button class="save-btn chat-send-btn" onclick="sendProfileChatMessage()" style="margin:0; padding:9px 16px; width:auto; font-size:13px; flex-shrink:0;">Gửi</button>
+            
+            <input type="file" id="chatImageInput" style="display:none;" onchange="uploadChatImage(this)" />
+            <button type="button" class="chat-image-trigger" id="chatImageTrigger" onclick="document.getElementById('chatImageInput').click()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'" title="Gửi tệp đính kèm">📎</button>
+            <button type="button" class="chat-emoji-trigger" onclick="toggleChatEmojiPicker()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'" title="Chọn emoji">😀</button>
+          </div>
+          
+          <!-- Input row -->
+          <div class="chat-input-row" style="display:flex; gap:6px; align-items:center; width:100%;">
+            <input type="text" id="profileChatInput" placeholder="Nhập tin nhắn... tag @JD để thông báo" class="chat-text-input" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px;" onkeydown="if(event.key==='Enter') sendProfileChatMessage(); else if(event.key==='Escape') cancelEditChatMessage();" autocomplete="off" spellcheck="false" name="chat_msg_input_field" />
+            <button class="save-btn chat-send-btn" onclick="sendProfileChatMessage()" style="margin:0; padding:9px 16px; width:auto; font-size:13px; flex-shrink:0; height:36px; display:flex; align-items:center; justify-content:center;">Gửi</button>
           </div>
           <!-- Emoji picker container -->
-          <div id="chatEmojiPicker" class="chat-emoji-picker-panel" style="display:none; position:absolute; bottom:42px; right:0; width:280px; height:180px; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.15); padding:10px; z-index:10; grid-template-columns:repeat(7, 1fr); gap:6px;"></div>
+          <div id="chatEmojiPicker" class="chat-emoji-picker-panel" style="display:none; position:absolute; bottom:100%; right:0; width:280px; height:180px; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 -4px 16px rgba(0,0,0,0.15); padding:10px; z-index:10; grid-template-columns:repeat(7, 1fr); gap:6px;"></div>
         </div>
       </div>
     </div>
@@ -900,25 +909,25 @@
 <script src="settings.js?v=2026052610"></script>
 <script src="fruit-actions.js?v=2026052610"></script>
 <!-- ── Feature Modules ── -->
-<script src="dashboard.js?v=2026052612"></script>
-<script src="profiles.js?v=2026052612"></script>
-<script src="hapja.js?v=2026052612"></script>
-<script src="records.js?v=2026052612"></script>
-<script src="staff.js?v=2026052612"></script>
-<script src="structure.js?v=2026052612"></script>
-<script src="calendar.js?v=2026052612"></script>
-<script src="notification.js?v=2026052612"></script>
-<script src="priority.js?v=2026052612"></script>
-<script src="notes.js?v=2026052612"></script>
-<script src="sinka.js?v=2026052612"></script>
-<script src="dkbb.js?v=2026052612"></script>
-<script src="strategy.js?v=2026052612"></script>
-<script src="lacie.js?v=2026052612"></script>
-<script src="ai-parse.js?v=2026052612"></script>
-<script src="mindmap.js?v=2026052612"></script>
-<script src="chat.js?v=2026052612"></script>
+<script src="dashboard.js?v=2026052613"></script>
+<script src="profiles.js?v=2026052613"></script>
+<script src="hapja.js?v=2026052613"></script>
+<script src="records.js?v=2026052613"></script>
+<script src="staff.js?v=2026052613"></script>
+<script src="structure.js?v=2026052613"></script>
+<script src="calendar.js?v=2026052613"></script>
+<script src="notification.js?v=2026052613"></script>
+<script src="priority.js?v=2026052613"></script>
+<script src="notes.js?v=2026052613"></script>
+<script src="sinka.js?v=2026052613"></script>
+<script src="dkbb.js?v=2026052613"></script>
+<script src="strategy.js?v=2026052613"></script>
+<script src="lacie.js?v=2026052613"></script>
+<script src="ai-parse.js?v=2026052613"></script>
+<script src="mindmap.js?v=2026052613"></script>
+<script src="chat.js?v=2026052613"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=2026052612"></script>
+<script src="init.js?v=2026052613"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;

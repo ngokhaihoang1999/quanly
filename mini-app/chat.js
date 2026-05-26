@@ -60,6 +60,13 @@ async function loadProfileChat(profileId) {
     
     // Setup Supabase Realtime for this profile chat
     setupSupabaseRealtimeForChat(profileId);
+
+    // Bind tag autocomplete once
+    const input = document.getElementById('profileChatInput');
+    if (input && !input.dataset.tagAutocompleteBound) {
+      input.dataset.tagAutocompleteBound = '1';
+      setupChatTagAutocomplete();
+    }
     
     // Close emoji picker if open
     const picker = document.getElementById('chatEmojiPicker');
@@ -742,28 +749,49 @@ function unsubscribeProfileChat() {
   console.log('Cleaned up profile chat resources.');
 }
 
-// Format message text: Mentions, links, and inline images (Option 2 / Secure Telegram Proxy)
+// Format message text: Mentions, links, and inline images/documents (Secure Telegram Proxy)
 function formatChatMessageText(text) {
   let messageText = escHtml(text);
   
   // 1. Format mentions
   messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
 
-  // 2. Format links and check if they are images
+  // 2. Format links and check if they are images or documents
   const urlRegex = /(https?:\/\/[^\s<]+)/gi;
   messageText = messageText.replace(urlRegex, (url) => {
-    // Check if the link is an image URL (ends with standard extension or is a Telegram/Imgur file link)
-    const isTelegramFile = url.includes('/file/bot');
-    const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
+    const isTelegramFile = url.includes('/file/bot') || url.includes('/functions/v1/telegram-bot');
+    
+    let isDocFile = false;
+    let fileName = 'Tệp tin đính kèm';
+    
+    if (url.includes('/functions/v1/telegram-bot')) {
+      try {
+        const urlObj = new URL(url.replace(/&amp;/g, '&'));
+        const nameParam = urlObj.searchParams.get('name');
+        const fileParam = urlObj.searchParams.get('file') || '';
+        
+        if (nameParam) {
+          fileName = decodeURIComponent(nameParam);
+        } else {
+          fileName = fileParam.split('/').pop() || 'Tệp tin';
+        }
+        
+        if (fileParam.includes('documents/') || !/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileName)) {
+          isDocFile = true;
+        }
+      } catch (e) {
+        console.warn('URL parsing failed:', e);
+      }
+    }
+
+    const isImage = (/\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
                     isTelegramFile || 
                     url.includes('imgbb.com') || 
-                    url.includes('postimg.cc') || 
-                    url.includes('telegram.org/file/bot');
+                    url.includes('postimg.cc')) && !isDocFile;
     
     if (isImage) {
       let displayUrl = url;
-      if (isTelegramFile) {
-        // Extract the file path (anything after /file/bot<token>/)
+      if (isTelegramFile && !url.includes('/functions/v1/telegram-bot')) {
         const match = url.match(/\/file\/bot[^/]+\/(.+)/i);
         if (match && match[1]) {
           const filePath = match[1];
@@ -774,6 +802,16 @@ function formatChatMessageText(text) {
       return `
         <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation(); openChatImageModal('${displayUrl}')">
           <img src="${displayUrl}" style="width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
+        </div>
+      `;
+    } else if (isDocFile) {
+      return `
+        <div class="chat-file-card" onclick="event.stopPropagation(); window.open('${url}', '_blank')" style="display:flex; align-items:center; gap:10px; background:var(--surface2); padding:10px; border-radius:8px; border:1px solid var(--border); cursor:pointer; margin-top:6px; max-width:280px; transition:background 0.15s; user-select:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'">
+          <div style="font-size:24px;">📄</div>
+          <div style="flex:1; min-width:0; text-align:left;">
+            <div style="font-size:12px; font-weight:700; color:var(--text); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${fileName}">${fileName}</div>
+            <div style="font-size:10px; color:var(--text3);">Bấm để tải xuống</div>
+          </div>
         </div>
       `;
     } else {
@@ -804,7 +842,7 @@ function openChatImageModal(url) {
   modal.style.display = 'flex';
 }
 
-// Upload selected image to Telegram CDN via Edge Function POST proxy
+// Upload selected file/media to Telegram CDN via Edge Function POST proxy
 async function uploadChatImage(input) {
   const file = input.files?.[0];
   if (!file || !currentProfileId) return;
@@ -821,7 +859,7 @@ async function uploadChatImage(input) {
     triggerBtn.style.opacity = '0.5';
   }
 
-  showToast('⌛ Đang xử lý tải ảnh...');
+  showToast('⌛ Đang tải tệp đính kèm...');
 
   try {
     const formData = new FormData();
@@ -841,12 +879,12 @@ async function uploadChatImage(input) {
     if (data && data.url) {
       // Send the proxy URL to the chat DB
       await sendProxyImageMessage(data.url);
-      showToast('✅ Đã gửi ảnh');
+      showToast('✅ Đã gửi tệp đính kèm');
     } else {
       throw new Error('No URL returned from proxy server');
     }
   } catch (e) {
-    showToast('❌ Gửi ảnh thất bại');
+    showToast('❌ Gửi tệp thất bại');
     console.error('uploadChatImage error:', e);
   } finally {
     if (triggerBtn) {
@@ -883,7 +921,146 @@ async function sendProxyImageMessage(imageUrl) {
     // Automatically update my read stamp
     await markChatAsRead(currentProfileId);
   } catch(e) {
-    showToast('❌ Lỗi gửi ảnh');
+    showToast('❌ Lỗi gửi tin nhắn');
     console.error('sendProxyImageMessage:', e);
+  }
+}
+
+// ============ CHAT TAG AUTOCOMPLETE LOGIC ============
+let _chatMatchingStaff = [];
+let _chatActiveSuggestionIndex = -1;
+
+function setupChatTagAutocomplete() {
+  const input = document.getElementById('profileChatInput');
+  const suggestionsBox = document.getElementById('chatTagSuggestions');
+  if (!input || !suggestionsBox) return;
+
+  input.addEventListener('input', () => {
+    const val = input.value;
+    const selectionStart = input.selectionStart || 0;
+    
+    const textBeforeCursor = val.substring(0, selectionStart);
+    const lastAtIdx = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIdx !== -1) {
+      const charBeforeAt = lastAtIdx > 0 ? textBeforeCursor[lastAtIdx - 1] : ' ';
+      if (charBeforeAt === ' ' || charBeforeAt === '\n') {
+        const textAfterAt = textBeforeCursor.substring(lastAtIdx + 1);
+        if (!textAfterAt.includes(' ')) {
+          showTagSuggestions(textAfterAt, lastAtIdx);
+          return;
+        }
+      }
+    }
+    
+    suggestionsBox.style.display = 'none';
+    _chatActiveSuggestionIndex = -1;
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (suggestionsBox.style.display === 'flex') {
+      const items = suggestionsBox.querySelectorAll('.tag-suggestion-item');
+      if (items.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          _chatActiveSuggestionIndex = (_chatActiveSuggestionIndex + 1) % items.length;
+          updateActiveSuggestion(items);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          _chatActiveSuggestionIndex = (_chatActiveSuggestionIndex - 1 + items.length) % items.length;
+          updateActiveSuggestion(items);
+        } else if (e.key === 'Enter') {
+          if (_chatActiveSuggestionIndex >= 0 && _chatActiveSuggestionIndex < items.length) {
+            e.preventDefault();
+            items[_chatActiveSuggestionIndex].click();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          suggestionsBox.style.display = 'none';
+          _chatActiveSuggestionIndex = -1;
+        }
+      }
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#chatTagSuggestions') && e.target !== input) {
+      suggestionsBox.style.display = 'none';
+      _chatActiveSuggestionIndex = -1;
+    }
+  });
+}
+
+function updateActiveSuggestion(items) {
+  items.forEach((item, idx) => {
+    if (idx === _chatActiveSuggestionIndex) {
+      item.style.background = 'var(--surface2)';
+      item.classList.add('active-suggestion');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.style.background = '';
+      item.classList.remove('active-suggestion');
+    }
+  });
+}
+
+function showTagSuggestions(query, atIndex) {
+  const suggestionsBox = document.getElementById('chatTagSuggestions');
+  if (!suggestionsBox) return;
+
+  const q = query.toLowerCase().trim();
+  const matches = allStaff.filter(s => {
+    const name = (s.full_name || '').toLowerCase();
+    const nickname = (s.nickname || '').toLowerCase();
+    const code = (s.staff_code || '').toLowerCase();
+    return name.includes(q) || nickname.includes(q) || code.includes(q);
+  }).slice(0, 5);
+
+  if (matches.length === 0) {
+    suggestionsBox.style.display = 'none';
+    _chatActiveSuggestionIndex = -1;
+    return;
+  }
+
+  _chatMatchingStaff = matches;
+  _chatActiveSuggestionIndex = 0; // Default to first item highlighted
+  suggestionsBox.innerHTML = matches.map((staff, idx) => {
+    const displayName = staff.nickname || staff.full_name || staff.staff_code;
+    const initial = getNameInitial(displayName);
+    return `
+      <div class="tag-suggestion-item" onclick="insertChatTag('${staff.staff_code}', ${atIndex})" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; cursor:pointer; font-size:12px; transition:background 0.15s; user-select:none;" onmouseover="_chatActiveSuggestionIndex = ${idx}; updateActiveSuggestion(this.parentElement.querySelectorAll('.tag-suggestion-item'))">
+        <div style="width:24px; height:24px; border-radius:50%; background:${staff.staff_avatar_color || 'var(--accent)'}; color:white; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0;">
+          ${initial}
+        </div>
+        <div style="flex:1; font-weight:600; text-align:left; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${displayName}</div>
+        <div style="font-size:10px; color:var(--text3); flex-shrink:0;">${staff.staff_code}</div>
+      </div>
+    `;
+  }).join('');
+
+  suggestionsBox.style.display = 'flex';
+  updateActiveSuggestion(suggestionsBox.querySelectorAll('.tag-suggestion-item'));
+}
+
+function insertChatTag(staffCode, atIndex) {
+  const input = document.getElementById('profileChatInput');
+  const suggestionsBox = document.getElementById('chatTagSuggestions');
+  if (!input) return;
+
+  const val = input.value;
+  const cursorStart = input.selectionStart || 0;
+  
+  const before = val.substring(0, atIndex);
+  const after = val.substring(cursorStart);
+  const tagText = `@${staffCode} `;
+  
+  input.value = before + tagText + after;
+  
+  const newCursorPos = atIndex + tagText.length;
+  input.focus();
+  input.setSelectionRange(newCursorPos, newCursorPos);
+  
+  if (suggestionsBox) {
+    suggestionsBox.style.display = 'none';
   }
 }

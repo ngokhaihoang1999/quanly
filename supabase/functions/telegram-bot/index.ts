@@ -87,31 +87,48 @@ Deno.serve(async (req) => {
           return new Response("Admin Telegram ID not configured in database", { status: 500 });
         }
 
+        const isImage = file.type.startsWith('image/') || /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(file.name);
+        
+        let telegramApiMethod = 'sendDocument';
+        let telegramField = 'document';
+        
+        if (isImage) {
+          telegramApiMethod = 'sendPhoto';
+          telegramField = 'photo';
+        }
+
         const tgForm = new FormData();
         tgForm.append('chat_id', String(adminChatId));
-        tgForm.append('photo', file);
+        tgForm.append(telegramField, file);
 
-        const sendPhotoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        const sendPhotoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${telegramApiMethod}`, {
           method: "POST",
           body: tgForm
         });
 
         if (!sendPhotoRes.ok) {
           const errText = await sendPhotoRes.text();
-          console.error("sendPhoto error:", errText);
-          return new Response(`Telegram sendPhoto failed: ${sendPhotoRes.statusText}`, { status: 500 });
+          console.error(`${telegramApiMethod} error:`, errText);
+          return new Response(`Telegram ${telegramApiMethod} failed: ${sendPhotoRes.statusText}`, { status: 500 });
         }
 
         const sendPhotoData = await sendPhotoRes.json();
         const messageId = sendPhotoData.result?.message_id;
-        const photoArr = sendPhotoData.result?.photo;
         
-        if (!photoArr || !photoArr.length) {
-          return new Response("No photo data returned from Telegram", { status: 500 });
+        let fileId = '';
+        if (isImage) {
+          const photoArr = sendPhotoData.result?.photo;
+          if (!photoArr || !photoArr.length) {
+            return new Response("No photo data returned from Telegram", { status: 500 });
+          }
+          const largestPhoto = photoArr[photoArr.length - 1];
+          fileId = largestPhoto.file_id;
+        } else {
+          fileId = sendPhotoData.result?.document?.file_id;
+          if (!fileId) {
+            return new Response("No document data returned from Telegram", { status: 500 });
+          }
         }
-
-        const largestPhoto = photoArr[photoArr.length - 1];
-        const fileId = largestPhoto.file_id;
 
         const getFileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
         if (!getFileRes.ok) {
@@ -133,7 +150,7 @@ Deno.serve(async (req) => {
           }).catch(err => console.error("deleteMessage error:", err));
         }
 
-        const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}`;
+        const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}&name=${encodeURIComponent(file.name)}`;
         
         return new Response(JSON.stringify({ file_path: filePath, url: proxyUrl }), {
           status: 200,
