@@ -742,7 +742,7 @@ function unsubscribeProfileChat() {
   console.log('Cleaned up profile chat resources.');
 }
 
-// Format message text: Mentions, links, and inline images (Option 2)
+// Format message text: Mentions, links, and inline images (Option 2 / Secure Telegram Proxy)
 function formatChatMessageText(text) {
   let messageText = escHtml(text);
   
@@ -753,16 +753,27 @@ function formatChatMessageText(text) {
   const urlRegex = /(https?:\/\/[^\s<]+)/gi;
   messageText = messageText.replace(urlRegex, (url) => {
     // Check if the link is an image URL (ends with standard extension or is a Telegram/Imgur file link)
+    const isTelegramFile = url.includes('/file/bot');
     const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
-                    url.includes('/file/bot') || 
+                    isTelegramFile || 
                     url.includes('imgbb.com') || 
                     url.includes('postimg.cc') || 
                     url.includes('telegram.org/file/bot');
     
     if (isImage) {
+      let displayUrl = url;
+      if (isTelegramFile) {
+        // Extract the file path (anything after /file/bot<token>/)
+        const match = url.match(/\/file\/bot[^/]+\/(.+)/i);
+        if (match && match[1]) {
+          const filePath = match[1];
+          displayUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}`;
+        }
+      }
+
       return `
-        <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation(); openChatImageModal('${url}')">
-          <img src="${url}" style="width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
+        <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation(); openChatImageModal('${displayUrl}')">
+          <img src="${displayUrl}" style="width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
         </div>
       `;
     } else {

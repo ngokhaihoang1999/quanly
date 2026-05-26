@@ -14,7 +14,7 @@
  *     private.ts      → Private chat: /start, /search, /check_hapja, /support, /reply
  */
 
-import { supabase, ADMIN_STAFF_CODE } from "./config.ts";
+import { supabase, ADMIN_STAFF_CODE, BOT_TOKEN } from "./config.ts";
 import { sendText } from "./telegram.ts";
 import { getStaffByTelegramId } from "./telegram.ts";
 import { handleGroupChat } from "./handlers/group.ts";
@@ -26,6 +26,40 @@ import { handlePrivateChat } from "./handlers/private.ts";
 
 Deno.serve(async (req) => {
   try {
+    // ── Handle GET requests for file proxying ──
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      const filePath = url.searchParams.get('file');
+      
+      if (!filePath) {
+        return new Response("Missing 'file' parameter", { status: 400 });
+      }
+
+      if (!BOT_TOKEN) {
+        return new Response("Bot token not configured on server", { status: 500 });
+      }
+
+      // Build the Telegram file URL
+      const telegramFileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
+      
+      // Fetch the file from Telegram
+      const tgRes = await fetch(telegramFileUrl);
+      if (!tgRes.ok) {
+        return new Response(`Error fetching file from Telegram: ${tgRes.statusText}`, { status: tgRes.status });
+      }
+
+      const contentType = tgRes.headers.get("content-type") || "application/octet-stream";
+      
+      return new Response(tgRes.body, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=31536000",
+          "Access-Control-Allow-Origin": "*",
+        }
+      });
+    }
+
     const update = await req.json();
 
     // Detect chat type
