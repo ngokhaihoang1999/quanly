@@ -297,6 +297,66 @@ function setupSupabaseRealtimeForChat(profileId) {
     });
 }
 
+let _globalChatSubscription = null;
+
+function setupGlobalChatRealtime() {
+  if (typeof window.supabase === 'undefined') {
+    console.warn('Supabase JS Client is not loaded. Global realtime disabled.');
+    return;
+  }
+  
+  if (!_supabaseRealtimeClient) {
+    _supabaseRealtimeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  
+  if (_globalChatSubscription) return; // already subscribed
+  
+  _globalChatSubscription = _supabaseRealtimeClient
+    .channel('global-profile-chats')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'profile_chats'
+    }, (payload) => {
+      const msg = payload.new;
+      const myCode = getEffectiveStaffCode();
+      
+      // If it's a message from someone else
+      if (msg.sender_code !== myCode) {
+        // If we are currently viewing the profile of this message
+        if (currentProfileId === msg.profile_id) {
+          // If the chat tab is currently active, mark as read immediately
+          const chatTabActive = document.querySelector('#profileTabs .form-tab.active')?.getAttribute('onclick')?.includes('chatTab');
+          if (chatTabActive) {
+            markChatAsRead(msg.profile_id);
+            return;
+          }
+        }
+        
+        // Check if the profile belongs to the loaded profiles list
+        const hasAccess = typeof allProfiles !== 'undefined' && allProfiles.some(p => p.id === msg.profile_id);
+        if (hasAccess) {
+          if (window.unreadChatProfileIds) {
+            window.unreadChatProfileIds.add(msg.profile_id);
+          } else {
+            window.unreadChatProfileIds = new Set([msg.profile_id]);
+          }
+          
+          // Re-render list elements to show the badge
+          if (typeof filterProfiles === 'function') filterProfiles();
+          if (typeof renderPersonalList === 'function' && window._activePersonalListType) {
+            renderPersonalList(window._activePersonalListType);
+          }
+        }
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Global profile chat realtime subscribed.');
+      }
+    });
+}
+
 // Emoji Picker toggle and generation
 function toggleChatEmojiPicker() {
   const picker = document.getElementById('chatEmojiPicker');
@@ -349,4 +409,7 @@ async function loadUnreadChats() {
     console.warn('loadUnreadChats error:', e);
     window.unreadChatProfileIds = new Set();
   }
+  
+  // Set up global realtime listener for new chat messages
+  setupGlobalChatRealtime();
 }

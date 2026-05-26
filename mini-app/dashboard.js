@@ -553,6 +553,7 @@ async function loadDashboard() {
 }
 
 window.renderPersonalList = async function(type) {
+  window._activePersonalListType = type;
   const lists = window._personalLists;
   if (!lists) return;
   
