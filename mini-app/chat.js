@@ -1431,40 +1431,19 @@ function makeFloatingWindowDraggable(win) {
   let initialX = 0, initialY = 0;
   let isDragging = false;
   
-  header.addEventListener('pointerdown', (e) => {
-    // Prevent drag trigger if clicking on inputs, select, buttons or avatars list inside the header
-    if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('#cjFloatingChatAvatarsRow')) {
-      return;
-    }
-    e.preventDefault();
-    header.setPointerCapture(e.pointerId);
-    
-    const rect = win.getBoundingClientRect();
-    initialX = rect.left;
-    initialY = rect.top;
-    
-    win.style.left = initialX + 'px';
-    win.style.top = initialY + 'px';
-    win.style.right = 'auto';
-    win.style.bottom = 'auto';
-    
-    startX = e.clientX;
-    startY = e.clientY;
-    isDragging = true;
-  });
-  
-  header.addEventListener('pointermove', (e) => {
+  function onPointerMove(e) {
     if (!isDragging) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
-    
     win.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
-  });
+  }
   
-  header.addEventListener('pointerup', (e) => {
+  function onPointerUp(e) {
     if (!isDragging) return;
-    header.releasePointerCapture(e.pointerId);
     isDragging = false;
+    
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
     
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
@@ -1481,60 +1460,53 @@ function makeFloatingWindowDraggable(win) {
     
     localStorage.setItem('cj_floating_win_pos_x', pos.x);
     localStorage.setItem('cj_floating_win_pos_y', pos.y);
-  });
+  }
   
-  header.addEventListener('pointercancel', (e) => {
-    if (isDragging) {
-      header.releasePointerCapture(e.pointerId);
-      isDragging = false;
-      win.style.transform = '';
+  header.addEventListener('pointerdown', (e) => {
+    // Prevent drag trigger if clicking on inputs, select, buttons or avatars list inside the header
+    if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('#cjFloatingChatAvatarsRow')) {
+      return;
     }
+    e.preventDefault();
+    
+    const rect = win.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+    
+    win.style.left = initialX + 'px';
+    win.style.top = initialY + 'px';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = true;
+    
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
   });
 }
 
 function makeFloatingWindowResizable(win) {
-  // Create Left handle
-  const leftHandle = document.createElement('div');
-  leftHandle.style.cssText = 'position:absolute; left:-3px; top:0; bottom:0; width:8px; cursor:w-resize; z-index:99999;';
-  win.appendChild(leftHandle);
+  // Clear any existing handles
+  win.querySelectorAll('.fl-resize-handle').forEach(h => h.remove());
 
-  // Create Top handle
-  const topHandle = document.createElement('div');
-  topHandle.style.cssText = 'position:absolute; left:0; right:0; top:-3px; height:8px; cursor:n-resize; z-index:99999;';
-  win.appendChild(topHandle);
-
-  // Create Top-Left handle
-  const topLeftHandle = document.createElement('div');
-  topLeftHandle.style.cssText = 'position:absolute; left:-3px; top:-3px; width:12px; height:12px; cursor:nw-resize; z-index:100000;';
-  win.appendChild(topLeftHandle);
+  // 8-direction handles mapping
+  const handles = [
+    { type: 'l', cursor: 'w-resize', style: 'left:-4px; top:0; bottom:0; width:8px;' },
+    { type: 'r', cursor: 'e-resize', style: 'right:-4px; top:0; bottom:0; width:8px;' },
+    { type: 't', cursor: 'n-resize', style: 'top:-4px; left:0; right:0; height:8px;' },
+    { type: 'b', cursor: 's-resize', style: 'bottom:-4px; left:0; right:0; height:8px;' },
+    { type: 'tl', cursor: 'nw-resize', style: 'left:-6px; top:-6px; width:12px; height:12px;' },
+    { type: 'tr', cursor: 'ne-resize', style: 'right:-6px; top:-6px; width:12px; height:12px;' },
+    { type: 'bl', cursor: 'sw-resize', style: 'left:-6px; bottom:-6px; width:12px; height:12px;' },
+    { type: 'br', cursor: 'se-resize', style: 'right:-6px; bottom:-6px; width:12px; height:12px;' }
+  ];
 
   let startWidth = 0, startHeight = 0;
   let startLeft = 0, startTop = 0;
   let startX = 0, startY = 0;
   let activeHandle = null;
-
-  function onPointerDown(e, handle) {
-    e.preventDefault();
-    e.stopPropagation();
-    handle.setPointerCapture(e.pointerId);
-    
-    const rect = win.getBoundingClientRect();
-    startWidth = rect.width;
-    startHeight = rect.height;
-    startLeft = rect.left;
-    startTop = rect.top;
-    
-    startX = e.clientX;
-    startY = e.clientY;
-    activeHandle = handle;
-    
-    win.style.left = startLeft + 'px';
-    win.style.top = startTop + 'px';
-    win.style.right = 'auto';
-    win.style.bottom = 'auto';
-    win.style.width = startWidth + 'px';
-    win.style.height = startHeight + 'px';
-  }
 
   function onPointerMove(e) {
     if (!activeHandle) return;
@@ -1546,23 +1518,32 @@ function makeFloatingWindowResizable(win) {
     let newLeft = startLeft;
     let newTop = startTop;
 
-    if (activeHandle === leftHandle || activeHandle === topLeftHandle) {
+    if (activeHandle.includes('l')) {
       newWidth = startWidth - dx;
       newLeft = startLeft + dx;
-    }
-    if (activeHandle === topHandle || activeHandle === topLeftHandle) {
-      newHeight = startHeight - dy;
-      newTop = startTop + dy;
+      if (newWidth < 280) {
+        newLeft = startLeft + (startWidth - 280);
+        newWidth = 280;
+      }
+    } else if (activeHandle.includes('r')) {
+      newWidth = startWidth + dx;
+      if (newWidth < 280) {
+        newWidth = 280;
+      }
     }
 
-    // Min size boundaries
-    if (newWidth < 280) {
-      newLeft = startLeft + (startWidth - 280);
-      newWidth = 280;
-    }
-    if (newHeight < 300) {
-      newTop = startTop + (startHeight - 300);
-      newHeight = 300;
+    if (activeHandle.includes('t')) {
+      newHeight = startHeight - dy;
+      newTop = startTop + dy;
+      if (newHeight < 300) {
+        newTop = startTop + (startHeight - 300);
+        newHeight = 300;
+      }
+    } else if (activeHandle.includes('b')) {
+      newHeight = startHeight + dy;
+      if (newHeight < 300) {
+        newHeight = 300;
+      }
     }
 
     win.style.width = newWidth + 'px';
@@ -1571,10 +1552,11 @@ function makeFloatingWindowResizable(win) {
     win.style.top = newTop + 'px';
   }
 
-  function onPointerUp(e, handle) {
+  function onPointerUp(e) {
     if (!activeHandle) return;
-    handle.releasePointerCapture(e.pointerId);
     activeHandle = null;
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
 
     const rect = win.getBoundingClientRect();
     localStorage.setItem('cj_floating_win_width', Math.round(rect.width));
@@ -1583,18 +1565,40 @@ function makeFloatingWindowResizable(win) {
     localStorage.setItem('cj_floating_win_pos_y', Math.round(rect.top));
   }
 
-  leftHandle.addEventListener('pointerdown', (e) => onPointerDown(e, leftHandle));
-  leftHandle.addEventListener('pointermove', onPointerMove);
-  leftHandle.addEventListener('pointerup', (e) => onPointerUp(e, leftHandle));
+  handles.forEach(h => {
+    const handleEl = document.createElement('div');
+    handleEl.className = 'fl-resize-handle';
+    handleEl.style.cssText = `position:absolute; ${h.style} cursor:${h.cursor}; z-index:100000;`;
+    
+    handleEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const rect = win.getBoundingClientRect();
+      startWidth = rect.width;
+      startHeight = rect.height;
+      startLeft = rect.left;
+      startTop = rect.top;
+      
+      startX = e.clientX;
+      startY = e.clientY;
+      activeHandle = h.type;
 
-  topHandle.addEventListener('pointerdown', (e) => onPointerDown(e, topHandle));
-  topHandle.addEventListener('pointermove', onPointerMove);
-  topHandle.addEventListener('pointerup', (e) => onPointerUp(e, topHandle));
+      win.style.left = startLeft + 'px';
+      win.style.top = startTop + 'px';
+      win.style.right = 'auto';
+      win.style.bottom = 'auto';
+      win.style.width = startWidth + 'px';
+      win.style.height = startHeight + 'px';
 
-  topLeftHandle.addEventListener('pointerdown', (e) => onPointerDown(e, topLeftHandle));
-  topLeftHandle.addEventListener('pointermove', onPointerMove);
-  topLeftHandle.addEventListener('pointerup', (e) => onPointerUp(e, topLeftHandle));
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    });
+
+    win.appendChild(handleEl);
+  });
 }
+
 
 // Calculate and position the expanded window near the bubble head without overflowing
 function positionFloatingChatWindow() {
