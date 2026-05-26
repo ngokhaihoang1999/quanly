@@ -486,7 +486,8 @@ async function sbFetch(path, opts={}) {
   }
 
   // ── GET cache (5s TTL) ──
-  if (!isWrite && _getCache.has(path)) {
+  const bypassCache = opts.headers && (opts.headers['Cache-Control'] === 'no-cache' || opts.headers['cache-control'] === 'no-cache');
+  if (!isWrite && !bypassCache && _getCache.has(path)) {
     const cached = _getCache.get(path);
     if (Date.now() - cached.ts < 5000) return cached.res.clone();
     _getCache.delete(path);
@@ -518,7 +519,9 @@ async function sbFetch(path, opts={}) {
   if (!isWrite) _inflight.set(path, promise);
   const res = await promise;
   if (!isWrite) {
-    try { _getCache.set(path, { ts: Date.now(), res: res.clone() }); } catch(e) {}
+    if (!bypassCache) {
+      try { _getCache.set(path, { ts: Date.now(), res: res.clone() }); } catch(e) {}
+    }
     return res.clone();
   }
   const table = path.split('?')[0];

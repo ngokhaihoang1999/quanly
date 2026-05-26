@@ -190,7 +190,7 @@ async function openProfile(p, cardEl) {
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
   const canEditBB     = hasFullEdit || isProfileGVBB;
-  const canAccessTuDuy = hasFullEdit || isProfileGVBB || isProfileNDD;
+  const canAccessTuDuy = true;
   // Store for use in other functions
   window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
   window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };

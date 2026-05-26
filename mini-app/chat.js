@@ -19,7 +19,9 @@ async function loadProfileChat(profileId) {
   msgArea.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">⌛ Đang tải cuộc thảo luận...</div>';
   
   try {
-    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc&_ts=${Date.now()}`);
+    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     const messages = await res.json();
     
     if (countEl) {
@@ -94,12 +96,27 @@ function addChatMessageToDOM(msg) {
 
   // Add category badge inside the bubble
   let categoryPrefix = '';
+  let catIcon = '';
   if (msg.category === 'warning') {
     categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--warning">⚠️ Cảnh báo</span>';
+    catIcon = '⚠️';
   } else if (msg.category === 'strategy') {
     categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--strategy">🧭 Chiến lược</span>';
+    catIcon = '🧭';
   } else if (msg.category === 'important') {
     categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--important">🔔 Quan trọng</span>';
+    catIcon = '🔔';
+  }
+
+  // Format message body text (with icon on the left if applicable)
+  let messageContentHtml = `<div class="chat-message-text">${messageText}</div>`;
+  if (catIcon) {
+    messageContentHtml = `
+      <div class="chat-message-body-with-icon">
+        <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
+        <div class="chat-message-text" style="flex: 1; padding-top: 2px;">${messageText}</div>
+      </div>
+    `;
   }
 
   const avatarHtmlBlock = isMe ? '' : `
@@ -115,7 +132,7 @@ function addChatMessageToDOM(msg) {
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
         <div class="${bubbleClass}">
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
-          <div class="chat-message-text">${messageText}</div>
+          ${messageContentHtml}
           <div class="chat-message-time">${timeStr}</div>
         </div>
       </div>
