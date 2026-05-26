@@ -92,6 +92,16 @@ function addChatMessageToDOM(msg) {
   // Match @JD codes: @\d{6}-[A-Z]+
   messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
 
+  // Add category badge inside the bubble
+  let categoryPrefix = '';
+  if (msg.category === 'warning') {
+    categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--warning">⚠️ Cảnh báo</span>';
+  } else if (msg.category === 'strategy') {
+    categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--strategy">🧭 Chiến lược</span>';
+  } else if (msg.category === 'important') {
+    categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--important">🔔 Quan trọng</span>';
+  }
+
   const avatarHtmlBlock = isMe ? '' : `
     <div class="chat-message-avatar" onclick="showStaffCard('${msg.sender_code}')" style="cursor:pointer;" title="${displayName}">
       ${avatarHtml}
@@ -104,6 +114,7 @@ function addChatMessageToDOM(msg) {
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
         <div class="${bubbleClass}">
+          ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           <div class="chat-message-text">${messageText}</div>
           <div class="chat-message-time">${timeStr}</div>
         </div>

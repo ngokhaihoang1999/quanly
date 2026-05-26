@@ -283,7 +283,7 @@ async function openProfile(p, cardEl) {
   // Tab TV: hiện khi có TVV, bất kể phase (vì Chốt TV có thể xảy ra ở phase Chakki)
   const tabTV = document.getElementById('tabTV');
   const tabBB = document.getElementById('tabBB');
-  const tabMM = document.getElementById('tabMindmap');
+  const tabMM = document.getElementById('tabMap');
   const showTabTV = canEditTV && !!tvvCode;
   if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
   if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
