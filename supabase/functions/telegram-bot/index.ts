@@ -14,8 +14,8 @@
  *     private.ts      → Private chat: /start, /search, /check_hapja, /support, /reply
  */
 
-import { supabase, ADMIN_STAFF_CODE, BOT_TOKEN } from "./config.ts";
-import { sendText } from "./telegram.ts";
+import { supabase, ADMIN_STAFF_CODE, BOT_TOKEN, SUPABASE_URL } from "./config.ts";
+import { sendText, getAdminTelegramId } from "./telegram.ts";
 import { getStaffByTelegramId } from "./telegram.ts";
 import { handleGroupChat } from "./handlers/group.ts";
 import { handleCallback } from "./handlers/callbacks.ts";
@@ -26,6 +26,18 @@ import { handlePrivateChat } from "./handlers/private.ts";
 
 Deno.serve(async (req) => {
   try {
+    // ── Handle CORS Preflight ──
+    if (req.method === 'OPTIONS') {
+      return new Response("OK", {
+        status: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+          "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+        }
+      });
+    }
+
     // ── Handle GET requests for file proxying ──
     if (req.method === 'GET') {
       const url = new URL(req.url);
@@ -58,6 +70,79 @@ Deno.serve(async (req) => {
           "Access-Control-Allow-Origin": "*",
         }
       });
+    }
+
+    // ── Handle POST requests for uploading files to Telegram ──
+    if (req.method === 'POST') {
+      const contentType = req.headers.get("content-type") || "";
+      if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        const file = formData.get("file");
+        if (!file || !(file instanceof File)) {
+          return new Response("Missing 'file' parameter", { status: 400 });
+        }
+
+        const adminChatId = await getAdminTelegramId();
+        if (!adminChatId) {
+          return new Response("Admin Telegram ID not configured in database", { status: 500 });
+        }
+
+        const tgForm = new FormData();
+        tgForm.append('chat_id', String(adminChatId));
+        tgForm.append('photo', file);
+
+        const sendPhotoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: "POST",
+          body: tgForm
+        });
+
+        if (!sendPhotoRes.ok) {
+          const errText = await sendPhotoRes.text();
+          console.error("sendPhoto error:", errText);
+          return new Response(`Telegram sendPhoto failed: ${sendPhotoRes.statusText}`, { status: 500 });
+        }
+
+        const sendPhotoData = await sendPhotoRes.json();
+        const messageId = sendPhotoData.result?.message_id;
+        const photoArr = sendPhotoData.result?.photo;
+        
+        if (!photoArr || !photoArr.length) {
+          return new Response("No photo data returned from Telegram", { status: 500 });
+        }
+
+        const largestPhoto = photoArr[photoArr.length - 1];
+        const fileId = largestPhoto.file_id;
+
+        const getFileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+        if (!getFileRes.ok) {
+          return new Response("Telegram getFile failed", { status: 500 });
+        }
+
+        const getFileData = await getFileRes.json();
+        const filePath = getFileData.result?.file_path;
+
+        if (!filePath) {
+          return new Response("Failed to retrieve file_path from Telegram", { status: 500 });
+        }
+
+        if (messageId) {
+          fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: adminChatId, message_id: messageId })
+          }).catch(err => console.error("deleteMessage error:", err));
+        }
+
+        const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}`;
+        
+        return new Response(JSON.stringify({ file_path: filePath, url: proxyUrl }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+      }
     }
 
     const update = await req.json();

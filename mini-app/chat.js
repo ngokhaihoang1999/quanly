@@ -803,3 +803,87 @@ function openChatImageModal(url) {
   }
   modal.style.display = 'flex';
 }
+
+// Upload selected image to Telegram CDN via Edge Function POST proxy
+async function uploadChatImage(input) {
+  const file = input.files?.[0];
+  if (!file || !currentProfileId) return;
+
+  // Clear input value so selecting the same image again triggers onchange
+  input.value = '';
+
+  const triggerBtn = document.getElementById('chatImageTrigger');
+  const originalText = triggerBtn ? triggerBtn.textContent : '📎';
+  
+  if (triggerBtn) {
+    triggerBtn.textContent = '⌛';
+    triggerBtn.disabled = true;
+    triggerBtn.style.opacity = '0.5';
+  }
+
+  showToast('⌛ Đang xử lý tải ảnh...');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && data.url) {
+      // Send the proxy URL to the chat DB
+      await sendProxyImageMessage(data.url);
+      showToast('✅ Đã gửi ảnh');
+    } else {
+      throw new Error('No URL returned from proxy server');
+    }
+  } catch (e) {
+    showToast('❌ Gửi ảnh thất bại');
+    console.error('uploadChatImage error:', e);
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.textContent = originalText;
+      triggerBtn.disabled = false;
+      triggerBtn.style.opacity = '1';
+    }
+  }
+}
+
+// Save the secure proxy URL as message text to the profile chat database
+async function sendProxyImageMessage(imageUrl) {
+  const sender = getEffectiveStaffCode();
+  const catSelect = document.getElementById('chat_category');
+  const category = catSelect ? catSelect.value : 'general';
+  
+  try {
+    const res = await sbFetch('/rest/v1/profile_chats', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        profile_id: currentProfileId,
+        sender_code: sender,
+        message: imageUrl,
+        category: category
+      })
+    });
+    
+    const newMsgArr = await res.json();
+    if (newMsgArr && newMsgArr[0]) {
+      addChatMessageToDOM(newMsgArr[0]);
+    }
+    
+    // Automatically update my read stamp
+    await markChatAsRead(currentProfileId);
+  } catch(e) {
+    showToast('❌ Lỗi gửi ảnh');
+    console.error('sendProxyImageMessage:', e);
+  }
+}
