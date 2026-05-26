@@ -1,0 +1,359 @@
+/* ═══════════════ PHASE 3: DESKTOP SPLIT VIEW ═══════════════ */
+.desktop-panel {
+  display: none;
+}
+#panelCenter {
+  display: block; /* Mặc định hiện trên mobile */
+}
+/* Resize dividers – hidden on mobile */
+.panel-divider {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  /* ── Main tabs: inside panelCenter on desktop ── */
+  #panelCenter > .tab-bar {
+    flex-shrink: 0;
+    padding: 8px 8px 6px;
+    gap: 3px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  #panelCenter > .tab-bar .tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    padding: 8px 4px;
+    font-size: 12px;
+    overflow: hidden;
+    background: var(--surface2);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  #panelCenter > .tab-bar .tab:hover:not(.active) {
+    background: var(--surface);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  /* When panel is narrow: hide label, show only icon */
+  #panelCenter > .tab-bar .tab-label {
+    display: none;
+  }
+  #panelCenter > .tab-bar .tab-icon {
+    font-size: 16px;
+  }
+  /* When panel is wide enough: show label */
+  #panelCenter > .tab-bar.tab-bar--wide .tab-label {
+    display: inline;
+  }
+  #panelCenter > .tab-bar.tab-bar--wide .tab {
+    padding: 8px 8px;
+    white-space: nowrap;
+  }
+  #panelCenter > .tab-bar.tab-bar--wide .tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #panelCenter > .tab-bar.tab-bar--wide .tab-icon {
+    font-size: 13px;
+  }
+  /* Icon-only mode: compact tabs, centered in bar */
+  #panelCenter > .tab-bar:not(.tab-bar--wide) {
+    justify-content: center;
+  }
+  #panelCenter > .tab-bar:not(.tab-bar--wide) .tab {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+  }
+
+  /* ── Wrapper: fills remaining height after header ── */
+  .desktop-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;           /* crucial so flex children can shrink */
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* ── Center: scrollable content area ── */
+  #panelCenter {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* Content inside center panel must scroll */
+  #panelCenter > .content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-width: none !important;  /* Override the 900px/600px limit inside panels */
+    margin: 0 !important;       /* Override auto centering from base .content */
+    padding: 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* detailView also needs to scroll when inside center */
+  #detailView {
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 100%;
+    padding-bottom: 24px;
+  }
+
+  /* Back button trên desktop: nhỏ gọn hơn */
+  #detailView .back-btn {
+    margin-bottom: 8px;
+  }
+
+  /* ── Center panel: grids must respond to container width, not viewport ── */
+  #panelCenter #profileList,
+  #panelCenter #staffList,
+  #panelCenter #dashMyList,
+  #panelCenter #dashHapjaList,
+  #panelCenter #tvList,
+  #panelCenter #bbList,
+  #panelCenter #calEventList {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  }
+  /* Timeline inside center: single-column, centered */
+  #panelCenter #timelineList {
+    display: block;
+  }
+
+  /* Form tabs in detail view: scroll horizontally, never clip */
+  #panelCenter .form-tabs {
+    flex-wrap: wrap;
+  }
+
+  /* Prevent text content inside center from overflowing */
+  #panelCenter .content {
+    overflow-x: hidden;
+  }
+  #panelCenter img, 
+  #panelCenter canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Detail view content: word break to prevent overflow */
+  #detailView {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* ── Side panels ── */
+  .desktop-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;            /* allow flex shrink */
+  }
+
+  #panelLeft, #panelRight {
+    width: 320px;
+    min-width: 120px;
+    flex-shrink: 0;
+    overflow: hidden;         /* children scroll, not the panel itself */
+    background: var(--surface2);
+    border: none;
+    display: flex;
+    flex-direction: column;
+  }
+  #panelLeft {
+    border-right: 1px solid var(--border);
+  }
+  #panelRight {
+    border-left: 1px solid var(--border);
+  }
+
+  /* ── Pinned tab content: scrollable within panel ── */
+  .desktop-pinned {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 14px 12px;
+    min-height: 0;            /* allow flex shrink */
+    word-break: break-word;   /* prevent text overflow */
+  }
+  /* Notes board fills remaining height in panel */
+  .desktop-pinned #notesPanelList {
+    flex: 1;
+    min-height: 200px;
+  }
+  .desktop-pinned #notesPanelList.notes-board {
+    min-height: 0;
+    height: auto;
+  }
+
+  /* ── Drag-to-resize dividers ── */
+  .panel-divider {
+    display: block;
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+    transition: background 0.2s;
+  }
+  .panel-divider:hover,
+  .panel-divider.dragging {
+    background: var(--accent);
+    opacity: 0.5;
+  }
+  .panel-divider::after {
+    content: '';
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    top: 0;
+    bottom: 0;  /* invisible wider hit area */
+  }
+
+  /* ── Prevent text selection while dragging ── */
+  body.panel-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+  body.panel-resizing * {
+    cursor: col-resize !important;
+  }
+
+  /* ── Components in side panels: responsive when narrow ── */
+  #panelLeft .desktop-pinned,
+  #panelRight .desktop-pinned {
+    /* Force single-column grids for narrow panels */
+  }
+  #panelLeft #profileList,
+  #panelRight #profileList,
+  #panelLeft #staffList,
+  #panelRight #staffList,
+  #panelLeft #notesPanelList:not(.notes-board),
+  #panelRight #notesPanelList:not(.notes-board),
+  #panelLeft .priority-group,
+  #panelRight .priority-group {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  /* Dashboard stats: wrap to fit narrow space */
+  #panelLeft .dash-stat,
+  #panelRight .dash-stat {
+    font-size: 11px;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  /* Profile cards: tighter in narrow panels */
+  #panelLeft .profile-card,
+  #panelRight .profile-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  /* Section headers: allow wrapping */
+  #panelLeft .section-header,
+  #panelRight .section-header {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  /* Filter chips: scroll instead of overflow */  
+  #panelLeft .chip,
+  #panelRight .chip {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  /* Panel text: prevent overflow (targeted, not wildcard) */
+  #panelLeft .profile-card,
+  #panelRight .profile-card,
+  #panelLeft .staff-card,
+  #panelRight .staff-card,
+  #panelLeft .section-header,
+  #panelRight .section-header,
+  #panelLeft .dash-stat,
+  #panelRight .dash-stat {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  /* ── Performance: disable stagger animations inside panels ── */
+  #panelLeft .profile-card,
+  #panelRight .profile-card,
+  #panelLeft .staff-card,
+  #panelRight .staff-card,
+  #panelLeft .dash-stat,
+  #panelRight .dash-stat,
+  #panelLeft .dash-card,
+  #panelRight .dash-card,
+  #panelLeft .stagger-item,
+  #panelRight .stagger-item,
+  #panelLeft .tree-node,
+  #panelRight .tree-node {
+    animation: none !important;
+  }
+
+  /* ── Performance: layout containment for panels ── */
+  #panelLeft,
+  #panelRight {
+    contain: layout style;
+  }
+
+  /* ── Performance: GPU-accelerate profile cards for smoother hover ── */
+  .desktop-layout .profile-card {
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  /* Dashboard funnel & stat grids: stack vertically */
+  #panelLeft .dash-grid,
+  #panelRight .dash-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  /* Profile cards inner: allow wrapping */
+  #panelLeft .profile-card .badges,
+  #panelRight .profile-card .badges {
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  /* Sub-tabs in profiles: allow wrapping */
+  #panelLeft .form-tabs,
+  #panelRight .form-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  #panelLeft .form-tab,
+  #panelRight .form-tab {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+  /* Stat numbers: smaller in panel */
+  #panelLeft .stat-number,
+  #panelRight .stat-number {
+    font-size: 22px;
+  }
+  /* Notes filter bar: wrap */
+  #panelLeft #notesFilterChips,
+  #panelRight #notesFilterChips {
+    flex-wrap: wrap;
+  }
+
+  /* Header must be a flex container parent so body stacks header + panels */
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .header {
+    flex-shrink: 0; /* header never shrinks */
+    padding-right: 90px; /* Clear space for Telegram Mini App close/settings buttons */
+  }
+}
