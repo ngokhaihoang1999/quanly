@@ -458,6 +458,9 @@ function setupGlobalChatRealtime() {
           if (typeof renderPersonalList === 'function' && window._activePersonalListType) {
             renderPersonalList(window._activePersonalListType);
           }
+          if (typeof updateFloatingChatUI === 'function') {
+            updateFloatingChatUI();
+          }
         }
       }
     })
@@ -1109,4 +1112,633 @@ function updateChatTabBadge() {
   } else {
     tab.innerHTML = '💬 Thảo luận';
   }
+}
+
+// ============ FLOATING MULTI-CHAT MODULE ============
+window._pinnedChatProfileIds = [];
+window._activeFloatingProfileId = null;
+window._floatingActiveChatSubscription = null;
+
+// Ensure pinned profile details are fetched and stored in allProfiles
+async function ensureFloatingProfilesLoaded() {
+  if (!window._pinnedChatProfileIds || window._pinnedChatProfileIds.length === 0) return;
+  
+  const missingIds = window._pinnedChatProfileIds.filter(id => {
+    return !window.allProfiles || !window.allProfiles.some(p => p.id === id);
+  });
+  
+  if (missingIds.length === 0) return;
+  
+  try {
+    const res = await sbFetch(`/rest/v1/profiles?id=in.(${missingIds.join(',')})&select=*`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        if (!window.allProfiles) window.allProfiles = [];
+        data.forEach(p => {
+          if (!window.allProfiles.some(x => x.id === p.id)) {
+            window.allProfiles.push(p);
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.error('ensureFloatingProfilesLoaded error:', e);
+  }
+}
+
+// Initialize floating chat head positioning and drag handlers
+function initFloatingChat() {
+  try {
+    const saved = localStorage.getItem('cj_pinned_chat_profile_ids');
+    if (saved) {
+      window._pinnedChatProfileIds = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Error loading pinned chats:', e);
+    window._pinnedChatProfileIds = [];
+  }
+
+  const head = document.getElementById('cjFloatingChatHead');
+  if (head) {
+    const savedX = localStorage.getItem('cj_floating_chat_pos_x');
+    const savedY = localStorage.getItem('cj_floating_chat_pos_y');
+    if (savedX !== null && savedY !== null) {
+      head.style.left = savedX + 'px';
+      head.style.top = savedY + 'px';
+      head.style.right = 'auto';
+      head.style.bottom = 'auto';
+    } else {
+      head.style.right = '20px';
+      head.style.bottom = '120px';
+      head.style.left = 'auto';
+      head.style.top = 'auto';
+    }
+    makeFloatingHeadDraggable(head);
+  }
+
+  if (window._pinnedChatProfileIds.length > 0) {
+    window._activeFloatingProfileId = window._pinnedChatProfileIds[0];
+  }
+
+  updateFloatingChatUI();
+}
+
+// Bind drag and drop functionality with boundary checks and click distinction
+function makeFloatingHeadDraggable(head) {
+  let startX = 0, startY = 0;
+  let initialX = 0, initialY = 0;
+  let isDragging = false;
+  let startTime = 0;
+
+  head.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    head.setPointerCapture(e.pointerId);
+    startTime = Date.now();
+    
+    const rect = head.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+    
+    head.style.left = initialX + 'px';
+    head.style.top = initialY + 'px';
+    head.style.right = 'auto';
+    head.style.bottom = 'auto';
+    
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = true;
+    head.style.cursor = 'grabbing';
+  });
+
+  head.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    let nextX = initialX + dx;
+    let nextY = initialY + dy;
+    
+    const rect = head.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+    
+    if (nextX < 0) nextX = 0;
+    if (nextX > maxX) nextX = maxX;
+    if (nextY < 0) nextY = 0;
+    if (nextY > maxY) nextY = maxY;
+    
+    head.style.left = nextX + 'px';
+    head.style.top = nextY + 'px';
+    
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      head.dataset.dragged = '1';
+    }
+  });
+
+  head.addEventListener('pointerup', (e) => {
+    if (!isDragging) return;
+    head.releasePointerCapture(e.pointerId);
+    isDragging = false;
+    head.style.cursor = 'grab';
+    
+    const duration = Date.now() - startTime;
+    const isClick = (head.dataset.dragged !== '1') && (duration < 300);
+    delete head.dataset.dragged;
+
+    const rect = head.getBoundingClientRect();
+    localStorage.setItem('cj_floating_chat_pos_x', rect.left);
+    localStorage.setItem('cj_floating_chat_pos_y', rect.top);
+    
+    const win = document.getElementById('cjFloatingChatWindow');
+    if (win && win.style.display === 'flex') {
+      positionFloatingChatWindow();
+    }
+
+    if (isClick) {
+      toggleFloatingChatWindow();
+    }
+  });
+
+  head.addEventListener('pointercancel', (e) => {
+    if (isDragging) {
+      head.releasePointerCapture(e.pointerId);
+      isDragging = false;
+      head.style.cursor = 'grab';
+      delete head.dataset.dragged;
+    }
+  });
+}
+
+// Expand or collapse floating window
+function toggleFloatingChatWindow() {
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (!win) return;
+  if (win.style.display === 'none' || win.style.display === '') {
+    expandFloatingChat();
+  } else {
+    collapseFloatingChat();
+  }
+}
+
+function expandFloatingChat() {
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (!win) return;
+  
+  win.style.display = 'flex';
+  positionFloatingChatWindow();
+  
+  if (window._activeFloatingProfileId) {
+    selectFloatingChat(window._activeFloatingProfileId);
+  } else if (window._pinnedChatProfileIds.length > 0) {
+    selectFloatingChat(window._pinnedChatProfileIds[0]);
+  }
+}
+
+function collapseFloatingChat() {
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (win) win.style.display = 'none';
+  if (window._floatingActiveChatSubscription) {
+    window._floatingActiveChatSubscription.unsubscribe();
+    window._floatingActiveChatSubscription = null;
+  }
+}
+
+// Close active pinned chat (unpin it)
+function closeActiveFloatingChat() {
+  if (window._activeFloatingProfileId) {
+    unpinChatFromFloating(window._activeFloatingProfileId);
+  }
+}
+
+// Calculate and position the expanded window near the bubble head without overflowing
+function positionFloatingChatWindow() {
+  const head = document.getElementById('cjFloatingChatHead');
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (!head || !win) return;
+  
+  const headRect = head.getBoundingClientRect();
+  const winWidth = 330;
+  const winHeight = 420;
+  
+  let left = 0;
+  let top = 0;
+  
+  if (headRect.left + headRect.width / 2 > window.innerWidth / 2) {
+    left = headRect.right - winWidth;
+  } else {
+    left = headRect.left;
+  }
+  
+  if (headRect.top + headRect.height / 2 > window.innerHeight / 2) {
+    top = headRect.top - winHeight - 10;
+  } else {
+    top = headRect.bottom + 10;
+  }
+  
+  if (left < 10) left = 10;
+  if (left + winWidth > window.innerWidth - 10) left = window.innerWidth - winWidth - 10;
+  if (top < 10) top = 10;
+  if (top + winHeight > window.innerHeight - 10) top = window.innerHeight - winHeight - 10;
+  
+  win.style.left = left + 'px';
+  win.style.top = top + 'px';
+  win.style.right = 'auto';
+  win.style.bottom = 'auto';
+}
+
+// Pin a chat profile to floating stack
+function pinChatToFloating(profileId) {
+  const pid = profileId || currentProfileId;
+  if (!pid) {
+    showToast('⚠️ Không tìm thấy học viên để ghim');
+    return;
+  }
+  
+  if (!window._pinnedChatProfileIds.includes(pid)) {
+    window._pinnedChatProfileIds.push(pid);
+    localStorage.setItem('cj_pinned_chat_profile_ids', JSON.stringify(window._pinnedChatProfileIds));
+  }
+  
+  window._activeFloatingProfileId = pid;
+  showToast('📌 Đã ghim nổi cuộc thảo luận');
+  expandFloatingChat();
+  updateFloatingChatUI();
+}
+
+// Unpin a chat profile from floating stack
+function unpinChatFromFloating(profileId) {
+  window._pinnedChatProfileIds = window._pinnedChatProfileIds.filter(id => id !== profileId);
+  localStorage.setItem('cj_pinned_chat_profile_ids', JSON.stringify(window._pinnedChatProfileIds));
+  
+  if (window._activeFloatingProfileId === profileId) {
+    if (window._pinnedChatProfileIds.length > 0) {
+      window._activeFloatingProfileId = window._pinnedChatProfileIds[0];
+    } else {
+      window._activeFloatingProfileId = null;
+    }
+  }
+  
+  updateFloatingChatUI();
+  
+  if (window._pinnedChatProfileIds.length === 0) {
+    collapseFloatingChat();
+  } else if (window._activeFloatingProfileId) {
+    selectFloatingChat(window._activeFloatingProfileId);
+  }
+}
+
+// Re-render the floating bubble stack and switcher row
+async function updateFloatingChatUI() {
+  const head = document.getElementById('cjFloatingChatHead');
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (!head) return;
+  
+  if (!window._pinnedChatProfileIds || window._pinnedChatProfileIds.length === 0) {
+    head.style.display = 'none';
+    if (win) win.style.display = 'none';
+    collapseFloatingChat();
+    return;
+  }
+  
+  await ensureFloatingProfilesLoaded();
+  head.style.display = 'flex';
+  
+  const backHead = document.getElementById('cjFloatingChatHeadBack');
+  if (backHead) {
+    backHead.style.display = window._pinnedChatProfileIds.length > 1 ? 'block' : 'none';
+  }
+  
+  if (!window._activeFloatingProfileId || !window._pinnedChatProfileIds.includes(window._activeFloatingProfileId)) {
+    window._activeFloatingProfileId = window._pinnedChatProfileIds[0];
+  }
+  
+  const activeProfile = window.allProfiles ? window.allProfiles.find(x => x.id === window._activeFloatingProfileId) : null;
+  const avatarDiv = document.getElementById('cjFloatingChatHeadAvatar');
+  
+  if (avatarDiv) {
+    if (activeProfile) {
+      const displayName = activeProfile.nickname || activeProfile.full_name || 'Học viên';
+      const initial = getNameInitial(displayName);
+      const avatarHtml = typeof renderAnimatedAvatar === 'function'
+        ? renderAnimatedAvatar(initial, activeProfile.avatar_color || '', 'md')
+        : `<div style="width:100%;height:100%;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;">${initial}</div>`;
+      avatarDiv.innerHTML = avatarHtml;
+    } else {
+      avatarDiv.innerHTML = '💬';
+    }
+  }
+  
+  const badge = document.getElementById('cjFloatingChatHeadBadge');
+  if (badge) {
+    let hasUnread = false;
+    let unreadCount = 0;
+    if (window.unreadChatProfileIds) {
+      window._pinnedChatProfileIds.forEach(id => {
+        if (window.unreadChatProfileIds.has(id)) {
+          hasUnread = true;
+          unreadCount++;
+        }
+      });
+    }
+    if (hasUnread) {
+      badge.style.display = 'block';
+      badge.textContent = unreadCount > 1 ? unreadCount : 'Mới';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  
+  const avatarsRow = document.getElementById('cjFloatingChatAvatarsRow');
+  if (avatarsRow && win && win.style.display === 'flex') {
+    avatarsRow.innerHTML = '';
+    
+    window._pinnedChatProfileIds.forEach(id => {
+      const p = window.allProfiles ? window.allProfiles.find(x => x.id === id) : null;
+      if (!p) return;
+      
+      const displayName = p.nickname || p.full_name || 'Học viên';
+      const initial = getNameInitial(displayName);
+      const isActive = id === window._activeFloatingProfileId;
+      
+      const avatarHtml = typeof renderAnimatedAvatar === 'function'
+        ? renderAnimatedAvatar(initial, p.avatar_color || '', 'sm')
+        : `<div class="floating-avatar-circle" style="background:var(--accent);">${initial}</div>`;
+      
+      const hasUnread = window.unreadChatProfileIds && window.unreadChatProfileIds.has(id);
+      
+      const item = document.createElement('div');
+      item.className = 'floating-avatar-item' + (isActive ? ' active' : '');
+      item.dataset.profileId = id;
+      item.title = displayName;
+      item.onclick = () => selectFloatingChat(id);
+      
+      item.innerHTML = `
+        <div class="floating-avatar-wrapper" style="position:relative;">
+          ${avatarHtml}
+          ${hasUnread ? '<div class="floating-avatar-unread"></div>' : ''}
+          <div class="floating-avatar-close" onclick="event.stopPropagation(); unpinChatFromFloating('${id}')">✕</div>
+        </div>
+      `;
+      avatarsRow.appendChild(item);
+    });
+  }
+}
+
+// Switch active chat in floating mode
+async function selectFloatingChat(profileId) {
+  window._activeFloatingProfileId = profileId;
+  setupFloatingChatRealtime(profileId);
+  await loadFloatingChatMessages(profileId);
+  await updateFloatingChatUI();
+}
+
+// Load message history for floating panel
+async function loadFloatingChatMessages(profileId) {
+  const msgArea = document.getElementById('cjFloatingChatMessages');
+  if (!msgArea) return;
+  
+  msgArea.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:11px;">⌛ Đang tải...</div>';
+  
+  try {
+    await markChatAsRead(profileId);
+    
+    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    
+    const messages = await res.json();
+    msgArea.innerHTML = '';
+    
+    if (!messages || messages.length === 0) {
+      msgArea.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:11px;">Chưa có tin nhắn.</div>';
+    } else {
+      messages.forEach(msg => {
+        addFloatingChatMessageToDOM(msg);
+      });
+      msgArea.scrollTop = msgArea.scrollHeight;
+    }
+  } catch (e) {
+    console.error('loadFloatingChatMessages error:', e);
+    msgArea.innerHTML = '<div style="text-align:center;padding:12px;color:var(--red);font-size:11px;">❌ Lỗi tải tin nhắn.</div>';
+  }
+}
+
+// Append single message to floating DOM
+function addFloatingChatMessageToDOM(msg) {
+  const msgArea = document.getElementById('cjFloatingChatMessages');
+  if (!msgArea) return;
+  if (document.getElementById(`fl_msg_${msg.id}`)) return;
+  
+  const myCode = getEffectiveStaffCode();
+  const isMe = msg.sender_code === myCode;
+  
+  const sender = allStaff.find(s => s.staff_code === msg.sender_code);
+  const displayName = sender ? (sender.nickname || sender.full_name) : msg.sender_code;
+  const initial = displayName ? getNameInitial(displayName) : '?';
+  const avatarColor = sender?.staff_avatar_color || '';
+  
+  const avatarHtml = typeof renderAnimatedAvatar === 'function'
+    ? renderAnimatedAvatar(initial, avatarColor, 'sm')
+    : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;">${initial}</div>`;
+    
+  let timeStr = '';
+  try {
+    const d = new Date(msg.created_at);
+    timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  } catch (e) {}
+  
+  let bubbleClass = 'chat-message-bubble';
+  if (isMe) bubbleClass += ' chat-message-bubble--me';
+  if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
+  if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
+  if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
+  
+  const rowClass = isMe ? 'chat-message-row chat-message-row--me' : 'chat-message-row';
+  
+  let messageText = formatChatMessageText(msg.message);
+  
+  let categoryPrefix = '';
+  let catIcon = '';
+  if (msg.category === 'warning') {
+    categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--warning">⚠️ Cảnh báo</span>';
+    catIcon = '⚠️';
+  } else if (msg.category === 'strategy') {
+    categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--strategy">🧭 Chiến lược</span>';
+    catIcon = '🧭';
+  } else if (msg.category === 'important') {
+    categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--important">🔔 Quan trọng</span>';
+    catIcon = '🔔';
+  }
+  
+  let messageContentHtml = `<div class="chat-message-text">${messageText}</div>`;
+  if (catIcon) {
+    messageContentHtml = `
+      <div class="chat-message-body-with-icon">
+        <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
+        <div class="chat-message-text" style="flex:1; padding-top:2px;">${messageText}</div>
+      </div>
+    `;
+  }
+  
+  const avatarHtmlBlock = isMe ? '' : `
+    <div class="chat-message-avatar" title="${displayName}">
+      ${avatarHtml}
+    </div>
+  `;
+  
+  const timeHtml = `<div class="chat-message-time" style="text-align:right;">${timeStr}</div>`;
+  
+  const html = `
+    <div class="${rowClass}" id="fl_msg_${msg.id}">
+      ${avatarHtmlBlock}
+      <div class="chat-message-content">
+        ${!isMe ? `<div class="chat-message-sender">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
+        <div class="${bubbleClass}">
+          ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
+          ${messageContentHtml}
+          ${timeHtml}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  msgArea.insertAdjacentHTML('beforeend', html);
+  msgArea.scrollTop = msgArea.scrollHeight;
+}
+
+// Send text message from floating input
+async function sendFloatingChatMessage() {
+  const input = document.getElementById('cjFloatingChatInput');
+  const catSelect = document.getElementById('cjFloatingChatCategory');
+  const profileId = window._activeFloatingProfileId;
+  
+  if (!input || !profileId) return;
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const category = catSelect ? catSelect.value : 'general';
+  const sender = getEffectiveStaffCode();
+  
+  input.value = '';
+  input.focus();
+  
+  try {
+    const res = await sbFetch('/rest/v1/profile_chats', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        profile_id: profileId,
+        sender_code: sender,
+        message: text,
+        category: category
+      })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data[0]) {
+        addFloatingChatMessageToDOM(data[0]);
+        await markChatAsRead(profileId);
+      }
+    } else {
+      showToast('❌ Gửi tin nhắn thất bại');
+    }
+  } catch (e) {
+    console.error('sendFloatingChatMessage error:', e);
+    showToast('❌ Lỗi kết nối');
+  }
+}
+
+// Upload file proxy streaming for floating chat
+async function uploadFloatingChatFile(input) {
+  const file = input.files?.[0];
+  const profileId = window._activeFloatingProfileId;
+  if (!file || !profileId) return;
+  
+  input.value = '';
+  showToast('⌛ Đang tải tệp lên...');
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    if (data && data.url) {
+      const sender = getEffectiveStaffCode();
+      const catSelect = document.getElementById('cjFloatingChatCategory');
+      const category = catSelect ? catSelect.value : 'general';
+      
+      const dbRes = await sbFetch('/rest/v1/profile_chats', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          profile_id: profileId,
+          sender_code: sender,
+          message: data.url,
+          category: category
+        })
+      });
+      
+      if (dbRes.ok) {
+        const newMsgArr = await dbRes.json();
+        if (newMsgArr && newMsgArr[0]) {
+          addFloatingChatMessageToDOM(newMsgArr[0]);
+          await markChatAsRead(profileId);
+          showToast('✅ Đã gửi tệp đính kèm');
+        }
+      }
+    } else {
+      throw new Error('No URL returned');
+    }
+  } catch (e) {
+    showToast('❌ Gửi tệp thất bại');
+    console.error('uploadFloatingChatFile error:', e);
+  }
+}
+
+// Setup floating active chat realtime channel
+function setupFloatingChatRealtime(profileId) {
+  if (typeof window.supabase === 'undefined') return;
+  
+  if (window._floatingActiveChatSubscription) {
+    window._floatingActiveChatSubscription.unsubscribe();
+    window._floatingActiveChatSubscription = null;
+  }
+  
+  if (!_supabaseRealtimeClient) {
+    _supabaseRealtimeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  
+  window._floatingActiveChatSubscription = _supabaseRealtimeClient
+    .channel(`floating-chat-realtime:${profileId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'profile_chats',
+      filter: `profile_id=eq.${profileId}`
+    }, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        const msg = payload.new;
+        addFloatingChatMessageToDOM(msg);
+        if (msg.sender_code !== getEffectiveStaffCode()) {
+          markChatAsRead(profileId);
+        }
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`Floating active realtime subscribed for profile:${profileId}`);
+      }
+    });
 }

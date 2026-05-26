@@ -168,6 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await Promise.allSettled([loadProfiles(), loadStaff()]);
     if (typeof loadUnreadChats === 'function') await loadUnreadChats();
     await loadDashboard();
+    if (typeof initFloatingChat === 'function') initFloatingChat();
 
     _handleDeepLink();
     applyDesktopLayout();
