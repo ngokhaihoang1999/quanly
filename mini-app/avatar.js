@@ -64,6 +64,13 @@ function serializeAvatarConfig(cfg) {
 // Returns HTML string for the avatar element
 // size: 'sm' (list card 40px), 'md' (detail 56px), 'lg' (preview 90px)
 function renderAnimatedAvatar(letter, config, size = 'md') {
+  // If the config is a direct image URL, render a custom image element instead
+  if (typeof config === 'string' && (config.startsWith('http://') || config.startsWith('https://') || config.startsWith('/') || config.includes('supabase') || config.includes('telegram'))) {
+    const sz = size === 'sm' ? 40 : size === 'lg' ? 90 : 56;
+    const r = sz < 50 ? 12 : 16;
+    return `<img class="av-box" src="${config}" style="width:${sz}px;height:${sz}px;border-radius:${r}px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 16px rgba(0,0,0,0.1);" onerror="this.outerHTML='<div class=\\'av-box\\' style=\\'width:${sz}px;height:${sz}px;border-radius:${r}px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:${size==='sm'?18:size==='lg'?42:24}px;font-weight:700;color:white;\\'>${letter}</div>'" />`;
+  }
+
   const cfg = typeof config === 'string' ? parseAvatarConfig(config) : config;
   const sz = size === 'sm' ? 40 : size === 'lg' ? 90 : 56;
   const fz = size === 'sm' ? 18 : size === 'lg' ? 42 : 24;
@@ -249,6 +256,17 @@ function openAvatarStylePicker(profileId, encodedRaw) {
       <div id="avGradientSection" style="display:none;">
         <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">🖌 Hoặc chỉ chọn màu nền</div>
         <div id="avGradientGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      </div>
+
+      <!-- PHOTO UPLOAD -->
+      <div style="margin-bottom:18px; border-top:1px solid var(--border); padding-top:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">📷 Hoặc tải hình ảnh lên</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="file" id="avProfilePhotoUpload" style="display:none;" onchange="uploadAvatarImage(this, 'profile', '${profileId}')" />
+          <button onclick="document.getElementById('avProfilePhotoUpload').click()" id="btnAvProfilePhotoUpload" style="flex:1;padding:10px;background:var(--surface2);color:var(--text);border:1px dashed var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            📤 Chọn & tải hình ảnh lên
+          </button>
+        </div>
       </div>
 
       <!-- ACTIONS -->
@@ -514,6 +532,17 @@ function _openStaffAvatarPicker() {
         <div id="avGradientGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
       </div>
 
+      <!-- PHOTO UPLOAD -->
+      <div style="margin-bottom:18px; border-top:1px solid var(--border); padding-top:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">📷 Hoặc tải hình ảnh lên</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="file" id="avProfilePhotoUpload" style="display:none;" onchange="uploadAvatarImage(this, 'staff', '__staff__')" />
+          <button onclick="document.getElementById('avProfilePhotoUpload').click()" id="btnAvProfilePhotoUpload" style="flex:1;padding:10px;background:var(--surface2);color:var(--text);border:1px dashed var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            📤 Chọn & tải hình ảnh lên
+          </button>
+        </div>
+      </div>
+
       <!-- ACTIONS -->
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('avatarStyleModal').remove()" style="flex:1;padding:13px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Huỷ</button>
@@ -587,5 +616,97 @@ async function _saveStaffAvatarStyle() {
   } catch(e) {
     console.error('saveStaffAvatarStyle:', e);
     showToast('❌ Lỗi lưu avatar');
+  }
+}
+
+// Upload custom avatar image using Supreme bot proxy server (lag-free, CORS-enabled)
+async function uploadAvatarImage(input, targetType, targetId) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const btn = document.getElementById('btnAvProfilePhotoUpload');
+  const originalText = btn ? btn.innerHTML : '📤 Chọn & tải hình ảnh lên';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Đang tải lên...';
+  }
+
+  showToast('⏳ Đang tải ảnh lên máy chủ...');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && data.url) {
+      const imageUrl = data.url;
+
+      if (targetType === 'staff') {
+        // Save to staff table
+        await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ staff_avatar_color: imageUrl })
+        });
+        myStaff.staff_avatar_color = imageUrl;
+
+        // Update hidden inputs and previews in settings
+        const profInput = document.getElementById('prof_staff_avatar_color');
+        if (profInput) profInput.value = imageUrl;
+
+        const previewBox = document.getElementById('staffAvatarPreviewBox');
+        if (previewBox) {
+          const letter = getNameInitial(myStaff?.nickname || myStaff?.full_name);
+          previewBox.innerHTML = renderAnimatedAvatar(letter, imageUrl, 'md');
+        }
+
+        // Refresh header avatar
+        const headerAv = document.getElementById('headerAvatar');
+        if (headerAv) {
+          const dn = myStaff.nickname || myStaff.full_name || '?';
+          const lt = getNameInitial(dn);
+          const avH = renderAnimatedAvatar(lt, imageUrl, 'md');
+          headerAv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="openPersonalizationPanel()" title="Cài đặt"><div style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">${avH}</div><div style="display:flex;flex-direction:column;gap:1px;"><span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;">${dn}</span><span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;">Hệ thống quản lý</span></div></div>`;
+        }
+
+        showToast('✅ Đã lưu avatar cá nhân!');
+      } else {
+        // Save to profiles table
+        await sbFetch(`/rest/v1/profiles?id=eq.${targetId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ avatar_color: imageUrl })
+        });
+        const p = allProfiles.find(x => x.id === targetId);
+        if (p) {
+          p.avatar_color = imageUrl;
+          openProfile(p); // Refresh profile detail card
+        }
+        showToast('✅ Đã lưu avatar hồ sơ!');
+      }
+
+      // Close modal
+      document.getElementById('avatarStyleModal')?.remove();
+    } else {
+      throw new Error('No URL returned from proxy');
+    }
+  } catch (e) {
+    showToast('❌ Tải ảnh lên thất bại');
+    console.error('uploadAvatarImage error:', e);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+    input.value = '';
   }
 }

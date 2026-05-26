@@ -490,8 +490,11 @@ function toggleFullscreen(elId) {
     // Exit fullscreen
     el.classList.remove('ai-fullscreen');
     document.body.style.overflow = '';
-    var closeBtn = document.getElementById('aiFsClose');
+    var closeBtn = el.querySelector('#aiFsClose') || document.getElementById('aiFsClose');
     if (closeBtn) closeBtn.remove();
+    const triggerBtn = el.querySelector('.chat-fs-trigger');
+    if (triggerBtn) triggerBtn.innerHTML = '⛶ Phóng to';
+    
     // Re-render mindmap at normal size
     if (elId === 'mindmapContainer') {
       el.style.height = '420px';
@@ -506,8 +509,11 @@ function toggleFullscreen(elId) {
     btn.id = 'aiFsClose';
     btn.className = 'ai-fs-close';
     btn.innerHTML = '\u2715';
-    btn.onclick = function() { toggleFullscreen(elId); };
-    document.body.appendChild(btn);
+    btn.onclick = function(e) { e.stopPropagation(); toggleFullscreen(elId); };
+    el.appendChild(btn);
+    const triggerBtn = el.querySelector('.chat-fs-trigger');
+    if (triggerBtn) triggerBtn.innerHTML = '⛶ Thu nhỏ';
+    
     // Mindmap: re-render at full size
     if (elId === 'mindmapContainer') {
       el.style.height = '100vh';

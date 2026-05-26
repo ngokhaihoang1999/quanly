@@ -20,6 +20,9 @@ async function loadProfileChat(profileId) {
   const countEl = document.getElementById('chatCount');
   if (!msgArea) return;
 
+  const searchInput = document.getElementById('cjMainChatSearchInput');
+  if (searchInput) searchInput.value = '';
+
   msgArea.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">⌛ Đang tải cuộc thảo luận...</div>';
   
   try {
@@ -1165,6 +1168,41 @@ async function ensureFloatingProfilesLoaded() {
   }
 }
 
+// Constrain coordinates to current viewport limits to prevent off-screen leakage
+function constrainPositionToViewport(x, y, w, h) {
+  const maxX = window.innerWidth - w;
+  const maxY = window.innerHeight - h;
+  const finalX = Math.max(0, Math.min(maxX, x));
+  const finalY = Math.max(0, Math.min(maxY, y));
+  return { x: finalX, y: finalY };
+}
+
+// Automatically snap elements to screen borders during viewport resize
+window.addEventListener('resize', () => {
+  const head = document.getElementById('cjFloatingChatHead');
+  if (head) {
+    const curX = parseInt(head.style.left);
+    const curY = parseInt(head.style.top);
+    if (!isNaN(curX) && !isNaN(curY)) {
+      const pos = constrainPositionToViewport(curX, curY, 56, 56);
+      head.style.left = pos.x + 'px';
+      head.style.top = pos.y + 'px';
+    }
+  }
+  
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (win && win.style.display === 'flex' && window.innerWidth > 600) {
+    const curX = parseInt(win.style.left);
+    const curY = parseInt(win.style.top);
+    if (!isNaN(curX) && !isNaN(curY)) {
+      const rect = win.getBoundingClientRect();
+      const pos = constrainPositionToViewport(curX, curY, rect.width || 330, rect.height || 420);
+      win.style.left = pos.x + 'px';
+      win.style.top = pos.y + 'px';
+    }
+  }
+});
+
 // Initialize floating chat head positioning and drag handlers
 function initFloatingChat() {
   try {
@@ -1182,8 +1220,9 @@ function initFloatingChat() {
     const savedX = localStorage.getItem('cj_floating_chat_pos_x');
     const savedY = localStorage.getItem('cj_floating_chat_pos_y');
     if (savedX !== null && savedY !== null) {
-      head.style.left = savedX + 'px';
-      head.style.top = savedY + 'px';
+      const pos = constrainPositionToViewport(parseInt(savedX), parseInt(savedY), 56, 56);
+      head.style.left = pos.x + 'px';
+      head.style.top = pos.y + 'px';
       head.style.right = 'auto';
       head.style.bottom = 'auto';
     } else {
@@ -1193,6 +1232,11 @@ function initFloatingChat() {
       head.style.top = 'auto';
     }
     makeFloatingHeadDraggable(head);
+  }
+
+  const win = document.getElementById('cjFloatingChatWindow');
+  if (win) {
+    makeFloatingWindowInteractive(win);
   }
 
   if (window._pinnedChatProfileIds.length > 0) {
@@ -1372,6 +1416,186 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', adjustFloatingLayoutForViewport);
 }
 
+// Make the expanded floating window draggable and resizable
+function makeFloatingWindowInteractive(win) {
+  makeFloatingWindowDraggable(win);
+  makeFloatingWindowResizable(win);
+}
+
+function makeFloatingWindowDraggable(win) {
+  // We drag via .floating-chat-header
+  const header = win.querySelector('.floating-chat-header');
+  if (!header) return;
+  
+  let startX = 0, startY = 0;
+  let initialX = 0, initialY = 0;
+  let isDragging = false;
+  
+  header.addEventListener('pointerdown', (e) => {
+    // Prevent drag trigger if clicking on inputs, select, buttons or avatars list inside the header
+    if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('#cjFloatingChatAvatarsRow')) {
+      return;
+    }
+    e.preventDefault();
+    header.setPointerCapture(e.pointerId);
+    
+    const rect = win.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+    
+    win.style.left = initialX + 'px';
+    win.style.top = initialY + 'px';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = true;
+  });
+  
+  header.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    win.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+  });
+  
+  header.addEventListener('pointerup', (e) => {
+    if (!isDragging) return;
+    header.releasePointerCapture(e.pointerId);
+    isDragging = false;
+    
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    win.style.transform = '';
+    
+    let finalX = initialX + dx;
+    let finalY = initialY + dy;
+    
+    const rect = win.getBoundingClientRect();
+    const pos = constrainPositionToViewport(finalX, finalY, rect.width || 330, rect.height || 420);
+    
+    win.style.left = pos.x + 'px';
+    win.style.top = pos.y + 'px';
+    
+    localStorage.setItem('cj_floating_win_pos_x', pos.x);
+    localStorage.setItem('cj_floating_win_pos_y', pos.y);
+  });
+  
+  header.addEventListener('pointercancel', (e) => {
+    if (isDragging) {
+      header.releasePointerCapture(e.pointerId);
+      isDragging = false;
+      win.style.transform = '';
+    }
+  });
+}
+
+function makeFloatingWindowResizable(win) {
+  // Create Left handle
+  const leftHandle = document.createElement('div');
+  leftHandle.style.cssText = 'position:absolute; left:-3px; top:0; bottom:0; width:8px; cursor:w-resize; z-index:99999;';
+  win.appendChild(leftHandle);
+
+  // Create Top handle
+  const topHandle = document.createElement('div');
+  topHandle.style.cssText = 'position:absolute; left:0; right:0; top:-3px; height:8px; cursor:n-resize; z-index:99999;';
+  win.appendChild(topHandle);
+
+  // Create Top-Left handle
+  const topLeftHandle = document.createElement('div');
+  topLeftHandle.style.cssText = 'position:absolute; left:-3px; top:-3px; width:12px; height:12px; cursor:nw-resize; z-index:100000;';
+  win.appendChild(topLeftHandle);
+
+  let startWidth = 0, startHeight = 0;
+  let startLeft = 0, startTop = 0;
+  let startX = 0, startY = 0;
+  let activeHandle = null;
+
+  function onPointerDown(e, handle) {
+    e.preventDefault();
+    e.stopPropagation();
+    handle.setPointerCapture(e.pointerId);
+    
+    const rect = win.getBoundingClientRect();
+    startWidth = rect.width;
+    startHeight = rect.height;
+    startLeft = rect.left;
+    startTop = rect.top;
+    
+    startX = e.clientX;
+    startY = e.clientY;
+    activeHandle = handle;
+    
+    win.style.left = startLeft + 'px';
+    win.style.top = startTop + 'px';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    win.style.width = startWidth + 'px';
+    win.style.height = startHeight + 'px';
+  }
+
+  function onPointerMove(e) {
+    if (!activeHandle) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    let newWidth = startWidth;
+    let newHeight = startHeight;
+    let newLeft = startLeft;
+    let newTop = startTop;
+
+    if (activeHandle === leftHandle || activeHandle === topLeftHandle) {
+      newWidth = startWidth - dx;
+      newLeft = startLeft + dx;
+    }
+    if (activeHandle === topHandle || activeHandle === topLeftHandle) {
+      newHeight = startHeight - dy;
+      newTop = startTop + dy;
+    }
+
+    // Min size boundaries
+    if (newWidth < 280) {
+      newLeft = startLeft + (startWidth - 280);
+      newWidth = 280;
+    }
+    if (newHeight < 300) {
+      newTop = startTop + (startHeight - 300);
+      newHeight = 300;
+    }
+
+    win.style.width = newWidth + 'px';
+    win.style.height = newHeight + 'px';
+    win.style.left = newLeft + 'px';
+    win.style.top = newTop + 'px';
+  }
+
+  function onPointerUp(e, handle) {
+    if (!activeHandle) return;
+    handle.releasePointerCapture(e.pointerId);
+    activeHandle = null;
+
+    const rect = win.getBoundingClientRect();
+    localStorage.setItem('cj_floating_win_width', Math.round(rect.width));
+    localStorage.setItem('cj_floating_win_height', Math.round(rect.height));
+    localStorage.setItem('cj_floating_win_pos_x', Math.round(rect.left));
+    localStorage.setItem('cj_floating_win_pos_y', Math.round(rect.top));
+  }
+
+  leftHandle.addEventListener('pointerdown', (e) => onPointerDown(e, leftHandle));
+  leftHandle.addEventListener('pointermove', onPointerMove);
+  leftHandle.addEventListener('pointerup', (e) => onPointerUp(e, leftHandle));
+
+  topHandle.addEventListener('pointerdown', (e) => onPointerDown(e, topHandle));
+  topHandle.addEventListener('pointermove', onPointerMove);
+  topHandle.addEventListener('pointerup', (e) => onPointerUp(e, topHandle));
+
+  topLeftHandle.addEventListener('pointerdown', (e) => onPointerDown(e, topLeftHandle));
+  topLeftHandle.addEventListener('pointermove', onPointerMove);
+  topLeftHandle.addEventListener('pointerup', (e) => onPointerUp(e, topLeftHandle));
+}
+
 // Calculate and position the expanded window near the bubble head without overflowing
 function positionFloatingChatWindow() {
   const head = document.getElementById('cjFloatingChatHead');
@@ -1384,9 +1608,30 @@ function positionFloatingChatWindow() {
     return;
   }
   
+  // Restore user defined width & height if available
+  const savedW = localStorage.getItem('cj_floating_win_width');
+  const savedH = localStorage.getItem('cj_floating_win_height');
+  if (savedW) win.style.width = savedW + 'px';
+  if (savedH) win.style.height = savedH + 'px';
+  
+  // Restore user defined coordinates if available
+  const savedX = localStorage.getItem('cj_floating_win_pos_x');
+  const savedY = localStorage.getItem('cj_floating_win_pos_y');
+  if (savedX !== null && savedY !== null) {
+    const w = parseInt(savedW) || 330;
+    const h = parseInt(savedH) || 420;
+    const pos = constrainPositionToViewport(parseInt(savedX), parseInt(savedY), w, h);
+    win.style.left = pos.x + 'px';
+    win.style.top = pos.y + 'px';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    return;
+  }
+  
+  // Otherwise, default calculate position near the bubble head
   const headRect = head.getBoundingClientRect();
-  const winWidth = 330;
-  const winHeight = 420;
+  const winWidth = parseInt(savedW) || 330;
+  const winHeight = parseInt(savedH) || 420;
   
   let left = 0;
   let top = 0;
@@ -1403,17 +1648,12 @@ function positionFloatingChatWindow() {
     top = headRect.bottom + 10;
   }
   
-  if (left < 10) left = 10;
-  if (left + winWidth > window.innerWidth - 10) left = window.innerWidth - winWidth - 10;
-  if (top < 10) top = 10;
-  if (top + winHeight > window.innerHeight - 10) top = window.innerHeight - winHeight - 10;
+  const pos = constrainPositionToViewport(left, top, winWidth, winHeight);
   
-  win.style.left = left + 'px';
-  win.style.top = top + 'px';
+  win.style.left = pos.x + 'px';
+  win.style.top = pos.y + 'px';
   win.style.right = 'auto';
   win.style.bottom = 'auto';
-  win.style.width = '';
-  win.style.height = '';
 }
 
 // Pin a chat profile to floating stack
@@ -1463,6 +1703,32 @@ function renderFloatingChatUIElements() {
   if (!head) return;
 
   head.style.display = 'flex';
+
+  // Constrain bubble position to current viewport immediately upon rendering/showing
+  const curX = parseInt(head.style.left);
+  const curY = parseInt(head.style.top);
+  if (!isNaN(curX) && !isNaN(curY)) {
+    const pos = constrainPositionToViewport(curX, curY, 56, 56);
+    head.style.left = pos.x + 'px';
+    head.style.top = pos.y + 'px';
+  } else {
+    // If not set in absolute position yet, check if there are saved coordinates in localStorage
+    const savedX = localStorage.getItem('cj_floating_chat_pos_x');
+    const savedY = localStorage.getItem('cj_floating_chat_pos_y');
+    if (savedX !== null && savedY !== null) {
+      const pos = constrainPositionToViewport(parseInt(savedX), parseInt(savedY), 56, 56);
+      head.style.left = pos.x + 'px';
+      head.style.top = pos.y + 'px';
+      head.style.right = 'auto';
+      head.style.bottom = 'auto';
+    } else {
+      // Default initial layout values if no custom dragging is recorded
+      head.style.right = '20px';
+      head.style.bottom = '120px';
+      head.style.left = 'auto';
+      head.style.top = 'auto';
+    }
+  }
   
   const backHead = document.getElementById('cjFloatingChatHeadBack');
   if (backHead) {
@@ -1579,6 +1845,9 @@ async function selectFloatingChat(profileId) {
 async function loadFloatingChatMessages(profileId) {
   const msgArea = document.getElementById('cjFloatingChatMessages');
   if (!msgArea) return;
+
+  const searchInput = document.getElementById('cjFloatingChatSearchInput');
+  if (searchInput) searchInput.value = '';
   
   msgArea.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:11px;">⌛ Đang tải...</div>';
   
@@ -1672,7 +1941,7 @@ function addFloatingChatMessageToDOM(msg) {
   const timeHtml = `<div class="chat-message-time" style="text-align:right;">${timeStr}</div>`;
   
   const html = `
-    <div class="${rowClass}" id="fl_msg_${msg.id}">
+    <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
@@ -1823,4 +2092,25 @@ function setupFloatingChatRealtime(profileId) {
         console.log(`Floating active realtime subscribed for profile:${profileId}`);
       }
     });
+}
+
+// Client-side instant chat messages search filtering (0ms latency)
+function searchChatMessages(keyword, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const kw = keyword.toLowerCase().trim();
+  const rows = container.querySelectorAll('.chat-message-row');
+  
+  rows.forEach(row => {
+    const textEl = row.querySelector('.chat-message-text');
+    const text = textEl ? textEl.textContent.toLowerCase() : '';
+    const rawText = row.getAttribute('data-raw-text') ? row.getAttribute('data-raw-text').toLowerCase() : '';
+    
+    if (!kw || text.includes(kw) || rawText.includes(kw)) {
+      row.style.display = 'flex';
+    } else {
+      row.style.display = 'none';
+    }
+  });
 }
