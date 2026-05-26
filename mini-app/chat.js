@@ -19,7 +19,7 @@ async function loadProfileChat(profileId) {
   msgArea.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">⌛ Đang tải cuộc thảo luận...</div>';
   
   try {
-    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`);
+    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc&_ts=${Date.now()}`);
     const messages = await res.json();
     
     if (countEl) {
@@ -92,11 +92,15 @@ function addChatMessageToDOM(msg) {
   // Match @JD codes: @\d{6}-[A-Z]+
   messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
 
+  const avatarHtmlBlock = isMe ? '' : `
+    <div class="chat-message-avatar" onclick="showStaffCard('${msg.sender_code}')" style="cursor:pointer;" title="${displayName}">
+      ${avatarHtml}
+    </div>
+  `;
+
   const html = `
     <div class="${rowClass}" id="msg_${msg.id}">
-      <div class="chat-message-avatar" onclick="showStaffCard('${msg.sender_code}')" style="cursor:pointer;" title="${displayName}">
-        ${avatarHtml}
-      </div>
+      ${avatarHtmlBlock}
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
         <div class="${bubbleClass}">
