@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await Promise.allSettled([loadSemesters(), loadStructure()]);
     await Promise.allSettled([loadProfiles(), loadStaff()]);
+    if (typeof loadUnreadChats === 'function') await loadUnreadChats();
     await loadDashboard();
 
     _handleDeepLink();
@@ -284,7 +285,7 @@ async function loadStaffInfo() {
       }
       if (myStaff.preferences && typeof applyUserPreferences === 'function') applyUserPreferences(myStaff.preferences);
       try {
-        const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,scj_code,sinka_info,position,specialist_position,telegram_id');
+        const allRes = await sbFetch('/rest/v1/staff?select=full_name,staff_code,nickname,gender,birth_year,bio,avatar_emoji,motto,scj_code,sinka_info,position,specialist_position,telegram_id,staff_avatar_color');
         const allS = await allRes.json();
         allStaff = allS;
         const dl = document.getElementById('staffSuggest');
@@ -323,6 +324,10 @@ function _clearLoadingStates() {
 
 // ── Navigation ──
 function backToList() {
+  if (typeof _profileChatSubscription !== 'undefined' && _profileChatSubscription) {
+    _profileChatSubscription.unsubscribe();
+    _profileChatSubscription = null;
+  }
   if (typeof ProfileTransition !== 'undefined') {
     ProfileTransition.close();
     return;
@@ -370,6 +375,10 @@ function switchFormTab(el, cardId) {
         if (wrap) wrap.style.display = (hocLaiEl.value && hocLaiEl.value !== 'Nhập học mới') ? '' : 'none';
       });
     }
+  }
+  if (cardId === 'chatTab' && typeof loadProfileChat === 'function' && currentProfileId) {
+    if (typeof markChatAsRead === 'function') markChatAsRead(currentProfileId);
+    loadProfileChat(currentProfileId);
   }
 }
 function switchMainTab(el, tab) {

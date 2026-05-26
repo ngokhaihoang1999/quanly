@@ -95,6 +95,10 @@ function renderProfileCard(p, opts = {}) {
   const resolvedId = p.id || opts.profileId || '';
   const clickFn = opts.clickFn || `openProfileById('${resolvedId}', event)`;
 
+  // Check if profile has unread chat messages
+  const isUnread = window.unreadChatProfileIds && window.unreadChatProfileIds.has(resolvedId);
+  const unreadBadge = isUnread ? '<span class="unread-chat-badge" style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--red);color:white;margin-left:4px;display:inline-block;animation: pulse 2s infinite;">💬 Mới</span>' : '';
+
   // Birth year
   const birthYear = !isInactive && p.birth_year ? p.birth_year : '';
   const yearTag = birthYear ? `<span style="font-size:12px;color:var(--text3);font-weight:400;"> · ${birthYear}</span>` : '';
@@ -107,7 +111,7 @@ function renderProfileCard(p, opts = {}) {
 
   // ── Row 1: Name + year (left) — Status badge (right) ──
   const row1 = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-    <div style="font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.full_name}${yearTag}</div>
+    <div style="font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.full_name}${yearTag}${unreadBadge}</div>
     <div style="flex-shrink:0;">${statusBadge}</div>
   </div>`;
 
