@@ -1404,7 +1404,8 @@ async function saveRecord() {
         if (typeof createNotification === 'function' && typeof getProfileStakeholders === 'function') {
           const stks = await getProfileStakeholders(currentProfileId);
           const title = isBTVN ? '📝 Có cập nhật Bài tập về nhà mới' : '🤝 Ghi nhận Team Meeting mới';
-          createNotification(stks, 'system', title, pName, currentProfileId);
+          const type = isBTVN ? 'new_btvn' : 'new_team_meeting';
+          createNotification(stks, type, title, pName, currentProfileId);
         }
       }
     }

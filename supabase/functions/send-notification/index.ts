@@ -14,11 +14,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 // Format a nice Telegram message per event type
 function formatTgMessage(eventType: string, title: string, body: string | null, profileId?: string | null): string {
   const icons: Record<string, string> = {
-    hapja_created: '🍎', hapja_approved: '✅', hapja_rejected: '❌',
+    hapja_created: '🍎', hapja_approved: '✅', hapja_rejected: '❌', hapja_resubmitted: '📝',
     chot_tv: '📅', bc_tv: '📝', chot_bb: '🎓', bc_bb: '📋',
     mo_kt: '📖', drop_out: '🔴', pause: '⏸️', chot_center: '🏛️', reminder: '⏰',
     lap_group_tv_bb: '🎓', bb_reminder: '📚', bb_report_reminder: '✍️', bb_milestone: '⭐',
-    chat_mention: '💬',
+    chat_mention: '💬', new_btvn: '📝', new_team_meeting: '🤝',
   };
   const icon = icons[eventType] || '🔔';
   let msg = `${icon} *${title}*`;
