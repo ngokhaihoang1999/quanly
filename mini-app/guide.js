@@ -68,6 +68,7 @@ const JONDO_STEPS_DATA = [
   {
     step: 1,
     title: "1. Lập phiếu Check Hapja 📋",
+    label: "Check Hapja",
     icon: "📋",
     keywords: ["hapja", "duyệt", "sàng lọc", "tạo học viên", "thêm học viên", "học viên mới", "khởi tạo"],
     content: `
@@ -88,6 +89,7 @@ const JONDO_STEPS_DATA = [
   {
     step: 2,
     title: "2. Thông tin & Trạng thái hồ sơ 👤",
+    label: "Trạng thái",
     icon: "👤",
     keywords: ["profile", "hồ sơ", "trạng thái", "alive", "pause", "dropout", "nghỉ học", "tạm dừng", "hoạt động"],
     content: `
@@ -109,6 +111,7 @@ const JONDO_STEPS_DATA = [
   {
     step: 3,
     title: "3. Nhật ký & Báo cáo Tư vấn (TV) 💬",
+    label: "Nhật ký TV",
     icon: "💬",
     keywords: ["tư vấn", "tv", "báo cáo", "nhật ký", "tình trạng", "tâm lý", "ghi chú"],
     content: `
@@ -128,6 +131,7 @@ const JONDO_STEPS_DATA = [
   {
     step: 4,
     title: "4. Nhóm hỗ trợ & Telegram (Group TV-BB) 🤝",
+    label: "Group TV-BB",
     icon: "🤝",
     keywords: ["telegram", "nhóm", "group", "chat", "thảo luận", "liên kết", "kết nối", "tv-bb"],
     content: `
@@ -147,6 +151,7 @@ const JONDO_STEPS_DATA = [
   {
     step: 5,
     title: "5. Theo dõi 4 Mốc Tiến độ ⭐",
+    label: "Tiến độ",
     icon: "⭐",
     keywords: ["milestone", "mốc", "bài đặc biệt", "tiến độ", "phỏng vấn", "đăng ký center", "đk center"],
     content: `
@@ -170,6 +175,7 @@ const JONDO_STEPS_DATA = [
   {
     step: 6,
     title: "6. Chốt Center (Thẻ Sinka) 🏢",
+    label: "Chốt Center",
     icon: "🏢",
     keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "hoàn thành"],
     content: `
@@ -258,7 +264,7 @@ function openGuideCenter() {
             ${JONDO_STEPS_DATA.map(step => `
               <div class="guide-step-node ${step.step === 1 ? 'active' : ''}" id="gstep_${step.step}" onclick="selectGuideStep(${step.step})">
                 <div class="guide-step-circle">${step.icon}</div>
-                <div class="guide-step-label">${step.title.split('.')[1].split('(')[0].trim()}</div>
+                <div class="guide-step-label">${step.label}</div>
               </div>
             `).join('')}
           </div>

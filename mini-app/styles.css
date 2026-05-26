@@ -2577,7 +2577,10 @@
   font-weight: 700;
   color: var(--text3);
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: keep-all;
+  max-width: 65px;
+  line-height: 1.25;
   transition: color 0.2s;
 }
 .guide-step-node.active .guide-step-label {
