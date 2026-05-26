@@ -12,10 +12,15 @@ try {
     $runs = $data.workflow_runs
     
     if (-not $runs) {
-        Write-Host "No workflow runs found." -ForegroundColor Yellow
+        if ($data.message) {
+            Write-Host "GitHub API Error: $($data.message)" -ForegroundColor Red
+        } else {
+            Write-Host "No workflow runs found." -ForegroundColor Yellow
+        }
         exit
     }
     
+    $isFirst = $true
     foreach ($run in $runs) {
         $id = $run.id
         $name = $run.name
@@ -34,27 +39,32 @@ try {
             } else {
                 Write-Host "  Conclusion: Failure" -ForegroundColor Red
                 
-                # Fetch detailed annotations from check-runs
-                $checkUrl = "https://api.github.com/repos/$repo/commits/$sha/check-runs"
-                $checkRes = curl.exe -s -L $checkUrl | ConvertFrom-Json
-                $checkRuns = $checkRes.check_runs
-                
-                foreach ($cr in $checkRuns) {
-                    if ($cr.conclusion -eq "failure") {
-                        Write-Host "  > Job failed: $($cr.name)" -ForegroundColor Yellow
-                        $annUrl = $cr.output.annotations_url
-                        if ($annUrl) {
-                            $annotations = curl.exe -s -L $annUrl | ConvertFrom-Json
-                            foreach ($ann in $annotations) {
-                                Write-Host "    [Error] $($ann.message)" -ForegroundColor DarkRed
+                if ($isFirst) {
+                    # Fetch detailed annotations from check-runs (only for the latest run to save API limit)
+                    $checkUrl = "https://api.github.com/repos/$repo/commits/$sha/check-runs"
+                    $checkRes = curl.exe -s -L $checkUrl | ConvertFrom-Json
+                    $checkRuns = $checkRes.check_runs
+                    
+                    foreach ($cr in $checkRuns) {
+                        if ($cr.conclusion -eq "failure") {
+                            Write-Host "  > Job failed: $($cr.name)" -ForegroundColor Yellow
+                            $annUrl = $cr.output.annotations_url
+                            if ($annUrl) {
+                                $annotations = curl.exe -s -L $annUrl | ConvertFrom-Json
+                                foreach ($ann in $annotations) {
+                                    Write-Host "    [Error] $($ann.message)" -ForegroundColor DarkRed
+                                }
                             }
                         }
                     }
+                } else {
+                    Write-Host "  > (Annotations skipped to save API rate limit)" -ForegroundColor Gray
                 }
             }
         } else {
             Write-Host "  Conclusion: In Progress" -ForegroundColor Yellow
         }
+        $isFirst = $false
     }
 } catch {
     Write-Host "Error fetching action status: $_" -ForegroundColor Red
