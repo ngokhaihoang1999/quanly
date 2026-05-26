@@ -116,10 +116,8 @@ function addChatMessageToDOM(msg) {
 
   const rowClass = isMe ? 'chat-message-row chat-message-row--me' : 'chat-message-row';
 
-  // Format mentions to be bold/colored
-  let messageText = escHtml(msg.message);
-  // Match @JD codes: @\d{6}-[A-Z]+
-  messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
+  // Format message text (mentions, links, images)
+  let messageText = formatChatMessageText(msg.message);
 
   // Add category badge inside the bubble
   let categoryPrefix = '';
@@ -606,8 +604,7 @@ function updateChatMessageInDOM(msg) {
   
   const textEl = row.querySelector('.chat-message-text');
   if (textEl) {
-    let messageText = escHtml(msg.message);
-    messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
+    let messageText = formatChatMessageText(msg.message);
     textEl.innerHTML = messageText;
     
     // Add (đã sửa) tag
@@ -743,4 +740,55 @@ function unsubscribeProfileChat() {
   window._chatReads = [];
   currentProfileId = null;
   console.log('Cleaned up profile chat resources.');
+}
+
+// Format message text: Mentions, links, and inline images (Option 2)
+function formatChatMessageText(text) {
+  let messageText = escHtml(text);
+  
+  // 1. Format mentions
+  messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
+
+  // 2. Format links and check if they are images
+  const urlRegex = /(https?:\/\/[^\s<]+)/gi;
+  messageText = messageText.replace(urlRegex, (url) => {
+    // Check if the link is an image URL (ends with standard extension or is a Telegram/Imgur file link)
+    const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
+                    url.includes('/file/bot') || 
+                    url.includes('imgbb.com') || 
+                    url.includes('postimg.cc') || 
+                    url.includes('telegram.org/file/bot');
+    
+    if (isImage) {
+      return `
+        <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation(); openChatImageModal('${url}')">
+          <img src="${url}" style="width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
+        </div>
+      `;
+    } else {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link" style="color: inherit; text-decoration: underline; font-weight: 600; word-break: break-all;" onclick="event.stopPropagation();">${url}</a>`;
+    }
+  });
+
+  return messageText;
+}
+
+// Fullscreen image viewer modal
+function openChatImageModal(url) {
+  let modal = document.getElementById('chatImageModal');
+  if (!modal) {
+    const html = `
+      <div id="chatImageModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:999999; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);" onclick="this.style.display='none'">
+        <span style="position:absolute; top:20px; right:20px; font-size:32px; color:white; cursor:pointer; font-weight:bold; user-select:none; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); border-radius:50%;">&times;</span>
+        <img id="chatImageModalImg" src="" style="max-width:100%; max-height:90vh; object-fit:contain; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.6); animation: zoomFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;" onclick="event.stopPropagation();" />
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+    modal = document.getElementById('chatImageModal');
+  }
+  const img = document.getElementById('chatImageModalImg');
+  if (img) {
+    img.src = url;
+  }
+  modal.style.display = 'flex';
 }
