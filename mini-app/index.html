@@ -6,9 +6,9 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026052616" />
-  <link rel="stylesheet" href="avatar.css?v=2026052616" />
-  <link rel="stylesheet" href="reports.css?v=2026052616" />
+  <link rel="stylesheet" href="styles.css?v=2026052617" />
+  <link rel="stylesheet" href="avatar.css?v=2026052617" />
+  <link rel="stylesheet" href="reports.css?v=2026052617" />
 </head>
 <body>
 <div class="header">
@@ -902,39 +902,39 @@
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="utils.js?v=2026052616"></script>
-<script src="combobox.js?v=2026052616"></script>
-<script src="webhook.js?v=2026052616"></script>
-<script src="avatar.js?v=2026052616"></script>
-<script src="reports.js?v=2026052616"></script>
-<script src="transitions.js?v=2026052616"></script>
+<script src="utils.js?v=2026052617"></script>
+<script src="combobox.js?v=2026052617"></script>
+<script src="webhook.js?v=2026052617"></script>
+<script src="avatar.js?v=2026052617"></script>
+<script src="reports.js?v=2026052617"></script>
+<script src="transitions.js?v=2026052617"></script>
 <!-- ── Core + Extracted Modules (dependency order) ── -->
-<script src="core.js?v=2026052616"></script>
-<script src="pin.js?v=2026052616"></script>
-<script src="permissions.js?v=2026052616"></script>
-<script src="desktop.js?v=2026052616"></script>
-<script src="settings.js?v=2026052616"></script>
-<script src="fruit-actions.js?v=2026052616"></script>
+<script src="core.js?v=2026052617"></script>
+<script src="pin.js?v=2026052617"></script>
+<script src="permissions.js?v=2026052617"></script>
+<script src="desktop.js?v=2026052617"></script>
+<script src="settings.js?v=2026052617"></script>
+<script src="fruit-actions.js?v=2026052617"></script>
 <!-- ── Feature Modules ── -->
-<script src="dashboard.js?v=2026052616"></script>
-<script src="profiles.js?v=2026052616"></script>
-<script src="hapja.js?v=2026052616"></script>
-<script src="records.js?v=2026052616"></script>
-<script src="staff.js?v=2026052616"></script>
-<script src="structure.js?v=2026052616"></script>
-<script src="calendar.js?v=2026052616"></script>
-<script src="notification.js?v=2026052616"></script>
-<script src="priority.js?v=2026052616"></script>
-<script src="notes.js?v=2026052616"></script>
-<script src="sinka.js?v=2026052616"></script>
-<script src="dkbb.js?v=2026052616"></script>
-<script src="strategy.js?v=2026052616"></script>
-<script src="lacie.js?v=2026052616"></script>
-<script src="ai-parse.js?v=2026052616"></script>
-<script src="mindmap.js?v=2026052616"></script>
-<script src="chat.js?v=2026052616"></script>
+<script src="dashboard.js?v=2026052617"></script>
+<script src="profiles.js?v=2026052617"></script>
+<script src="hapja.js?v=2026052617"></script>
+<script src="records.js?v=2026052617"></script>
+<script src="staff.js?v=2026052617"></script>
+<script src="structure.js?v=2026052617"></script>
+<script src="calendar.js?v=2026052617"></script>
+<script src="notification.js?v=2026052617"></script>
+<script src="priority.js?v=2026052617"></script>
+<script src="notes.js?v=2026052617"></script>
+<script src="sinka.js?v=2026052617"></script>
+<script src="dkbb.js?v=2026052617"></script>
+<script src="strategy.js?v=2026052617"></script>
+<script src="lacie.js?v=2026052617"></script>
+<script src="ai-parse.js?v=2026052617"></script>
+<script src="mindmap.js?v=2026052617"></script>
+<script src="chat.js?v=2026052617"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=2026052616"></script>
+<script src="init.js?v=2026052617"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;
@@ -1013,7 +1013,7 @@ window._lazyMarkmap = function() {
         </div>
       </div>
       <!-- avatars list -->
-      <div id="cjFloatingChatAvatarsRow" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; align-items:center; scrollbar-width:none; width:100%;">
+      <div id="cjFloatingChatAvatarsRow" style="display:flex; gap:12px; overflow-x:auto; padding:8px 8px; align-items:center; scrollbar-width:none; width:100%; min-height:56px; box-sizing:border-box;">
         <!-- Pinned chats avatars dynamically render here -->
       </div>
     </div>
@@ -1022,18 +1022,26 @@ window._lazyMarkmap = function() {
       <!-- Messages load here -->
     </div>
     
-    <div class="floating-chat-input-area" style="padding:8px; border-top:1px solid var(--border); background:var(--surface2); display:flex; flex-direction:column; gap:4px;">
-      <div style="display:flex; gap:4px; align-items:center; width:100%;">
-        <select id="cjFloatingChatCategory" style="padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:10px; cursor:pointer; height:28px;">
-          <option value="general">💬 Thường</option>
-          <option value="warning">⚠️ Cảnh báo</option>
-          <option value="strategy">🧭 Chi tiết</option>
-          <option value="important">🔔 Khẩn</option>
-        </select>
+    <div class="floating-chat-input-area" style="padding:10px 12px; border-top:1px solid var(--border); background:var(--surface2); display:flex; flex-direction:column; gap:8px;">
+      <!-- Row 1: Category Dropdown & Attach Button -->
+      <div style="display:flex; gap:8px; align-items:center; width:100%;">
+        <div style="position:relative; flex:1; max-width:140px;">
+          <select id="cjFloatingChatCategory" style="width:100%; padding:4px 8px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:11px; font-weight:500; cursor:pointer; height:28px; outline:none; -webkit-appearance:none; appearance:none;">
+            <option value="general">💬 Thường</option>
+            <option value="warning">⚠️ Cảnh báo</option>
+            <option value="strategy">🧭 Chi tiết</option>
+            <option value="important">🔔 Khẩn</option>
+          </select>
+          <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:9px; color:var(--text3); pointer-events:none;">▼</span>
+        </div>
         <input type="file" id="cjFloatingChatImageInput" style="display:none;" onchange="uploadFloatingChatFile(this)" />
-        <button onclick="document.getElementById('cjFloatingChatImageInput').click()" style="background:var(--surface); border:1px solid var(--border); border-radius:6px; width:28px; height:28px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Gửi tệp">📎</button>
-        <input type="text" id="cjFloatingChatInput" placeholder="Nhập tin nhắn... (@ để tag)" style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:11.5px; height:28px;" onkeydown="if(event.key==='Enter') sendFloatingChatMessage();" autocomplete="off" spellcheck="false" />
-        <button onclick="sendFloatingChatMessage()" style="padding:6px 10px; font-size:11px; font-weight:700; background:var(--accent); color:white; border:none; border-radius:6px; cursor:pointer; height:28px; flex-shrink:0;">Gửi</button>
+        <button onclick="document.getElementById('cjFloatingChatImageInput').click()" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; width:28px; height:28px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface)'" title="Gửi tệp">📎</button>
+      </div>
+      
+      <!-- Row 2: Message Input & Send Button -->
+      <div style="display:flex; gap:8px; align-items:center; width:100%;">
+        <input type="text" id="cjFloatingChatInput" placeholder="Nhập tin nhắn... (@ để tag)" style="flex:1; min-width:0; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; height:32px; outline:none;" onkeydown="if(event.key==='Enter') sendFloatingChatMessage();" autocomplete="off" spellcheck="false" />
+        <button onclick="sendFloatingChatMessage()" style="padding:6px 14px; font-size:12px; font-weight:700; background:var(--accent); color:white; border:none; border-radius:8px; cursor:pointer; height:32px; flex-shrink:0; transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Gửi</button>
       </div>
     </div>
   </div>

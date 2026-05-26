@@ -302,10 +302,11 @@ async function markChatAsRead(profileId) {
     }
     
     // Update chat tab badge
-    updateChatTabBadge();
+    if (typeof updateChatTabBadge === 'function') updateChatTabBadge();
     
     // Trigger visual list updates to hide unread badges
     if (typeof filterProfiles === 'function') filterProfiles();
+    if (typeof updateFloatingChatUI === 'function') updateFloatingChatUI();
     
     const countEl = document.getElementById('notifBadge');
     if (countEl && typeof loadNotifCount === 'function') loadNotifCount();
@@ -460,6 +461,23 @@ function setupGlobalChatRealtime() {
           }
           if (typeof updateFloatingChatUI === 'function') {
             updateFloatingChatUI();
+          }
+          
+          // Trigger shake/bump animation on chat head if collapsed and profile is pinned
+          if (window._pinnedChatProfileIds && window._pinnedChatProfileIds.includes(msg.profile_id)) {
+            const win = document.getElementById('cjFloatingChatWindow');
+            const isCollapsed = !win || win.style.display === 'none' || win.style.display === '';
+            if (isCollapsed) {
+              const avatarDiv = document.getElementById('cjFloatingChatHeadAvatar');
+              if (avatarDiv) {
+                avatarDiv.classList.remove('chat-head-bump');
+                void avatarDiv.offsetWidth; // trigger reflow to restart animation
+                avatarDiv.classList.add('chat-head-bump');
+                avatarDiv.onanimationend = () => {
+                  avatarDiv.classList.remove('chat-head-bump');
+                };
+              }
+            }
           }
         }
       }
@@ -1413,7 +1431,6 @@ function pinChatToFloating(profileId) {
   
   window._activeFloatingProfileId = pid;
   showToast('💬 Đã ghim bong bóng chat');
-  expandFloatingChat();
   updateFloatingChatUI();
 }
 
