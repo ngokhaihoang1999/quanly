@@ -2743,6 +2743,18 @@
   }
 }
 
+/* Ensure the header avatar is perfectly circular and clips protruding child borders */
+.header-avatar-wrapper {
+  overflow: hidden !important;
+}
+.header-avatar-wrapper,
+.header-avatar-wrapper img,
+.header-avatar-wrapper div,
+.header-avatar-wrapper svg {
+  border-radius: 50% !important;
+}
+
+
 
 
 

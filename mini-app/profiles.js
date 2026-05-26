@@ -246,7 +246,7 @@ async function openProfile(p, cardEl) {
           ${avatarHtml}
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:18px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.full_name}</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;word-break:break-word;line-height:1.3;">${p.full_name}</div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             ${statusBtn}
             <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
