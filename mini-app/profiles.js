@@ -364,6 +364,11 @@ async function openProfile(p, cardEl) {
       if (isInactive) b.style.display = 'none';
       else b.style.display = '';
   });
+
+  // Update chat tab badge (Mới / @)
+  if (typeof updateChatTabBadge === 'function') {
+    updateChatTabBadge();
+  }
 }
 
 // ── Refresh in-place: sync dữ liệu mới nhất, giữ nguyên tab đang mở ──

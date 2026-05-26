@@ -772,6 +772,25 @@
   box-sizing: border-box;
 }
 
+/* Chat Tab Fullscreen Styles */
+#chatTab.ai-fullscreen {
+  box-sizing: border-box;
+}
+#chatTab.ai-fullscreen .chat-container {
+  flex: 1 !important;
+  height: calc(100vh - 48px) !important;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+#chatTab.ai-fullscreen .form-card-header {
+  border-radius: 0;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+}
+
 /* ═══════════════ NOTIFICATION BELL ═══════════════ */
 .notif-bell {
   width: 32px; height: 32px; border-radius: 50%;

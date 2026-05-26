@@ -61,6 +61,9 @@ async function loadProfileChat(profileId) {
     // Setup Supabase Realtime for this profile chat
     setupSupabaseRealtimeForChat(profileId);
 
+    // Update chat tab badge
+    updateChatTabBadge();
+
     // Bind tag autocomplete once
     const input = document.getElementById('profileChatInput');
     if (input && !input.dataset.tagAutocompleteBound) {
@@ -294,6 +297,12 @@ async function markChatAsRead(profileId) {
     if (window.unreadChatProfileIds) {
       window.unreadChatProfileIds.delete(profileId);
     }
+    if (window.unreadChatMentionProfileIds) {
+      window.unreadChatMentionProfileIds.delete(profileId);
+    }
+    
+    // Update chat tab badge
+    updateChatTabBadge();
     
     // Trigger visual list updates to hide unread badges
     if (typeof filterProfiles === 'function') filterProfiles();
@@ -429,6 +438,21 @@ function setupGlobalChatRealtime() {
             window.unreadChatProfileIds = new Set([msg.profile_id]);
           }
           
+          // Check if message mentions user
+          const isMention = msg.message && msg.message.includes(`@${myCode}`);
+          if (isMention) {
+            if (window.unreadChatMentionProfileIds) {
+              window.unreadChatMentionProfileIds.add(msg.profile_id);
+            } else {
+              window.unreadChatMentionProfileIds = new Set([msg.profile_id]);
+            }
+          }
+          
+          // Update chat tab badge if this matches current open profile
+          if (currentProfileId === msg.profile_id) {
+            updateChatTabBadge();
+          }
+          
           // Re-render list elements to show the badge
           if (typeof filterProfiles === 'function') filterProfiles();
           if (typeof renderPersonalList === 'function' && window._activePersonalListType) {
@@ -492,10 +516,15 @@ async function loadUnreadChats() {
     });
     const data = await res.json();
     window.unreadChatProfileIds = new Set((data || []).map(d => d.profile_id));
+    window.unreadChatMentionProfileIds = new Set((data || []).filter(d => d.has_mention).map(d => d.profile_id));
   } catch(e) {
     console.warn('loadUnreadChats error:', e);
     window.unreadChatProfileIds = new Set();
+    window.unreadChatMentionProfileIds = new Set();
   }
+  
+  // Update current chat tab badge if open
+  updateChatTabBadge();
   
   // Set up global realtime listener for new chat messages
   setupGlobalChatRealtime();
@@ -535,7 +564,7 @@ function cancelEditChatMessage() {
   window._editingMessageId = null;
   if (input) {
     input.value = '';
-    input.placeholder = 'Nhập tin nhắn... tag @JD để thông báo';
+    input.placeholder = 'Nhập tin nhắn... (@ để tag)';
   }
   if (sendBtn) {
     sendBtn.textContent = 'Gửi';
@@ -1062,5 +1091,22 @@ function insertChatTag(staffCode, atIndex) {
   
   if (suggestionsBox) {
     suggestionsBox.style.display = 'none';
+  }
+}
+
+// Update the badge text for "Thảo luận" tab inside profile detail switcher
+function updateChatTabBadge() {
+  const tab = document.getElementById('tabProfileChat');
+  if (!tab) return;
+  
+  if (currentProfileId && window.unreadChatProfileIds && window.unreadChatProfileIds.has(currentProfileId)) {
+    const isMention = window.unreadChatMentionProfileIds && window.unreadChatMentionProfileIds.has(currentProfileId);
+    if (isMention) {
+      tab.innerHTML = '💬 Thảo luận <span style="background:var(--red); color:white; font-size:9px; font-weight:700; padding:1px 4px; border-radius:4px; margin-left:3px; animation: pulse 2s infinite;">@</span>';
+    } else {
+      tab.innerHTML = '💬 Thảo luận <span style="background:var(--red); color:white; font-size:9px; font-weight:700; padding:1px 4px; border-radius:4px; margin-left:3px; animation: pulse 2s infinite;">Mới</span>';
+    }
+  } else {
+    tab.innerHTML = '💬 Thảo luận';
   }
 }
