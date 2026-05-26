@@ -324,7 +324,9 @@ function _clearLoadingStates() {
 
 // ── Navigation ──
 function backToList() {
-  if (typeof _profileChatSubscription !== 'undefined' && _profileChatSubscription) {
+  if (typeof unsubscribeProfileChat === 'function') {
+    unsubscribeProfileChat();
+  } else if (typeof _profileChatSubscription !== 'undefined' && _profileChatSubscription) {
     _profileChatSubscription.unsubscribe();
     _profileChatSubscription = null;
   }

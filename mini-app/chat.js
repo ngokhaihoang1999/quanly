@@ -2,6 +2,10 @@
 let _supabaseRealtimeClient = null;
 let _profileChatSubscription = null;
 
+// Global state cache for chat messages and reads
+window._chatMessages = [];
+window._chatReads = [];
+
 // Common emojis for quick picking
 const CHAT_COMMON_EMOJIS = [
   '😀', '😂', '🤣', '😊', '😍', '🥰', '😘', '😜', '😎', '🤩', 
@@ -19,10 +23,26 @@ async function loadProfileChat(profileId) {
   msgArea.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">⌛ Đang tải cuộc thảo luận...</div>';
   
   try {
-    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    const messages = await res.json();
+    // 1. Mark chat as read first so DB updates
+    await markChatAsRead(profileId);
+
+    // 2. Initialize memory state
+    window._chatMessages = [];
+    window._chatReads = [];
+
+    // 3. Fetch messages and read states in parallel
+    const [messagesRes, readsRes] = await Promise.all([
+      sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      }),
+      sbFetch(`/rest/v1/profile_chat_reads?profile_id=eq.${profileId}&select=*`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+    ]);
+
+    const messages = await messagesRes.json();
+    window._chatReads = await readsRes.json();
+    window._chatMessages = messages;
     
     if (countEl) {
       countEl.textContent = `${messages.length} tin nhắn`;
@@ -33,6 +53,8 @@ async function loadProfileChat(profileId) {
       msgArea.innerHTML = '<div id="chatEmptyState" style="text-align:center;padding:32px;color:var(--text3);font-size:13px;">Chưa có thảo luận nào cho hồ sơ này.</div>';
     } else {
       messages.forEach(msg => addChatMessageToDOM(msg));
+      // Calculate and display seen indicators
+      updateSeenIndicators();
       msgArea.scrollTop = msgArea.scrollHeight;
     }
     
@@ -55,6 +77,11 @@ function addChatMessageToDOM(msg) {
   
   // Prevent duplicate rendering
   if (document.getElementById(`msg_${msg.id}`)) return;
+
+  // Add to memory list if not present
+  if (window._chatMessages && !window._chatMessages.some(m => m.id === msg.id)) {
+    window._chatMessages.push(msg);
+  }
 
   const emptyState = document.getElementById('chatEmptyState');
   if (emptyState) emptyState.remove();
@@ -129,25 +156,28 @@ function addChatMessageToDOM(msg) {
   if (isMe) {
     timeHtml = `
       <div class="chat-message-time" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-        <span class="chat-bubble-actions" style="display:inline-flex; gap:6px; font-size:9px; user-select:none;">
-          <span onclick="startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.65; font-weight:600; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">✏️ Sửa</span>
-          <span onclick="deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.65; font-weight:600; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">🗑️ Xoá</span>
+        <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none;">
+          <span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>
+          <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
         </span>
-        <span>${timeStr}</span>
+        <span style="flex-grow:1; text-align:right;">${timeStr}</span>
       </div>
     `;
   }
+
+  const onclickHtml = isMe ? `onclick="toggleBubbleActions(event, '${msg.id}')" style="cursor:pointer;"` : '';
 
   const html = `
     <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
-        <div class="${bubbleClass}">
+        <div class="${bubbleClass}" ${onclickHtml}>
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
           ${timeHtml}
         </div>
+        <div class="chat-message-seen-container" id="seen_${msg.id}"></div>
       </div>
     </div>
   `;
@@ -297,6 +327,13 @@ function setupSupabaseRealtimeForChat(profileId) {
     }, (payload) => {
       if (payload.eventType === 'INSERT') {
         addChatMessageToDOM(payload.new);
+        
+        // If we are currently active on the chat tab, update our own read stamp
+        const chatTabActive = document.querySelector('#profileTabs .form-tab.active')?.getAttribute('onclick')?.includes('chatTab');
+        if (chatTabActive && payload.new.sender_code !== getEffectiveStaffCode()) {
+          markChatAsRead(profileId);
+        }
+
         const countEl = document.getElementById('chatCount');
         if (countEl) {
           // Increment message count locally
@@ -307,10 +344,32 @@ function setupSupabaseRealtimeForChat(profileId) {
             countEl.textContent = `${currentCount} tin nhắn`;
           }
         }
+        updateSeenIndicators();
       } else if (payload.eventType === 'UPDATE') {
         updateChatMessageInDOM(payload.new);
+        updateSeenIndicators();
       } else if (payload.eventType === 'DELETE') {
         removeChatMessageFromDOM(payload.old.id);
+        updateSeenIndicators();
+      }
+    })
+    .on('postgres_changes', {
+      event: '*', // Listen to INSERT, UPDATE, DELETE on reads
+      schema: 'public',
+      table: 'profile_chat_reads',
+      filter: `profile_id=eq.${profileId}`
+    }, (payload) => {
+      if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+        const read = payload.new;
+        if (window._chatReads) {
+          const idx = window._chatReads.findIndex(r => r.staff_code === read.staff_code);
+          if (idx !== -1) {
+            window._chatReads[idx] = read;
+          } else {
+            window._chatReads.push(read);
+          }
+          updateSeenIndicators();
+        }
       }
     })
     .subscribe((status) => {
@@ -534,6 +593,14 @@ async function deleteChatMessage(msgId) {
 function updateChatMessageInDOM(msg) {
   const row = document.getElementById(`msg_${msg.id}`);
   if (!row) return;
+
+  // Update memory list
+  if (window._chatMessages) {
+    const idx = window._chatMessages.findIndex(m => m.id === msg.id);
+    if (idx !== -1) {
+      window._chatMessages[idx] = msg;
+    }
+  }
   
   row.setAttribute('data-raw-text', msg.message);
   
@@ -561,6 +628,12 @@ function removeChatMessageFromDOM(msgId) {
   const row = document.getElementById(`msg_${msgId}`);
   if (row) {
     row.remove();
+    
+    // Update memory list
+    if (window._chatMessages) {
+      window._chatMessages = window._chatMessages.filter(m => m.id !== msgId);
+    }
+
     const countEl = document.getElementById('chatCount');
     if (countEl) {
       const text = countEl.textContent || '0';
@@ -571,4 +644,103 @@ function removeChatMessageFromDOM(msgId) {
       }
     }
   }
+}
+
+// Update miniature seen indicators below messages
+function updateSeenIndicators() {
+  document.querySelectorAll('.chat-message-seen-container').forEach(el => {
+    el.innerHTML = '';
+  });
+
+  if (!window._chatMessages || !window._chatMessages.length || !window._chatReads || !window._chatReads.length) return;
+
+  const myCode = getEffectiveStaffCode();
+  const seenMap = {}; // msgId -> array of staff_codes
+
+  window._chatReads.forEach(read => {
+    if (read.staff_code === myCode) return;
+
+    const readTime = new Date(read.last_read_at).getTime();
+    
+    // Find last message read by this staff member
+    for (let i = window._chatMessages.length - 1; i >= 0; i--) {
+      const msg = window._chatMessages[i];
+      const msgTime = new Date(msg.created_at).getTime();
+      if (msgTime <= readTime) {
+        if (!seenMap[msg.id]) {
+          seenMap[msg.id] = [];
+        }
+        seenMap[msg.id].push(read.staff_code);
+        break; // found the latest message read by them
+      }
+    }
+  });
+
+  // Render avatars in containers
+  Object.keys(seenMap).forEach(msgId => {
+    const container = document.getElementById(`seen_${msgId}`);
+    if (container) {
+      const avatarsHtml = seenMap[msgId]
+        .map(code => renderTinySeenAvatar(code))
+        .join('');
+      container.innerHTML = avatarsHtml;
+    }
+  });
+}
+
+// Render a tiny staff avatar
+function renderTinySeenAvatar(staffCode) {
+  const staff = allStaff.find(s => s.staff_code === staffCode);
+  const displayName = staff ? (staff.nickname || staff.full_name) : staffCode;
+  const initial = displayName ? getNameInitial(displayName) : '?';
+  const avatarColor = staff?.staff_avatar_color || '';
+
+  return `
+    <div class="chat-seen-avatar" style="background:${avatarColor || 'var(--accent)'};" title="${displayName} (${staffCode})">
+      ${initial}
+    </div>
+  `;
+}
+
+// Toggle actions for own message bubble
+function toggleBubbleActions(event, msgId) {
+  event.stopPropagation();
+  
+  const targetActions = document.getElementById(`actions_${msgId}`);
+  if (!targetActions) return;
+
+  const isOpen = targetActions.style.display === 'inline-flex';
+
+  // Close all other actions
+  document.querySelectorAll('.chat-bubble-actions').forEach(el => {
+    el.style.display = 'none';
+    el.classList.remove('chat-bubble-actions-animate');
+  });
+
+  if (!isOpen) {
+    targetActions.style.display = 'inline-flex';
+    targetActions.classList.add('chat-bubble-actions-animate');
+  }
+}
+
+// Global click handler to close actions when clicking away
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.chat-bubble-actions')) return;
+
+  document.querySelectorAll('.chat-bubble-actions').forEach(el => {
+    el.style.display = 'none';
+    el.classList.remove('chat-bubble-actions-animate');
+  });
+});
+
+// Cleanup sub and data on tab exit
+function unsubscribeProfileChat() {
+  if (_profileChatSubscription) {
+    _profileChatSubscription.unsubscribe();
+    _profileChatSubscription = null;
+  }
+  window._chatMessages = [];
+  window._chatReads = [];
+  currentProfileId = null;
+  console.log('Cleaned up profile chat resources.');
 }
