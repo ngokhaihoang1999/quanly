@@ -72,6 +72,13 @@ function renderAnimatedAvatar(letter, config, size = 'md') {
   }
 
   const cfg = typeof config === 'string' ? parseAvatarConfig(config) : config;
+
+  // Support image URL stored inside a config object (e.g. { style: null, gradient: "https://..." })
+  if (cfg && typeof cfg.gradient === 'string' && (cfg.gradient.startsWith('http://') || cfg.gradient.startsWith('https://') || cfg.gradient.startsWith('/') || cfg.gradient.includes('supabase') || cfg.gradient.includes('telegram'))) {
+    const sz = size === 'sm' ? 40 : size === 'lg' ? 90 : 56;
+    const r = sz < 50 ? 12 : 16;
+    return `<img class="av-box" src="${cfg.gradient}" style="width:${sz}px;height:${sz}px;border-radius:${r}px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 16px rgba(0,0,0,0.1);" onerror="this.outerHTML='<div class=\\'av-box\\' style=\\'width:${sz}px;height:${sz}px;border-radius:${r}px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:${size==='sm'?18:size==='lg'?42:24}px;font-weight:700;color:white;\\'>${letter}</div>'" />`;
+  }
   const sz = size === 'sm' ? 40 : size === 'lg' ? 90 : 56;
   const fz = size === 'sm' ? 18 : size === 'lg' ? 42 : 24;
   const efi = size === 'sm' ? 10 : size === 'lg' ? 22 : 14; // emoji font size inner
@@ -638,7 +645,7 @@ async function uploadAvatarImage(input, targetType, targetId) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?document=true`;
     const res = await fetch(uploadUrl, {
       method: 'POST',
       body: formData

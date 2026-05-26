@@ -74,6 +74,8 @@ Deno.serve(async (req) => {
 
     // ── Handle POST requests for uploading files to Telegram ──
     if (req.method === 'POST') {
+      const url = new URL(req.url);
+      const forceDocument = url.searchParams.get('document') === 'true';
       const contentType = req.headers.get("content-type") || "";
       if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -87,7 +89,8 @@ Deno.serve(async (req) => {
           return new Response("Admin Telegram ID not configured in database", { status: 500 });
         }
 
-        const isImage = file.type.startsWith('image/') || /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(file.name);
+        // If forceDocument is true, we treat it as document to preserve original quality
+        const isImage = !forceDocument && (file.type.startsWith('image/') || /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(file.name));
         
         let telegramApiMethod = 'sendDocument';
         let telegramField = 'document';
