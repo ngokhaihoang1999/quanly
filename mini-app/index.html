@@ -6,9 +6,9 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026052609" />
-  <link rel="stylesheet" href="avatar.css?v=2026052609" />
-  <link rel="stylesheet" href="reports.css?v=2026052609" />
+  <link rel="stylesheet" href="styles.css?v=2026052610" />
+  <link rel="stylesheet" href="avatar.css?v=2026052610" />
+  <link rel="stylesheet" href="reports.css?v=2026052610" />
 </head>
 <body>
 <div class="header">
@@ -267,6 +267,11 @@
           <!-- Chat messages render here -->
         </div>
         <div class="chat-input-area-wrapper" style="position:relative; display:flex; flex-direction:column; gap:6px; width:100%;">
+          <!-- Edit Indicator Banner -->
+          <div id="chatEditIndicator" style="display:none; justify-content:space-between; align-items:center; background:var(--surface2); padding:6px 12px; border-radius:8px; border:1px solid var(--border); font-size:12px; color:var(--text2); width:100%;">
+            <span>✏️ Đang chỉnh sửa tin nhắn... (nhấn ESC để huỷ)</span>
+            <button onclick="cancelEditChatMessage()" style="background:none; border:none; color:var(--red); font-weight:600; cursor:pointer; font-size:11px;">Huỷ</button>
+          </div>
           <div style="display:flex; gap:6px; align-items:center; width:100%;">
             <div class="chat-category-select-wrapper">
               <select id="chat_category" class="chat-category-select" style="padding:9px 6px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:12px; cursor:pointer;">
@@ -276,7 +281,7 @@
                 <option value="important">🔔 Quan trọng</option>
               </select>
             </div>
-            <input type="text" id="profileChatInput" placeholder="Nhập tin nhắn... tag @JD để thông báo" class="chat-text-input" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px;" onkeydown="if(event.key==='Enter') sendProfileChatMessage();" />
+            <input type="text" id="profileChatInput" placeholder="Nhập tin nhắn... tag @JD để thông báo" class="chat-text-input" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px;" onkeydown="if(event.key==='Enter') sendProfileChatMessage(); else if(event.key==='Escape') cancelEditChatMessage();" />
             <button type="button" class="chat-emoji-trigger" onclick="toggleChatEmojiPicker()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:36px; height:36px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">😀</button>
             <button class="save-btn chat-send-btn" onclick="sendProfileChatMessage()" style="margin:0; padding:9px 16px; width:auto; font-size:13px; flex-shrink:0;">Gửi</button>
           </div>
@@ -879,39 +884,39 @@
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="utils.js?v=2026052609"></script>
-<script src="combobox.js?v=2026052609"></script>
-<script src="webhook.js?v=2026052609"></script>
-<script src="avatar.js?v=2026052609"></script>
-<script src="reports.js?v=2026052609"></script>
-<script src="transitions.js?v=2026052609"></script>
+<script src="utils.js?v=2026052610"></script>
+<script src="combobox.js?v=2026052610"></script>
+<script src="webhook.js?v=2026052610"></script>
+<script src="avatar.js?v=2026052610"></script>
+<script src="reports.js?v=2026052610"></script>
+<script src="transitions.js?v=2026052610"></script>
 <!-- ── Core + Extracted Modules (dependency order) ── -->
-<script src="core.js?v=2026052609"></script>
-<script src="pin.js?v=2026052609"></script>
-<script src="permissions.js?v=2026052609"></script>
-<script src="desktop.js?v=2026052609"></script>
-<script src="settings.js?v=2026052609"></script>
-<script src="fruit-actions.js?v=2026052609"></script>
+<script src="core.js?v=2026052610"></script>
+<script src="pin.js?v=2026052610"></script>
+<script src="permissions.js?v=2026052610"></script>
+<script src="desktop.js?v=2026052610"></script>
+<script src="settings.js?v=2026052610"></script>
+<script src="fruit-actions.js?v=2026052610"></script>
 <!-- ── Feature Modules ── -->
-<script src="dashboard.js?v=2026052609"></script>
-<script src="profiles.js?v=2026052609"></script>
-<script src="hapja.js?v=2026052609"></script>
-<script src="records.js?v=2026052609"></script>
-<script src="staff.js?v=2026052609"></script>
-<script src="structure.js?v=2026052609"></script>
-<script src="calendar.js?v=2026052609"></script>
-<script src="notification.js?v=2026052609"></script>
-<script src="priority.js?v=2026052609"></script>
-<script src="notes.js?v=2026052609"></script>
-<script src="sinka.js?v=2026052609"></script>
-<script src="dkbb.js?v=2026052609"></script>
-<script src="strategy.js?v=2026052609"></script>
-<script src="lacie.js?v=2026052609"></script>
-<script src="ai-parse.js?v=2026052609"></script>
-<script src="mindmap.js?v=2026052609"></script>
-<script src="chat.js?v=2026052609"></script>
+<script src="dashboard.js?v=2026052610"></script>
+<script src="profiles.js?v=2026052610"></script>
+<script src="hapja.js?v=2026052610"></script>
+<script src="records.js?v=2026052610"></script>
+<script src="staff.js?v=2026052610"></script>
+<script src="structure.js?v=2026052610"></script>
+<script src="calendar.js?v=2026052610"></script>
+<script src="notification.js?v=2026052610"></script>
+<script src="priority.js?v=2026052610"></script>
+<script src="notes.js?v=2026052610"></script>
+<script src="sinka.js?v=2026052610"></script>
+<script src="dkbb.js?v=2026052610"></script>
+<script src="strategy.js?v=2026052610"></script>
+<script src="lacie.js?v=2026052610"></script>
+<script src="ai-parse.js?v=2026052610"></script>
+<script src="mindmap.js?v=2026052610"></script>
+<script src="chat.js?v=2026052610"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=2026052609"></script>
+<script src="init.js?v=2026052610"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;

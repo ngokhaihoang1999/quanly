@@ -125,15 +125,28 @@ function addChatMessageToDOM(msg) {
     </div>
   `;
 
+  let timeHtml = `<div class="chat-message-time">${timeStr}</div>`;
+  if (isMe) {
+    timeHtml = `
+      <div class="chat-message-time" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span class="chat-bubble-actions" style="display:inline-flex; gap:6px; font-size:9px; user-select:none;">
+          <span onclick="startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.65; font-weight:600; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">✏️ Sửa</span>
+          <span onclick="deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.65; font-weight:600; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">🗑️ Xoá</span>
+        </span>
+        <span>${timeStr}</span>
+      </div>
+    `;
+  }
+
   const html = `
-    <div class="${rowClass}" id="msg_${msg.id}">
+    <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
         <div class="${bubbleClass}">
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
-          <div class="chat-message-time">${timeStr}</div>
+          ${timeHtml}
         </div>
       </div>
     </div>
@@ -147,6 +160,11 @@ function addChatMessageToDOM(msg) {
 
 // Send chat message
 async function sendProfileChatMessage() {
+  if (window._editingMessageId) {
+    saveEditChatMessage();
+    return;
+  }
+
   const input = document.getElementById('profileChatInput');
   const catSelect = document.getElementById('chat_category');
   if (!input || !currentProfileId) return;
@@ -272,22 +290,27 @@ function setupSupabaseRealtimeForChat(profileId) {
   _profileChatSubscription = _supabaseRealtimeClient
     .channel(`profile-chat-realtime:${profileId}`)
     .on('postgres_changes', {
-      event: 'INSERT',
+      event: '*', // Listen to INSERT, UPDATE, DELETE
       schema: 'public',
       table: 'profile_chats',
       filter: `profile_id=eq.${profileId}`
     }, (payload) => {
-      // Direct render
-      addChatMessageToDOM(payload.new);
-      const countEl = document.getElementById('chatCount');
-      if (countEl) {
-        // Increment message count locally
-        const text = countEl.textContent || '0';
-        const match = text.match(/(\d+)/);
-        if (match) {
-          const currentCount = parseInt(match[1]) + 1;
-          countEl.textContent = `${currentCount} tin nhắn`;
+      if (payload.eventType === 'INSERT') {
+        addChatMessageToDOM(payload.new);
+        const countEl = document.getElementById('chatCount');
+        if (countEl) {
+          // Increment message count locally
+          const text = countEl.textContent || '0';
+          const match = text.match(/(\d+)/);
+          if (match) {
+            const currentCount = parseInt(match[1]) + 1;
+            countEl.textContent = `${currentCount} tin nhắn`;
+          }
         }
+      } else if (payload.eventType === 'UPDATE') {
+        updateChatMessageInDOM(payload.new);
+      } else if (payload.eventType === 'DELETE') {
+        removeChatMessageFromDOM(payload.old.id);
       }
     })
     .subscribe((status) => {
@@ -412,4 +435,140 @@ async function loadUnreadChats() {
   
   // Set up global realtime listener for new chat messages
   setupGlobalChatRealtime();
+}
+
+// Edit and Delete Message Utilities
+window._editingMessageId = null;
+
+function startEditChatMessage(msgId) {
+  const row = document.getElementById(`msg_${msgId}`);
+  if (!row) return;
+
+  const rawText = row.getAttribute('data-raw-text') || '';
+  const input = document.getElementById('profileChatInput');
+  const indicator = document.getElementById('chatEditIndicator');
+  const sendBtn = document.querySelector('.chat-send-btn');
+  
+  if (input && indicator && sendBtn) {
+    window._editingMessageId = msgId;
+    input.value = rawText;
+    input.placeholder = 'Đang chỉnh sửa tin nhắn...';
+    sendBtn.textContent = 'Lưu';
+    indicator.style.display = 'flex';
+    input.focus();
+    
+    // Close emoji picker
+    const picker = document.getElementById('chatEmojiPicker');
+    if (picker) picker.style.display = 'none';
+  }
+}
+
+function cancelEditChatMessage() {
+  const input = document.getElementById('profileChatInput');
+  const indicator = document.getElementById('chatEditIndicator');
+  const sendBtn = document.querySelector('.chat-send-btn');
+  
+  window._editingMessageId = null;
+  if (input) {
+    input.value = '';
+    input.placeholder = 'Nhập tin nhắn... tag @JD để thông báo';
+  }
+  if (sendBtn) {
+    sendBtn.textContent = 'Gửi';
+  }
+  if (indicator) {
+    indicator.style.display = 'none';
+  }
+}
+
+async function saveEditChatMessage() {
+  const msgId = window._editingMessageId;
+  const input = document.getElementById('profileChatInput');
+  if (!msgId || !input) return;
+
+  const newText = input.value.trim();
+  if (!newText) return;
+
+  try {
+    const res = await sbFetch(`/rest/v1/profile_chats?id=eq.${msgId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ message: newText })
+    });
+    
+    if (res.ok) {
+      cancelEditChatMessage();
+      showToast('✅ Đã cập nhật tin nhắn');
+    } else {
+      const err = await res.text();
+      console.error('saveEditChatMessage error:', err);
+      showToast('❌ Lỗi sửa tin nhắn');
+    }
+  } catch(e) {
+    console.error('saveEditChatMessage:', e);
+    showToast('❌ Lỗi sửa tin nhắn');
+  }
+}
+
+async function deleteChatMessage(msgId) {
+  if (!confirm('Bạn có chắc chắn muốn xoá tin nhắn này không?')) return;
+
+  try {
+    const res = await sbFetch(`/rest/v1/profile_chats?id=eq.${msgId}`, {
+      method: 'DELETE'
+    });
+    
+    if (res.ok) {
+      showToast('🗑️ Đã xoá tin nhắn');
+      const el = document.getElementById(`msg_${msgId}`);
+      if (el) el.remove();
+    } else {
+      showToast('❌ Lỗi xoá tin nhắn');
+    }
+  } catch(e) {
+    console.error('deleteChatMessage:', e);
+    showToast('❌ Lỗi xoá tin nhắn');
+  }
+}
+
+function updateChatMessageInDOM(msg) {
+  const row = document.getElementById(`msg_${msg.id}`);
+  if (!row) return;
+  
+  row.setAttribute('data-raw-text', msg.message);
+  
+  const textEl = row.querySelector('.chat-message-text');
+  if (textEl) {
+    let messageText = escHtml(msg.message);
+    messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
+    textEl.innerHTML = messageText;
+    
+    // Add (đã sửa) tag
+    const timeEl = row.querySelector('.chat-message-time');
+    if (timeEl && !row.querySelector('.chat-message-edited-tag')) {
+      const tagHtml = '<span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>';
+      const lastChild = timeEl.lastElementChild || timeEl.firstChild;
+      if (lastChild === timeEl) {
+        timeEl.insertAdjacentHTML('afterbegin', tagHtml);
+      } else {
+        timeEl.insertBefore(document.createRange().createContextualFragment(tagHtml), lastChild);
+      }
+    }
+  }
+}
+
+function removeChatMessageFromDOM(msgId) {
+  const row = document.getElementById(`msg_${msgId}`);
+  if (row) {
+    row.remove();
+    const countEl = document.getElementById('chatCount');
+    if (countEl) {
+      const text = countEl.textContent || '0';
+      const match = text.match(/(\d+)/);
+      if (match) {
+        const currentCount = Math.max(0, parseInt(match[1]) - 1);
+        countEl.textContent = `${currentCount} tin nhắn`;
+      }
+    }
+  }
 }
