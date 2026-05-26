@@ -676,6 +676,11 @@ function openPersonalizationPanel() {
           </div>
           <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">💡 Bố cục chỉ hiện khi dùng màn hình rộng (≥1024px)</div>
         </div>
+        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+        <!-- ═══ HƯỚNG DẪN ═══ -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;">❓ TRỢ GIÚP & HƯỚNG DẪN</div>
+        <button onclick="document.getElementById('personalizationModal')?.remove();startAppTour()" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'">🚀 Chạy hướng dẫn giao diện (Interactive Tour)</button>
+
         <button onclick="_savePrefs()" style="width:100%;padding:13px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Lưu giao diện</button>
         <button onclick="_resetPrefs()" style="width:100%;padding:10px;background:none;color:var(--text3);border:1px solid var(--border);border-radius:12px;font-size:12px;cursor:pointer;">↩ Về mặc định hệ thống</button>
         </div>
