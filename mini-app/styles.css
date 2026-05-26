@@ -2838,6 +2838,235 @@
   font-weight: 500;
 }
 
+/* ═══════════════ GUIDE CENTER (WIKI & STEPPER) ═══════════════ */
+.guide-center-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 100%;
+}
+.guide-search-wrap {
+  position: relative;
+  width: 100%;
+}
+.guide-search-wrap input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.guide-search-wrap input:focus {
+  border-color: var(--accent);
+}
+.guide-search-wrap .icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  font-size: 14px;
+}
+/* Stepper horizontal */
+.guide-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  padding: 10px 0 15px;
+  margin: 5px 0 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 6px;
+}
+.guide-stepper::-webkit-scrollbar {
+  display: none;
+}
+.guide-stepper::before {
+  content: '';
+  position: absolute;
+  top: 26px;
+  left: 15px;
+  right: 15px;
+  height: 3px;
+  background: var(--border);
+  z-index: 1;
+}
+.guide-step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 2;
+  flex: 1;
+  min-width: 58px;
+}
+.guide-step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: var(--text2);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.guide-step-node:hover .guide-step-circle {
+  transform: scale(1.1);
+  border-color: var(--accent2);
+}
+.guide-step-node.active .guide-step-circle {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 0 12px var(--fab-shadow);
+  transform: scale(1.15);
+}
+.guide-step-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.guide-step-node.active .guide-step-label {
+  color: var(--accent);
+}
+/* Guide content panel */
+.guide-content-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-height: 200px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.guide-content-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.guide-content-body {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+}
+.guide-content-body ul {
+  padding-left: 16px;
+  margin: 8px 0;
+}
+.guide-content-body li {
+  margin-bottom: 4px;
+}
+/* CSS illustrated graphics */
+.guide-illustration {
+  margin: 12px 0 0;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guide-ill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guide-ill-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  flex: 1;
+}
+.guide-ill-bar.fill {
+  background: var(--accent);
+}
+.guide-ill-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--accent2);
+  border: 1px solid var(--border);
+}
+/* Guide tabs */
+.guide-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+.guide-tab-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.guide-tab-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px var(--fab-shadow);
+}
+.guide-wiki-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.guide-wiki-item:hover {
+  border-color: var(--accent);
+}
+.guide-wiki-header {
+  padding: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text1);
+}
+.guide-wiki-body {
+  padding: 0 12px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  border-top: 1px dashed var(--border);
+  display: none;
+}
+.guide-wiki-body.open {
+  display: block;
+  padding-top: 8px;
+}
+
 
 
 
