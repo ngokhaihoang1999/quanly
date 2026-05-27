@@ -1484,43 +1484,13 @@ function makeFloatingWindowDraggable(win) {
   let initialX = 0, initialY = 0;
   let isDragging = false;
   
-  function onPointerMove(e) {
-    if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    win.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
-  }
-  
-  function onPointerUp(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', onPointerUp);
-    
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    win.style.transform = '';
-    
-    let finalX = initialX + dx;
-    let finalY = initialY + dy;
-    
-    const rect = win.getBoundingClientRect();
-    const pos = constrainPositionToViewport(finalX, finalY, rect.width || 330, rect.height || 420);
-    
-    win.style.left = pos.x + 'px';
-    win.style.top = pos.y + 'px';
-    
-    localStorage.setItem('cj_floating_win_pos_x', pos.x);
-    localStorage.setItem('cj_floating_win_pos_y', pos.y);
-  }
-  
   header.addEventListener('pointerdown', (e) => {
     // Prevent drag trigger if clicking on inputs, select, buttons or avatars list inside the header
     if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('#cjFloatingChatAvatarsRow')) {
       return;
     }
     e.preventDefault();
+    header.setPointerCapture(e.pointerId);
     
     const rect = win.getBoundingClientRect();
     initialX = rect.left;
@@ -1534,10 +1504,36 @@ function makeFloatingWindowDraggable(win) {
     startX = e.clientX;
     startY = e.clientY;
     isDragging = true;
-    
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
+    header.style.cursor = 'grabbing';
   });
+  
+  header.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    const rect = win.getBoundingClientRect();
+    const targetX = initialX + dx;
+    const targetY = initialY + dy;
+    const pos = constrainPositionToViewport(targetX, targetY, rect.width || 330, rect.height || 420);
+    
+    win.style.left = pos.x + 'px';
+    win.style.top = pos.y + 'px';
+  });
+  
+  const endDrag = (e) => {
+    if (!isDragging) return;
+    header.releasePointerCapture(e.pointerId);
+    isDragging = false;
+    header.style.cursor = 'move';
+    
+    const rect = win.getBoundingClientRect();
+    localStorage.setItem('cj_floating_win_pos_x', Math.round(rect.left));
+    localStorage.setItem('cj_floating_win_pos_y', Math.round(rect.top));
+  };
+  
+  header.addEventListener('pointerup', endDrag);
+  header.addEventListener('pointercancel', endDrag);
 }
 
 function makeFloatingWindowResizable(win) {
