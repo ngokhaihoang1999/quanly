@@ -269,12 +269,9 @@ function renderBoardNoteCard(note, idx) {
       <span class="board-note-title" ${canEdit ? 'contenteditable="true"' : ''} onblur="saveNoteInlineTitle(this, '${note.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escHtml(note.title || 'Ghi chú')}</span>
       <span class="board-note-time" style="color:${c.dateTxt};">${timeAgo}</span>
     </div>
-    <div class="board-note-body" style="color:${c.text}; position:relative; overflow:auto; flex:1; padding-bottom:34px;">
-      <div class="board-note-content" id="noteContent-${note.id}" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" style="min-height:90px; outline:none; text-align:left; word-wrap:break-word; padding:4px;">${note.content}</div>
-    </div>
     
     ${canEdit ? `
-    <!-- Note Editor Rich-Text Bottom Toolbar -->
+    <!-- Note Editor Rich-Text Bottom Toolbar (Now Top Block under Header) -->
     <div class="note-toolbar" id="noteToolbar-${note.id}">
       <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('bold', '${note.id}')" title="In đậm"><b>B</b></button>
       <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('italic', '${note.id}')" title="In nghiêng"><i>I</i></button>
@@ -294,6 +291,10 @@ function renderBoardNoteCard(note, idx) {
       </div>
     </div>
     ` : ''}
+
+    <div class="board-note-body" style="color:${c.text}; position:relative; overflow:auto; flex:1;">
+      <div class="board-note-content" id="noteContent-${note.id}" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" style="min-height:90px; outline:none; text-align:left; word-wrap:break-word; padding:4px;">${note.content}</div>
+    </div>
 
     <div class="board-note-footer">
       <div class="board-note-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}</div>
@@ -572,6 +573,11 @@ function openCreateNoteModal() {
   document.getElementById('pnote_content').value = '';
   document.getElementById('pnote_link_profile').value = '';
   document.getElementById('pnote_cal_date').value = '';
+  
+  // Show content textarea container for new notes
+  const contentGroup = document.getElementById('pnote_content')?.closest('.field-group');
+  if (contentGroup) contentGroup.style.display = 'block';
+
   // Clear alarm fields
   const alarmDate = document.getElementById('pnote_alarm_date');
   const alarmTime = document.getElementById('pnote_alarm_time');
@@ -592,6 +598,10 @@ function openEditNoteModal(noteId) {
   document.getElementById('pnoteModalTitle').textContent = '✏️ Sửa ghi chú';
   document.getElementById('pnote_title').value = note.title || '';
   document.getElementById('pnote_content').value = note.content || '';
+
+  // Hide content textarea container since notes are edited directly inline
+  const contentGroup = document.getElementById('pnote_content')?.closest('.field-group');
+  if (contentGroup) contentGroup.style.display = 'none';
 
   // Set linked profile
   const linkInput = document.getElementById('pnote_link_profile');
@@ -644,13 +654,20 @@ async function savePersonalNote() {
   if (!sc) { showToast('Chưa xác định được tài khoản'); return; }
 
   const title = document.getElementById('pnote_title').value.trim();
-  const content = document.getElementById('pnote_content').value.trim();
   const color = getSelectedNoteColor();
   const linkInput = document.getElementById('pnote_link_profile');
   const rawId = (linkInput.dataset.profileId || '').trim();
   const linkedProfileId = rawId.length > 10 ? rawId : null; // uuid is 36 chars
 
-  if (!content) { showToast('Vui lòng nhập nội dung'); return; }
+  // Preserve existing rich HTML note content when editing properties in the modal
+  let content = '';
+  if (_editingNoteId) {
+    const existing = _allMyNotes.find(n => n.id === _editingNoteId) || _sharedWithMeNotes.find(n => n.id === _editingNoteId);
+    content = existing ? existing.content : '';
+  } else {
+    content = document.getElementById('pnote_content').value.trim();
+    if (!content) { showToast('Vui lòng nhập nội dung'); return; }
+  }
 
   const calDate = document.getElementById('pnote_cal_date')?.value || null;
 

@@ -426,16 +426,13 @@
     border-radius: 4px;
   }
   
-  /* Modern Bottom Toolbar for Note Editing */
+  /* Modern Top Toolbar for Note Editing */
   .note-toolbar {
-    display: none; /* Hidden by default, shown when note has focus or hover */
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    display: none; /* Hidden by default, shown when note is focused */
+    position: relative !important;
     height: 32px;
-    background: rgba(255, 255, 255, 0.95);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.02) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     align-items: center;
     justify-content: flex-start;
     gap: 4px;
@@ -444,12 +441,11 @@
   }
   
   [data-theme="dark"] .note-toolbar {
-    background: rgba(30, 30, 30, 0.95);
-    border-top-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
   }
   
-  .board-note:focus-within .note-toolbar,
-  .board-note:hover .note-toolbar {
+  .board-note:focus-within .note-toolbar {
     display: flex;
   }
   
@@ -571,7 +567,8 @@
   /* Embedded Media Link Popover modal inside note editor */
   .media-link-popover {
     position: absolute;
-    bottom: 36px;
+    top: 36px;
+    bottom: auto;
     left: 8px;
     background: var(--surface);
     border: 1px solid var(--border);
