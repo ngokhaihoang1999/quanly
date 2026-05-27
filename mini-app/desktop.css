@@ -424,23 +424,23 @@
     border: none !important;
   }
   
-  /* Đặt nút toggle là absolute so với .header để nó không bị ẩn khi header-top bị ẩn */
+  /* Đặt nút toggle cố định ở góc dưới bên phải header, ngang hàng với tab bar */
   #headerCollapseBtn {
     display: flex !important;
     position: absolute;
-    right: 16px;
-    top: 24px; /* Ngang hàng với header-top */
+    right: 8px;
+    bottom: 8px; /* Cố định ở đáy header */
     z-index: 1000;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: white;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
   #headerCollapseBtn:hover {
     background: rgba(255, 255, 255, 0.25);
@@ -450,12 +450,15 @@
     transform: scale(0.95);
   }
   
-  /* Căn chỉnh nút toggle xuống giữa tab bar khi header bị thu gọn (.header-collapsed) */
+  /* Tạo khoảng trống ở cuối tab bar để không bị nút toggle đè lên các tab pill */
+  .tab-bar {
+    padding-right: 38px !important;
+  }
+  
+  /* Căn chỉnh nhẹ background nút toggle khi header bị thu gọn */
   .header.header-collapsed #headerCollapseBtn {
-    top: 10px; /* Di chuyển xuống giữa tab bar */
-    right: 12px;
-    background: rgba(0, 0, 0, 0.15);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
   }
   
   /* Light theme override for toggle button */
