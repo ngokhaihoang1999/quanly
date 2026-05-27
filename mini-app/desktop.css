@@ -424,11 +424,62 @@
     border: none !important;
   }
   
-  /* Đặt nút toggle cố định ở góc dưới bên phải header, ngang hàng với tab bar */
+  /* Tối ưu hóa khoảng cách padding/margin của header trên mobile để siêu gọn gàng */
+  .header {
+    padding: 10px 12px 6px !important;
+    position: relative;
+  }
+  .header.header-collapsed {
+    padding: 6px 12px 6px !important;
+  }
+  .header-top {
+    margin-bottom: 8px !important;
+  }
+  .view-as-bar {
+    margin-bottom: 6px !important;
+    padding: 4px 8px !important;
+    gap: 4px !important;
+  }
+  .view-as-bar select, .view-as-bar button {
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+    height: 26px !important;
+  }
+  .semester-bar {
+    margin-bottom: 6px !important;
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+  .semester-bar select, .semester-bar button {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    height: 26px !important;
+  }
+
+  /* Bắt buộc Tab Bar trên di động nằm trên 1 hàng duy nhất và cuộn ngang mượt mà */
+  .tab-bar, #mainTabBar, .tab-bar--compact {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important; /* ẩn scrollbar Firefox */
+    padding-bottom: 4px !important;
+    gap: 6px !important;
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .tab-bar::-webkit-scrollbar, #mainTabBar::-webkit-scrollbar {
+    display: none !important; /* ẩn scrollbar Chrome/Safari */
+  }
+  .tab-bar .tab {
+    flex: 0 0 auto !important; /* giữ nguyên kích thước tự nhiên để cuộn ngang */
+  }
+  
+  /* Đặt nút toggle cố định ở góc dưới bên phải header, dịch sang trái để tránh thanh dọc điều khiển của Telegram */
   #headerCollapseBtn {
     display: flex !important;
     position: absolute;
-    right: 8px;
+    right: 20px; /* Tránh bị lấn bởi thanh dọc điều khiển */
     bottom: 8px; /* Cố định ở đáy header */
     z-index: 1000;
     align-items: center;
@@ -452,7 +503,7 @@
   
   /* Tạo khoảng trống ở cuối tab bar để không bị nút toggle đè lên các tab pill */
   .tab-bar {
-    padding-right: 38px !important;
+    padding-right: 52px !important;
   }
   
   /* Căn chỉnh nhẹ background nút toggle khi header bị thu gọn */
