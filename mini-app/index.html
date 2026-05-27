@@ -1054,7 +1054,7 @@ window._lazyMarkmap = function() {
     </div>
     
     <div class="floating-chat-input-area" style="padding:10px 12px; border-top:1px solid var(--border); background:var(--surface2); display:flex; flex-direction:column; gap:8px;">
-      <!-- Row 1: Category Dropdown & Attach Button -->
+      <!-- Row 1: Category Dropdown, Attach & Mic Buttons -->
       <div style="display:flex; gap:8px; align-items:center; width:100%;">
         <div style="position:relative; flex:1; max-width:140px;">
           <select id="cjFloatingChatCategory" style="width:100%; padding:4px 8px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:11px; font-weight:500; cursor:pointer; height:28px; outline:none; -webkit-appearance:none; appearance:none;">
@@ -1067,10 +1067,31 @@ window._lazyMarkmap = function() {
         </div>
         <input type="file" id="cjFloatingChatImageInput" style="display:none;" onchange="uploadFloatingChatFile(this)" />
         <button onclick="document.getElementById('cjFloatingChatImageInput').click()" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; width:28px; height:28px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface)'" title="Gửi tệp">📎</button>
+        <button id="cjFloatingChatVoiceTrigger" onclick="toggleFloatingVoiceRecording()" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; width:28px; height:28px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s; color:var(--text);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface)'" title="Ghi âm thoại">🎙️</button>
       </div>
       
+      <!-- Floating Voice recording row -->
+      <div id="cjFloatingChatVoiceRecordRow" style="display:none; align-items:center; justify-content:space-between; gap:6px; width:100%; background:var(--surface2); padding:6px 10px; border-radius:8px; border:1px solid var(--border); box-sizing: border-box;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="recording-dot" style="width:8px; height:8px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
+          <span id="cjFloatingChatVoiceTimer" style="font-size:11px; font-weight:700; color:var(--text2); font-family: monospace;">00:00</span>
+        </div>
+        <!-- Waveform visualizer -->
+        <div class="voice-wave-container" style="display:flex; gap:2px; align-items:center; height:16px; flex-grow:1; justify-content:center;">
+          <span class="voice-wave-bar bar-1"></span>
+          <span class="voice-wave-bar bar-2"></span>
+          <span class="voice-wave-bar bar-3"></span>
+          <span class="voice-wave-bar bar-4"></span>
+          <span class="voice-wave-bar bar-5"></span>
+        </div>
+        <div style="display:flex; gap:4px; flex-shrink:0;">
+          <button type="button" onclick="cancelFloatingVoiceRecording()" style="background:none; border:1px solid var(--border); border-radius:6px; padding:3px 6px; cursor:pointer; font-size:10px; color:var(--red); font-weight:600; display:flex; align-items:center; height:24px;">🗑️</button>
+          <button type="button" onclick="stopAndSendFloatingVoiceRecording()" style="background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:6px; padding:3px 8px; cursor:pointer; font-size:10px; color:white; font-weight:700; display:flex; align-items:center; height:24px; box-shadow:0 1px 4px rgba(124,106,247,0.2);">✔️ Gửi</button>
+        </div>
+      </div>
+
       <!-- Row 2: Message Input & Send Button -->
-      <div style="display:flex; gap:8px; align-items:center; width:100%;">
+      <div id="cjFloatingChatInputRow" style="display:flex; gap:8px; align-items:center; width:100%;">
         <input type="text" id="cjFloatingChatInput" placeholder="Nhập tin nhắn... (@ để tag)" style="flex:1; min-width:0; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; height:32px; outline:none;" onkeydown="if(event.key==='Enter') sendFloatingChatMessage();" autocomplete="off" spellcheck="false" />
         <button onclick="sendFloatingChatMessage()" style="padding:6px 14px; font-size:12px; font-weight:700; background:var(--accent); color:white; border:none; border-radius:8px; cursor:pointer; height:32px; flex-shrink:0; transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Gửi</button>
       </div>

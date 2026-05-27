@@ -853,13 +853,14 @@ function formatChatMessageText(text) {
     }
 
     // Detect media types
-    const isVideo = /\.(mp4|webm|ogg|mov|m4v|3gp|quicktime)$/i.test(fileName) || url.includes('/video/');
     const isAudio = /\.(mp3|wav|m4a|ogg|aac|opus|flac)$/i.test(fileName) || 
                     url.includes('/audio/') || 
                     fileName.includes('voice_message') || 
                     fileName.includes('voice_note') || 
                     fileName.includes('audio_record') ||
                     (fileParam && fileParam.includes('voice'));
+
+    const isVideo = (/\.(mp4|webm|ogg|mov|m4v|3gp|quicktime)$/i.test(fileName) || url.includes('/video/')) && !isAudio;
 
     const isImage = (/\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
                     isTelegramFile || 
@@ -892,16 +893,17 @@ function formatChatMessageText(text) {
         <div class="voice-player" id="voice_player_${safeId}" onclick="event.stopPropagation();">
           <audio id="audio_${safeId}" src="${displayUrl}" preload="metadata" style="display:none;"></audio>
           <button type="button" class="voice-player-play-btn" id="play_btn_${safeId}" onclick="toggleVoicePlayerPlay('${safeId}')">
-            ▶️
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor" class="play-icon" style="margin-left: 2px;"><path d="M1.5 12.3V1.7c0-.9 1-1.4 1.8-.9l8 5.3c.7.4.7 1.4 0 1.9l-8 5.3c-.8.5-1.8 0-1.8-.9z"/></svg>
           </button>
-          <div class="voice-player-timeline-container">
-            <input type="range" class="voice-player-slider" id="slider_${safeId}" min="0" max="100" value="0" oninput="seekVoicePlayer('${safeId}', this.value)" />
-            <div class="voice-player-time-row">
-              <span id="time_${safeId}">0:00</span>
-              <span id="dur_${safeId}">0:00</span>
+          <div class="voice-player-body">
+            <div class="voice-player-waves" id="waves_${safeId}" onclick="seekVoicePlayerByWaves(event, '${safeId}')"></div>
+            <div class="voice-player-meta-row">
+              <span class="voice-player-time" id="time_${safeId}">0:00</span>
+              <span class="voice-player-divider">/</span>
+              <span class="voice-player-duration" id="dur_${safeId}">0:00</span>
+              <button type="button" class="voice-player-speed-btn" id="speed_${safeId}" onclick="toggleVoicePlayerSpeed('${safeId}')">1x</button>
             </div>
           </div>
-          <button type="button" class="voice-player-speed-btn" id="speed_${safeId}" onclick="toggleVoicePlayerSpeed('${safeId}')">1x</button>
         </div>
       `;
     } else if (isDocFile) {
@@ -2170,6 +2172,9 @@ function searchChatMessages(keyword, containerId) {
 // CUSTOM VOICE/AUDIO PLAYER CONTROLLERS (TELEGRAM / ZALO UX)
 // ==========================================================================
 
+const VOICE_PLAY_SVG = `<svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor" style="margin-left: 2px;"><path d="M1.5 12.3V1.7c0-.9 1-1.4 1.8-.9l8 5.3c.7.4.7 1.4 0 1.9l-8 5.3c-.8.5-1.8 0-1.8-.9z"/></svg>`;
+const VOICE_PAUSE_SVG = `<svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><path d="M1 0h2c.6 0 1 .4 1 1v10c0 .6-.4 1-1 1H1c-.6 0-1-.4-1-1V1c0-.6.4-1 1-1zm6 0h2c.6 0 1 .4 1 1v10c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V1c0-.6.4-1 1-1z"/></svg>`;
+
 // Toggle Play/Pause for a Custom Voice Player
 function toggleVoicePlayerPlay(safeId) {
   const audio = document.getElementById(`audio_${safeId}`);
@@ -2182,29 +2187,34 @@ function toggleVoicePlayerPlay(safeId) {
       el.pause();
       const otherSafeId = el.id.replace('audio_', '');
       const otherBtn = document.getElementById(`play_btn_${otherSafeId}`);
-      if (otherBtn) otherBtn.textContent = '▶️';
+      if (otherBtn) otherBtn.innerHTML = VOICE_PLAY_SVG;
     }
   });
 
   if (audio.paused) {
     audio.play().then(() => {
-      btn.textContent = '⏸️';
+      btn.innerHTML = VOICE_PAUSE_SVG;
     }).catch(err => {
       console.error('Play failed:', err);
     });
   } else {
     audio.pause();
-    btn.textContent = '▶️';
+    btn.innerHTML = VOICE_PLAY_SVG;
   }
 }
 
-// Seek/Tua inside a Custom Voice Player
-function seekVoicePlayer(safeId, value) {
+// Seek/Tua inside a Custom Voice Player by clicking the waves
+function seekVoicePlayerByWaves(event, safeId) {
+  const wavesContainer = document.getElementById(`waves_${safeId}`);
   const audio = document.getElementById(`audio_${safeId}`);
-  if (!audio || !audio.duration) return;
+  if (!wavesContainer || !audio || !audio.duration) return;
+
+  const rect = wavesContainer.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const width = rect.width;
+  const pct = Math.max(0, Math.min(1, clickX / width));
   
-  const seekTime = (value / 100) * audio.duration;
-  audio.currentTime = seekTime;
+  audio.currentTime = pct * audio.duration;
 }
 
 // Toggle Playback Rate Speed multiplier (1x -> 1.5x -> 2x -> 1x)
@@ -2240,12 +2250,25 @@ function toggleVoicePlayerSpeed(safeId) {
 // Initialize event listeners on dynamically inserted Custom Audio Player DOM
 function initCustomAudioPlayer(safeId) {
   const audio = document.getElementById(`audio_${safeId}`);
-  const slider = document.getElementById(`slider_${safeId}`);
+  const wavesContainer = document.getElementById(`waves_${safeId}`);
   const timeEl = document.getElementById(`time_${safeId}`);
   const durEl = document.getElementById(`dur_${safeId}`);
   const btn = document.getElementById(`play_btn_${safeId}`);
   
-  if (!audio || !slider || !timeEl || !durEl) return;
+  if (!audio || !wavesContainer || !timeEl || !durEl) return;
+
+  // 1. Generate Waveform static bars
+  const barCount = 28;
+  const presetHeights = [6, 8, 12, 16, 10, 6, 8, 14, 18, 22, 16, 12, 10, 14, 20, 18, 14, 10, 8, 12, 16, 14, 10, 6, 8, 12, 10, 8];
+  
+  wavesContainer.innerHTML = '';
+  for (let i = 0; i < barCount; i++) {
+    const height = presetHeights[i % presetHeights.length];
+    const bar = document.createElement('span');
+    bar.className = 'voice-player-wave-bar';
+    bar.style.height = `${height}px`;
+    wavesContainer.appendChild(bar);
+  }
 
   function formatTime(secs) {
     if (isNaN(secs) || secs === Infinity) return '0:00';
@@ -2273,20 +2296,30 @@ function initCustomAudioPlayer(safeId) {
   }, 300);
   setTimeout(() => clearInterval(durCheck), 5000); // safety timeout
 
-  // Update time and slider during playback
+  // Update time and waveform active coloring during playback
   audio.addEventListener('timeupdate', () => {
     if (audio.duration && audio.duration !== Infinity) {
-      const pct = (audio.currentTime / audio.duration) * 100;
-      slider.value = pct;
+      const pct = audio.currentTime / audio.duration;
+      const activeCount = Math.floor(pct * barCount);
+      
+      const bars = wavesContainer.querySelectorAll('.voice-player-wave-bar');
+      bars.forEach((bar, idx) => {
+        if (idx < activeCount) {
+          bar.classList.add('active');
+        } else {
+          bar.classList.remove('active');
+        }
+      });
     }
     timeEl.textContent = formatTime(audio.currentTime);
   });
 
   // Handle audio end
   audio.addEventListener('ended', () => {
-    slider.value = 0;
+    const bars = wavesContainer.querySelectorAll('.voice-player-wave-bar');
+    bars.forEach(bar => bar.classList.remove('active'));
     timeEl.textContent = '0:00';
-    if (btn) btn.textContent = '▶️';
+    if (btn) btn.innerHTML = VOICE_PLAY_SVG;
   });
 
   // Handle errors gracefully
@@ -2501,10 +2534,234 @@ async function stopAndSendVoiceRecording() {
     } else {
       throw new Error('No URL returned from bot server');
     }
-  } catch (e) {
-    showToast('❌ Gửi tin nhắn thoại thất bại');
-    console.error('stopAndSendVoiceRecording error:', e);
   } finally {
     _audioChunks = [];
+  }
+}
+
+// ==========================================================================
+// FLOATING CHAT VOICE RECORDER MODULE
+// ==========================================================================
+
+let _floatingRecordingTimer = null;
+let _floatingRecordingSeconds = 0;
+
+// Toggles Voice Recording UI and state in the Floating Chat
+async function toggleFloatingVoiceRecording() {
+  const row = document.getElementById('cjFloatingChatVoiceRecordRow');
+  const inputRow = document.getElementById('cjFloatingChatInputRow');
+  if (!row || !inputRow) return;
+
+  if (row.style.display === 'none') {
+    await startFloatingVoiceRecording();
+  } else {
+    await stopAndSendFloatingVoiceRecording();
+  }
+}
+
+// Start capturing mic and record audio in the Floating Chat
+async function startFloatingVoiceRecording() {
+  const row = document.getElementById('cjFloatingChatVoiceRecordRow');
+  const inputRow = document.getElementById('cjFloatingChatInputRow');
+  const timerEl = document.getElementById('cjFloatingChatVoiceTimer');
+  const profileId = window._activeFloatingProfileId;
+
+  if (!row || !inputRow || !timerEl || !profileId) {
+    showToast('⚠️ Vui lòng mở hội thoại nổi trước');
+    return;
+  }
+
+  try {
+    _recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 24000 };
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options = { mimeType: 'audio/webm', audioBitsPerSecond: 24000 };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'audio/ogg;codecs=opus', audioBitsPerSecond: 24000 };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          options = {};
+        }
+      }
+    }
+
+    _audioChunks = [];
+    _mediaRecorder = new MediaRecorder(_recordingStream, options);
+    
+    _mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        _audioChunks.push(event.data);
+      }
+    };
+
+    _mediaRecorder.onstop = () => {
+      if (_recordingStream) {
+        _recordingStream.getTracks().forEach(t => t.stop());
+        _recordingStream = null;
+      }
+    };
+
+    _mediaRecorder.start(400);
+
+    inputRow.style.display = 'none';
+    row.style.display = 'flex';
+    
+    if (typeof haptic === 'function') haptic('medium');
+
+    _floatingRecordingSeconds = 0;
+    timerEl.textContent = '00:00';
+    
+    clearInterval(_floatingRecordingTimer);
+    _floatingRecordingTimer = setInterval(() => {
+      _floatingRecordingSeconds++;
+      const m = Math.floor(_floatingRecordingSeconds / 60);
+      const s = _floatingRecordingSeconds % 60;
+      timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      
+      if (_floatingRecordingSeconds >= 120) {
+        showToast('⚠️ Đạt giới hạn 2 phút ghi âm');
+        stopAndSendFloatingVoiceRecording();
+      }
+    }, 1000);
+
+  } catch (err) {
+    console.error('Failed to start floating voice recording:', err);
+    showToast('❌ Không thể truy cập micro của bạn');
+  }
+}
+
+// Discards current floating recording
+function cancelFloatingVoiceRecording() {
+  const row = document.getElementById('cjFloatingChatVoiceRecordRow');
+  const inputRow = document.getElementById('cjFloatingChatInputRow');
+  
+  clearInterval(_floatingRecordingTimer);
+  
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.stop();
+  }
+  
+  if (_recordingStream) {
+    _recordingStream.getTracks().forEach(t => t.stop());
+    _recordingStream = null;
+  }
+
+  if (row) row.style.display = 'none';
+  if (inputRow) inputRow.style.display = 'flex';
+  
+  _audioChunks = [];
+  showToast('🗑️ Đã huỷ bản ghi âm');
+}
+
+// Stops and submits recorded voice file for Floating Chat
+async function stopAndSendFloatingVoiceRecording() {
+  const row = document.getElementById('cjFloatingChatVoiceRecordRow');
+  const inputRow = document.getElementById('cjFloatingChatInputRow');
+  const profileId = window._activeFloatingProfileId;
+  
+  clearInterval(_floatingRecordingTimer);
+  
+  if (!_mediaRecorder || _mediaRecorder.state === 'inactive') {
+    if (row) row.style.display = 'none';
+    if (inputRow) inputRow.style.display = 'flex';
+    return;
+  }
+
+  const recorderStopped = new Promise((resolve) => {
+    _mediaRecorder.onstop = () => {
+      if (_recordingStream) {
+        _recordingStream.getTracks().forEach(t => t.stop());
+        _recordingStream = null;
+      }
+      resolve();
+    };
+  });
+
+  _mediaRecorder.stop();
+  await recorderStopped;
+
+  if (_audioChunks.length === 0) {
+    showToast('❌ Ghi âm thất bại, thử lại');
+    if (row) row.style.display = 'none';
+    if (inputRow) inputRow.style.display = 'flex';
+    return;
+  }
+
+  const mimeType = _mediaRecorder.mimeType || 'audio/webm';
+  const audioBlob = new Blob(_audioChunks, { type: mimeType });
+  
+  let ext = 'webm';
+  if (mimeType.includes('ogg')) ext = 'ogg';
+  else if (mimeType.includes('mp4') || mimeType.includes('aac')) ext = 'mp4';
+  else if (mimeType.includes('mpeg')) ext = 'mp3';
+  else if (mimeType.includes('wav')) ext = 'wav';
+
+  const fileName = `voice_note_${profileId}_${Date.now()}.${ext}`;
+  const audioFile = new File([audioBlob], fileName, { type: mimeType });
+
+  if (row) row.style.display = 'none';
+  if (inputRow) inputRow.style.display = 'flex';
+
+  showToast('⌛ Đang tải lên tin nhắn thoại...');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', audioFile);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload voice failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && data.url) {
+      // Send the secure bot proxy url directly as message content to floating chat
+      await sendFloatingProxyImageMessage(data.url);
+      showToast('✅ Đã gửi tin nhắn thoại');
+    } else {
+      throw new Error('No URL returned from bot server');
+    }
+  } catch (e) {
+    showToast('❌ Gửi tin nhắn thoại thất bại');
+    console.error('stopAndSendFloatingVoiceRecording error:', e);
+  } finally {
+    _audioChunks = [];
+  }
+}
+
+// Post a proxy file URL to floating chat
+async function sendFloatingProxyImageMessage(imageUrl) {
+  const profileId = window._activeFloatingProfileId;
+  const sender = getEffectiveStaffCode();
+  const catSelect = document.getElementById('cjFloatingChatCategory');
+  const category = catSelect ? catSelect.value : 'general';
+  
+  try {
+    const res = await sbFetch('/rest/v1/profile_chats', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        profile_id: profileId,
+        sender_code: sender,
+        message: imageUrl,
+        category: category
+      })
+    });
+    
+    if (res.ok) {
+      const newMsgArr = await res.json();
+      if (newMsgArr && newMsgArr[0]) {
+        addFloatingChatMessageToDOM(newMsgArr[0]);
+        await markChatAsRead(profileId);
+      }
+    }
+  } catch(e) {
+    showToast('❌ Lỗi gửi tin nhắn');
+    console.error('sendFloatingProxyImageMessage:', e);
   }
 }

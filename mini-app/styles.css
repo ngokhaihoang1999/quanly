@@ -2835,86 +2835,82 @@
   background: rgba(255, 255, 255, 0.3) !important;
 }
 
-/* Timeline Container */
-.voice-player-timeline-container {
-  flex-grow: 1;
+/* Voice Player Body (Telegram style flex column) */
+.voice-player-body {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 1px;
+  flex-grow: 1;
   min-width: 0;
+  box-sizing: border-box;
 }
 
-/* Styled Range Input (Slider) */
-.voice-player-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(0, 0, 0, 0.1);
-  height: 4px;
-  border-radius: 2px;
-  outline: none;
-  width: 100%;
-  cursor: pointer;
-  margin: 6px 0 2px 0;
-  transition: height 0.15s;
-}
-.chat-message-bubble--me .voice-player-slider {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* Webkit browser slider thumb */
-.voice-player-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.voice-player-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
-}
-.chat-message-bubble--me .voice-player-slider::-webkit-slider-thumb {
-  background: #fff;
-}
-
-/* Mozilla browser slider thumb */
-.voice-player-slider::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
-  border: none;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.voice-player-slider::-moz-range-thumb:hover {
-  transform: scale(1.3);
-}
-.chat-message-bubble--me .voice-player-slider::-moz-range-thumb {
-  background: #fff;
-}
-
-/* Time Indicator Labels */
-.voice-player-time-row {
+/* Timeline Waveform Container */
+.voice-player-waves {
   display: flex;
-  justify-content: space-between;
+  gap: 2px;
+  align-items: flex-end;
+  height: 25px;
+  cursor: pointer;
   width: 100%;
-  font-size: 9.5px;
-  opacity: 0.75;
-  font-family: 'Courier New', Courier, monospace;
+  user-select: none;
+  padding-top: 4px;
+  box-sizing: border-box;
 }
-.chat-message-bubble--me .voice-player-time-row {
+
+/* Individual wave bar */
+.voice-player-wave-bar {
+  width: 2px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 1px;
+  transition: background 0.1s ease;
+  flex-shrink: 0;
+}
+.chat-message-bubble--me .voice-player-wave-bar {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Active coloring for wave bar */
+.voice-player-wave-bar.active {
+  background: var(--accent);
+}
+.chat-message-bubble--me .voice-player-wave-bar.active {
+  background: #ffffff;
+}
+
+/* Meta details row under waveform */
+.voice-player-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  opacity: 0.8;
+  margin-top: 2px;
+  font-family: monospace;
+}
+.chat-message-bubble--me .voice-player-meta-row {
   color: rgba(255, 255, 255, 0.9);
+}
+
+.voice-player-time {
+  font-weight: 500;
+}
+
+.voice-player-divider {
+  opacity: 0.5;
+  margin: 0 1px;
+}
+
+.voice-player-duration {
+  opacity: 0.85;
 }
 
 /* Speed Capsule Button */
 .voice-player-speed-btn {
   font-size: 10px;
   font-weight: 700;
-  padding: 3px 7px;
-  border-radius: 12px;
+  padding: 2px 6px;
+  border-radius: 8px;
   background: var(--surface2);
   border: 1px solid var(--border);
   cursor: pointer;
@@ -2923,18 +2919,23 @@
   transition: all 0.15s;
   user-select: none;
   font-family: monospace;
+  margin-left: auto; /* Pushes the speed button to the far right */
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .voice-player-speed-btn:hover {
   background: var(--border);
   color: var(--text);
 }
 .chat-message-bubble--me .voice-player-speed-btn {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
   color: #fff !important;
 }
 .chat-message-bubble--me .voice-player-speed-btn:hover {
-  background: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.32) !important;
 }
 
 /* 3. Voice Note Recording Panel Elements */
