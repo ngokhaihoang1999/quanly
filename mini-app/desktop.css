@@ -413,7 +413,7 @@
     transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
                 opacity 0.25s ease, 
                 padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 58px;
     opacity: 1;
     margin-bottom: 8px !important;
@@ -425,7 +425,7 @@
     transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
                 opacity 0.25s ease, 
                 padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 36px;
     opacity: 1;
     margin-bottom: 6px !important;
@@ -444,7 +444,7 @@
     transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
                 opacity 0.25s ease, 
                 padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 36px;
     opacity: 1;
     margin-bottom: 6px !important;

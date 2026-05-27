@@ -467,6 +467,9 @@ function toggleHeaderCollapse(isManual = true) {
   const btn = document.getElementById('headerCollapseBtn');
   if (!header) return;
 
+  // Xóa bỏ toàn bộ inline styles trước khi toggle class để CSS transition đảm nhận chuyển động mượt mà
+  _resetHeaderStyle(header);
+
   const isCollapsed = header.classList.toggle('header-collapsed');
   
   if (btn) {
@@ -493,12 +496,91 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Hàm áp dụng tiến trình co giãn theo thời gian thực (1-1 bám theo ngón tay cuộn)
+function _applyHeaderScrollProgress(header, pct) {
+  const headerTop = header.querySelector('.header-top');
+  const viewAsBar = header.querySelector('.view-as-bar');
+  const semesterBar = header.querySelector('.semester-bar');
+  const btn = document.getElementById('headerCollapseBtn');
+
+  // transition mượt mà cho padding của header (từ 10px xuống 6px)
+  const paddingTop = 10 - (pct * 4);
+  header.style.padding = `${paddingTop}px 12px 6px`;
+
+  // transition cho header-top (chiều cao tối đa 58px, margin-bottom 8px)
+  if (headerTop) {
+    headerTop.style.maxHeight = `${(1 - pct) * 58}px`;
+    headerTop.style.opacity = 1 - pct;
+    headerTop.style.marginBottom = `${(1 - pct) * 8}px`;
+    headerTop.style.overflow = 'hidden';
+    headerTop.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
+  }
+
+  // transition cho view-as-bar (chiều cao tối đa 36px, margin-bottom 6px)
+  if (viewAsBar) {
+    viewAsBar.style.maxHeight = `${(1 - pct) * 36}px`;
+    viewAsBar.style.opacity = 1 - pct;
+    viewAsBar.style.marginBottom = `${(1 - pct) * 6}px`;
+    viewAsBar.style.overflow = 'hidden';
+    viewAsBar.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
+  }
+
+  // transition cho semester-bar (chiều cao tối đa 36px, margin-bottom 6px)
+  if (semesterBar) {
+    semesterBar.style.maxHeight = `${(1 - pct) * 36}px`;
+    semesterBar.style.opacity = 1 - pct;
+    semesterBar.style.marginBottom = `${(1 - pct) * 6}px`;
+    semesterBar.style.overflow = 'hidden';
+    semesterBar.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
+  }
+
+  // Cập nhật emoji nút toggle theo tiến trình cuộn
+  if (btn) {
+    btn.textContent = pct > 0.5 ? '🔽' : '🔼';
+    btn.title = pct > 0.5 ? 'Mở rộng header' : 'Thu gọn header';
+  }
+
+  // Thêm/Xóa class để đồng bộ các style CSS khác (nút toggle, tab-bar)
+  if (pct >= 0.95) {
+    header.classList.add('header-collapsed');
+  } else {
+    header.classList.remove('header-collapsed');
+  }
+}
+
+function _resetHeaderStyle(header) {
+  const headerTop = header.querySelector('.header-top');
+  const viewAsBar = header.querySelector('.view-as-bar');
+  const semesterBar = header.querySelector('.semester-bar');
+
+  header.style.padding = '';
+
+  if (headerTop) {
+    headerTop.style.maxHeight = '';
+    headerTop.style.opacity = '';
+    headerTop.style.marginBottom = '';
+    headerTop.style.overflow = '';
+    headerTop.style.pointerEvents = '';
+  }
+  if (viewAsBar) {
+    viewAsBar.style.maxHeight = '';
+    viewAsBar.style.opacity = '';
+    viewAsBar.style.marginBottom = '';
+    viewAsBar.style.overflow = '';
+    viewAsBar.style.pointerEvents = '';
+  }
+  if (semesterBar) {
+    semesterBar.style.maxHeight = '';
+    semesterBar.style.opacity = '';
+    semesterBar.style.marginBottom = '';
+    semesterBar.style.overflow = '';
+    semesterBar.style.pointerEvents = '';
+  }
+}
+
 // Auto-collapsible header on scroll for mobile/narrow viewports
 (function() {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
-  let lastScrollTop = 0;
-  let isTransitioning = false;
-
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', () => {
       // Nếu người dùng đã chủ động thu gọn thủ công, giữ nguyên không tự động thay đổi
@@ -506,8 +588,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const header = document.querySelector('.header');
       if (!header) return;
-
-      if (isTransitioning) return;
 
       const scrollTop = scrollContainer.scrollTop;
       const scrollHeight = scrollContainer.scrollHeight;
@@ -517,51 +597,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const isScrollable = scrollHeight > clientHeight + 80;
 
       if (!isScrollable) {
-        // Trang quá ngắn -> Luôn giữ header mở rộng để tránh giật lag và hiện trọn vẹn nội dung
-        if (header.classList.contains('header-collapsed')) {
-          header.classList.remove('header-collapsed');
-          const btn = document.getElementById('headerCollapseBtn');
-          if (btn) {
-            btn.textContent = '🔼';
-            btn.title = 'Thu gọn header';
-          }
-          isTransitioning = true;
-          setTimeout(() => { isTransitioning = false; }, 280);
+        // Trang quá ngắn -> Luôn giữ header mở rộng đầy đủ
+        _resetHeaderStyle(header);
+        header.classList.remove('header-collapsed');
+        const btn = document.getElementById('headerCollapseBtn');
+        if (btn) {
+          btn.textContent = '🔼';
+          btn.title = 'Thu gọn header';
         }
         return;
       }
 
-      // Chỉ xử lý nếu có sự thay đổi cuộn thực sự (chống nhiễu rung)
-      if (Math.abs(scrollTop - lastScrollTop) > 5) {
-        const isScrollingDown = scrollTop > lastScrollTop;
+      // Tiến trình cuộn từ 0px đến 85px (ngưỡng co giãn tối đa)
+      const maxScroll = 85;
+      const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
 
-        if (isScrollingDown && scrollTop > 60) {
-          // Cuộn xuống -> thu gọn header
-          if (!header.classList.contains('header-collapsed')) {
-            header.classList.add('header-collapsed');
-            const btn = document.getElementById('headerCollapseBtn');
-            if (btn) {
-              btn.textContent = '🔽';
-              btn.title = 'Mở rộng header';
-            }
-            isTransitioning = true;
-            setTimeout(() => { isTransitioning = false; }, 280);
-          }
-        } else if (!isScrollingDown && (scrollTop < lastScrollTop - 25 || scrollTop <= 5)) {
-          // Cuộn lên đáng kể hoặc cuộn hẳn lên đỉnh -> mở rộng header
-          if (header.classList.contains('header-collapsed')) {
-            header.classList.remove('header-collapsed');
-            const btn = document.getElementById('headerCollapseBtn');
-            if (btn) {
-              btn.textContent = '🔼';
-              btn.title = 'Thu gọn header';
-            }
-            isTransitioning = true;
-            setTimeout(() => { isTransitioning = false; }, 280);
-          }
-        }
-        lastScrollTop = scrollTop;
-      }
+      _applyHeaderScrollProgress(header, pct);
     });
   }
 })();
