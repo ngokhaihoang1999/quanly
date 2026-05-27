@@ -458,3 +458,19 @@ function toggleDashMetrics() {
   el.classList.toggle('collapsed');
   if (icon) icon.textContent = el.classList.contains('collapsed') ? '▼' : '▲';
 }
+
+// Auto-collapsible header on scroll for mobile/narrow viewports
+(function() {
+  const scrollContainer = document.getElementById('desktopPanelsWrapper');
+  if (scrollContainer) {
+    scrollContainer.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      if (!header) return;
+      if (scrollContainer.scrollTop > 15) {
+        header.classList.add('header-collapsed');
+      } else {
+        header.classList.remove('header-collapsed');
+      }
+    });
+  }
+})();
