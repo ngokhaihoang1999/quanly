@@ -520,24 +520,38 @@ function _applyHeaderScrollProgress(header, pct) {
     headerTop.style.maxHeight = `${(1 - pct) * 58}px`;
     headerTop.style.opacity = 1 - pct;
     headerTop.style.marginBottom = `${(1 - pct) * 8}px`;
+    headerTop.style.paddingTop = '0px';
+    headerTop.style.paddingBottom = '0px';
     headerTop.style.overflow = 'hidden';
     headerTop.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
   }
 
-  // transition cho view-as-bar (chiều cao tối đa 36px, margin-bottom 6px)
+  // transition cho view-as-bar (chiều cao tối đa 36px, margin-bottom 6px, padding-top/bottom 4px)
   if (viewAsBar) {
     viewAsBar.style.maxHeight = `${(1 - pct) * 36}px`;
     viewAsBar.style.opacity = 1 - pct;
     viewAsBar.style.marginBottom = `${(1 - pct) * 6}px`;
+    
+    // Co giãn mượt mà padding từ 4px về 0px để triệt tiêu cú giật 10-20% cuối hành trình
+    const barPad = (1 - pct) * 4;
+    viewAsBar.style.paddingTop = `${barPad}px`;
+    viewAsBar.style.paddingBottom = `${barPad}px`;
+    
     viewAsBar.style.overflow = 'hidden';
     viewAsBar.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
   }
 
-  // transition cho semester-bar (chiều cao tối đa 36px, margin-bottom 6px)
+  // transition cho semester-bar (chiều cao tối đa 36px, margin-bottom 6px, padding-top/bottom 4px)
   if (semesterBar) {
     semesterBar.style.maxHeight = `${(1 - pct) * 36}px`;
     semesterBar.style.opacity = 1 - pct;
     semesterBar.style.marginBottom = `${(1 - pct) * 6}px`;
+    
+    // Co giãn mượt mà padding từ 4px về 0px
+    const barPad = (1 - pct) * 4;
+    semesterBar.style.paddingTop = `${barPad}px`;
+    semesterBar.style.paddingBottom = `${barPad}px`;
+    
     semesterBar.style.overflow = 'hidden';
     semesterBar.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
   }
@@ -549,7 +563,8 @@ function _applyHeaderScrollProgress(header, pct) {
   }
 
   // Thêm/Xóa class để đồng bộ các style CSS khác (nút toggle, tab-bar)
-  if (pct >= 0.95) {
+  // Chỉ gán class collapsed ở mốc cực sát đáy (>= 0.99) khi mọi thứ đã thu gọn hoàn toàn về 0px, tránh giật hình
+  if (pct >= 0.99) {
     header.classList.add('header-collapsed');
   } else {
     header.classList.remove('header-collapsed');
@@ -567,6 +582,8 @@ function _resetHeaderStyle(header) {
     headerTop.style.maxHeight = '';
     headerTop.style.opacity = '';
     headerTop.style.marginBottom = '';
+    headerTop.style.paddingTop = '';
+    headerTop.style.paddingBottom = '';
     headerTop.style.overflow = '';
     headerTop.style.pointerEvents = '';
   }
@@ -574,6 +591,8 @@ function _resetHeaderStyle(header) {
     viewAsBar.style.maxHeight = '';
     viewAsBar.style.opacity = '';
     viewAsBar.style.marginBottom = '';
+    viewAsBar.style.paddingTop = '';
+    viewAsBar.style.paddingBottom = '';
     viewAsBar.style.overflow = '';
     viewAsBar.style.pointerEvents = '';
   }
@@ -581,6 +600,8 @@ function _resetHeaderStyle(header) {
     semesterBar.style.maxHeight = '';
     semesterBar.style.opacity = '';
     semesterBar.style.marginBottom = '';
+    semesterBar.style.paddingTop = '';
+    semesterBar.style.paddingBottom = '';
     semesterBar.style.overflow = '';
     semesterBar.style.pointerEvents = '';
   }
