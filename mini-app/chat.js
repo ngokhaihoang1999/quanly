@@ -801,26 +801,27 @@ function unsubscribeProfileChat() {
   console.log('Cleaned up profile chat resources.');
 }
 
-// Format message text: Mentions, links, and inline images/documents (Secure Telegram Proxy)
+// Format message text: Mentions, links, and inline images/documents/videos/audios (Secure Telegram Proxy)
 function formatChatMessageText(text) {
   let messageText = escHtml(text);
   
   // 1. Format mentions
   messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
 
-  // 2. Format links and check if they are images or documents
+  // 2. Format links and check if they are images, videos, audios, or documents
   const urlRegex = /(https?:\/\/[^\s<]+)/gi;
   messageText = messageText.replace(urlRegex, (url) => {
     const isTelegramFile = url.includes('/file/bot') || url.includes('/functions/v1/telegram-bot');
     
     let isDocFile = false;
     let fileName = 'Tệp tin đính kèm';
+    let fileParam = '';
     
     if (url.includes('/functions/v1/telegram-bot')) {
       try {
         const urlObj = new URL(url.replace(/&amp;/g, '&'));
         const nameParam = urlObj.searchParams.get('name');
-        const fileParam = urlObj.searchParams.get('file') || '';
+        fileParam = urlObj.searchParams.get('file') || '';
         
         if (nameParam) {
           fileName = decodeURIComponent(nameParam);
@@ -834,26 +835,73 @@ function formatChatMessageText(text) {
       } catch (e) {
         console.warn('URL parsing failed:', e);
       }
+    } else {
+      // Extrapolate filename for non-telegram links
+      try {
+        const urlObj = new URL(url);
+        fileName = urlObj.pathname.split('/').pop() || 'Tệp tin';
+      } catch (e) {}
     }
+
+    let displayUrl = url;
+    if (isTelegramFile && !url.includes('/functions/v1/telegram-bot')) {
+      const match = url.match(/\/file\/bot[^/]+\/(.+)/i);
+      if (match && match[1]) {
+        const filePath = match[1];
+        displayUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}`;
+      }
+    }
+
+    // Detect media types
+    const isVideo = /\.(mp4|webm|ogg|mov|m4v|3gp|quicktime)$/i.test(fileName) || url.includes('/video/');
+    const isAudio = /\.(mp3|wav|m4a|ogg|aac|opus|flac)$/i.test(fileName) || 
+                    url.includes('/audio/') || 
+                    fileName.includes('voice_message') || 
+                    fileName.includes('voice_note') || 
+                    fileName.includes('audio_record') ||
+                    (fileParam && fileParam.includes('voice'));
 
     const isImage = (/\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
                     isTelegramFile || 
                     url.includes('imgbb.com') || 
-                    url.includes('postimg.cc')) && !isDocFile;
+                    url.includes('postimg.cc')) && !isDocFile && !isVideo && !isAudio;
     
     if (isImage) {
-      let displayUrl = url;
-      if (isTelegramFile && !url.includes('/functions/v1/telegram-bot')) {
-        const match = url.match(/\/file\/bot[^/]+\/(.+)/i);
-        if (match && match[1]) {
-          const filePath = match[1];
-          displayUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}`;
-        }
-      }
-
       return `
         <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation(); openChatImageModal('${displayUrl}')">
           <img src="${displayUrl}" style="width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
+        </div>
+      `;
+    } else if (isVideo) {
+      return `
+        <div class="chat-video-wrap" onclick="event.stopPropagation();">
+          <video src="${displayUrl}" class="chat-video-player" controls playsinline preload="metadata"></video>
+        </div>
+      `;
+    } else if (isAudio) {
+      const safeId = 'v_' + Math.random().toString(36).substr(2, 9);
+      
+      // Initialize the audio player dynamic bindings in standard javascript
+      setTimeout(() => {
+        if (typeof initCustomAudioPlayer === 'function') {
+          initCustomAudioPlayer(safeId);
+        }
+      }, 50);
+
+      return `
+        <div class="voice-player" id="voice_player_${safeId}" onclick="event.stopPropagation();">
+          <audio id="audio_${safeId}" src="${displayUrl}" preload="metadata" style="display:none;"></audio>
+          <button type="button" class="voice-player-play-btn" id="play_btn_${safeId}" onclick="toggleVoicePlayerPlay('${safeId}')">
+            ▶️
+          </button>
+          <div class="voice-player-timeline-container">
+            <input type="range" class="voice-player-slider" id="slider_${safeId}" min="0" max="100" value="0" oninput="seekVoicePlayer('${safeId}', this.value)" />
+            <div class="voice-player-time-row">
+              <span id="time_${safeId}">0:00</span>
+              <span id="dur_${safeId}">0:00</span>
+            </div>
+          </div>
+          <button type="button" class="voice-player-speed-btn" id="speed_${safeId}" onclick="toggleVoicePlayerSpeed('${safeId}')">1x</button>
         </div>
       `;
     } else if (isDocFile) {
@@ -2116,4 +2164,347 @@ function searchChatMessages(keyword, containerId) {
       row.style.display = 'none';
     }
   });
+}
+
+// ==========================================================================
+// CUSTOM VOICE/AUDIO PLAYER CONTROLLERS (TELEGRAM / ZALO UX)
+// ==========================================================================
+
+// Toggle Play/Pause for a Custom Voice Player
+function toggleVoicePlayerPlay(safeId) {
+  const audio = document.getElementById(`audio_${safeId}`);
+  const btn = document.getElementById(`play_btn_${safeId}`);
+  if (!audio || !btn) return;
+
+  // Pause all other audio players to prevent multiple audio overlaps
+  document.querySelectorAll('audio').forEach(el => {
+    if (el.id !== `audio_${safeId}` && !el.paused) {
+      el.pause();
+      const otherSafeId = el.id.replace('audio_', '');
+      const otherBtn = document.getElementById(`play_btn_${otherSafeId}`);
+      if (otherBtn) otherBtn.textContent = '▶️';
+    }
+  });
+
+  if (audio.paused) {
+    audio.play().then(() => {
+      btn.textContent = '⏸️';
+    }).catch(err => {
+      console.error('Play failed:', err);
+    });
+  } else {
+    audio.pause();
+    btn.textContent = '▶️';
+  }
+}
+
+// Seek/Tua inside a Custom Voice Player
+function seekVoicePlayer(safeId, value) {
+  const audio = document.getElementById(`audio_${safeId}`);
+  if (!audio || !audio.duration) return;
+  
+  const seekTime = (value / 100) * audio.duration;
+  audio.currentTime = seekTime;
+}
+
+// Toggle Playback Rate Speed multiplier (1x -> 1.5x -> 2x -> 1x)
+function toggleVoicePlayerSpeed(safeId) {
+  const audio = document.getElementById(`audio_${safeId}`);
+  const btn = document.getElementById(`speed_${safeId}`);
+  if (!audio || !btn) return;
+
+  let currentRate = audio.playbackRate;
+  let newRate = 1.0;
+
+  if (currentRate === 1.0) {
+    newRate = 1.5;
+  } else if (currentRate === 1.5) {
+    newRate = 2.0;
+  } else {
+    newRate = 1.0;
+  }
+
+  audio.playbackRate = newRate;
+  btn.textContent = `${newRate}x`;
+  
+  // Highlight speed button with accent border if speed is elevated
+  if (newRate !== 1.0) {
+    btn.style.fontWeight = 'bold';
+    btn.style.borderColor = 'var(--accent)';
+  } else {
+    btn.style.fontWeight = 'normal';
+    btn.style.borderColor = 'var(--border)';
+  }
+}
+
+// Initialize event listeners on dynamically inserted Custom Audio Player DOM
+function initCustomAudioPlayer(safeId) {
+  const audio = document.getElementById(`audio_${safeId}`);
+  const slider = document.getElementById(`slider_${safeId}`);
+  const timeEl = document.getElementById(`time_${safeId}`);
+  const durEl = document.getElementById(`dur_${safeId}`);
+  const btn = document.getElementById(`play_btn_${safeId}`);
+  
+  if (!audio || !slider || !timeEl || !durEl) return;
+
+  function formatTime(secs) {
+    if (isNaN(secs) || secs === Infinity) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  // Display duration when metadata is fully loaded
+  audio.addEventListener('loadedmetadata', () => {
+    durEl.textContent = formatTime(audio.duration);
+  });
+
+  // Display immediately if duration is already cached by browser
+  if (audio.duration && audio.duration !== Infinity) {
+    durEl.textContent = formatTime(audio.duration);
+  }
+
+  // Fallback if metadata load is slow, check periodically
+  const durCheck = setInterval(() => {
+    if (audio.duration && audio.duration !== Infinity) {
+      durEl.textContent = formatTime(audio.duration);
+      clearInterval(durCheck);
+    }
+  }, 300);
+  setTimeout(() => clearInterval(durCheck), 5000); // safety timeout
+
+  // Update time and slider during playback
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration && audio.duration !== Infinity) {
+      const pct = (audio.currentTime / audio.duration) * 100;
+      slider.value = pct;
+    }
+    timeEl.textContent = formatTime(audio.currentTime);
+  });
+
+  // Handle audio end
+  audio.addEventListener('ended', () => {
+    slider.value = 0;
+    timeEl.textContent = '0:00';
+    if (btn) btn.textContent = '▶️';
+  });
+
+  // Handle errors gracefully
+  audio.addEventListener('error', () => {
+    durEl.textContent = 'Lỗi';
+  });
+}
+
+// ==========================================================================
+// VOICE RECORDER MODULE USING MEDIARECORDER API (ZERO SUPABASE STORAGE INLINE)
+// ==========================================================================
+
+let _mediaRecorder = null;
+let _audioChunks = [];
+let _recordingTimer = null;
+let _recordingSeconds = 0;
+let _recordingStream = null;
+
+// Toggles Voice Recording UI and state
+async function toggleVoiceRecording() {
+  const row = document.getElementById('chatVoiceRecordRow');
+  const inputRow = document.getElementById('chatInputRow');
+  if (!row || !inputRow) return;
+
+  if (row.style.display === 'none') {
+    await startVoiceRecording();
+  } else {
+    await stopAndSendVoiceRecording();
+  }
+}
+
+// Start capturing mic and record audio
+async function startVoiceRecording() {
+  const row = document.getElementById('chatVoiceRecordRow');
+  const inputRow = document.getElementById('chatInputRow');
+  const timerEl = document.getElementById('chatVoiceTimer');
+  const statusEl = document.getElementById('chatVoiceStatus');
+  
+  if (!row || !inputRow || !timerEl || !currentProfileId) {
+    showToast('⚠️ Vui lòng chọn học viên trước');
+    return;
+  }
+
+  try {
+    // Request microphone access from user
+    _recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // Choose optimized compressed format (WebM/Opus or fallbacks)
+    let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 24000 };
+    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+      options = { mimeType: 'audio/webm', audioBitsPerSecond: 24000 };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'audio/ogg;codecs=opus', audioBitsPerSecond: 24000 };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          // Fallback to default browser capability
+          options = {};
+        }
+      }
+    }
+
+    _audioChunks = [];
+    _mediaRecorder = new MediaRecorder(_recordingStream, options);
+    
+    _mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        _audioChunks.push(event.data);
+      }
+    };
+
+    _mediaRecorder.onstop = () => {
+      if (_recordingStream) {
+        _recordingStream.getTracks().forEach(t => t.stop());
+        _recordingStream = null;
+      }
+    };
+
+    // Slice recorder chunks every 400ms for safety
+    _mediaRecorder.start(400);
+
+    // Switch UI display to recording state
+    inputRow.style.display = 'none';
+    row.style.display = 'flex';
+    
+    if (typeof haptic === 'function') haptic('medium');
+
+    // Run recording timer
+    _recordingSeconds = 0;
+    timerEl.textContent = '00:00';
+    if (statusEl) statusEl.textContent = 'Đang ghi âm...';
+    
+    clearInterval(_recordingTimer);
+    _recordingTimer = setInterval(() => {
+      _recordingSeconds++;
+      const m = Math.floor(_recordingSeconds / 60);
+      const s = _recordingSeconds % 60;
+      timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      
+      // Auto-stop at 2 minutes (120 seconds) to guarantee small files (<300KB)
+      if (_recordingSeconds >= 120) {
+        showToast('⚠️ Đạt giới hạn 2 phút ghi âm');
+        stopAndSendVoiceRecording();
+      }
+    }, 1000);
+
+  } catch (err) {
+    console.error('Failed to start voice recording:', err);
+    showToast('❌ Không thể truy cập micro của bạn');
+  }
+}
+
+// Discards current recording
+function cancelVoiceRecording() {
+  const row = document.getElementById('chatVoiceRecordRow');
+  const inputRow = document.getElementById('chatInputRow');
+  
+  clearInterval(_recordingTimer);
+  
+  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
+    _mediaRecorder.stop();
+  }
+  
+  if (_recordingStream) {
+    _recordingStream.getTracks().forEach(t => t.stop());
+    _recordingStream = null;
+  }
+
+  // Restore main UI
+  if (row) row.style.display = 'none';
+  if (inputRow) inputRow.style.display = 'flex';
+  
+  _audioChunks = [];
+  showToast('🗑️ Đã huỷ bản ghi âm');
+}
+
+// Stops and submits recorded voice file
+async function stopAndSendVoiceRecording() {
+  const row = document.getElementById('chatVoiceRecordRow');
+  const inputRow = document.getElementById('chatInputRow');
+  const timerEl = document.getElementById('chatVoiceTimer');
+  const statusEl = document.getElementById('chatVoiceStatus');
+  
+  clearInterval(_recordingTimer);
+  
+  if (!_mediaRecorder || _mediaRecorder.state === 'inactive') {
+    if (row) row.style.display = 'none';
+    if (inputRow) inputRow.style.display = 'flex';
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = '⌛ Đang nén âm thanh...';
+
+  // Wait for mediarecorder to finish stop sequences
+  const recorderStopped = new Promise((resolve) => {
+    _mediaRecorder.onstop = () => {
+      if (_recordingStream) {
+        _recordingStream.getTracks().forEach(t => t.stop());
+        _recordingStream = null;
+      }
+      resolve();
+    };
+  });
+
+  _mediaRecorder.stop();
+  await recorderStopped;
+
+  if (_audioChunks.length === 0) {
+    showToast('❌ Ghi âm thất bại, thử lại');
+    if (row) row.style.display = 'none';
+    if (inputRow) inputRow.style.display = 'flex';
+    return;
+  }
+
+  // Assemble blob
+  const mimeType = _mediaRecorder.mimeType || 'audio/webm';
+  const audioBlob = new Blob(_audioChunks, { type: mimeType });
+  
+  // Decide extension matching mimetype
+  let ext = 'webm';
+  if (mimeType.includes('ogg')) ext = 'ogg';
+  else if (mimeType.includes('mp4') || mimeType.includes('aac')) ext = 'mp4';
+  else if (mimeType.includes('mpeg')) ext = 'mp3';
+  else if (mimeType.includes('wav')) ext = 'wav';
+
+  const fileName = `voice_note_${currentProfileId}_${Date.now()}.${ext}`;
+  const audioFile = new File([audioBlob], fileName, { type: mimeType });
+
+  // Reset UI early for visual snappy response
+  if (row) row.style.display = 'none';
+  if (inputRow) inputRow.style.display = 'flex';
+
+  showToast('⌛ Đang tải lên tin nhắn thoại...');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', audioFile);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload voice failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && data.url) {
+      // Send the secure bot proxy url directly as message content
+      await sendProxyImageMessage(data.url);
+      showToast('✅ Đã gửi tin nhắn thoại');
+    } else {
+      throw new Error('No URL returned from bot server');
+    }
+  } catch (e) {
+    showToast('❌ Gửi tin nhắn thoại thất bại');
+    console.error('stopAndSendVoiceRecording error:', e);
+  } finally {
+    _audioChunks = [];
+  }
 }
