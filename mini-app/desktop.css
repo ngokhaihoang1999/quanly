@@ -411,11 +411,11 @@
   }
   
   /* Thiết lập transition siêu mượt cho từng phần tử con với max-height CHÍNH XÁC - Chỉ áp dụng khi toggle thủ công bằng nút bấm */
-  .header-top {
+  .header .header-top {
     max-height: 58px;
     min-height: 0 !important; /* Cho phép co giãn mượt mà không bị giới hạn chiều cao tối thiểu */
     opacity: 1;
-    margin-bottom: 8px !important;
+    margin-bottom: 8px; /* Bỏ !important để JS có thể nội suy */
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
   }
@@ -426,13 +426,13 @@
                 margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
   
-  .view-as-bar {
+  .header .view-as-bar {
     max-height: 36px;
     min-height: 0 !important; /* Cho phép co giãn mượt mà */
     opacity: 1;
-    margin-bottom: 6px !important;
-    padding: 4px 8px !important;
-    gap: 4px !important;
+    margin-bottom: 6px; /* Bỏ !important để JS có thể nội suy */
+    padding: 4px 8px; /* Bỏ !important để JS có thể nội suy */
+    gap: 4px;
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
   }
@@ -448,13 +448,13 @@
     height: 26px !important;
   }
   
-  .semester-bar {
+  .header .semester-bar {
     max-height: 36px;
     min-height: 0 !important; /* Cho phép co giãn mượt mà */
     opacity: 1;
-    margin-bottom: 6px !important;
-    padding: 4px 6px !important;
-    gap: 4px !important;
+    margin-bottom: 6px; /* Bỏ !important để JS có thể nội suy */
+    padding: 4px 6px; /* Bỏ !important để JS có thể nội suy */
+    gap: 4px;
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
   }
