@@ -389,9 +389,12 @@
     height: auto !important;
   }
 
-  /* Smooth Auto-Collapsible Header on Mobile */
+  /* Smooth Auto-Collapsible Header on Mobile with GPU acceleration */
   .header {
     transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: padding;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
   .header.header-collapsed {
     padding: 6px 16px 8px !important;
@@ -400,6 +403,8 @@
     transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.25s ease, margin 0.25s ease !important;
     max-height: 120px;
     opacity: 1;
+    will-change: max-height, opacity, padding, margin;
+    transform: translateZ(0);
   }
   .header.header-collapsed .header-top,
   .header.header-collapsed .view-as-bar,
@@ -413,6 +418,35 @@
     opacity: 0 !important;
     pointer-events: none !important;
     border: none !important;
+  }
+  
+  /* Ensure header toggle button fits elegantly inside header-right */
+  #headerCollapseBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  #headerCollapseBtn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+  }
+  #headerCollapseBtn:active {
+    transform: scale(0.95);
+  }
+  
+  /* Light theme override for toggle button */
+  [data-theme="light"] #headerCollapseBtn {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: var(--text1);
+  }
+  [data-theme="light"] #headerCollapseBtn:hover {
+    background: rgba(0, 0, 0, 0.08);
   }
 }
 

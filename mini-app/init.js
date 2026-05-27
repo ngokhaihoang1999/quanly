@@ -459,17 +459,108 @@ function toggleDashMetrics() {
   if (icon) icon.textContent = el.classList.contains('collapsed') ? '▼' : '▲';
 }
 
+// ── Header Collapse Logic (Auto & Manual) ──
+let _headerManualCollapsed = localStorage.getItem('cj_header_collapsed') === '1';
+
+function toggleHeaderCollapse(isManual = true) {
+  const header = document.querySelector('.header');
+  const btn = document.getElementById('headerCollapseBtn');
+  if (!header) return;
+
+  const isCollapsed = header.classList.toggle('header-collapsed');
+  
+  if (btn) {
+    btn.textContent = isCollapsed ? '🔽' : '🔼';
+    btn.title = isCollapsed ? 'Mở rộng header' : 'Thu gọn header';
+  }
+
+  if (isManual) {
+    _headerManualCollapsed = isCollapsed;
+    localStorage.setItem('cj_header_collapsed', isCollapsed ? '1' : '0');
+  }
+}
+
+// Khôi phục trạng thái thu gọn thủ công khi load trang
+document.addEventListener('DOMContentLoaded', () => {
+  if (_headerManualCollapsed) {
+    const header = document.querySelector('.header');
+    const btn = document.getElementById('headerCollapseBtn');
+    if (header) header.classList.add('header-collapsed');
+    if (btn) {
+      btn.textContent = '🔽';
+      btn.title = 'Mở rộng header';
+    }
+  }
+});
+
 // Auto-collapsible header on scroll for mobile/narrow viewports
 (function() {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
+  let lastScrollTop = 0;
+  let isTransitioning = false;
+
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', () => {
+      // Nếu người dùng đã chủ động thu gọn thủ công, giữ nguyên không tự động thay đổi
+      if (_headerManualCollapsed) return;
+
       const header = document.querySelector('.header');
       if (!header) return;
-      if (scrollContainer.scrollTop > 15) {
-        header.classList.add('header-collapsed');
-      } else {
-        header.classList.remove('header-collapsed');
+
+      if (isTransitioning) return;
+
+      const scrollTop = scrollContainer.scrollTop;
+      const scrollHeight = scrollContainer.scrollHeight;
+      const clientHeight = scrollContainer.clientHeight;
+
+      // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight > clientHeight + 80)
+      const isScrollable = scrollHeight > clientHeight + 80;
+
+      if (!isScrollable) {
+        // Trang quá ngắn -> Luôn giữ header mở rộng để tránh giật lag và hiện trọn vẹn nội dung
+        if (header.classList.contains('header-collapsed')) {
+          header.classList.remove('header-collapsed');
+          const btn = document.getElementById('headerCollapseBtn');
+          if (btn) {
+            btn.textContent = '🔼';
+            btn.title = 'Thu gọn header';
+          }
+          isTransitioning = true;
+          setTimeout(() => { isTransitioning = false; }, 280);
+        }
+        return;
+      }
+
+      // Chỉ xử lý nếu có sự thay đổi cuộn thực sự (chống nhiễu rung)
+      if (Math.abs(scrollTop - lastScrollTop) > 5) {
+        const isScrollingDown = scrollTop > lastScrollTop;
+
+        if (isScrollingDown && scrollTop > 60) {
+          // Cuộn xuống -> thu gọn header
+          if (!header.classList.contains('header-collapsed')) {
+            header.classList.add('header-collapsed');
+            const btn = document.getElementById('headerCollapseBtn');
+            if (btn) {
+              btn.textContent = '🔽';
+              btn.title = 'Mở rộng header';
+            }
+            isTransitioning = true;
+            setTimeout(() => { isTransitioning = false; }, 280);
+          }
+        } else if (!isScrollingDown && (scrollTop < lastScrollTop - 25 || scrollTop <= 5)) {
+          // Cuộn lên đáng kể hoặc cuộn hẳn lên đỉnh -> mở rộng header
+          if (header.classList.contains('header-collapsed')) {
+            header.classList.remove('header-collapsed');
+            const btn = document.getElementById('headerCollapseBtn');
+            if (btn) {
+              btn.textContent = '🔼';
+              btn.title = 'Thu gọn header';
+            }
+            isTransitioning = true;
+            setTimeout(() => { isTransitioning = false; }, 280);
+          }
+        }
+        lastScrollTop = scrollTop;
       }
     });
   }
