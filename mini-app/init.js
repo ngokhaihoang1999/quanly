@@ -640,6 +640,13 @@ function _resetHeaderStyle(header) {
       // Thêm 20px đệm để tiến trình cuộn co giãn diễn ra thật từ từ, mềm mại và tinh tế
       maxScroll += 20;
 
+      // Giới hạn maxScroll không được vượt quá khoảng cuộn tối đa thực tế của trang.
+      // Điều này đảm bảo trên các trang có độ dài vừa phải, người dùng vẫn có thể cuộn đạt 100% tiến trình thu gọn header.
+      const maxPossibleScroll = scrollHeight - clientHeight;
+      if (maxPossibleScroll > 20 && maxScroll > maxPossibleScroll - 10) {
+        maxScroll = Math.max(20, maxPossibleScroll - 10);
+      }
+
       // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight > clientHeight + 80)
       const isScrollable = scrollHeight > clientHeight + 80;
 
