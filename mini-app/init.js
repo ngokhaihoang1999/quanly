@@ -467,6 +467,9 @@ function toggleHeaderCollapse(isManual = true) {
   const btn = document.getElementById('headerCollapseBtn');
   if (!header) return;
 
+  // Bật class transitioning để kích hoạt CSS transitions mượt mà khi bấm nút thủ công
+  header.classList.add('header-transitioning');
+
   // Xóa bỏ toàn bộ inline styles trước khi toggle class để CSS transition đảm nhận chuyển động mượt mà
   _resetHeaderStyle(header);
 
@@ -481,6 +484,11 @@ function toggleHeaderCollapse(isManual = true) {
     _headerManualCollapsed = isCollapsed;
     localStorage.setItem('cj_header_collapsed', isCollapsed ? '1' : '0');
   }
+
+  // Tự động gỡ class transitioning sau khi hoàn tất transition (350ms)
+  setTimeout(() => {
+    header.classList.remove('header-transitioning');
+  }, 350);
 }
 
 // Khôi phục trạng thái thu gọn thủ công khi load trang
@@ -589,9 +597,27 @@ function _resetHeaderStyle(header) {
       const header = document.querySelector('.header');
       if (!header) return;
 
+      // Đảm bảo gỡ bỏ class transitioning ngay khi cuộn để không bị delay do transition CSS
+      header.classList.remove('header-transitioning');
+
       const scrollTop = scrollContainer.scrollTop;
       const scrollHeight = scrollContainer.scrollHeight;
       const clientHeight = scrollContainer.clientHeight;
+
+      // Tính toán chiều cao co giãn thực tế động để làm mốc cuộn (maxScroll)
+      let maxScroll = 66; // Chiều cao mặc định của header-top (58px) + padding chênh lệch (4px) + margin (8px)
+      const viewAsBar = header.querySelector('.view-as-bar');
+      const semesterBar = header.querySelector('.semester-bar');
+
+      if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') {
+        maxScroll += 42; // 36px + 6px margin
+      }
+      if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') {
+        maxScroll += 42; // 36px + 6px margin
+      }
+
+      // Thêm 20px đệm để tiến trình cuộn co giãn diễn ra thật từ từ, mềm mại và tinh tế
+      maxScroll += 20;
 
       // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight > clientHeight + 80)
       const isScrollable = scrollHeight > clientHeight + 80;
@@ -608,8 +634,7 @@ function _resetHeaderStyle(header) {
         return;
       }
 
-      // Tiến trình cuộn từ 0px đến 85px (ngưỡng co giãn tối đa)
-      const maxScroll = 85;
+      // Tiến trình cuộn từ 0px đến maxScroll (bám sát ngón tay 1-to-1)
       const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
 
       _applyHeaderScrollProgress(header, pct);

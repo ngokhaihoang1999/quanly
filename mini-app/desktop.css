@@ -395,10 +395,12 @@
 
   /* Smooth Auto-Collapsible Header on Mobile with GPU acceleration */
   .header {
-    transition: padding 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     will-change: padding;
     transform: translateZ(0);
     backface-visibility: hidden;
+  }
+  .header.header-transitioning {
+    transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
   .header {
     padding: 10px 12px 6px !important;
@@ -408,24 +410,22 @@
     padding: 6px 12px 6px !important;
   }
   
-  /* Thiết lập transition siêu mượt cho từng phần tử con với max-height CHÍNH XÁC */
+  /* Thiết lập transition siêu mượt cho từng phần tử con với max-height CHÍNH XÁC - Chỉ áp dụng khi toggle thủ công bằng nút bấm */
   .header-top {
-    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                opacity 0.25s ease, 
-                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 58px;
     opacity: 1;
     margin-bottom: 8px !important;
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
   }
-  
-  .view-as-bar {
+  .header.header-transitioning .header-top {
     transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
                 opacity 0.25s ease, 
                 padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  
+  .view-as-bar {
     max-height: 36px;
     opacity: 1;
     margin-bottom: 6px !important;
@@ -434,6 +434,12 @@
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
   }
+  .header.header-transitioning .view-as-bar {
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.25s ease, 
+                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
   .view-as-bar select, .view-as-bar button {
     font-size: 11px !important;
     padding: 2px 4px !important;
@@ -441,10 +447,6 @@
   }
   
   .semester-bar {
-    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                opacity 0.25s ease, 
-                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     max-height: 36px;
     opacity: 1;
     margin-bottom: 6px !important;
@@ -452,6 +454,12 @@
     gap: 4px !important;
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
+  }
+  .header.header-transitioning .semester-bar {
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.25s ease, 
+                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
   .semester-bar select, .semester-bar button {
     font-size: 11px !important;
