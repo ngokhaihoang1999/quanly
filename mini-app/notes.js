@@ -383,6 +383,44 @@ function _initBoardNotes(container) {
       _initNoteEmbeddedMedia(mediaCanvas, noteId);
     }
 
+    // Bind click-anywhere-to-type handler (vertical autofocus space filling)
+    const bodyEl = el.querySelector('.board-note-body');
+    const contentEl = el.querySelector('.board-note-content');
+    if (bodyEl && contentEl) {
+      bodyEl.addEventListener('mousedown', e => {
+        if (e.target.closest('button') || e.target.closest('.embedded-media-wrapper') || e.target.closest('.media-link-popover') || e.target.closest('.note-toolbar')) return;
+        
+        const rect = contentEl.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        
+        let contentBottom = 0;
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(contentEl);
+          const rangeRect = range.getBoundingClientRect();
+          contentBottom = rangeRect.bottom - rect.top;
+        } catch(err) {
+          contentBottom = contentEl.scrollHeight || 20;
+        }
+        
+        if (clickY > contentBottom + 10) {
+          const gap = clickY - contentBottom;
+          const lineHeight = 20;
+          const linesToAdd = Math.floor(gap / lineHeight);
+          if (linesToAdd > 0) {
+            for (let i = 0; i < linesToAdd; i++) {
+              const div = document.createElement('div');
+              div.innerHTML = '<br>';
+              contentEl.appendChild(div);
+            }
+            saveNoteInline(noteId);
+          }
+        }
+        
+        setTimeout(() => contentEl.focus(), 1);
+      });
+    }
+
     if (isFloating) {
       document.body.appendChild(el);
       el.classList.add('board-note-floating');
@@ -498,19 +536,7 @@ function _initBoardNotes(container) {
       document.addEventListener('mouseup', onUp);
     });
 
-    // ─ Click to expand (only for non-floating) ─
-    el.addEventListener('click', e => {
-      if (isFloating) return;
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.board-badge-link') || e.target.closest('.board-note-resize') || e.target.closest('.note-toolbar') || e.target.closest('.media-link-popover')) return;
-      if (wasDragged) { wasDragged = false; return; }
-      if (el.classList.contains('board-note-expanded')) {
-        _collapseNote(el);
-      } else {
-        const prev = container.querySelector('.board-note-expanded');
-        if (prev) _collapseNote(prev);
-        _expandNote(el, container);
-      }
-    });
+    // Click-to-expand card click listener removed to prevent unwanted card resizing on focus
   });
 }
 
