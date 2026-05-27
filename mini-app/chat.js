@@ -2765,3 +2765,68 @@ async function sendFloatingProxyImageMessage(imageUrl) {
     console.error('sendFloatingProxyImageMessage:', e);
   }
 }
+
+// ============================================================
+// REALTIME PERFORMANCE OPTIMIZATION (Page Visibility API)
+// ============================================================
+function pauseAllChatRealtime() {
+  console.log('[Realtime] Pausing all realtime subscriptions due to page hidden');
+  
+  if (typeof _profileChatSubscription !== 'undefined' && _profileChatSubscription) {
+    _profileChatSubscription.unsubscribe();
+    _profileChatSubscription = null;
+  }
+  
+  if (window._floatingActiveChatSubscription) {
+    window._floatingActiveChatSubscription.unsubscribe();
+    window._floatingActiveChatSubscription = null;
+  }
+  
+  if (typeof _globalChatSubscription !== 'undefined' && _globalChatSubscription) {
+    _globalChatSubscription.unsubscribe();
+    _globalChatSubscription = null;
+  }
+}
+
+async function resumeAllChatRealtime() {
+  console.log('[Realtime] Resuming all realtime subscriptions due to page visible');
+  
+  // 1. Re-subscribe global channel
+  if (typeof setupGlobalChatRealtime === 'function') {
+    setupGlobalChatRealtime();
+  }
+  
+  // 2. Re-subscribe active chat detail channel if detailView is open on chat tab
+  const detailView = document.getElementById('detailView');
+  const isDetailOpen = detailView && detailView.style.display !== 'none';
+  const chatTabActive = document.querySelector('#profileTabs .form-tab.active')?.getAttribute('onclick')?.includes('chatTab');
+  
+  if (isDetailOpen && chatTabActive && currentProfileId) {
+    if (typeof setupSupabaseRealtimeForChat === 'function') {
+      setupSupabaseRealtimeForChat(currentProfileId);
+    }
+  }
+  
+  // 3. Re-subscribe floating active chat detail if it is open
+  const floatingChat = document.getElementById('floatingChatModal');
+  const isFloatingOpen = floatingChat && floatingChat.classList.contains('open');
+  const activeFloatingProfileId = window._activeFloatingProfileId;
+  if (isFloatingOpen && activeFloatingProfileId) {
+    if (typeof setupFloatingChatRealtime === 'function') {
+      setupFloatingChatRealtime(activeFloatingProfileId);
+    }
+  }
+  
+  // 4. Force reload unread chats status to catch up with anything missed
+  if (typeof loadUnreadChats === 'function') {
+    await loadUnreadChats();
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    pauseAllChatRealtime();
+  } else {
+    resumeAllChatRealtime();
+  }
+});

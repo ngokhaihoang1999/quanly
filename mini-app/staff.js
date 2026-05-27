@@ -1,5 +1,9 @@
 // ============ STAFF ============
 async function loadStaff() {
+  if (typeof isFresh === 'function' && isFresh('staff') && allStaff && allStaff.length > 0) {
+    renderStaff(allStaff);
+    return;
+  }
   try {
     const res = await sbFetch('/rest/v1/staff?select=*&order=staff_code.asc');
     allStaff = await res.json();
