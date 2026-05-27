@@ -15,38 +15,46 @@ function _toggleTree(key, nodeEl) {
     if (chevron) chevron.classList.toggle('open', !isOpen);
   }
 }
-async function loadStructure() {
+async function loadStructure(force = false) {
   try {
-    const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
-    structureData = await res.json();
-    structureData.sort((a,b) => a.name.localeCompare(b.name, 'vi', {numeric:true}));
-    structureData.forEach(a => {
-      a.org_groups = (a.org_groups||[]).sort((x,y) => x.name.localeCompare(y.name, 'vi', {numeric:true}));
-      a.org_groups.forEach(g => {
-        g.teams = (g.teams||[]).sort((x,y) => x.name.localeCompare(y.name, 'vi', {numeric:true}));
-        g.teams.forEach(t => {
-          t.staff = (t.staff||[]).sort((m1, m2) => {
-            let ep1 = m1.position||'td', ep2 = m2.position||'td';
-            if (m1.staff_code===a.yjyn_staff_code) ep1='yjyn';
-            if (m1.staff_code===g.tjn_staff_code) ep1='tjn';
-            if (m1.staff_code===t.gyjn_staff_code) ep1='gyjn';
-            if (m1.staff_code===t.bgyjn_staff_code) ep1='bgyjn';
-            if (m2.staff_code===a.yjyn_staff_code) ep2='yjyn';
-            if (m2.staff_code===g.tjn_staff_code) ep2='tjn';
-            if (m2.staff_code===t.gyjn_staff_code) ep2='gyjn';
-            if (m2.staff_code===t.bgyjn_staff_code) ep2='bgyjn';
-            if (ep1==='gyjn' && ep2!=='gyjn') return -1;
-            if (ep2==='gyjn' && ep1!=='gyjn') return 1;
-            if (ep1==='bgyjn' && ep2!=='bgyjn') return -1;
-            if (ep2==='bgyjn' && ep1!=='bgyjn') return 1;
-            if (ep1!=='td' && ep2==='td') return -1;
-            if (ep2!=='td' && ep1==='td') return 1;
-            return m1.staff_code.localeCompare(m2.staff_code);
+    let isCached = false;
+    if (!force && typeof isFresh === 'function' && isFresh('structure') && structureData && structureData.length > 0) {
+      isCached = true;
+    }
+
+    if (!isCached) {
+      const res = await sbFetch('/rest/v1/areas?select=*,org_groups(*,teams(*,staff:staff!staff_team_id_fkey(*)))&order=name');
+      structureData = await res.json();
+      structureData.sort((a,b) => a.name.localeCompare(b.name, 'vi', {numeric:true}));
+      structureData.forEach(a => {
+        a.org_groups = (a.org_groups||[]).sort((x,y) => x.name.localeCompare(y.name, 'vi', {numeric:true}));
+        a.org_groups.forEach(g => {
+          g.teams = (g.teams||[]).sort((x,y) => x.name.localeCompare(y.name, 'vi', {numeric:true}));
+          g.teams.forEach(t => {
+            t.staff = (t.staff||[]).sort((m1, m2) => {
+              let ep1 = m1.position||'td', ep2 = m2.position||'td';
+              if (m1.staff_code===a.yjyn_staff_code) ep1='yjyn';
+              if (m1.staff_code===g.tjn_staff_code) ep1='tjn';
+              if (m1.staff_code===t.gyjn_staff_code) ep1='gyjn';
+              if (m1.staff_code===t.bgyjn_staff_code) ep1='bgyjn';
+              if (m2.staff_code===a.yjyn_staff_code) ep2='yjyn';
+              if (m2.staff_code===g.tjn_staff_code) ep2='tjn';
+              if (m2.staff_code===t.gyjn_staff_code) ep2='gyjn';
+              if (m2.staff_code===t.bgyjn_staff_code) ep2='bgyjn';
+              if (ep1==='gyjn' && ep2!=='gyjn') return -1;
+              if (ep2==='gyjn' && ep1!=='gyjn') return 1;
+              if (ep1==='bgyjn' && ep2!=='bgyjn') return -1;
+              if (ep2==='bgyjn' && ep1!=='bgyjn') return 1;
+              if (ep1!=='td' && ep2==='td') return -1;
+              if (ep2!=='td' && ep1==='td') return 1;
+              return m1.staff_code.localeCompare(m2.staff_code);
+            });
           });
         });
       });
-    });
-    if (typeof buildStaffUnitMap === 'function') buildStaffUnitMap(); // build unit lookup
+      if (typeof buildStaffUnitMap === 'function') buildStaffUnitMap(); // build unit lookup
+      markFresh('structure');
+    }
     const el = document.getElementById('structureTree');
     const pos = getCurrentPosition();
     const myCode = getEffectiveStaffCode();
@@ -231,7 +239,7 @@ async function saveStructure() {
     }
     closeModal('structureModal');
     showToast('\u2705 \u0110\u00e3 t\u1ea1o ' + name);
-    loadStructure(); loadStaff();
+    loadStructure(true); loadStaff(true);
   } catch(e) { 
     showToast('\u274c L\u1ed7i'); console.error(e); 
   } finally {
@@ -432,7 +440,7 @@ async function updateStructure() {
     }
     closeModal('editStructModal');
     showToast('\u2705 \u0110\u00e3 c\u1eadp nh\u1eadt');
-    loadStructure(); loadStaff();
+    loadStructure(true); loadStaff(true);
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 async function deleteStructure() {
@@ -496,7 +504,7 @@ async function deleteStructure() {
     }
     closeModal('editStructModal');
     showToast('\u2705 \u0110\u00e3 x\u00f3a ' + name);
-    loadStructure(); loadStaff();
+    loadStructure(true); loadStaff(true);
   } catch(e) {
     showToast('\u274c L\u1ed7i x\u00f3a: ' + (e.message||'')); console.error(e);
   } finally {
@@ -534,10 +542,10 @@ async function addMemberToTeam() {
     await sbFetch(`/rest/v1/staff?staff_code=eq.${code}`, { method:'PATCH', headers:{'Prefer':'return=representation'}, body:JSON.stringify({team_id:teamId}) });
     showToast('\u2705 \u0110\u00e3 th\u00eam');
     // Reload data and refresh member list
-    await loadStructure();
+    await loadStructure(true);
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);
-    await loadStaff();
+    await loadStaff(true);
     
     // Clear the input
     const inputEl = document.getElementById('edit_add_member');
@@ -591,10 +599,10 @@ async function createAndAddStaff() {
     showToast('\u2705 \u0110\u00e3 t\u1ea1o "' + code + '" v\u00e0 th\u00eam v\u00e0o T\u1ed5');
     codeEl.value = '';
     nameEl.value = '';
-    await loadStructure();
+    await loadStructure(true);
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);
-    await loadStaff();
+    await loadStaff(true);
   } catch(e) {
     showToast('\u274c L\u1ed7i: ' + (e.message || ''));
     console.error('createAndAddStaff:', e);
@@ -627,10 +635,10 @@ async function deleteStaffPermanently(staffCode) {
     await sbFetch(`/rest/v1/staff?staff_code=eq.${encodeURIComponent(staffCode)}`, { method:'DELETE' });
     showToast('\u2705 \u0110\u00e3 x\u00f3a T\u0110 ' + staffCode);
     const teamId = document.getElementById('edit_struct_id').value;
-    await loadStructure();
+    await loadStructure(true);
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);
-    await loadStaff();
+    await loadStaff(true);
   } catch(e) { showToast('\u274c L\u1ed7i: ' + (e.message||'')); console.error(e); }
 }
 async function removeMemberFromTeam(staffCode) {
@@ -658,10 +666,10 @@ async function removeMemberFromTeam(staffCode) {
     }
     
     showToast('\u2705 \u0110\u00e3 g\u1ee1');
-    await loadStructure();
+    await loadStructure(true);
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);
-    await loadStaff();
+    await loadStaff(true);
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 // Returns highest structural position a staff holds (excluding a specific unit being edited)
@@ -765,10 +773,10 @@ async function assignMemberPos(staffCode, newPos, posType) {
     await sbFetch('/rest/v1/staff?staff_code=eq.' + staffCode, { method:'PATCH', body: JSON.stringify(body) });
     const label = posType === 'specialist' ? (newPos ? getPositionName(newPos) : 'Kh\u00f4ng') : getPositionName(newPos);
     showToast('\u2705 \u0110\u00e3 ch\u1ec9 \u0111\u1ecbnh ' + label + ' cho ' + staffCode);
-    await loadStructure();
+    await loadStructure(true);
     const item = findStructItem('team', teamId);
     if (item) renderTeamMembers(item);
-    await loadStaff();
+    await loadStaff(true);
   } catch(e) { showToast('\u274c L\u1ed7i'); console.error(e); }
 }
 

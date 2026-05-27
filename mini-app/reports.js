@@ -5,9 +5,15 @@
 // Cache fetched data so sub-unit dropdown can re-render without re-fetch
 let _rptCache = null;
 
-async function loadReports() {
+async function loadReports(force = false) {
   const el = document.getElementById('reportContent');
   if (!el) return;
+
+  if (!force && typeof isFresh === 'function' && isFresh('reports') && _rptCache) {
+    _renderReports(el, null);
+    return;
+  }
+
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">⏳ Đang phân tích dữ liệu...</div>';
 
   try {

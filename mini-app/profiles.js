@@ -1,5 +1,9 @@
 // ============ PROFILES ============
-async function loadProfiles() {
+async function loadProfiles(force = false) {
+  if (!force && typeof isFresh === 'function' && isFresh('profiles') && allProfiles && allProfiles.length > 0) {
+    renderProfiles(allProfiles);
+    return;
+  }
   try {
     const semFilter = typeof getSemesterFilter === 'function' ? getSemesterFilter() : '';
     const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(telegram_group_id,fruit_roles(staff_code,role_type))&order=created_at.desc' + semFilter);

@@ -3,7 +3,10 @@ const PHASE_LABELS = {new:'🟡 Chakki',chakki:'🟡 Chakki',tu_van_hinh:'🖼�
 const PHASE_COLORS = {new:'#f59e0b',chakki:'#f59e0b',tu_van_hinh:'#ef4444',tu_van:'var(--accent)',bb:'var(--green)',center:'#8b5cf6',completed:'var(--green)'};
 
 // ============ DASHBOARD ============
-async function loadDashboard() {
+async function loadDashboard(force = false) {
+  if (!force && typeof isFresh === 'function' && isFresh('dashboard')) {
+    return;
+  }
   try {
     const pos = getCurrentPosition();
     const scope = getScope();

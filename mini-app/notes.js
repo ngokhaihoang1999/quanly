@@ -604,6 +604,8 @@ async function savePersonalNote() {
     closeModal('createNoteModal');
     _editingNoteId = null;
     await loadPersonalNotes();
+    if (typeof invalidateCache === 'function') invalidateCache();
+    if (typeof loadCalendar === 'function') loadCalendar(true);
   } catch(e) {
     console.error('[Notes] save error:', e);
     showToast('Lỗi lưu ghi chú');
@@ -622,6 +624,8 @@ async function deletePersonalNote(noteId) {
     closeModal('createNoteModal');
     _editingNoteId = null;
     await loadPersonalNotes();
+    if (typeof invalidateCache === 'function') invalidateCache();
+    if (typeof loadCalendar === 'function') loadCalendar(true);
   } catch(e) {
     console.error('[Notes] delete error:', e);
     showToast('Lỗi xoá ghi chú');

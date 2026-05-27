@@ -34,10 +34,13 @@ function calNavMonth(dir) {
   loadCalendar();
 }
 
-async function loadCalendar() {
+let _calCacheData = {};
+
+async function loadCalendar(force = false) {
   if (calYear === undefined) initCalendar();
   const myCode = getEffectiveStaffCode();
   const scope = getScope();
+  const cacheKey = 'calendar_' + calYear + '_' + calMonth;
   
   // Build date range for this month
   const firstDay = new Date(calYear, calMonth, 1);
@@ -49,64 +52,79 @@ async function loadCalendar() {
   const label = document.getElementById('calMonthLabel');
   if (label) label.textContent = `Shin ${calYear - 1983} — Tháng ${calMonth + 1}`;
   
-  try {
-    // Fetch calendar events + linked notes in parallel
-    const [evRes, noteRes] = await Promise.all([
-      sbFetch(`/rest/v1/calendar_events?event_date=gte.${startStr}&event_date=lte.${endStr}&select=*&order=event_date.asc,event_time.asc`),
-      sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,content,cal_date,color,owner_staff_code,updated_at,reminder_at,reminder_sent&order=cal_date.asc`).catch(() => null)
-    ]);
-    const allEvents = await evRes.json();
-    try {
-      _calLinkedNotes = noteRes && noteRes.ok ? (await noteRes.json()).filter(n => n.owner_staff_code === myCode || scope === 'system') : [];
-    } catch(e2) { _calLinkedNotes = []; }
-    
-    // Filter: system events by scope, personal events by owner
-    calEvents = allEvents.filter(ev => {
-      if (ev.is_system) {
-        return isEventInScope(ev, myCode, scope);
-      } else {
-        return ev.staff_code === myCode;
-      }
-    });
-  } catch(e) {
-    console.error('loadCalendar:', e);
-    calEvents = [];
-    _calLinkedNotes = [];
+  let isCached = false;
+  if (!force && typeof isFresh === 'function' && isFresh(cacheKey) && _calCacheData[cacheKey]) {
+    calEvents = _calCacheData[cacheKey].events;
+    _calLinkedNotes = _calCacheData[cacheKey].notes;
+    isCached = true;
   }
   
-  // Also fetch TV/BB records with scheduled dates to merge as virtual events
-  await _mergeRecordMilestones(startStr, endStr, myCode, scope);
-
-  // Client-side deduplication of system events to prevent displaying duplicate cards for different stakeholders
-  const uniqueEvents = [];
-  const seen = new Set();
-
-  // Sort to prioritize keeping the event belonging to the current user (myCode), then with active alarms
-  calEvents.sort((a, b) => {
-    const aIsMine = a.staff_code === myCode ? 1 : 0;
-    const bIsMine = b.staff_code === myCode ? 1 : 0;
-    if (aIsMine !== bIsMine) return bIsMine - aIsMine;
-
-    const aHasAlarm = (a.reminder_at && !a.reminder_sent) ? 1 : 0;
-    const bHasAlarm = (b.reminder_at && !b.reminder_sent) ? 1 : 0;
-    return bHasAlarm - aHasAlarm;
-  });
-
-  calEvents.forEach(ev => {
-    if (ev.is_system) {
-      // System events can be duplicated for different staff members
-      // Deduplicate by profile_id + event_type + event_date + title
-      const key = `${ev.profile_id || ''}_${ev.event_type}_${ev.event_date}_${ev.title}`;
-      if (!seen.has(key)) {
-        seen.add(key);
+  if (!isCached) {
+    try {
+      // Fetch calendar events + linked notes in parallel
+      const [evRes, noteRes] = await Promise.all([
+        sbFetch(`/rest/v1/calendar_events?event_date=gte.${startStr}&event_date=lte.${endStr}&select=*&order=event_date.asc,event_time.asc`),
+        sbFetch(`/rest/v1/personal_notes?cal_date=gte.${startStr}&cal_date=lte.${endStr}&select=id,title,content,cal_date,color,owner_staff_code,updated_at,reminder_at,reminder_sent&order=cal_date.asc`).catch(() => null)
+      ]);
+      const allEvents = await evRes.json();
+      try {
+        _calLinkedNotes = noteRes && noteRes.ok ? (await noteRes.json()).filter(n => n.owner_staff_code === myCode || scope === 'system') : [];
+      } catch(e2) { _calLinkedNotes = []; }
+      
+      // Filter: system events by scope, personal events by owner
+      calEvents = allEvents.filter(ev => {
+        if (ev.is_system) {
+          return isEventInScope(ev, myCode, scope);
+        } else {
+          return ev.staff_code === myCode;
+        }
+      });
+    } catch(e) {
+      console.error('loadCalendar:', e);
+      calEvents = [];
+      _calLinkedNotes = [];
+    }
+    
+    // Also fetch TV/BB records with scheduled dates to merge as virtual events
+    await _mergeRecordMilestones(startStr, endStr, myCode, scope);
+  
+    // Client-side deduplication of system events to prevent displaying duplicate cards for different stakeholders
+    const uniqueEvents = [];
+    const seen = new Set();
+  
+    // Sort to prioritize keeping the event belonging to the current user (myCode), then with active alarms
+    calEvents.sort((a, b) => {
+      const aIsMine = a.staff_code === myCode ? 1 : 0;
+      const bIsMine = b.staff_code === myCode ? 1 : 0;
+      if (aIsMine !== bIsMine) return bIsMine - aIsMine;
+  
+      const aHasAlarm = (a.reminder_at && !a.reminder_sent) ? 1 : 0;
+      const bHasAlarm = (b.reminder_at && !b.reminder_sent) ? 1 : 0;
+      return bHasAlarm - aHasAlarm;
+    });
+  
+    calEvents.forEach(ev => {
+      if (ev.is_system) {
+        // System events can be duplicated for different staff members
+        // Deduplicate by profile_id + event_type + event_date + title
+        const key = `${ev.profile_id || ''}_${ev.event_type}_${ev.event_date}_${ev.title}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueEvents.push(ev);
+        }
+      } else {
         uniqueEvents.push(ev);
       }
-    } else {
-      uniqueEvents.push(ev);
-    }
-  });
-  calEvents = uniqueEvents;
-
+    });
+    calEvents = uniqueEvents;
+    
+    _calCacheData[cacheKey] = {
+      events: calEvents,
+      notes: _calLinkedNotes
+    };
+    if (typeof markFresh === 'function') markFresh(cacheKey);
+  }
+  
   renderCalendarGrid();
   // Auto-select today or keep selected date
   const today = new Date();
@@ -118,7 +136,7 @@ async function loadCalendar() {
     }
   }
   renderCalendarDayEvents(calSelectedDate);
-  if (typeof markFresh === 'function') markFresh('calendar');
+}
 }
 
 // Fetch TV & BB records and merge as virtual calendar events
@@ -958,7 +976,7 @@ async function saveCalEvent() {
     if (saveBtn) { saveBtn.textContent = '💾 Lưu phiếu'; saveBtn.onclick = saveRecord; saveBtn.disabled = false; }
     showToast(`✅ Đã tạo sự kiện${isDistributed ? ` cho ${targetCodes.length} TĐ` : ''}`);
     _distMode = 'me'; // reset
-    loadCalendar();
+    loadCalendar(true);
   } catch(e) {
     showToast('❌ Lỗi tạo sự kiện'); console.error(e);
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '📅 Tạo sự kiện'; }
@@ -1003,7 +1021,7 @@ async function deleteCalEvent(eventId) {
   try {
     await sbFetch(`/rest/v1/calendar_events?id=eq.${eventId}`, { method: 'DELETE' });
     showToast('✁EĐã xoá');
-    loadCalendar();
+    loadCalendar(true);
   } catch(e) { showToast('❁ELỗi'); console.error(e); }
 }
 

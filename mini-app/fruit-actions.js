@@ -113,7 +113,7 @@ async function changeAvatarColor(profileId, gradient) {
     const p = allProfiles.find(x => x.id === profileId);
     if (p) p.avatar_color = gradient;
     if (typeof _refreshCurrentProfile === 'function') _refreshCurrentProfile();
-    else if (typeof loadDashboard === 'function') loadDashboard();
+    else if (typeof loadDashboard === 'function') loadDashboard(true);
     showToast('✅ Đã đổi màu avatar');
   } catch(e) { console.error('changeAvatarColor:', e); showToast('❌ Lỗi đổi màu'); }
 }
@@ -141,8 +141,8 @@ async function promptChangeSemester(profileId, currentSemId) {
     await sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}`, { method: 'PATCH', body: JSON.stringify({ semester_id: semVal }) });
     showToast('✅ Đã chuyển Khai Giảng');
     
-    if (typeof loadProfiles === 'function') await loadProfiles();
-    if (typeof loadDashboard === 'function') await loadDashboard();
+    if (typeof loadProfiles === 'function') await loadProfiles(true);
+    if (typeof loadDashboard === 'function') await loadDashboard(true);
     
     if (currentProfileId === profileId) {
       if (typeof refreshProfileInPlace === 'function') refreshProfileInPlace();
@@ -284,7 +284,7 @@ async function toggleFruitStatus(profileId, current) {
       createNotification(stakeholders, notifType, `${icon} ${label}`, pName + (reason ? ` — ${reason}` : ''), profileId);
     }
     filterProfiles();
-    loadDashboard();
+    loadDashboard(true);
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('toggleFruitStatus:', e); }
 }
 
@@ -394,7 +394,7 @@ async function executeKTToggle(profileId, newState, buoiThu) {
     if (typeof _refreshCurrentProfile === 'function' && window.currentProfileId === profileId) {
        _refreshCurrentProfile();
     } else {
-       filterProfiles(); loadDashboard();
+       filterProfiles(); loadDashboard(true);
     }
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error('executeKTToggle:', e); }
 }

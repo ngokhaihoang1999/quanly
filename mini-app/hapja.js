@@ -122,7 +122,7 @@ async function submitCreateHapja() {
       if (typeof loadNotifCount === 'function') loadNotifCount();
     } catch(e) { console.warn('Hapja notify error:', e); }
 
-    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadDashboard === 'function') loadDashboard(true);
   } catch(e) { 
     showToast('❌ Lỗi: ' + e.message); 
     console.error(e); 
@@ -364,7 +364,7 @@ async function saveHapjaEdit(id) {
       } catch(e) { console.warn('Notify resubmit:', e); }
     }
     
-    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadDashboard === 'function') loadDashboard(true);
   } catch(e) { showToast('❌ Lỗi lưu: ' + e.message); console.error(e); }
 }
 
@@ -415,7 +415,7 @@ async function requestHapjaRevision(id) {
     
     showToast('📝 Đã gửi yêu cầu chỉnh sửa!');
     closeModal('hapjaDetailModal');
-    if (typeof loadDashboard === 'function') loadDashboard();
+    if (typeof loadDashboard === 'function') loadDashboard(true);
   } catch(e) { showToast('❌ Lỗi: ' + e.message); console.error(e); }
 }
 
@@ -543,7 +543,7 @@ async function approveHapja(id) {
       }
     }
 
-    loadDashboard(); loadProfiles();
+    loadDashboard(true); loadProfiles(true);
   } catch(e) { showToast('❌ Lỗi khi duyệt: ' + e.message); console.error(e); }
   finally {
     window._approvingHapja = false;
@@ -556,7 +556,7 @@ async function deleteHapja(id) {
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, {method:'DELETE'});
     showToast('✅ Đã xoá phiếu');
     closeModal('hapjaDetailModal');
-    loadDashboard();
+    loadDashboard(true);
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 async function rejectHapja(id) {
@@ -564,7 +564,7 @@ async function rejectHapja(id) {
     await sbFetch(`/rest/v1/check_hapja?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ status: 'rejected', approved_by: getEffectiveStaffCode(), approved_at: new Date().toISOString() }) });
     showToast('❌ Đã từ chối phiếu.');
     closeModal('hapjaDetailModal');
-    loadDashboard();
+    loadDashboard(true);
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
 }
 // Records (Tư vấn / BB)
@@ -642,7 +642,7 @@ async function deleteProfile() {
     await del(`/rest/v1/profiles?id=eq.${pid}`);
     // Sync: remove from Google Sheet
     if (typeof deleteFromSheet === 'function') deleteFromSheet(pid);
-    showToast('✅ Đã xoá!'); backToList(); await loadProfiles();
+    showToast('✅ Đã xoá!'); backToList(); await loadProfiles(true);
   } catch(e) { showToast('❌ Lỗi: ' + (e.message||'').slice(0,80)); console.error('deleteProfile:', e); }
 }
 async function deleteRecord(id, type) {

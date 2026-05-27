@@ -1,6 +1,6 @@
 // ============ STAFF ============
-async function loadStaff() {
-  if (typeof isFresh === 'function' && isFresh('staff') && allStaff && allStaff.length > 0) {
+async function loadStaff(force = false) {
+  if (!force && typeof isFresh === 'function' && isFresh('staff') && allStaff && allStaff.length > 0) {
     renderStaff(allStaff);
     return;
   }
@@ -150,6 +150,6 @@ async function deleteStaffFromList(staffCode) {
     showToast('✅ Đã xóa TĐ ' + staffCode);
     allStaff = allStaff.filter(s => s.staff_code !== staffCode);
     renderStaff(allStaff);
-    await loadStructure();
+    await loadStructure(true);
   } catch(e) { showToast('❌ Lỗi xoá: ' + (e.message||'')); console.error('deleteStaffFromList:', e); }
 }

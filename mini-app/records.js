@@ -611,8 +611,12 @@ async function _refreshCurrentProfile() {
     if (idx >= 0) allProfiles[idx] = ps[0];
     openProfile(ps[0]);
     // Ensure lists and dashboard metrics are never stale when navigating away
+    if (typeof invalidateCache === 'function') {
+      invalidateCache('profiles');
+      invalidateCache('reports');
+    }
     filterProfiles();
-    loadDashboard();
+    loadDashboard(true);
   }
 }
 
