@@ -400,16 +400,66 @@
     transform: translateZ(0);
     backface-visibility: hidden;
   }
-  .header.header-collapsed {
-    padding: 6px 16px 8px !important;
+  .header {
+    padding: 10px 12px 6px !important;
+    position: relative;
   }
-  .header-top, .view-as-bar, .semester-bar {
-    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.25s ease, margin 0.25s ease !important;
-    max-height: 120px;
+  .header.header-collapsed {
+    padding: 6px 12px 6px !important;
+  }
+  
+  /* Thiết lập transition siêu mượt cho từng phần tử con với max-height CHÍNH XÁC */
+  .header-top {
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.25s ease, 
+                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    max-height: 58px;
     opacity: 1;
+    margin-bottom: 8px !important;
     will-change: max-height, opacity, padding, margin;
     transform: translateZ(0);
   }
+  
+  .view-as-bar {
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.25s ease, 
+                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    max-height: 36px;
+    opacity: 1;
+    margin-bottom: 6px !important;
+    padding: 4px 8px !important;
+    gap: 4px !important;
+    will-change: max-height, opacity, padding, margin;
+    transform: translateZ(0);
+  }
+  .view-as-bar select, .view-as-bar button {
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+    height: 26px !important;
+  }
+  
+  .semester-bar {
+    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.25s ease, 
+                padding 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    max-height: 36px;
+    opacity: 1;
+    margin-bottom: 6px !important;
+    padding: 4px 6px !important;
+    gap: 4px !important;
+    will-change: max-height, opacity, padding, margin;
+    transform: translateZ(0);
+  }
+  .semester-bar select, .semester-bar button {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    height: 26px !important;
+  }
+  
+  /* Khi thu gọn (.header-collapsed), các phần tử sụp xuống mượt mà ngay lập tức theo tuyến tính */
   .header.header-collapsed .header-top,
   .header.header-collapsed .view-as-bar,
   .header.header-collapsed .semester-bar {
@@ -422,38 +472,6 @@
     opacity: 0 !important;
     pointer-events: none !important;
     border: none !important;
-  }
-  
-  /* Tối ưu hóa khoảng cách padding/margin của header trên mobile để siêu gọn gàng */
-  .header {
-    padding: 10px 12px 6px !important;
-    position: relative;
-  }
-  .header.header-collapsed {
-    padding: 6px 12px 6px !important;
-  }
-  .header-top {
-    margin-bottom: 8px !important;
-  }
-  .view-as-bar {
-    margin-bottom: 6px !important;
-    padding: 4px 8px !important;
-    gap: 4px !important;
-  }
-  .view-as-bar select, .view-as-bar button {
-    font-size: 11px !important;
-    padding: 2px 4px !important;
-    height: 26px !important;
-  }
-  .semester-bar {
-    margin-bottom: 6px !important;
-    padding: 4px 6px !important;
-    gap: 4px !important;
-  }
-  .semester-bar select, .semester-bar button {
-    font-size: 11px !important;
-    padding: 2px 6px !important;
-    height: 26px !important;
   }
 
   /* Bắt buộc Tab Bar trên di động & desktop nhỏ hiển thị thành 2 hàng cố định, xếp đều đặn */
