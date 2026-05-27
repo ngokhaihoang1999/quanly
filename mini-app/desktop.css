@@ -487,9 +487,9 @@
   .embedded-media-wrapper iframe,
   .embedded-media-wrapper img,
   .embedded-media-wrapper video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
     pointer-events: auto;
     border-radius: 4px;
   }
@@ -537,7 +537,34 @@
     z-index: 100;
   }
   
-  .embedded-media-wrapper:hover .media-loop-btn {
+  /* Media Delete Button */
+  .media-delete-btn {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: rgba(220, 38, 38, 0.85);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    line-height: 1;
+    font-weight: bold;
+    transition: background 0.15s;
+  }
+  
+  .media-delete-btn:hover {
+    background: rgb(220, 38, 38);
+  }
+  
+  .embedded-media-wrapper:hover .media-loop-btn,
+  .embedded-media-wrapper:hover .media-delete-btn {
     display: flex;
   }
   

@@ -283,12 +283,8 @@ function renderBoardNoteCard(note, idx) {
     <!-- Media link insert popover -->
     <div class="media-link-popover" id="mediaPopover-${note.id}" style="display:none;" onmousedown="event.stopPropagation();">
       <input type="text" placeholder="Dán link ảnh, mp3, mp4, youtube..." onkeydown="if(event.key==='Enter') { insertMediaUrl('${note.id}', this.value, this); this.value=''; }" style="width:100%; box-sizing:border-box; margin-bottom:4px;" />
-      <div style="font-size:8px;color:var(--text3);margin-top:2px;font-weight:bold;text-align:left;">Mẫu thử nhanh:</div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;">
-        <button class="chip" onmousedown="event.preventDefault();" onclick="insertMediaUrl('${note.id}', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', this)" style="font-size:7px;padding:2px 4px;margin:1px 0;">🎵 Nhạc mp3</button>
-        <button class="chip" onmousedown="event.preventDefault();" onclick="insertMediaUrl('${note.id}', 'https://www.w3schools.com/html/mov_bbb.mp4', this)" style="font-size:7px;padding:2px 4px;margin:1px 0;">📹 Video mp4</button>
-        <button class="chip" onmousedown="event.preventDefault();" onclick="insertMediaUrl('${note.id}', 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300', this)" style="font-size:7px;padding:2px 4px;margin:1px 0;">🖼️ Ảnh đẹp</button>
-      </div>
+      <input type="file" accept="image/*,audio/*,video/*" onchange="uploadNoteMedia(this, '${note.id}')" style="display:none;" id="noteMediaUpload-${note.id}" />
+      <button class="chip" onmousedown="event.preventDefault();" onclick="document.getElementById('noteMediaUpload-${note.id}').click()" style="font-size:10px;padding:4px 8px;margin-top:2px;width:100%;text-align:center;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">📤 Tải tệp lên</button>
     </div>
     ` : ''}
 
@@ -1041,32 +1037,49 @@ function insertMediaUrl(noteId, url, triggerEl) {
   let html = '';
   let type = '';
   
-  let ytId = '';
-  const ytReg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-  const match = url.match(ytReg);
-  if (match) {
-    ytId = match[1];
-    type = 'youtube';
-    html = `<iframe src="https://www.youtube.com/embed/${ytId}?enablejsapi=1&loop=1&playlist=${ytId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-  } else if (/\.(mp3|wav|ogg|aac|m4a)(?:\?|$)/i.test(url)) {
-    type = 'audio';
-    html = `<audio src="${url}" controls></audio>`;
-  } else if (/\.(mp4|webm|ogv|mov)(?:\?|$)/i.test(url)) {
-    type = 'video';
-    html = `<video src="${url}" controls playsinline></video>`;
+  if (url.startsWith('data:')) {
+    if (url.startsWith('data:image/') || url.startsWith('data:img/')) {
+      type = 'image';
+      html = `<img src="${url}" alt="Media" />`;
+    } else if (url.startsWith('data:audio/')) {
+      type = 'audio';
+      html = `<audio src="${url}" controls></audio>`;
+    } else if (url.startsWith('data:video/')) {
+      type = 'video';
+      html = `<video src="${url}" controls playsinline></video>`;
+    } else {
+      type = 'image';
+      html = `<img src="${url}" alt="Media" />`;
+    }
   } else {
-    type = 'image';
-    html = `<img src="${url}" alt="Media" />`;
+    let ytId = '';
+    const ytReg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const match = url.match(ytReg);
+    if (match) {
+      ytId = match[1];
+      type = 'youtube';
+      html = `<iframe src="https://www.youtube.com/embed/${ytId}?enablejsapi=1&loop=1&playlist=${ytId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    } else if (/\.(mp3|wav|ogg|aac|m4a)(?:\?|$)/i.test(url)) {
+      type = 'audio';
+      html = `<audio src="${url}" controls></audio>`;
+    } else if (/\.(mp4|webm|ogv|mov)(?:\?|$)/i.test(url)) {
+      type = 'video';
+      html = `<video src="${url}" controls playsinline></video>`;
+    } else {
+      type = 'image';
+      html = `<img src="${url}" alt="Media" />`;
+    }
   }
 
   const wrapId = 'mediaWrap_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  const defaultWidth = type === 'audio' ? 240 : 200;
-  const defaultHeight = type === 'audio' ? 44 : 140;
+  const defaultWidth = type === 'audio' ? 240 : (type === 'youtube' ? 280 : 240);
+  const defaultHeight = type === 'audio' ? 54 : (type === 'youtube' ? 157 : 135);
 
   const wrapperHtml = `
     <div class="embedded-media-wrapper" id="${wrapId}" contenteditable="false" style="position: absolute; left: 20px; top: 20px; width: ${defaultWidth}px; height: ${defaultHeight}px; z-index: 10;">
       ${html}
       <button class="media-loop-btn" onclick="event.stopPropagation();toggleMediaLoop(this);" title="Phát lại liên tục">🔁</button>
+      <button class="media-delete-btn" onclick="event.stopPropagation();this.closest('.embedded-media-wrapper').remove();saveNoteInline('${noteId}');" title="Xoá media">✕</button>
       <div class="media-resize-handle"></div>
     </div>
   `;
@@ -1093,8 +1106,23 @@ function _initNoteEmbeddedMedia(contentEl, noteId) {
 function _initEmbeddedMediaHandlers(wrapper, contentEl, noteId) {
   const resizeHandle = wrapper.querySelector('.media-resize-handle');
   
+  // Ensure delete button exists (adds support dynamically for old & new notes)
+  let deleteBtn = wrapper.querySelector('.media-delete-btn');
+  if (!deleteBtn) {
+    deleteBtn = document.createElement('button');
+    deleteBtn.className = 'media-delete-btn';
+    deleteBtn.title = 'Xoá media';
+    deleteBtn.innerHTML = '✕';
+    deleteBtn.onclick = (e) => {
+      e.stopPropagation();
+      wrapper.remove();
+      saveNoteInline(noteId);
+    };
+    wrapper.appendChild(deleteBtn);
+  }
+
   wrapper.addEventListener('mousedown', e => {
-    if (e.target.closest('.media-resize-handle') || e.target.closest('.media-loop-btn') || e.target.closest('audio') || e.target.closest('video') || e.target.closest('iframe')) return;
+    if (e.target.closest('.media-resize-handle') || e.target.closest('.media-loop-btn') || e.target.closest('.media-delete-btn') || e.target.closest('audio') || e.target.closest('video') || e.target.closest('iframe')) return;
     if (e.target.tagName === 'IMG') e.preventDefault();
     e.stopPropagation();
     
@@ -1283,4 +1311,19 @@ function toggleFloatNote(noteId) {
   } catch(e) {}
   
   renderNotes();
+}
+
+function uploadNoteMedia(input, noteId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('⚠️ Vui lòng chọn tệp nhỏ hơn 3MB!');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    insertMediaUrl(noteId, e.target.result, input);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
 }
