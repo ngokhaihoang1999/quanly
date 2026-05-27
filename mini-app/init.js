@@ -511,9 +511,10 @@ function _applyHeaderScrollProgress(header, pct) {
   const semesterBar = header.querySelector('.semester-bar');
   const btn = document.getElementById('headerCollapseBtn');
 
-  // transition mượt mà cho padding của header (từ 10px xuống 6px)
-  const paddingTop = 10 - (pct * 4);
-  header.style.padding = `${paddingTop}px 12px 6px`;
+  // transition mượt mà cho padding của header (từ 10px top, 6px bottom xuống 4px top, 4px bottom)
+  const paddingTop = 10 - (pct * 6);
+  const paddingBottom = 6 - (pct * 2);
+  header.style.padding = `${paddingTop}px 12px ${paddingBottom}px`;
 
   // transition cho header-top (chiều cao tối đa 58px, margin-bottom 8px)
   if (headerTop) {

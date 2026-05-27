@@ -394,20 +394,18 @@
   }
 
   /* Smooth Auto-Collapsible Header on Mobile with GPU acceleration */
-  .header {
+  body .header {
     will-change: padding;
     transform: translateZ(0);
     backface-visibility: hidden;
-  }
-  .header.header-transitioning {
-    transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-  .header {
-    padding: 10px 12px 6px !important;
+    padding: 10px 12px 6px; /* Bỏ !important để JS có thể nội suy mượt mà */
     position: relative;
   }
-  .header.header-collapsed {
-    padding: 6px 12px 6px !important;
+  body .header.header-transitioning {
+    transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  body .header.header-collapsed {
+    padding: 4px 12px 4px !important; /* Thu gọn tối đa còn 4px lề trên/dưới */
   }
   
   /* Thiết lập transition siêu mượt cho từng phần tử con với max-height CHÍNH XÁC - Chỉ áp dụng khi toggle thủ công bằng nút bấm */
