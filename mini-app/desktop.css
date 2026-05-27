@@ -478,6 +478,7 @@
     padding: 2px;
     box-sizing: border-box;
     overflow: visible;
+    pointer-events: auto !important; /* Critical override since canvas is pointer-events: none */
   }
   
   .embedded-media-wrapper:hover {
@@ -493,7 +494,7 @@
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    pointer-events: auto;
+    pointer-events: auto !important;
     border-radius: 4px;
     margin: 0 !important;
     padding: 0 !important;
@@ -506,7 +507,7 @@
     left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    pointer-events: auto;
+    pointer-events: auto !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -523,6 +524,7 @@
     cursor: se-resize;
     display: none;
     z-index: 100;
+    pointer-events: auto !important;
   }
   
   .embedded-media-wrapper:hover .media-resize-handle {
@@ -546,6 +548,7 @@
     align-items: center;
     justify-content: center;
     z-index: 100;
+    pointer-events: auto !important;
   }
   
   /* Media Delete Button */
@@ -568,6 +571,7 @@
     line-height: 1;
     font-weight: bold;
     transition: background 0.15s;
+    pointer-events: auto !important;
   }
   
   .media-delete-btn:hover {
@@ -631,20 +635,55 @@
     color: var(--text);
   }
 
-  /* Maximized note styles & Backdrop */
+  /* Premium maximized aesthetics & zoom-scale spring transitions */
   .board-note-maximized {
     position: fixed !important;
     top: 50% !important;
     left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: 80% !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+    width: 85% !important;
     height: 80% !important;
-    max-width: 900px !important;
-    max-height: 700px !important;
+    max-width: 950px !important;
+    max-height: 750px !important;
     z-index: 1000000 !important;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3) !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3) !important;
     border-radius: 16px !important;
     background: var(--surface) !important;
+    animation: noteZoomSpring 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .board-note-maximized .board-note-title {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+  }
+
+  .board-note-maximized .note-toolbar {
+    height: 40px !important;
+    gap: 8px !important;
+    padding: 0 12px !important;
+  }
+
+  .board-note-maximized .note-toolbar-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 13px !important;
+  }
+
+  .board-note-maximized .board-note-content {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    padding: 16px 20px !important;
+  }
+
+  @keyframes noteZoomSpring {
+    from {
+      transform: translate(-50%, -50%) scale(0.92);
+      opacity: 0;
+    }
+    to {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
   }
 
   .note-backdrop {
@@ -653,11 +692,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
     z-index: 999998;
-    animation: noteFadeIn 0.2s ease;
+    animation: noteFadeIn 0.25s ease;
   }
 
   @keyframes noteFadeIn {

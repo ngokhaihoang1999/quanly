@@ -99,6 +99,11 @@ function renderNotes() {
     return;
   }
 
+  if (!_isNotesOnBoard()) {
+    // Mobile/small screen: clean up all floating/maximized notes from the body
+    clearAllFloatingNotes();
+  }
+
   if (_isNotesOnBoard()) {
     // Board mode
     container.classList.add('notes-board');
@@ -116,6 +121,32 @@ function stripHtml(html) {
   if (!html) return '';
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
+}
+
+function parseNoteContent(rawContent) {
+  const doc = new DOMParser().parseFromString(rawContent || '', 'text/html');
+  const textLayer = doc.querySelector('.note-text-layer');
+  const mediaLayer = doc.querySelector('.note-media-layer');
+  
+  if (textLayer && mediaLayer) {
+    return {
+      text: textLayer.innerHTML,
+      media: mediaLayer.innerHTML
+    };
+  }
+  
+  // Backward compatibility: extract media wrappers from text content
+  const wrappers = doc.querySelectorAll('.embedded-media-wrapper');
+  let mediaHtml = '';
+  wrappers.forEach(w => {
+    mediaHtml += w.outerHTML;
+    w.remove();
+  });
+  
+  return {
+    text: doc.body.innerHTML,
+    media: mediaHtml
+  };
 }
 
 function renderNoteCard(note) {
@@ -260,11 +291,13 @@ function renderBoardNoteCard(note, idx) {
     <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share">📤</button>
     <button onclick="event.stopPropagation();deletePersonalNote('${note.id}')" title="Xoá" style="color:#dc2626;">🗑️</button>` : '';
 
+  const isPinningBack = _notesBoardLayouts[note.id]?.isPinningBack;
+  const pinBackStyles = isPinningBack ? 'opacity:0; pointer-events:none;' : '';
   const floatingClass = isFloating ? 'board-note-floating' : '';
   const floatingStyles = isFloating ? `position:fixed; z-index:999999; left:${_notesBoardLayouts[note.id]?.fx ?? 200}px; top:${_notesBoardLayouts[note.id]?.fy ?? 200}px; width:${_notesBoardLayouts[note.id]?.fw ?? 350}px; height:${_notesBoardLayouts[note.id]?.fh ?? 280}px;` : `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
 
   return `<div class="board-note ${floatingClass}" id="boardNote-${note.id}" data-note-id="${note.id}" 
-    style="${floatingStyles}background:${c.bg};border-color:${c.border};">
+    style="${floatingStyles}${pinBackStyles}background:${c.bg};border-color:${c.border};">
     <div class="board-note-header" style="background:${c.headerBg};color:${c.text};">
       <span class="board-note-title" ${canEdit ? 'contenteditable="true"' : ''} onblur="saveNoteInlineTitle(this, '${note.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escHtml(note.title || 'Ghi chú')}</span>
       <span class="board-note-time" style="color:${c.dateTxt};">${timeAgo}</span>
@@ -288,8 +321,15 @@ function renderBoardNoteCard(note, idx) {
     </div>
     ` : ''}
 
-    <div class="board-note-body" style="color:${c.text}; position:relative; overflow:auto; flex:1;">
-      <div class="board-note-content" id="noteContent-${note.id}" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" style="min-height:90px; outline:none; text-align:left; word-wrap:break-word; padding:4px;">${note.content}</div>
+    <!-- Separate Layers: Text writing vs Media drag canvas -->
+    <div class="board-note-body" style="color:${c.text}; position:relative; overflow:hidden; display:flex; flex-direction:column; flex:1; cursor:text;" onclick="document.getElementById('noteContent-${note.id}')?.focus();">
+      <!-- Text writing layer (fully scrollable, editable, and occupies full height) -->
+      <div class="board-note-content" id="noteContent-${note.id}" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" style="flex:1; overflow:auto; outline:none; text-align:left; word-wrap:break-word; padding:8px; cursor:text; min-height:100px;">${parseNoteContent(note.content).text}</div>
+      
+      <!-- Media canvas layer (absolutely overlayed, pointer-events: none, so typing click is transparent) -->
+      <div class="board-note-media-canvas" id="noteMediaCanvas-${note.id}" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 5;">
+        ${parseNoteContent(note.content).media}
+      </div>
     </div>
 
     <div class="board-note-footer">
@@ -321,11 +361,9 @@ function _initBoardNotes(container) {
   };
   document.addEventListener('mousedown', _boardClickOutHandler);
 
-  // Clean old floating notes from body before moving them again
+  // Clean all old floating notes from body before moving them again
   document.querySelectorAll('body > .board-note-floating').forEach(el => {
-    if (!container.querySelector(`[data-note-id="${el.dataset.noteId}"]`)) {
-      el.remove();
-    }
+    el.remove();
   });
 
   // Global click outside to close media popovers
@@ -339,10 +377,10 @@ function _initBoardNotes(container) {
     const noteId = el.dataset.noteId;
     const isFloating = _notesBoardLayouts[noteId]?.isFloating;
 
-    // Bind media handlers
-    const contentEl = el.querySelector('.board-note-content');
-    if (contentEl) {
-      _initNoteEmbeddedMedia(contentEl, noteId);
+    // Bind media handlers inside the transparent overlay canvas layer, NOT the text content layer!
+    const mediaCanvas = el.querySelector('.board-note-media-canvas');
+    if (mediaCanvas) {
+      _initNoteEmbeddedMedia(mediaCanvas, noteId);
     }
 
     if (isFloating) {
@@ -963,15 +1001,20 @@ function debounceSaveNoteInline(noteId) {
 
 async function saveNoteInline(noteId) {
   let content = '';
-  const bEl = document.getElementById(`noteContent-${noteId}`);
-  if (bEl) {
-    content = bEl.innerHTML;
+  const textEl = document.getElementById(`noteContent-${noteId}`);
+  const mediaEl = document.getElementById(`noteMediaCanvas-${noteId}`);
+  
+  if (textEl && mediaEl) {
+    // Keep separated layered format in database
+    content = `<div class="note-text-layer">${textEl.innerHTML}</div><div class="note-media-layer">${mediaEl.innerHTML}</div>`;
+  } else if (textEl) {
+    content = `<div class="note-text-layer">${textEl.innerHTML}</div>`;
   } else {
     const mEl = document.querySelector(`.pnote-card[data-note-id="${noteId}"] .pnote-full`);
     if (mEl) content = mEl.innerHTML;
   }
   
-  if (!bEl && !document.querySelector(`.pnote-card[data-note-id="${noteId}"] .pnote-full`)) return;
+  if (!textEl && !document.querySelector(`.pnote-card[data-note-id="${noteId}"] .pnote-full`)) return;
 
   try {
     const res = await sbFetch(`/rest/v1/personal_notes?id=eq.${noteId}`, {
@@ -1031,7 +1074,7 @@ function insertMediaUrl(noteId, url, triggerEl) {
   url = (url || '').trim();
   if (!url) return;
   
-  const container = document.getElementById(`noteContent-${noteId}`);
+  const container = document.getElementById(`noteMediaCanvas-${noteId}`);
   if (!container) return;
 
   let html = '';
@@ -1223,10 +1266,11 @@ function toggleMediaLoop(btn) {
 let _maximizedNoteId = null;
 
 function toggleMaximizeNote(noteId) {
-  const el = document.getElementById(`boardNote-${noteId}`);
+  const el = document.querySelector(`body > .board-note-maximized[data-note-id="${noteId}"]`) || document.getElementById(`boardNote-${noteId}`);
   if (!el) return;
   
   const isMaximized = el.classList.contains('board-note-maximized');
+  const container = document.getElementById('notesPanelList');
   
   if (isMaximized) {
     el.classList.remove('board-note-maximized');
@@ -1244,26 +1288,40 @@ function toggleMaximizeNote(noteId) {
       el.style.width = (saved.fw ?? 350) + 'px';
       el.style.height = (saved.fh ?? 280) + 'px';
     } else {
+      if (container) {
+        container.appendChild(el);
+      }
       el.style.position = 'absolute';
       el.style.left = el.dataset.origLeft || '';
       el.style.top = el.dataset.origTop || '';
       el.style.width = el.dataset.origW || '';
       el.style.height = el.dataset.origH || '';
     }
+    // Remove temporary maximize styling overrides
+    el.style.transform = '';
+    el.style.maxWidth = '';
+    el.style.maxHeight = '';
   } else {
     el.dataset.origLeft = el.style.left;
     el.dataset.origTop = el.style.top;
     el.dataset.origW = el.style.width;
     el.dataset.origH = el.style.height;
     
+    // Append to document.body to break out of rights panel layout containment!
+    document.body.appendChild(el);
+    
     el.classList.add('board-note-maximized');
     _maximizedNoteId = noteId;
     
-    el.style.position = '';
-    el.style.left = '';
-    el.style.top = '';
-    el.style.width = '';
-    el.style.height = '';
+    el.style.position = 'fixed';
+    el.style.left = '50%';
+    el.style.top = '50%';
+    el.style.transform = 'translate(-50%, -50%)';
+    el.style.width = '85vw';
+    el.style.height = '80vh';
+    el.style.maxWidth = '950px';
+    el.style.maxHeight = '750px';
+    el.style.zIndex = '1000000';
     
     if (!document.getElementById('noteBackdrop')) {
       const backdrop = document.createElement('div');
@@ -1275,28 +1333,85 @@ function toggleMaximizeNote(noteId) {
   }
 }
 
+function clearAllFloatingNotes() {
+  document.querySelectorAll('body > .board-note').forEach(el => el.remove());
+  const backdrop = document.getElementById('noteBackdrop');
+  if (backdrop) backdrop.remove();
+  _maximizedNoteId = null;
+}
+
 function toggleFloatNote(noteId) {
-  const el = document.getElementById(`boardNote-${noteId}`);
-  if (!el) return;
+  // Target the exact floating element on body first to avoid getting the static one inside container!
+  const floatEl = document.querySelector(`body > .board-note-floating[data-note-id="${noteId}"]`) || document.getElementById(`boardNote-${noteId}`);
+  if (!floatEl) return;
   
   if (!_notesBoardLayouts[noteId]) {
     _notesBoardLayouts[noteId] = {};
   }
   
   const isFloating = !_notesBoardLayouts[noteId].isFloating;
-  _notesBoardLayouts[noteId].isFloating = isFloating;
   
+  if (!isFloating) {
+    const container = document.getElementById('notesPanelList');
+    if (container) {
+      // 1. Mark that we are pinning this back so renderNotes renders it as invisible placeholder
+      _notesBoardLayouts[noteId].isPinningBack = true;
+      _notesBoardLayouts[noteId].isFloating = false;
+      delete _notesBoardLayouts[noteId].fx;
+      delete _notesBoardLayouts[noteId].fy;
+      delete _notesBoardLayouts[noteId].fw;
+      delete _notesBoardLayouts[noteId].fh;
+      try { localStorage.setItem('cj_notes_board', JSON.stringify(_notesBoardLayouts)); } catch(e) {}
+      
+      // 2. Render all notes, creating the static slot in notesPanelList
+      renderNotes();
+      
+      // 3. Find the newly rendered static card inside the container
+      const staticEl = container.querySelector(`#boardNote-${noteId}`);
+      if (staticEl) {
+        // Hide the static card temporarily so the transition is seamless
+        staticEl.style.opacity = '0';
+        staticEl.style.pointerEvents = 'none';
+        
+        // 4. Calculate its viewport relative coordinates
+        const staticRect = staticEl.getBoundingClientRect();
+        
+        // 5. Animate the floating card from its current position to the static placeholder's position
+        floatEl.style.transition = 'left 0.45s cubic-bezier(0.16, 1, 0.3, 1), top 0.45s cubic-bezier(0.16, 1, 0.3, 1), width 0.45s cubic-bezier(0.16, 1, 0.3, 1), height 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s';
+        
+        requestAnimationFrame(() => {
+          floatEl.style.left = staticRect.left + 'px';
+          floatEl.style.top = staticRect.top + 'px';
+          floatEl.style.width = staticRect.width + 'px';
+          floatEl.style.height = staticRect.height + 'px';
+          floatEl.style.opacity = '0.8';
+        });
+        
+        // 6. After transition, swap static visibility and clean up floating card
+        setTimeout(() => {
+          delete _notesBoardLayouts[noteId].isPinningBack;
+          staticEl.style.opacity = '';
+          staticEl.style.pointerEvents = '';
+          floatEl.remove();
+          // Render once more to clean up inline styles of the static card
+          renderNotes();
+        }, 450);
+      } else {
+        // Fallback if static element wasn't rendered
+        floatEl.remove();
+        renderNotes();
+      }
+      return;
+    }
+  }
+  
+  _notesBoardLayouts[noteId].isFloating = isFloating;
   if (isFloating) {
-    const rect = el.getBoundingClientRect();
+    const rect = floatEl.getBoundingClientRect();
     _notesBoardLayouts[noteId].fx = rect.left;
     _notesBoardLayouts[noteId].fy = rect.top;
     _notesBoardLayouts[noteId].fw = rect.width || 350;
     _notesBoardLayouts[noteId].fh = rect.height || 280;
-  } else {
-    delete _notesBoardLayouts[noteId].fx;
-    delete _notesBoardLayouts[noteId].fy;
-    delete _notesBoardLayouts[noteId].fw;
-    delete _notesBoardLayouts[noteId].fh;
   }
   
   try {

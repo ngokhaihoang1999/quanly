@@ -175,6 +175,10 @@ function applyDesktopLayout() {
     const arrangeBtn = document.getElementById('btnAutoArrange');
     if (arrangeBtn) arrangeBtn.style.display = 'none';
 
+    if (typeof clearAllFloatingNotes === 'function') {
+      clearAllFloatingNotes();
+    }
+
     if (typeof renderNotes === 'function') {
       setTimeout(() => renderNotes(), 100);
     }
