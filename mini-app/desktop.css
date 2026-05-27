@@ -9,6 +9,10 @@
 .panel-divider {
   display: none;
 }
+/* Mặc định ẩn nút thu gọn header (sẽ chỉ hiện trên mobile) */
+#headerCollapseBtn {
+  display: none !important;
+}
 
 @media (min-width: 1024px) {
   /* ── Main tabs: inside panelCenter on desktop ── */
@@ -420,8 +424,11 @@
     border: none !important;
   }
   
-  /* Ensure header toggle button fits elegantly inside header-right */
+  /* Ensure header toggle button fits elegantly inside header-right on mobile */
   #headerCollapseBtn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
     width: 32px;
     height: 32px;
     border-radius: 50%;
