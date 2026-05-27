@@ -663,7 +663,8 @@ function _resetHeaderStyle(header) {
       }
 
       // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight > clientHeight + 80)
-      const isScrollable = scrollHeight > clientHeight + 80;
+      // Thêm cơ chế giữ trạng thái cuộn (scrollTop > 5) để triệt tiêu vòng lặp phản hồi chiều cao gây giật hình (machine-gun oscillation)
+      const isScrollable = (scrollTop > 5) || (scrollHeight > clientHeight + 80);
 
       if (!isScrollable) {
         // Trang quá ngắn -> Luôn giữ header mở rộng đầy đủ
