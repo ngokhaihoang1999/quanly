@@ -487,17 +487,28 @@
   .embedded-media-wrapper iframe,
   .embedded-media-wrapper img,
   .embedded-media-wrapper video {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
     pointer-events: auto;
     border-radius: 4px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   }
 
   .embedded-media-wrapper audio {
-    width: 100%;
-    height: auto;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     pointer-events: auto;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .media-resize-handle {

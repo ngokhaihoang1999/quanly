@@ -1075,14 +1075,7 @@ function insertMediaUrl(noteId, url, triggerEl) {
   const defaultWidth = type === 'audio' ? 240 : (type === 'youtube' ? 280 : 240);
   const defaultHeight = type === 'audio' ? 54 : (type === 'youtube' ? 157 : 135);
 
-  const wrapperHtml = `
-    <div class="embedded-media-wrapper" id="${wrapId}" contenteditable="false" style="position: absolute; left: 20px; top: 20px; width: ${defaultWidth}px; height: ${defaultHeight}px; z-index: 10;">
-      ${html}
-      <button class="media-loop-btn" onclick="event.stopPropagation();toggleMediaLoop(this);" title="Phát lại liên tục">🔁</button>
-      <button class="media-delete-btn" onclick="event.stopPropagation();this.closest('.embedded-media-wrapper').remove();saveNoteInline('${noteId}');" title="Xoá media">✕</button>
-      <div class="media-resize-handle"></div>
-    </div>
-  `;
+  const wrapperHtml = `<div class="embedded-media-wrapper" id="${wrapId}" contenteditable="false" style="position: absolute; left: 20px; top: 20px; width: ${defaultWidth}px; height: ${defaultHeight}px; z-index: 10;">${html}<button class="media-loop-btn" onclick="event.stopPropagation();toggleMediaLoop(this);" title="Phát lại liên tục">🔁</button><button class="media-delete-btn" onclick="event.stopPropagation();this.closest('.embedded-media-wrapper').remove();saveNoteInline('${noteId}');" title="Xoá media">✕</button><div class="media-resize-handle"></div></div>`;
 
   container.focus();
   const tempDiv = document.createElement('div');
