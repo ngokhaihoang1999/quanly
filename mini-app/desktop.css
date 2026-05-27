@@ -456,36 +456,45 @@
     height: 26px !important;
   }
 
-  /* Bắt buộc Tab Bar trên di động nằm trên 1 hàng duy nhất và cuộn ngang mượt mà */
+  /* Bắt buộc Tab Bar trên di động & desktop nhỏ hiển thị thành 2 hàng cố định, xếp đều đặn */
   .tab-bar, #mainTabBar, .tab-bar--compact {
     display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scrollbar-width: none !important; /* ẩn scrollbar Firefox */
-    padding-bottom: 4px !important;
-    gap: 6px !important;
+    flex-wrap: wrap !important; /* Xếp thành 2 hàng */
+    overflow: hidden !important; /* Không cuộn ngang */
+    padding: 2px 36px 2px 0 !important; /* Chừa 36px lề phải cho nút toggle */
+    gap: 4px 5px !important; /* Khoảng cách hàng 4px, khoảng cách cột 5px */
     width: 100% !important;
-    -webkit-overflow-scrolling: touch !important;
   }
   .tab-bar::-webkit-scrollbar, #mainTabBar::-webkit-scrollbar {
-    display: none !important; /* ẩn scrollbar Chrome/Safari */
-  }
-  .tab-bar .tab {
-    flex: 0 0 auto !important; /* giữ nguyên kích thước tự nhiên để cuộn ngang */
+    display: none !important;
   }
   
-  /* Đặt nút toggle cố định ở góc dưới bên phải header, dịch sang trái để tránh thanh dọc điều khiển của Telegram */
+  /* Mỗi tab pill chiếm calc(25% - 5px) để chia đều 4 tab mỗi hàng */
+  .tab-bar .tab {
+    flex: 1 1 calc(25% - 5px) !important;
+    justify-content: center !important;
+    padding: 5px 2px !important;
+    font-size: 10.5px !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+    border-radius: 12px !important;
+  }
+  .tab-bar .tab-icon {
+    font-size: 12px !important;
+    margin-right: 2px !important;
+  }
+  
+  /* Đặt nút toggle cố định ở góc dưới bên phải header, dịch sang trái một chút để tránh thanh dọc của Telegram */
   #headerCollapseBtn {
     display: flex !important;
     position: absolute;
-    right: 20px; /* Tránh bị lấn bởi thanh dọc điều khiển */
+    right: 16px; /* Tránh thanh dọc của Telegram */
     bottom: 8px; /* Cố định ở đáy header */
     z-index: 1000;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -499,11 +508,6 @@
   }
   #headerCollapseBtn:active {
     transform: scale(0.95);
-  }
-  
-  /* Tạo khoảng trống ở cuối tab bar để không bị nút toggle đè lên các tab pill */
-  .tab-bar {
-    padding-right: 52px !important;
   }
   
   /* Căn chỉnh nhẹ background nút toggle khi header bị thu gọn */
