@@ -159,13 +159,21 @@ function renderNoteCard(note) {
   if (note.linked_profile_id) {
     const p = allProfiles.find(p => p.id === note.linked_profile_id);
     if (p) {
-      linkedBadge = `<span onclick="event.stopPropagation();openProfileById('${note.linked_profile_id}')" style="font-size:10px;background:rgba(0,0,0,0.08);padding:1px 6px;border-radius:8px;cursor:pointer;color:${c.text};" title="Xem hồ sơ">🔗 ${escHtml(p.full_name || '?')}</span>`;
+      linkedBadge = `<span class="board-badge board-badge-link" onclick="event.stopPropagation();openProfileById('${note.linked_profile_id}')" title="Xem hồ sơ">🔗 ${escHtml(p.full_name || '?')}</span>`;
     }
+  }
+
+  let sharedBadge = '';
+  if (isShared) {
+    const sharer = allStaff.find(s => s.staff_code === note._sharedBy);
+    sharedBadge = `<span class="board-badge">📤 ${escHtml(sharer?.full_name || note._sharedBy)}</span>`;
+  } else if (note._isSharedByMe) {
+    sharedBadge = `<span class="board-badge">📤 Đã share</span>`;
   }
 
   let calBadge = '';
   if (note.cal_date) {
-    calBadge = `<span style="font-size:10px;background:rgba(249,115,22,0.15);padding:1px 6px;border-radius:8px;color:#ea580c;">📅 ${note.cal_date.split('-').reverse().join('/')}</span>`;
+    calBadge = `<span class="board-badge" style="color:#ea580c;background:rgba(249,115,22,0.15);">📅 ${note.cal_date.split('-').reverse().join('/')}</span>`;
   }
 
   let alarmBadge = '';
@@ -173,39 +181,58 @@ function renderNoteCard(note) {
     const rAt = new Date(note.reminder_at);
     const rTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
     const rDate = `${String(rAt.getDate()).padStart(2,'0')}/${String(rAt.getMonth()+1).padStart(2,'0')}`;
-    alarmBadge = `<span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.12);padding:1px 6px;border-radius:8px;">🔔 ${rDate} ${rTime}</span>`;
-  } else if (note.reminder_sent) {
-    alarmBadge = `<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 6px;border-radius:8px;">✅ Đã nhắc</span>`;
-  }
-
-  let sharedBadge = '';
-  if (isShared) {
-    const sharer = allStaff.find(s => s.staff_code === note._sharedBy);
-    sharedBadge = `<span style="font-size:10px;background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:8px;color:${c.dateTxt};">📤 ${escHtml(sharer?.full_name || note._sharedBy)}</span>`;
-  }
-
-  let shareCount = '';
-  if (!isShared && note._isSharedByMe) {
-    shareCount = `<span style="font-size:10px;background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:8px;color:${c.dateTxt};" title="Bạn đã share note này">📤 Đã share</span>`;
+    alarmBadge = `<span class="board-badge" style="color:#fbbf24;background:rgba(251,191,36,0.12);">🔔 ${rDate} ${rTime}</span>`;
   }
 
   const plainContent = stripHtml(note.content);
   const preview = plainContent.length > 120 ? plainContent.substring(0, 120) + '...' : plainContent;
 
+  const toolbarHtml = canEdit ? `
+    <div class="note-toolbar" id="noteToolbar-${note.id}" style="display:none; margin-top: 4px;">
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('bold', '${note.id}')" title="In đậm"><b>B</b></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('italic', '${note.id}')" title="In nghiêng"><i>I</i></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('underline', '${note.id}')" title="Gạch chân"><u>U</u></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('strikeThrough', '${note.id}')" title="Gạch ngang"><s>ab</s></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('insertUnorderedList', '${note.id}')" title="Danh sách">☰</button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="toggleMediaLinkPopover(event, '${note.id}')" title="Chèn Ảnh/Video/Audio">🖼️</button>
+    </div>
+    <div class="media-link-popover" id="mediaPopover-${note.id}" style="display:none;" onmousedown="event.stopPropagation();">
+      <input type="text" placeholder="Dán link ảnh, mp3, mp4, youtube..." onkeydown="if(event.key==='Enter') { insertMediaUrl('${note.id}', this.value, this); this.value=''; }" style="width:100%; box-sizing:border-box; margin-bottom:4px;" />
+      <input type="file" accept="image/*,audio/*,video/*" onchange="uploadNoteMedia(this, '${note.id}')" style="display:none;" id="noteMediaUpload-${note.id}" />
+      <button class="chip" onmousedown="event.preventDefault();" onclick="document.getElementById('noteMediaUpload-${note.id}').click()" style="font-size:10px;padding:4px 8px;margin-top:2px;width:100%;text-align:center;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">📤 Tải tệp lên</button>
+    </div>
+  ` : '';
+
+  const parsed = parseNoteContent(note.content);
+
   return `
-  <div class="pnote-card" data-note-id="${note.id}" style="background:${c.bg};border-color:${c.border};" onclick="toggleNoteExpand(this)">
+  <div class="pnote-card" data-note-id="${note.id}" style="background:${c.bg};border-color:${c.border}; display: flex; flex-direction: column;" onclick="toggleNoteExpand(this)">
     <div class="pnote-header" style="background:${c.headerBg};">
       <div class="pnote-title-row">
         <span class="pnote-title" ${canEdit ? 'contenteditable="true"' : ''} onblur="saveNoteInlineTitle(this, '${note.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onclick="event.stopPropagation();" style="color:${c.text};">${escHtml(note.title || 'Ghi chú')}</span>
       </div>
       <span class="pnote-time" style="color:${c.dateTxt};">${timeAgo}</span>
     </div>
-    <div class="pnote-body" style="color:${c.text};">
+    
+    ${toolbarHtml}
+
+    <div class="pnote-body" style="color:${c.text}; position:relative; display:flex; flex-direction:column; flex:1;">
+      <!-- Collapsed state preview -->
       <div class="pnote-preview">${escHtml(preview)}</div>
-      <div class="pnote-full" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" onclick="event.stopPropagation();" style="display:none; outline:none; text-align:left; min-height:60px;">${note.content}</div>
+      
+      <!-- Expanded state editor (Text + Media layered overlay, naturally fitting mobile card stack) -->
+      <div class="pnote-full-editor" style="display:none; flex-direction:column; flex:1; position:relative; outline:none; text-align:left; min-height:120px;">
+        <div class="board-note-body" style="position:relative; overflow:hidden; display:flex; flex-direction:column; flex:1; cursor:text; min-height:120px;" onclick="document.getElementById('noteContent-${note.id}')?.focus();">
+          <div class="board-note-content" id="noteContent-${note.id}" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" style="flex:1; overflow:auto; outline:none; word-wrap:break-word; padding:8px; cursor:text; min-height:120px;">${parsed.text}</div>
+          <div class="board-note-media-canvas" id="noteMediaCanvas-${note.id}" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 5;">
+            ${parsed.media}
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="pnote-footer">
-      <div class="pnote-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}${shareCount}</div>
+
+    <div class="pnote-footer" style="padding-top: 4px;">
+      <div class="pnote-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}</div>
       ${canEdit ? `
       <div class="pnote-actions">
         <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share" style="color:${c.dateTxt};">📤</button>
@@ -611,11 +638,66 @@ function autoArrangeNotes() {
 // ── UI Interactions (list mode) ──
 function toggleNoteExpand(el) {
   const preview = el.querySelector('.pnote-preview');
-  const full = el.querySelector('.pnote-full');
+  const full = el.querySelector('.pnote-full-editor') || el.querySelector('.pnote-full');
+  const toolbar = el.querySelector('.note-toolbar');
   if (!preview || !full) return;
+  
   const isExpanded = full.style.display !== 'none';
+  
   preview.style.display = isExpanded ? 'block' : 'none';
-  full.style.display = isExpanded ? 'none' : 'block';
+  full.style.display = isExpanded ? 'none' : (full.classList.contains('pnote-full-editor') ? 'flex' : 'block');
+  
+  if (toolbar) {
+    toolbar.style.display = isExpanded ? 'none' : 'flex';
+  }
+  
+  // Bind handlers when expanding mobile card editors
+  if (!isExpanded && full.classList.contains('pnote-full-editor')) {
+    const noteId = el.dataset.noteId;
+    
+    const mediaCanvas = el.querySelector('.board-note-media-canvas');
+    if (mediaCanvas) {
+      _initNoteEmbeddedMedia(mediaCanvas, noteId);
+    }
+    
+    const bodyEl = el.querySelector('.board-note-body');
+    const contentEl = el.querySelector('.board-note-content');
+    if (bodyEl && contentEl && !bodyEl.dataset.autofocusBound) {
+      bodyEl.dataset.autofocusBound = '1';
+      bodyEl.addEventListener('mousedown', e => {
+        if (e.target.closest('button') || e.target.closest('.embedded-media-wrapper') || e.target.closest('.media-link-popover') || e.target.closest('.note-toolbar')) return;
+        
+        const rect = contentEl.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        
+        let contentBottom = 0;
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(contentEl);
+          const rangeRect = range.getBoundingClientRect();
+          contentBottom = rangeRect.bottom - rect.top;
+        } catch(err) {
+          contentBottom = contentEl.scrollHeight || 20;
+        }
+        
+        if (clickY > contentBottom + 10) {
+          const gap = clickY - contentBottom;
+          const lineHeight = 20;
+          const linesToAdd = Math.floor(gap / lineHeight);
+          if (linesToAdd > 0) {
+            for (let i = 0; i < linesToAdd; i++) {
+              const div = document.createElement('div');
+              div.innerHTML = '<br>';
+              contentEl.appendChild(div);
+            }
+            saveNoteInline(noteId);
+          }
+        }
+        
+        setTimeout(() => contentEl.focus(), 1);
+      });
+    }
+  }
 }
 
 function setNotesFilter(filter, chipEl) {
