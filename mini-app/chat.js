@@ -882,6 +882,10 @@ function formatChatMessageText(text) {
     } else if (isAudio) {
       const safeId = 'v_' + Math.random().toString(36).substr(2, 9);
       
+      // Extract duration from filename or URL query parameter
+      const durMatch = fileName.match(/_dur(\d+)/i) || url.match(/[?&]dur=(\d+)/i);
+      const extractedDuration = durMatch ? parseInt(durMatch[1]) : '';
+
       // Initialize the audio player dynamic bindings in standard javascript
       setTimeout(() => {
         if (typeof initCustomAudioPlayer === 'function') {
@@ -891,7 +895,7 @@ function formatChatMessageText(text) {
 
       return `
         <div class="voice-player" id="voice_player_${safeId}" onclick="event.stopPropagation();">
-          <audio id="audio_${safeId}" src="${displayUrl}" preload="metadata" style="display:none;"></audio>
+          <audio id="audio_${safeId}" src="${displayUrl}" preload="metadata" data-duration="${extractedDuration}" style="display:none;"></audio>
           <button type="button" class="voice-player-play-btn" id="play_btn_${safeId}" onclick="toggleVoicePlayerPlay('${safeId}')">
             <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor" class="play-icon" style="margin-left: 2px;"><path d="M1.5 12.3V1.7c0-.9 1-1.4 1.8-.9l8 5.3c.7.4.7 1.4 0 1.9l-8 5.3c-.8.5-1.8 0-1.8-.9z"/></svg>
           </button>
@@ -2270,8 +2274,13 @@ function initCustomAudioPlayer(safeId) {
     wavesContainer.appendChild(bar);
   }
 
+  const durAttr = audio.getAttribute('data-duration');
+  const parsedDuration = durAttr ? parseInt(durAttr) : null;
+
   function formatTime(secs) {
-    if (isNaN(secs) || secs === Infinity) return '0:00';
+    if (isNaN(secs) || secs === Infinity) {
+      return parsedDuration ? formatTime(parsedDuration) : '0:00';
+    }
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m}:${String(s).padStart(2, '0')}`;
@@ -2279,12 +2288,18 @@ function initCustomAudioPlayer(safeId) {
 
   // Display duration when metadata is fully loaded
   audio.addEventListener('loadedmetadata', () => {
-    durEl.textContent = formatTime(audio.duration);
+    if (audio.duration && audio.duration !== Infinity) {
+      durEl.textContent = formatTime(audio.duration);
+    } else if (parsedDuration) {
+      durEl.textContent = formatTime(parsedDuration);
+    }
   });
 
-  // Display immediately if duration is already cached by browser
+  // Display immediately if duration is already cached by browser or passed by attribute
   if (audio.duration && audio.duration !== Infinity) {
     durEl.textContent = formatTime(audio.duration);
+  } else if (parsedDuration) {
+    durEl.textContent = formatTime(parsedDuration);
   }
 
   // Fallback if metadata load is slow, check periodically
@@ -2298,8 +2313,9 @@ function initCustomAudioPlayer(safeId) {
 
   // Update time and waveform active coloring during playback
   audio.addEventListener('timeupdate', () => {
-    if (audio.duration && audio.duration !== Infinity) {
-      const pct = audio.currentTime / audio.duration;
+    const activeDuration = (audio.duration && audio.duration !== Infinity) ? audio.duration : parsedDuration;
+    if (activeDuration) {
+      const pct = audio.currentTime / activeDuration;
       const activeCount = Math.floor(pct * barCount);
       
       const bars = wavesContainer.querySelectorAll('.voice-player-wave-bar');
@@ -2528,8 +2544,16 @@ async function stopAndSendVoiceRecording() {
 
     const data = await res.json();
     if (data && data.url) {
+      let finalUrl = data.url;
+      // Append duration query parameter for seamless timeline render on client-side
+      const recordingSecs = typeof _recordingSeconds !== 'undefined' ? _recordingSeconds : 0;
+      if (finalUrl.includes('?')) {
+        finalUrl += `&dur=${recordingSecs}`;
+      } else {
+        finalUrl += `?dur=${recordingSecs}`;
+      }
       // Send the secure bot proxy url directly as message content
-      await sendProxyImageMessage(data.url);
+      await sendProxyImageMessage(finalUrl);
       showToast('✅ Đã gửi tin nhắn thoại');
     } else {
       throw new Error('No URL returned from bot server');
@@ -2720,8 +2744,16 @@ async function stopAndSendFloatingVoiceRecording() {
 
     const data = await res.json();
     if (data && data.url) {
+      let finalUrl = data.url;
+      // Append duration query parameter for seamless timeline render on client-side
+      const recordingSecs = typeof _floatingRecordingSeconds !== 'undefined' ? _floatingRecordingSeconds : 0;
+      if (finalUrl.includes('?')) {
+        finalUrl += `&dur=${recordingSecs}`;
+      } else {
+        finalUrl += `?dur=${recordingSecs}`;
+      }
       // Send the secure bot proxy url directly as message content to floating chat
-      await sendFloatingProxyImageMessage(data.url);
+      await sendFloatingProxyImageMessage(finalUrl);
       showToast('✅ Đã gửi tin nhắn thoại');
     } else {
       throw new Error('No URL returned from bot server');
@@ -2830,3 +2862,50 @@ document.addEventListener('visibilitychange', () => {
     resumeAllChatRealtime();
   }
 });
+
+// ============================================================
+// FULLSCREEN VIDEO EXIT HANDLER (Fixes frozen floating bubble chat UI after video fullscreen)
+// ============================================================
+function handleFullscreenExit() {
+  const isFullscreen = document.fullscreenElement || 
+                       document.webkitFullscreenElement || 
+                       document.mozFullScreenElement || 
+                       document.msFullscreenElement;
+  
+  if (!isFullscreen) {
+    console.log('[Fullscreen] Exit fullscreen detected, forcing UI and scroll recovery');
+    
+    // 1. Force restore normal overflow to body and HTML elements
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    
+    // 2. Unlock pointer events on the floating bubble chat elements
+    const head = document.getElementById('cjFloatingChatHead');
+    const win = document.getElementById('cjFloatingChatWindow');
+    if (head) {
+      head.style.pointerEvents = 'auto';
+      head.style.cursor = 'grab';
+    }
+    if (win) {
+      win.style.pointerEvents = 'auto';
+    }
+    
+    // 3. Guarantee scroll containers inside chat are scrollable
+    const floatMsgs = document.getElementById('cjFloatingChatMessages');
+    if (floatMsgs) {
+      floatMsgs.style.overflowY = 'auto';
+      floatMsgs.style.webkitOverflowScrolling = 'touch';
+    }
+    const mainMsgs = document.getElementById('profileChatMessages');
+    if (mainMsgs) {
+      mainMsgs.style.overflowY = 'auto';
+      mainMsgs.style.webkitOverflowScrolling = 'touch';
+    }
+  }
+}
+
+// Bind to all standard and vendor prefixed fullscreen events
+document.addEventListener('fullscreenchange', handleFullscreenExit);
+document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
+document.addEventListener('mozfullscreenchange', handleFullscreenExit);
+document.addEventListener('MSFullscreenChange', handleFullscreenExit);

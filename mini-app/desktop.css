@@ -357,3 +357,29 @@
     padding-right: 90px; /* Clear space for Telegram Mini App close/settings buttons */
   }
 }
+
+/* ── Force natural scroll recovery on mobile and narrow desktop window layouts ── */
+@media (max-width: 1023px) {
+  html, body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+  #desktopPanelsWrapper {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+  #panelCenter {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  #mainContent {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+

@@ -129,10 +129,21 @@ function applyDesktopLayout() {
       setTimeout(() => renderNotes(), 100);
     }
   } else {
+    // Force scroll recovery on mobile/small viewport
+    document.body.style.overflow = '';
+    document.body.style.height = '';
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.height = '';
+    
+    const center = document.getElementById('mainContent');
+    if (center) {
+      center.style.overflow = '';
+      center.style.height = '';
+    }
+
     if (!_isDesktopApplied) return;
     _isDesktopApplied = false;
 
-    const center = document.getElementById('mainContent');
     if (!center) return;
 
     const tabBar = document.getElementById('mainTabBar');
