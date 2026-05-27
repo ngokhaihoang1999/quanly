@@ -137,7 +137,6 @@ async function loadCalendar(force = false) {
   }
   renderCalendarDayEvents(calSelectedDate);
 }
-}
 
 // Fetch TV & BB records and merge as virtual calendar events
 async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
