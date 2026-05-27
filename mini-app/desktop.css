@@ -413,6 +413,7 @@
   /* Thiết lập transition siêu mượt cho từng phần tử con với max-height CHÍNH XÁC - Chỉ áp dụng khi toggle thủ công bằng nút bấm */
   .header-top {
     max-height: 58px;
+    min-height: 0 !important; /* Cho phép co giãn mượt mà không bị giới hạn chiều cao tối thiểu */
     opacity: 1;
     margin-bottom: 8px !important;
     will-change: max-height, opacity, padding, margin;
@@ -427,6 +428,7 @@
   
   .view-as-bar {
     max-height: 36px;
+    min-height: 0 !important; /* Cho phép co giãn mượt mà */
     opacity: 1;
     margin-bottom: 6px !important;
     padding: 4px 8px !important;
@@ -448,6 +450,7 @@
   
   .semester-bar {
     max-height: 36px;
+    min-height: 0 !important; /* Cho phép co giãn mượt mà */
     opacity: 1;
     margin-bottom: 6px !important;
     padding: 4px 6px !important;

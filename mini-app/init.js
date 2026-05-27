@@ -518,6 +518,7 @@ function _applyHeaderScrollProgress(header, pct) {
   // transition cho header-top (chiều cao tối đa 58px, margin-bottom 8px)
   if (headerTop) {
     headerTop.style.maxHeight = `${(1 - pct) * 58}px`;
+    headerTop.style.minHeight = '0px';
     headerTop.style.opacity = 1 - pct;
     headerTop.style.marginBottom = `${(1 - pct) * 8}px`;
     headerTop.style.paddingTop = '0px';
@@ -529,6 +530,7 @@ function _applyHeaderScrollProgress(header, pct) {
   // transition cho view-as-bar (chiều cao tối đa 36px, margin-bottom 6px, padding-top/bottom 4px)
   if (viewAsBar) {
     viewAsBar.style.maxHeight = `${(1 - pct) * 36}px`;
+    viewAsBar.style.minHeight = '0px';
     viewAsBar.style.opacity = 1 - pct;
     viewAsBar.style.marginBottom = `${(1 - pct) * 6}px`;
     
@@ -537,6 +539,9 @@ function _applyHeaderScrollProgress(header, pct) {
     viewAsBar.style.paddingTop = `${barPad}px`;
     viewAsBar.style.paddingBottom = `${barPad}px`;
     
+    // Co giãn luôn viền từ 1px về 0px tránh cú giật viền ở 10-20% cuối
+    viewAsBar.style.borderWidth = `${1 - pct}px`;
+    
     viewAsBar.style.overflow = 'hidden';
     viewAsBar.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
   }
@@ -544,6 +549,7 @@ function _applyHeaderScrollProgress(header, pct) {
   // transition cho semester-bar (chiều cao tối đa 36px, margin-bottom 6px, padding-top/bottom 4px)
   if (semesterBar) {
     semesterBar.style.maxHeight = `${(1 - pct) * 36}px`;
+    semesterBar.style.minHeight = '0px';
     semesterBar.style.opacity = 1 - pct;
     semesterBar.style.marginBottom = `${(1 - pct) * 6}px`;
     
@@ -551,6 +557,9 @@ function _applyHeaderScrollProgress(header, pct) {
     const barPad = (1 - pct) * 4;
     semesterBar.style.paddingTop = `${barPad}px`;
     semesterBar.style.paddingBottom = `${barPad}px`;
+    
+    // Co giãn luôn viền
+    semesterBar.style.borderWidth = `${1 - pct}px`;
     
     semesterBar.style.overflow = 'hidden';
     semesterBar.style.pointerEvents = pct > 0.8 ? 'none' : 'auto';
@@ -580,6 +589,7 @@ function _resetHeaderStyle(header) {
 
   if (headerTop) {
     headerTop.style.maxHeight = '';
+    headerTop.style.minHeight = '';
     headerTop.style.opacity = '';
     headerTop.style.marginBottom = '';
     headerTop.style.paddingTop = '';
@@ -589,19 +599,23 @@ function _resetHeaderStyle(header) {
   }
   if (viewAsBar) {
     viewAsBar.style.maxHeight = '';
+    viewAsBar.style.minHeight = '';
     viewAsBar.style.opacity = '';
     viewAsBar.style.marginBottom = '';
     viewAsBar.style.paddingTop = '';
     viewAsBar.style.paddingBottom = '';
+    viewAsBar.style.borderWidth = '';
     viewAsBar.style.overflow = '';
     viewAsBar.style.pointerEvents = '';
   }
   if (semesterBar) {
     semesterBar.style.maxHeight = '';
+    semesterBar.style.minHeight = '';
     semesterBar.style.opacity = '';
     semesterBar.style.marginBottom = '';
     semesterBar.style.paddingTop = '';
     semesterBar.style.paddingBottom = '';
+    semesterBar.style.borderWidth = '';
     semesterBar.style.overflow = '';
     semesterBar.style.pointerEvents = '';
   }
