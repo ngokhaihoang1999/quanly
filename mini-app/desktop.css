@@ -424,9 +424,13 @@
     border: none !important;
   }
   
-  /* Ensure header toggle button fits elegantly inside header-right on mobile */
+  /* Đặt nút toggle là absolute so với .header để nó không bị ẩn khi header-top bị ẩn */
   #headerCollapseBtn {
     display: flex !important;
+    position: absolute;
+    right: 16px;
+    top: 24px; /* Ngang hàng với header-top */
+    z-index: 1000;
     align-items: center;
     justify-content: center;
     width: 32px;
@@ -436,7 +440,7 @@
     border: 1px solid rgba(255, 255, 255, 0.25);
     color: white;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   #headerCollapseBtn:hover {
     background: rgba(255, 255, 255, 0.25);
@@ -444,6 +448,14 @@
   }
   #headerCollapseBtn:active {
     transform: scale(0.95);
+  }
+  
+  /* Căn chỉnh nút toggle xuống giữa tab bar khi header bị thu gọn (.header-collapsed) */
+  .header.header-collapsed #headerCollapseBtn {
+    top: 10px; /* Di chuyển xuống giữa tab bar */
+    right: 12px;
+    background: rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.15);
   }
   
   /* Light theme override for toggle button */
@@ -454,6 +466,10 @@
   }
   [data-theme="light"] #headerCollapseBtn:hover {
     background: rgba(0, 0, 0, 0.08);
+  }
+  [data-theme="light"] .header.header-collapsed #headerCollapseBtn {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.08);
   }
 }
 
