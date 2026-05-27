@@ -360,6 +360,275 @@
     flex-shrink: 0; /* header never shrinks */
     padding-right: 90px; /* Clear space for Telegram Mini App close/settings buttons */
   }
+
+  /* ── Premium Vertical Divider for stacked panels in same column ── */
+  .panel-vdivider {
+    height: 12px !important;
+    cursor: row-resize;
+    background: var(--bg) !important;
+    position: relative;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 8px 0;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  
+  .panel-vdivider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.2s, width 0.2s;
+  }
+
+  .panel-vdivider:hover::after,
+  .panel-vdivider.dragging::after {
+    background: var(--accent);
+    width: 48px;
+  }
+
+  /* ── Advanced Personal Notes Upgrade - Toolbar & Inline edit styling ── */
+  .board-note {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    border: 1px solid;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  
+  .board-note:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  }
+  
+  .board-note-title[contenteditable="true"],
+  .board-note-content[contenteditable="true"] {
+    outline: none;
+    transition: background 0.15s;
+  }
+  
+  .board-note-title[contenteditable="true"]:focus {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 4px;
+    padding: 0 4px;
+  }
+
+  .board-note-content[contenteditable="true"]:focus {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 4px;
+  }
+  
+  /* Modern Bottom Toolbar for Note Editing */
+  .note-toolbar {
+    display: none; /* Hidden by default, shown when note has focus or hover */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.95);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 0 8px;
+    z-index: 10;
+  }
+  
+  [data-theme="dark"] .note-toolbar {
+    background: rgba(30, 30, 30, 0.95);
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .board-note:focus-within .note-toolbar,
+  .board-note:hover .note-toolbar {
+    display: flex;
+  }
+  
+  .note-toolbar-btn {
+    background: none;
+    border: none;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text2);
+    transition: background 0.15s, color 0.15s;
+  }
+  
+  .note-toolbar-btn:hover {
+    background: var(--surface2);
+    color: var(--accent);
+  }
+
+  /* Embedded Draggable and Resizable Media Wrapper */
+  .embedded-media-wrapper {
+    position: absolute;
+    border: 1px dashed transparent;
+    cursor: move;
+    display: inline-block;
+    padding: 2px;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+  
+  .embedded-media-wrapper:hover {
+    border-color: var(--accent);
+  }
+  
+  .embedded-media-wrapper iframe,
+  .embedded-media-wrapper img,
+  .embedded-media-wrapper video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: auto;
+    border-radius: 4px;
+  }
+
+  .embedded-media-wrapper audio {
+    width: 100%;
+    height: auto;
+    pointer-events: auto;
+  }
+
+  .media-resize-handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border: 1px solid white;
+    border-radius: 50%;
+    right: -4px;
+    bottom: -4px;
+    cursor: se-resize;
+    display: none;
+    z-index: 100;
+  }
+  
+  .embedded-media-wrapper:hover .media-resize-handle {
+    display: block;
+  }
+  
+  /* Media Loop Badge Indicator */
+  .media-loop-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  
+  .embedded-media-wrapper:hover .media-loop-btn {
+    display: flex;
+  }
+  
+  .media-loop-btn.active {
+    background: var(--accent);
+    animation: rotateLoop 4s linear infinite;
+  }
+
+  @keyframes rotateLoop {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Floating window notes on desktop large view */
+  .board-note-floating {
+    position: fixed !important;
+    z-index: 999999 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25) !important;
+    border: 1.5px solid var(--accent) !important;
+    background: var(--surface) !important;
+  }
+
+  .board-note-floating .board-note-header {
+    cursor: move;
+  }
+  
+  /* Embedded Media Link Popover modal inside note editor */
+  .media-link-popover {
+    position: absolute;
+    bottom: 36px;
+    left: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    padding: 8px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 220px;
+    animation: zoomFadeIn 0.15s ease;
+  }
+  
+  .media-link-popover input {
+    font-size: 10px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    outline: none;
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  /* Maximized note styles & Backdrop */
+  .board-note-maximized {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 80% !important;
+    height: 80% !important;
+    max-width: 900px !important;
+    max-height: 700px !important;
+    z-index: 1000000 !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3) !important;
+    border-radius: 16px !important;
+    background: var(--surface) !important;
+  }
+
+  .note-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 999998;
+    animation: noteFadeIn 0.2s ease;
+  }
+
+  @keyframes noteFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 }
 
 /* ── Force modern native-like container scrolling on mobile and narrow viewports ── */

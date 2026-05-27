@@ -112,6 +112,12 @@ function renderNotes() {
   }
 }
 
+function stripHtml(html) {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
+}
+
 function renderNoteCard(note) {
   const c = NOTE_COLORS[note.color] || NOTE_COLORS.yellow;
   const isShared = note._shared;
@@ -152,27 +158,27 @@ function renderNoteCard(note) {
     shareCount = `<span style="font-size:10px;background:rgba(0,0,0,0.06);padding:1px 6px;border-radius:8px;color:${c.dateTxt};" title="Bạn đã share note này">📤 Đã share</span>`;
   }
 
-  const title = note.title ? escHtml(note.title) : escHtml(note.content.substring(0, 40)) + (note.content.length > 40 ? '...' : '');
-  const preview = note.content.length > 120 ? note.content.substring(0, 120) + '...' : note.content;
+  const plainContent = stripHtml(note.content);
+  const preview = plainContent.length > 120 ? plainContent.substring(0, 120) + '...' : plainContent;
 
   return `
   <div class="pnote-card" data-note-id="${note.id}" style="background:${c.bg};border-color:${c.border};" onclick="toggleNoteExpand(this)">
     <div class="pnote-header" style="background:${c.headerBg};">
       <div class="pnote-title-row">
-        <span class="pnote-title" style="color:${c.text};">${title}</span>
+        <span class="pnote-title" ${canEdit ? 'contenteditable="true"' : ''} onblur="saveNoteInlineTitle(this, '${note.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onclick="event.stopPropagation();" style="color:${c.text};">${escHtml(note.title || 'Ghi chú')}</span>
       </div>
       <span class="pnote-time" style="color:${c.dateTxt};">${timeAgo}</span>
     </div>
     <div class="pnote-body" style="color:${c.text};">
       <div class="pnote-preview">${escHtml(preview)}</div>
-      <div class="pnote-full" style="display:none;">${escHtml(note.content)}</div>
+      <div class="pnote-full" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" onclick="event.stopPropagation();" style="display:none; outline:none; text-align:left; min-height:60px;">${note.content}</div>
     </div>
     <div class="pnote-footer">
       <div class="pnote-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}${shareCount}</div>
       ${canEdit ? `
       <div class="pnote-actions">
         <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share" style="color:${c.dateTxt};">📤</button>
-        <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa" style="color:${c.dateTxt};">✏️</button>
+        <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa thuộc tính" style="color:${c.dateTxt};">⚙️</button>
         <button onclick="event.stopPropagation();deletePersonalNote('${note.id}')" title="Xoá" style="color:#dc2626;">🗑️</button>
       </div>` : `
       <div class="pnote-actions">
@@ -188,7 +194,6 @@ function renderBoardNoteCard(note, idx) {
   const isShared = note._shared;
   const canEdit = !isShared || note._canEdit;
   const timeAgo = getTimeAgo(note.updated_at);
-  const title = note.title ? escHtml(note.title) : escHtml(note.content.substring(0, 40)) + (note.content.length > 40 ? '…' : '');
 
   // Restore saved layout or use grid positions
   const saved = _notesBoardLayouts[note.id];
@@ -236,20 +241,60 @@ function renderBoardNoteCard(note, idx) {
     alarmBadge = `<span class="board-badge" style="color:#fbbf24;background:rgba(251,191,36,0.12);">🔔 ${rDate} ${rTime}</span>`;
   }
 
+  // Restore floating coordinates if floated
+  let isFloating = note._isFloating;
+  if (_notesBoardLayouts[note.id]?.isFloating) {
+    isFloating = true;
+  }
+
+  const floatBtn = canEdit ? `
+    <button onclick="event.stopPropagation();toggleFloatNote('${note.id}')" title="${isFloating ? 'Ghim vào bảng' : 'Thả nổi ghi chú'}" style="background:none;border:none;cursor:pointer;font-size:12px;padding:2px;" id="floatBtn-${note.id}">${isFloating ? '📌' : '📤'}</button>` : '';
+
+  const maxBtn = canEdit ? `
+    <button onclick="event.stopPropagation();toggleMaximizeNote('${note.id}')" title="Phóng to/Thu nhỏ" style="background:none;border:none;cursor:pointer;font-size:12px;padding:2px;" id="maxBtn-${note.id}">🔍</button>` : '';
+
   const actionBtns = canEdit ? `
-    <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa">✏️</button>
+    ${floatBtn}
+    ${maxBtn}
+    <button onclick="event.stopPropagation();openEditNoteModal('${note.id}')" title="Sửa thuộc tính">⚙️</button>
     <button onclick="event.stopPropagation();openShareNoteModal('${note.id}')" title="Share">📤</button>
     <button onclick="event.stopPropagation();deletePersonalNote('${note.id}')" title="Xoá" style="color:#dc2626;">🗑️</button>` : '';
 
-  return `<div class="board-note" data-note-id="${note.id}" 
-    style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${c.bg};border-color:${c.border};">
+  const floatingClass = isFloating ? 'board-note-floating' : '';
+  const floatingStyles = isFloating ? `position:fixed; z-index:999999; left:${_notesBoardLayouts[note.id]?.fx ?? 200}px; top:${_notesBoardLayouts[note.id]?.fy ?? 200}px; width:${_notesBoardLayouts[note.id]?.fw ?? 350}px; height:${_notesBoardLayouts[note.id]?.fh ?? 280}px;` : `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+
+  return `<div class="board-note ${floatingClass}" id="boardNote-${note.id}" data-note-id="${note.id}" 
+    style="${floatingStyles}background:${c.bg};border-color:${c.border};">
     <div class="board-note-header" style="background:${c.headerBg};color:${c.text};">
-      <span class="board-note-title">${title}</span>
+      <span class="board-note-title" ${canEdit ? 'contenteditable="true"' : ''} onblur="saveNoteInlineTitle(this, '${note.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${escHtml(note.title || 'Ghi chú')}</span>
       <span class="board-note-time" style="color:${c.dateTxt};">${timeAgo}</span>
     </div>
-    <div class="board-note-body" style="color:${c.text};">
-      <div class="board-note-content">${escHtml(note.content)}</div>
+    <div class="board-note-body" style="color:${c.text}; position:relative; overflow:auto; flex:1; padding-bottom:34px;">
+      <div class="board-note-content" id="noteContent-${note.id}" ${canEdit ? 'contenteditable="true"' : ''} oninput="debounceSaveNoteInline('${note.id}')" onblur="saveNoteInline('${note.id}')" style="min-height:90px; outline:none; text-align:left; word-wrap:break-word; padding:4px;">${note.content}</div>
     </div>
+    
+    ${canEdit ? `
+    <!-- Note Editor Rich-Text Bottom Toolbar -->
+    <div class="note-toolbar" id="noteToolbar-${note.id}">
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('bold', '${note.id}')" title="In đậm"><b>B</b></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('italic', '${note.id}')" title="In nghiêng"><i>I</i></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('underline', '${note.id}')" title="Gạch chân"><u>U</u></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('strikeThrough', '${note.id}')" title="Gạch ngang"><s>ab</s></button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="execNoteCmd('insertUnorderedList', '${note.id}')" title="Danh sách">☰</button>
+      <button class="note-toolbar-btn" onmousedown="event.preventDefault();" onclick="toggleMediaLinkPopover(event, '${note.id}')" title="Chèn Ảnh/Video/Audio">🖼️</button>
+    </div>
+    <!-- Media link insert popover -->
+    <div class="media-link-popover" id="mediaPopover-${note.id}" style="display:none;" onmousedown="event.stopPropagation();">
+      <input type="text" placeholder="Dán link ảnh, mp3, mp4, youtube..." onkeydown="if(event.key==='Enter') { insertMediaUrl('${note.id}', this.value, this); this.value=''; }" style="width:100%; box-sizing:border-box; margin-bottom:4px;" />
+      <div style="font-size:8px;color:var(--text3);margin-top:2px;font-weight:bold;text-align:left;">Mẫu thử nhanh:</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="chip" onmousedown="event.preventDefault();" onclick="insertMediaUrl('${note.id}', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', this)" style="font-size:7px;padding:2px 4px;margin:1px 0;">🎵 Nhạc mp3</button>
+        <button class="chip" onmousedown="event.preventDefault();" onclick="insertMediaUrl('${note.id}', 'https://www.w3schools.com/html/mov_bbb.mp4', this)" style="font-size:7px;padding:2px 4px;margin:1px 0;">📹 Video mp4</button>
+        <button class="chip" onmousedown="event.preventDefault();" onclick="insertMediaUrl('${note.id}', 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300', this)" style="font-size:7px;padding:2px 4px;margin:1px 0;">🖼️ Ảnh đẹp</button>
+      </div>
+    </div>
+    ` : ''}
+
     <div class="board-note-footer">
       <div class="board-note-badges">${linkedBadge}${calBadge}${alarmBadge}${sharedBadge}</div>
       <div class="board-note-actions" style="color:${c.dateTxt};">${actionBtns}</div>
@@ -279,7 +324,35 @@ function _initBoardNotes(container) {
   };
   document.addEventListener('mousedown', _boardClickOutHandler);
 
+  // Clean old floating notes from body before moving them again
+  document.querySelectorAll('body > .board-note-floating').forEach(el => {
+    if (!container.querySelector(`[data-note-id="${el.dataset.noteId}"]`)) {
+      el.remove();
+    }
+  });
+
+  // Global click outside to close media popovers
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.media-link-popover') && !e.target.closest('.note-toolbar-btn')) {
+      document.querySelectorAll('.media-link-popover').forEach(p => p.style.display = 'none');
+    }
+  });
+
   container.querySelectorAll('.board-note').forEach(el => {
+    const noteId = el.dataset.noteId;
+    const isFloating = _notesBoardLayouts[noteId]?.isFloating;
+
+    // Bind media handlers
+    const contentEl = el.querySelector('.board-note-content');
+    if (contentEl) {
+      _initNoteEmbeddedMedia(contentEl, noteId);
+    }
+
+    if (isFloating) {
+      document.body.appendChild(el);
+      el.classList.add('board-note-floating');
+    }
+
     const header = el.querySelector('.board-note-header');
     const resizeHandle = el.querySelector('.board-note-resize');
 
@@ -287,11 +360,13 @@ function _initBoardNotes(container) {
     let dragState = null;
     let wasDragged = false;
     header.addEventListener('mousedown', e => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('.board-badge-link')) return;
+      if (e.target.closest('button') || e.target.closest('.board-badge-link') || e.target.closest('.note-toolbar')) return;
       e.preventDefault();
       wasDragged = false;
+      
       const rect = el.getBoundingClientRect();
-      const parentRect = container.getBoundingClientRect();
+      const parentRect = isFloating ? { left: 0, top: 0 } : container.getBoundingClientRect();
+      
       dragState = { 
         offX: e.clientX - rect.left, 
         offY: e.clientY - rect.top,
@@ -300,6 +375,7 @@ function _initBoardNotes(container) {
         startX: e.clientX,
         startY: e.clientY
       };
+      
       el.style.zIndex = ++_boardZIndex;
       el.classList.add('board-note-dragging');
       document.body.classList.add('panel-resizing');
@@ -315,10 +391,15 @@ function _initBoardNotes(container) {
         _raf = requestAnimationFrame(() => {
           _raf = 0;
           if (!dragState) return;
-          const x = Math.max(0, _lastX - dragState.parentLeft - dragState.offX);
-          const y = Math.max(0, _lastY - dragState.parentTop - dragState.offY);
-          el.style.left = x + 'px';
-          el.style.top = y + 'px';
+          const x = _lastX - dragState.parentLeft - dragState.offX;
+          const y = _lastY - dragState.parentTop - dragState.offY;
+          if (isFloating) {
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+          } else {
+            el.style.left = Math.max(0, x) + 'px';
+            el.style.top = Math.max(0, y) + 'px';
+          }
         });
       };
       const onUp = () => {
@@ -328,7 +409,15 @@ function _initBoardNotes(container) {
         el.classList.remove('board-note-dragging');
         document.body.classList.remove('panel-resizing');
         dragState = null;
-        _saveBoardLayout(container);
+        
+        if (isFloating) {
+          if (!_notesBoardLayouts[noteId]) _notesBoardLayouts[noteId] = { isFloating: true };
+          _notesBoardLayouts[noteId].fx = parseInt(el.style.left) || 0;
+          _notesBoardLayouts[noteId].fy = parseInt(el.style.top) || 0;
+          try { localStorage.setItem('cj_notes_board', JSON.stringify(_notesBoardLayouts)); } catch(e) {}
+        } else {
+          _saveBoardLayout(container);
+        }
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
@@ -360,20 +449,28 @@ function _initBoardNotes(container) {
         document.removeEventListener('mouseup', onUp);
         if (_raf2) { cancelAnimationFrame(_raf2); _raf2 = 0; }
         document.body.classList.remove('panel-resizing');
-        _saveBoardLayout(container);
+        
+        if (isFloating) {
+          if (!_notesBoardLayouts[noteId]) _notesBoardLayouts[noteId] = { isFloating: true };
+          _notesBoardLayouts[noteId].fw = el.offsetWidth;
+          _notesBoardLayouts[noteId].fh = el.offsetHeight;
+          try { localStorage.setItem('cj_notes_board', JSON.stringify(_notesBoardLayouts)); } catch(e) {}
+        } else {
+          _saveBoardLayout(container);
+        }
       };
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
 
-    // ─ Click to expand ─
+    // ─ Click to expand (only for non-floating) ─
     el.addEventListener('click', e => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('.board-badge-link') || e.target.closest('.board-note-resize')) return;
+      if (isFloating) return;
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.board-badge-link') || e.target.closest('.board-note-resize') || e.target.closest('.note-toolbar') || e.target.closest('.media-link-popover')) return;
       if (wasDragged) { wasDragged = false; return; }
       if (el.classList.contains('board-note-expanded')) {
         _collapseNote(el);
       } else {
-        // Collapse any other expanded note first
         const prev = container.querySelector('.board-note-expanded');
         if (prev) _collapseNote(prev);
         _expandNote(el, container);
@@ -817,4 +914,356 @@ function clearNoteAlarm() {
   const tEl = document.getElementById('pnote_alarm_time');
   if (dEl) dEl.value = '';
   if (tEl) tEl.value = '';
+}
+
+// ============ ADVANCED PERSONAL NOTES INTERACTION ENGINE ============
+let _noteDebounceTimers = {};
+
+async function saveNoteInlineTitle(el, noteId) {
+  const title = el.textContent.trim();
+  try {
+    const res = await sbFetch(`/rest/v1/personal_notes?id=eq.${noteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        title: title || null,
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    
+    // Update local cache
+    const note = _allMyNotes.find(n => n.id === noteId) || _sharedWithMeNotes.find(n => n.id === noteId);
+    if (note) note.title = title || null;
+  } catch(e) {
+    console.error('[Notes] save inline title error:', e);
+    showToast('Lỗi lưu tiêu đề');
+  }
+}
+
+function debounceSaveNoteInline(noteId) {
+  if (_noteDebounceTimers[noteId]) clearTimeout(_noteDebounceTimers[noteId]);
+  _noteDebounceTimers[noteId] = setTimeout(() => {
+    delete _noteDebounceTimers[noteId];
+    saveNoteInline(noteId);
+  }, 1000);
+}
+
+async function saveNoteInline(noteId) {
+  let content = '';
+  const bEl = document.getElementById(`noteContent-${noteId}`);
+  if (bEl) {
+    content = bEl.innerHTML;
+  } else {
+    const mEl = document.querySelector(`.pnote-card[data-note-id="${noteId}"] .pnote-full`);
+    if (mEl) content = mEl.innerHTML;
+  }
+  
+  if (!bEl && !document.querySelector(`.pnote-card[data-note-id="${noteId}"] .pnote-full`)) return;
+
+  try {
+    const res = await sbFetch(`/rest/v1/personal_notes?id=eq.${noteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        content,
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    
+    // Update cache
+    const note = _allMyNotes.find(n => n.id === noteId) || _sharedWithMeNotes.find(n => n.id === noteId);
+    if (note) {
+      note.content = content;
+      note.updated_at = new Date().toISOString();
+    }
+    
+    // Update preview text
+    const previewEl = document.querySelector(`.pnote-card[data-note-id="${noteId}"] .pnote-preview`);
+    if (previewEl) {
+      const plainContent = stripHtml(content);
+      previewEl.textContent = plainContent.length > 120 ? plainContent.substring(0, 120) + '...' : plainContent;
+    }
+  } catch(e) {
+    console.error('[Notes] save inline content error:', e);
+  }
+}
+
+function execNoteCmd(cmd, noteId) {
+  const el = document.getElementById(`noteContent-${noteId}`);
+  if (el) {
+    el.focus();
+    document.execCommand(cmd, false, null);
+    saveNoteInline(noteId);
+  }
+}
+
+function toggleMediaLinkPopover(event, noteId) {
+  event.stopPropagation();
+  const pop = document.getElementById(`mediaPopover-${noteId}`);
+  if (!pop) return;
+  const isHidden = pop.style.display === 'none';
+  
+  document.querySelectorAll('.media-link-popover').forEach(p => p.style.display = 'none');
+  
+  if (isHidden) {
+    pop.style.display = 'flex';
+    const inp = pop.querySelector('input');
+    if (inp) {
+      inp.focus();
+    }
+  }
+}
+
+function insertMediaUrl(noteId, url, triggerEl) {
+  url = (url || '').trim();
+  if (!url) return;
+  
+  const container = document.getElementById(`noteContent-${noteId}`);
+  if (!container) return;
+
+  let html = '';
+  let type = '';
+  
+  let ytId = '';
+  const ytReg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+  const match = url.match(ytReg);
+  if (match) {
+    ytId = match[1];
+    type = 'youtube';
+    html = `<iframe src="https://www.youtube.com/embed/${ytId}?enablejsapi=1&loop=1&playlist=${ytId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  } else if (/\.(mp3|wav|ogg|aac|m4a)(?:\?|$)/i.test(url)) {
+    type = 'audio';
+    html = `<audio src="${url}" controls></audio>`;
+  } else if (/\.(mp4|webm|ogv|mov)(?:\?|$)/i.test(url)) {
+    type = 'video';
+    html = `<video src="${url}" controls playsinline></video>`;
+  } else {
+    type = 'image';
+    html = `<img src="${url}" alt="Media" />`;
+  }
+
+  const wrapId = 'mediaWrap_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  const defaultWidth = type === 'audio' ? 240 : 200;
+  const defaultHeight = type === 'audio' ? 44 : 140;
+
+  const wrapperHtml = `
+    <div class="embedded-media-wrapper" id="${wrapId}" contenteditable="false" style="position: absolute; left: 20px; top: 20px; width: ${defaultWidth}px; height: ${defaultHeight}px; z-index: 10;">
+      ${html}
+      <button class="media-loop-btn" onclick="event.stopPropagation();toggleMediaLoop(this);" title="Phát lại liên tục">🔁</button>
+      <div class="media-resize-handle"></div>
+    </div>
+  `;
+
+  container.focus();
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = wrapperHtml;
+  const element = tempDiv.firstElementChild;
+  container.appendChild(element);
+
+  const pop = document.getElementById(`mediaPopover-${noteId}`);
+  if (pop) pop.style.display = 'none';
+
+  _initEmbeddedMediaHandlers(element, container, noteId);
+  saveNoteInline(noteId);
+}
+
+function _initNoteEmbeddedMedia(contentEl, noteId) {
+  contentEl.querySelectorAll('.embedded-media-wrapper').forEach(wrapper => {
+    _initEmbeddedMediaHandlers(wrapper, contentEl, noteId);
+  });
+}
+
+function _initEmbeddedMediaHandlers(wrapper, contentEl, noteId) {
+  const resizeHandle = wrapper.querySelector('.media-resize-handle');
+  
+  wrapper.addEventListener('mousedown', e => {
+    if (e.target.closest('.media-resize-handle') || e.target.closest('.media-loop-btn') || e.target.closest('audio') || e.target.closest('video') || e.target.closest('iframe')) return;
+    if (e.target.tagName === 'IMG') e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = wrapper.getBoundingClientRect();
+    const parentRect = contentEl.getBoundingClientRect();
+    const offX = e.clientX - rect.left;
+    const offY = e.clientY - rect.top;
+    
+    wrapper.style.zIndex = 100;
+    
+    const onMove = ev => {
+      const x = ev.clientX - parentRect.left - offX;
+      const y = ev.clientY - parentRect.top - offY;
+      wrapper.style.left = x + 'px';
+      wrapper.style.top = y + 'px';
+    };
+    
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      wrapper.style.zIndex = 10;
+      saveNoteInline(noteId);
+    };
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  
+  if (resizeHandle) {
+    resizeHandle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startW = wrapper.offsetWidth;
+      const startH = wrapper.offsetHeight;
+      
+      const onMove = ev => {
+        const newW = Math.max(60, startW + (ev.clientX - startX));
+        const newH = Math.max(30, startH + (ev.clientY - startY));
+        wrapper.style.width = newW + 'px';
+        wrapper.style.height = newH + 'px';
+      };
+      
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        saveNoteInline(noteId);
+      };
+      
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+  
+  const mediaBtn = wrapper.querySelector('.media-loop-btn');
+  if (mediaBtn) {
+    const mediaEl = wrapper.querySelector('audio, video');
+    const iframeEl = wrapper.querySelector('iframe');
+    if (mediaEl && mediaEl.loop) {
+      mediaBtn.classList.add('active');
+    } else if (iframeEl && iframeEl.src.includes('loop=1')) {
+      mediaBtn.classList.add('active');
+    }
+  }
+}
+
+function toggleMediaLoop(btn) {
+  const wrapper = btn.closest('.embedded-media-wrapper');
+  if (!wrapper) return;
+  
+  const isActive = btn.classList.toggle('active');
+  const mediaEl = wrapper.querySelector('audio, video');
+  const iframeEl = wrapper.querySelector('iframe');
+  
+  if (mediaEl) {
+    if (isActive) {
+      mediaEl.loop = true;
+      mediaEl.setAttribute('loop', 'true');
+    } else {
+      mediaEl.loop = false;
+      mediaEl.removeAttribute('loop');
+    }
+  } else if (iframeEl) {
+    let src = iframeEl.src;
+    if (isActive) {
+      if (!src.includes('loop=1')) {
+        const ytReg = /\/embed\/([^"?]+)/;
+        const match = src.match(ytReg);
+        const ytId = match ? match[1] : '';
+        src += (src.includes('?') ? '&' : '?') + `loop=1&playlist=${ytId}`;
+      }
+    } else {
+      src = src.replace(/[?&]loop=1/, '').replace(/[?&]playlist=[^&]+/, '');
+    }
+    iframeEl.src = src;
+  }
+  
+  const noteId = wrapper.closest('.board-note')?.dataset.noteId;
+  if (noteId) {
+    saveNoteInline(noteId);
+  }
+}
+
+let _maximizedNoteId = null;
+
+function toggleMaximizeNote(noteId) {
+  const el = document.getElementById(`boardNote-${noteId}`);
+  if (!el) return;
+  
+  const isMaximized = el.classList.contains('board-note-maximized');
+  
+  if (isMaximized) {
+    el.classList.remove('board-note-maximized');
+    _maximizedNoteId = null;
+    
+    const backdrop = document.getElementById('noteBackdrop');
+    if (backdrop) backdrop.remove();
+    
+    const saved = _notesBoardLayouts[noteId] || {};
+    const isFloating = saved.isFloating;
+    if (isFloating) {
+      el.style.position = 'fixed';
+      el.style.left = (saved.fx ?? 200) + 'px';
+      el.style.top = (saved.fy ?? 200) + 'px';
+      el.style.width = (saved.fw ?? 350) + 'px';
+      el.style.height = (saved.fh ?? 280) + 'px';
+    } else {
+      el.style.position = 'absolute';
+      el.style.left = el.dataset.origLeft || '';
+      el.style.top = el.dataset.origTop || '';
+      el.style.width = el.dataset.origW || '';
+      el.style.height = el.dataset.origH || '';
+    }
+  } else {
+    el.dataset.origLeft = el.style.left;
+    el.dataset.origTop = el.style.top;
+    el.dataset.origW = el.style.width;
+    el.dataset.origH = el.style.height;
+    
+    el.classList.add('board-note-maximized');
+    _maximizedNoteId = noteId;
+    
+    el.style.position = '';
+    el.style.left = '';
+    el.style.top = '';
+    el.style.width = '';
+    el.style.height = '';
+    
+    if (!document.getElementById('noteBackdrop')) {
+      const backdrop = document.createElement('div');
+      backdrop.id = 'noteBackdrop';
+      backdrop.className = 'note-backdrop';
+      backdrop.onclick = () => toggleMaximizeNote(noteId);
+      document.body.appendChild(backdrop);
+    }
+  }
+}
+
+function toggleFloatNote(noteId) {
+  const el = document.getElementById(`boardNote-${noteId}`);
+  if (!el) return;
+  
+  if (!_notesBoardLayouts[noteId]) {
+    _notesBoardLayouts[noteId] = {};
+  }
+  
+  const isFloating = !_notesBoardLayouts[noteId].isFloating;
+  _notesBoardLayouts[noteId].isFloating = isFloating;
+  
+  if (isFloating) {
+    const rect = el.getBoundingClientRect();
+    _notesBoardLayouts[noteId].fx = rect.left;
+    _notesBoardLayouts[noteId].fy = rect.top;
+    _notesBoardLayouts[noteId].fw = rect.width || 350;
+    _notesBoardLayouts[noteId].fh = rect.height || 280;
+  } else {
+    delete _notesBoardLayouts[noteId].fx;
+    delete _notesBoardLayouts[noteId].fy;
+    delete _notesBoardLayouts[noteId].fw;
+    delete _notesBoardLayouts[noteId].fh;
+  }
+  
+  try {
+    localStorage.setItem('cj_notes_board', JSON.stringify(_notesBoardLayouts));
+  } catch(e) {}
+  
+  renderNotes();
 }
