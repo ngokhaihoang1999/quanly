@@ -196,6 +196,177 @@ document.addEventListener('DOMContentLoaded', async () => {
 function saveAppState() {}
 function restoreAppState() {}
 
+// ── Forms Draft Auto-Save System (Proposal 1) ──
+
+function saveDraftForModal(type) {
+  try {
+    if (!type) return;
+    const data = {};
+    let container = null;
+    if (type === 'hapja') {
+      container = document.getElementById('createHapjaModal');
+    } else {
+      container = document.getElementById('addRecordModal');
+    }
+    if (!container) return;
+
+    // Collect all inputs, textareas, selects
+    const inputs = container.querySelectorAll('input:not([type="password"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
+    inputs.forEach(input => {
+      if (input.id) {
+        data[input.id] = { value: input.value, checked: false };
+      }
+    });
+
+    const checkRadios = container.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+    checkRadios.forEach(input => {
+      if (input.id) {
+        data[input.id] = { value: input.value, checked: input.checked };
+      }
+    });
+
+    // Check if the draft is actually empty (to avoid saving empty drafts)
+    let isEmpty = true;
+    for (const key in data) {
+      if (data[key].value && data[key].value.trim() !== '') {
+        isEmpty = false;
+        break;
+      }
+    }
+
+    if (!isEmpty) {
+      localStorage.setItem('cj_draft_' + type, JSON.stringify(data));
+    } else {
+      localStorage.removeItem('cj_draft_' + type);
+    }
+  } catch(e) {
+    console.error('[Draft] Save draft error:', e);
+  }
+}
+
+window.checkAndShowDraftBanner = function(type) {
+  try {
+    if (!type) return;
+    const draftStr = localStorage.getItem('cj_draft_' + type);
+    if (!draftStr) return;
+
+    let modalBody = null;
+    let bannerId = 'draftBanner_' + type;
+    
+    // Remove existing draft banner if any
+    const existing = document.getElementById(bannerId);
+    if (existing) existing.remove();
+
+    if (type === 'hapja') {
+      modalBody = document.querySelector('#createHapjaModal .modal-body') || document.querySelector('#createHapjaModal .modal');
+    } else {
+      modalBody = document.getElementById('recordModalBody');
+    }
+    
+    if (!modalBody) return;
+
+    // Create banner element
+    const banner = document.createElement('div');
+    banner.id = bannerId;
+    banner.className = 'draft-banner';
+    banner.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#d97706;animation:slideDown 0.3s ease;';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;flex:1;">
+        <span style="font-size:16px;">💡</span>
+        <span>Phát hiện bản nháp chưa lưu gần nhất của bạn.</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button type="button" onclick="restoreDraftData('${type}')" style="background:#d97706;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:background 0.2s;">Khôi phục</button>
+        <button type="button" onclick="clearDraftData('${type}')" style="background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">Xoá</button>
+      </div>
+    `;
+    
+    // Insert at the very beginning of the modalBody
+    modalBody.insertBefore(banner, modalBody.firstChild);
+  } catch(e) {
+    console.error('[Draft] checkAndShowDraftBanner error:', e);
+  }
+};
+
+window.restoreDraftData = function(type) {
+  try {
+    const draftStr = localStorage.getItem('cj_draft_' + type);
+    if (!draftStr) return;
+    const draftData = JSON.parse(draftStr);
+
+    let container = null;
+    if (type === 'hapja') {
+      container = document.getElementById('createHapjaModal');
+    } else {
+      container = document.getElementById('addRecordModal');
+    }
+    if (!container) return;
+
+    for (const id in draftData) {
+      const el = container.querySelector('#' + id);
+      if (el) {
+        const saved = draftData[id];
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          el.checked = saved.checked;
+        } else {
+          el.value = saved.value;
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    
+    // Hide the banner after restoring
+    const banner = document.getElementById('draftBanner_' + type);
+    if (banner) banner.remove();
+    showToast('⚡ Đã khôi phục bản nháp!');
+  } catch(e) {
+    console.error('[Draft] restoreDraftData error:', e);
+  }
+};
+
+window.clearDraftData = function(type) {
+  try {
+    localStorage.removeItem('cj_draft_' + type);
+    const banner = document.getElementById('draftBanner_' + type);
+    if (banner) banner.remove();
+    showToast('🗑️ Đã xóa bản nháp.');
+  } catch(e) {
+    console.error('[Draft] clearDraftData error:', e);
+  }
+};
+
+// Document-level savers for drafts
+let _draftSaveDebounce = null;
+document.addEventListener('input', e => {
+  const target = e.target;
+  if (target.id && (target.id.includes('pin') || target.id.includes('Pin'))) return;
+  if (target.closest('#pinLockOverlay') || target.closest('#pinSetupModal')) return;
+
+  const hapjaModal = target.closest('#createHapjaModal');
+  const recordModal = target.closest('#addRecordModal');
+
+  if (hapjaModal || recordModal) {
+    clearTimeout(_draftSaveDebounce);
+    _draftSaveDebounce = setTimeout(() => {
+      saveDraftForModal(hapjaModal ? 'hapja' : (typeof currentRecordType !== 'undefined' ? currentRecordType : ''));
+    }, 500);
+  }
+});
+
+document.addEventListener('change', e => {
+  const target = e.target;
+  if (target.id && (target.id.includes('pin') || target.id.includes('Pin'))) return;
+  if (target.closest('#pinLockOverlay') || target.closest('#pinSetupModal')) return;
+
+  const hapjaModal = target.closest('#createHapjaModal');
+  const recordModal = target.closest('#addRecordModal');
+
+  if (hapjaModal || recordModal) {
+    saveDraftForModal(hapjaModal ? 'hapja' : (typeof currentRecordType !== 'undefined' ? currentRecordType : ''));
+  }
+});
+
 // ── Deep Link Handler ──
 function _getDeepLinkProfileId() {
   try { var p = new URLSearchParams(location.search).get('profile'); if (p) return p; } catch(e) {}

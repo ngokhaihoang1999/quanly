@@ -5,6 +5,9 @@ function openCreateHapjaModal() {
   document.getElementById('createHapjaModal').classList.add('open');
   const sel = document.getElementById('hj_ndd');
   if (sel) sel.value = '';
+  if (typeof checkAndShowDraftBanner === 'function') {
+    checkAndShowDraftBanner('hapja');
+  }
 }
 async function submitCreateHapja() {
   const ndd = getStaffCodeFromInput('hj_ndd');
@@ -92,6 +95,7 @@ async function submitCreateHapja() {
     }
 
     closeModal('createHapjaModal');
+    localStorage.removeItem('cj_draft_hapja');
     showToast('✅ Đã tạo phiếu Hapja!');
     
     const idsToClear = ['hj_ngay_chakki','hj_concept','hj_full_name','hj_birth_year',

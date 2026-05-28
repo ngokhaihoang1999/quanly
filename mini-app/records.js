@@ -1286,6 +1286,11 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
   }
 
   document.getElementById('addRecordModal').classList.add('open');
+  if (!existingContent && !readOnly && typeof checkAndShowDraftBanner === 'function') {
+    setTimeout(() => {
+      checkAndShowDraftBanner(type);
+    }, 50);
+  }
   // Toggle save button visibility based on readOnly
   const saveBtn = document.querySelector('#addRecordModal .save-btn');
   if (readOnly) {
@@ -1416,6 +1421,7 @@ async function saveRecord() {
     
     if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
     closeModal('addRecordModal');
+    localStorage.removeItem('cj_draft_' + currentRecordType);
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi lưu dữ liệu'); console.error(e); }
 }
