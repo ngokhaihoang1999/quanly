@@ -18,110 +18,13 @@ function _injectWindowControls() {
     b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = '#bbb'; };
     return b;
   };
-  const btnMin = mkBtn('winBtnMin', '\u2500', 'Thu nhỏ', 'rgba(255,255,255,0.15)');
   const btnMax = mkBtn('winBtnMax', '\u25A1', 'Phóng to', 'rgba(255,255,255,0.15)');
   const btnClose = mkBtn('winBtnClose', '\u2715', 'Đóng', '#e53e3e');
-  bar.appendChild(btnMin);
   bar.appendChild(btnMax);
   bar.appendChild(btnClose);
   document.body.appendChild(bar);
 
   // Actions
-  btnMin.onclick = () => {
-    console.log('[WinCtrl] Minimize button clicked! Applying emulated slide-minimize.');
-    
-    try {
-      if (!document.getElementById('minimizedPillStyles')) {
-        const styleTag = document.createElement('style');
-        styleTag.id = 'minimizedPillStyles';
-        styleTag.textContent = `
-          @keyframes pulseGlow {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(14, 165, 233, 0.4)); }
-            50% { transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.8)); }
-          }
-          #desktopPanelsWrapper, .header {
-            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
-          }
-          body.app-minimized #desktopPanelsWrapper,
-          body.app-minimized .header,
-          body.app-minimized .modal-overlay {
-            transform: translateY(100vh) translateY(100px) !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-          }
-          body.app-minimized {
-            overflow: hidden !important;
-            background: #121214 !important;
-          }
-          #minimizedTaskbarPill:hover {
-            border-color: rgba(14, 165, 233, 0.5) !important;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 24px rgba(14, 165, 233, 0.35) !important;
-            transform: translateX(-50%) translateY(-2px) scale(1.03) !important;
-          }
-          #minimizedTaskbarPill:active {
-            transform: translateX(-50%) translateY(1px) scale(0.98) !important;
-          }
-        `;
-        document.head.appendChild(styleTag);
-      }
-
-      const oldPill = document.getElementById('minimizedTaskbarPill');
-      if (oldPill) oldPill.remove();
-
-      const pill = document.createElement('div');
-      pill.id = 'minimizedTaskbarPill';
-      pill.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%) translateY(100px);
-        z-index: 999999;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 24px;
-        background: rgba(28, 28, 30, 0.85);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 40px;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 20px rgba(14, 165, 233, 0.2);
-        color: #f3f4f6;
-        font-family: system-ui, -apple-system, sans-serif;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        user-select: none;
-        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, border-color 0.3s, opacity 0.4s;
-        opacity: 0;
-      `;
-      pill.innerHTML = `
-        <span style="font-size: 16px; display: flex; align-items: center; animation: pulseGlow 2s infinite ease-in-out;">💼</span>
-        <span style="letter-spacing: 0.3px;">Quản lý (Đang thu nhỏ)</span>
-        <span style="font-size: 11px; color: #0ea5e9; background: rgba(14, 165, 233, 0.15); padding: 3px 8px; border-radius: 12px; font-weight: bold; margin-left: 4px;">Khôi phục</span>
-      `;
-
-      pill.onclick = () => {
-        console.log('[WinCtrl] Restore app clicked!');
-        document.body.classList.remove('app-minimized');
-        pill.style.transform = 'translateX(-50%) translateY(100px)';
-        pill.style.opacity = '0';
-        setTimeout(() => pill.remove(), 400);
-      };
-
-      document.body.appendChild(pill);
-      document.body.classList.add('app-minimized');
-
-      setTimeout(() => {
-        pill.style.transform = 'translateX(-50%) translateY(0)';
-        pill.style.opacity = '1';
-        console.log('[WinCtrl] Custom minimize slide complete, pill visible.');
-      }, 50);
-
-    } catch(e) {
-      console.error('[WinCtrl] custom minimize error:', e);
-    }
-  };
   btnMax.onclick = () => {
     try {
       const tgWA = window.Telegram?.WebApp;
@@ -131,7 +34,17 @@ function _injectWindowControls() {
       else if (tg && tg.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
     } catch(e){ console.log('[WinCtrl] fullscreen err:', e); }
   };
-  btnClose.onclick = () => { try { const tgWA = window.Telegram?.WebApp; if (tgWA && tgWA.close) tgWA.close(); else if (tg && tg.close) tg.close(); else window.close(); } catch(e){} };
+  btnClose.onclick = () => { 
+    try { 
+      if (typeof saveAppState === 'function') {
+        saveAppState();
+      }
+      const tgWA = window.Telegram?.WebApp; 
+      if (tgWA && tgWA.close) tgWA.close(); 
+      else if (tg && tg.close) tg.close(); 
+      else window.close(); 
+    } catch(e){} 
+  };
 
   // Auto-hide after 3s, show on hover
   let ht = setTimeout(() => { bar.style.opacity = '0.2'; }, 3000);

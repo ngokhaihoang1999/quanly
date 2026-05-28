@@ -183,20 +183,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ── State Preservation Helpers (Bứt phá giới hạn Webview) ──
 function saveAppState() {
   try {
+    // 1. Save active main tab
     const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset?.tab || 'unit';
     localStorage.setItem('cj_last_main_tab', activeTab);
     
+    // 2. Save active scroll position of viewport
     const scrollContainer = document.getElementById('desktopPanelsWrapper');
     if (scrollContainer) {
       localStorage.setItem('cj_last_scroll_top', scrollContainer.scrollTop);
     }
+    
+    // 3. Save detail profile view state (active profile + selected sub-tab)
+    const detailView = document.getElementById('detailView');
+    const detailOpen = detailView && detailView.style.display !== 'none';
+    localStorage.setItem('cj_detail_view_open', detailOpen ? '1' : '0');
+    
+    if (detailOpen && typeof currentProfileId !== 'undefined' && currentProfileId) {
+      localStorage.setItem('cj_last_profile_id', currentProfileId);
+      
+      const activeCardEl = document.querySelector('.form-card.active');
+      if (activeCardEl) {
+        localStorage.setItem('cj_last_form_tab', activeCardEl.id);
+      }
+    } else {
+      localStorage.removeItem('cj_last_profile_id');
+      localStorage.removeItem('cj_last_form_tab');
+    }
+    
+    // 4. Save active editing note state
+    if (typeof _editingNoteId !== 'undefined' && _editingNoteId) {
+      localStorage.setItem('cj_last_editing_note_id', _editingNoteId);
+    } else {
+      localStorage.removeItem('cj_last_editing_note_id');
+    }
+    console.log('[State] saveAppState: saved successfully.');
   } catch(e) {
     console.error('[State] saveAppState error:', e);
   }
 }
 
+// Bind saveAppState to page unload & visibility change events
+// This captures the native Telegram title bar Close "✕" button click!
+window.addEventListener('beforeunload', saveAppState);
+window.addEventListener('pagehide', saveAppState);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    saveAppState();
+  }
+});
+
 function restoreAppState() {
   try {
+    // 1. Restore active main tab
     const lastTab = localStorage.getItem('cj_last_main_tab');
     if (lastTab) {
       const tabEl = document.querySelector(`#mainTabBar .tab[data-tab="${lastTab}"]`);
@@ -204,15 +242,37 @@ function restoreAppState() {
         switchMainTab(tabEl, lastTab);
       }
     }
+    
+    // 2. Restore active profile detail view
+    const detailOpen = localStorage.getItem('cj_detail_view_open') === '1';
+    const lastProfileId = localStorage.getItem('cj_last_profile_id');
+    const lastFormTab = localStorage.getItem('cj_last_form_tab');
+    
+    if (detailOpen && lastProfileId && typeof openProfileById === 'function') {
+      setTimeout(() => {
+        openProfileById(lastProfileId, null, lastFormTab || null);
+      }, 300);
+    }
+    
+    // 3. Restore active note modal editing state
+    const lastEditingNoteId = localStorage.getItem('cj_last_editing_note_id');
+    if (lastEditingNoteId && typeof openEditNoteModal === 'function') {
+      setTimeout(() => {
+        openEditNoteModal(lastEditingNoteId);
+      }, 600);
+    }
+    
+    // 4. Restore scroll positions
     const lastScroll = localStorage.getItem('cj_last_scroll_top');
     if (lastScroll) {
       const scrollContainer = document.getElementById('desktopPanelsWrapper');
       if (scrollContainer) {
         setTimeout(() => {
           scrollContainer.scrollTop = parseFloat(lastScroll);
-        }, 180);
+        }, 400);
       }
     }
+    console.log('[State] restoreAppState: restored successfully.');
   } catch(e) {
     console.error('[State] restoreAppState error:', e);
   }
