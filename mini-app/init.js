@@ -173,11 +173,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     _handleDeepLink();
     applyDesktopLayout();
     _updateTabBarMode();
+    restoreAppState();
   } catch(e) {
     console.error('Init error:', e);
     _clearLoadingStates();
   }
 });
+
+// ── State Preservation Helpers (Bứt phá giới hạn Webview) ──
+function saveAppState() {
+  try {
+    const activeTab = document.querySelector('#mainTabBar .tab.active')?.dataset?.tab || 'unit';
+    localStorage.setItem('cj_last_main_tab', activeTab);
+    
+    const scrollContainer = document.getElementById('desktopPanelsWrapper');
+    if (scrollContainer) {
+      localStorage.setItem('cj_last_scroll_top', scrollContainer.scrollTop);
+    }
+  } catch(e) {
+    console.error('[State] saveAppState error:', e);
+  }
+}
+
+function restoreAppState() {
+  try {
+    const lastTab = localStorage.getItem('cj_last_main_tab');
+    if (lastTab) {
+      const tabEl = document.querySelector(`#mainTabBar .tab[data-tab="${lastTab}"]`);
+      if (tabEl) {
+        switchMainTab(tabEl, lastTab);
+      }
+    }
+    const lastScroll = localStorage.getItem('cj_last_scroll_top');
+    if (lastScroll) {
+      const scrollContainer = document.getElementById('desktopPanelsWrapper');
+      if (scrollContainer) {
+        setTimeout(() => {
+          scrollContainer.scrollTop = parseFloat(lastScroll);
+        }, 180);
+      }
+    }
+  } catch(e) {
+    console.error('[State] restoreAppState error:', e);
+  }
+}
 
 // ── Deep Link Handler ──
 function _getDeepLinkProfileId() {
