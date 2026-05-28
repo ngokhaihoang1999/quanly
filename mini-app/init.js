@@ -662,12 +662,12 @@ function _resetHeaderStyle(header) {
         maxScroll = Math.max(20, maxPossibleScroll - 10);
       }
 
-      // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight > clientHeight + 80)
-      // Thêm cơ chế giữ trạng thái cuộn (scrollTop > 5) để triệt tiêu vòng lặp phản hồi chiều cao gây giật hình (machine-gun oscillation)
-      const isScrollable = (scrollTop > 5) || (scrollHeight > clientHeight + 80);
+      // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight - clientHeight > maxScroll + 30)
+      // Điều này triệt tiêu hoàn toàn vòng lặp phản hồi chiều cao gây giật hình khi header co lại (machine-gun oscillation)
+      const isScrollable = (scrollHeight - clientHeight) > (maxScroll + 30);
 
       if (!isScrollable) {
-        // Trang quá ngắn -> Luôn giữ header mở rộng đầy đủ
+        // Trang quá ngắn -> Luôn giữ header mở rộng đầy đủ để tránh giật hình
         _resetHeaderStyle(header);
         header.classList.remove('header-collapsed');
         const btn = document.getElementById('headerCollapseBtn');
