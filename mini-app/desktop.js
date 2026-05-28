@@ -18,9 +18,9 @@ function _injectWindowControls() {
     b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = '#bbb'; };
     return b;
   };
-  const btnMin = mkBtn('winBtnMin', '\u2500', 'Thu nho', 'rgba(255,255,255,0.15)');
-  const btnMax = mkBtn('winBtnMax', '\u25A1', 'Phong to', 'rgba(255,255,255,0.15)');
-  const btnClose = mkBtn('winBtnClose', '\u2715', 'Dong', '#e53e3e');
+  const btnMin = mkBtn('winBtnMin', '\u2500', 'Thu nhỏ', 'rgba(255,255,255,0.15)');
+  const btnMax = mkBtn('winBtnMax', '\u25A1', 'Phóng to', 'rgba(255,255,255,0.15)');
+  const btnClose = mkBtn('winBtnClose', '\u2715', 'Đóng', '#e53e3e');
   bar.appendChild(btnMin);
   bar.appendChild(btnMax);
   bar.appendChild(btnClose);
@@ -29,18 +29,24 @@ function _injectWindowControls() {
   // Actions
   btnMin.onclick = () => {
     try {
-      if (tg && typeof tg.minimize === 'function') {
-        tg.minimize();
+      const tgWA = window.Telegram?.WebApp;
+      if (tgWA && typeof tgWA.minimize === 'function') {
+        tgWA.minimize();
+      } else {
+        console.warn('[WinCtrl] window.Telegram.WebApp.minimize is not available');
       }
     } catch(e){ console.log('[WinCtrl] minimize err:', e); }
   };
   btnMax.onclick = () => {
     try {
-      if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
+      const tgWA = window.Telegram?.WebApp;
+      if (_isFullscreen && tgWA && tgWA.exitFullscreen) { tgWA.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
+      else if (tgWA && tgWA.requestFullscreen) { tgWA.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
+      else if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
       else if (tg && tg.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
     } catch(e){ console.log('[WinCtrl] fullscreen err:', e); }
   };
-  btnClose.onclick = () => { try { if (tg && tg.close) tg.close(); else window.close(); } catch(e){} };
+  btnClose.onclick = () => { try { const tgWA = window.Telegram?.WebApp; if (tgWA && tgWA.close) tgWA.close(); else if (tg && tg.close) tg.close(); else window.close(); } catch(e){} };
 
   // Auto-hide after 3s, show on hover
   let ht = setTimeout(() => { bar.style.opacity = '0.2'; }, 3000);

@@ -206,7 +206,7 @@ function renderNoteCard(note) {
   const parsed = parseNoteContent(note.content);
 
   return `
-  <div class="pnote-card" data-note-id="${note.id}" style="background:${c.bg};border-color:${c.border}; display: flex; flex-direction: column;" onclick="toggleNoteExpand(this)">
+  <div class="pnote-card" data-note-id="${note.id}" style="background:${c.bg};border-color:${c.border}; display: flex; flex-direction: column;" onclick="toggleNoteExpand(this, event)">
     <div class="pnote-header" style="background:${c.headerBg};">
       <div class="pnote-title-row">
         <span class="pnote-title" ${canEdit ? 'contenteditable="true"' : ''} onblur="saveNoteInlineTitle(this, '${note.id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onclick="event.stopPropagation();" style="color:${c.text};">${escHtml(note.title || 'Ghi chú')}</span>
@@ -603,58 +603,138 @@ function autoArrangeNotes() {
 }
 
 // ── UI Interactions (list mode) ──
+function placeCaretAtEnd(el) {
+  el.focus();
+  if (typeof window.getSelection !== "undefined" && typeof document.createRange !== "undefined") {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
 function setupClickAnywhereToType(bodyEl, contentEl, noteId) {
   if (!bodyEl || !contentEl || bodyEl.dataset.autofocusBound) return;
   bodyEl.dataset.autofocusBound = '1';
   
   bodyEl.addEventListener('mousedown', e => {
-    if (e.target.closest('button') || e.target.closest('.embedded-media-wrapper') || e.target.closest('.media-link-popover') || e.target.closest('.note-toolbar')) return;
-    
-    const rect = contentEl.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    
-    let contentBottom = 0;
-    try {
-      const range = document.createRange();
-      range.selectNodeContents(contentEl);
-      const rangeRect = range.getBoundingClientRect();
-      contentBottom = rangeRect.bottom - rect.top;
-    } catch(err) {
-      contentBottom = contentEl.scrollHeight || 20;
+    if (e.target.closest('button') || 
+        e.target.closest('.embedded-media-wrapper') || 
+        e.target.closest('.media-link-popover') || 
+        e.target.closest('.note-toolbar') ||
+        e.target.closest('.board-note-resize') ||
+        e.target.closest('.pnote-actions')) {
+      return;
     }
     
-    // Case A: Click is below the text bottom -> fill Y gap with lines and X gap with spaces on last line
-    if (clickY > contentBottom + 10) {
+    // Dynamically measure the precise space width and line height of contentEl
+    const tempSpan = document.createElement('span');
+    tempSpan.style.visibility = 'hidden';
+    tempSpan.style.position = 'absolute';
+    tempSpan.style.whiteSpace = 'pre';
+    tempSpan.innerHTML = '&nbsp;'.repeat(20);
+    contentEl.appendChild(tempSpan);
+    const spaceWidth = tempSpan.getBoundingClientRect().width / 20 || 8;
+    contentEl.removeChild(tempSpan);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.position = 'absolute';
+    tempDiv.innerHTML = '&nbsp;';
+    contentEl.appendChild(tempDiv);
+    const lineHeight = tempDiv.getBoundingClientRect().height || 20;
+    contentEl.removeChild(tempDiv);
+
+    const rect = contentEl.getBoundingClientRect();
+    const style = window.getComputedStyle(contentEl);
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    
+    const clickX = e.clientX - rect.left - paddingLeft;
+    const clickY = e.clientY - rect.top - paddingTop;
+    
+    let contentBottom = 0;
+    if (contentEl.children.length > 0) {
+      const lastChild = contentEl.children[contentEl.children.length - 1];
+      const lastChildRect = lastChild.getBoundingClientRect();
+      contentBottom = lastChildRect.bottom - rect.top - paddingTop;
+    } else {
+      contentBottom = contentEl.clientHeight - paddingTop;
+    }
+    
+    // Case A: Click is below the text bottom
+    if (clickY > contentBottom + lineHeight / 2) {
+      e.preventDefault();
       const gapY = clickY - contentBottom;
-      const lineHeight = 20;
-      const linesToAdd = Math.floor(gapY / lineHeight);
+      const linesToAdd = Math.round(gapY / lineHeight);
       if (linesToAdd > 0) {
+        if (contentEl.children.length === 0 && contentEl.textContent.trim() === '') {
+          contentEl.innerHTML = '';
+        }
+        
         for (let i = 0; i < linesToAdd - 1; i++) {
           const div = document.createElement('div');
           div.innerHTML = '<br>';
           contentEl.appendChild(div);
         }
         const lastDiv = document.createElement('div');
-        const spacesCount = Math.max(0, Math.floor((clickX - 8) / 8));
+        const spacesCount = Math.max(0, Math.round(clickX / spaceWidth));
         lastDiv.innerHTML = '&nbsp;'.repeat(spacesCount) + '<br>';
         contentEl.appendChild(lastDiv);
+        
         saveNoteInline(noteId);
+        
+        setTimeout(() => {
+          placeCaretAtEnd(lastDiv);
+        }, 10);
       }
     } 
-    // Case B: Click is on or to the right of an existing line -> check if clicked to the right of its text
+    // Case B: Click is on or to the right of an existing line
     else {
       const children = contentEl.children;
       let targetLine = null;
+      
       for (let i = 0; i < children.length; i++) {
         const child = children[i];
         const childRect = child.getBoundingClientRect();
-        const childTop = childRect.top - rect.top;
-        const childBottom = childRect.bottom - rect.top;
+        const childTop = childRect.top - rect.top - paddingTop;
+        const childBottom = childRect.bottom - rect.top - paddingTop;
         if (clickY >= childTop && clickY <= childBottom) {
           targetLine = child;
           break;
         }
+      }
+      
+      // Fallback: if click in vertical gap, pick closest line
+      if (!targetLine && children.length > 0) {
+        let minDistance = Infinity;
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          const childRect = child.getBoundingClientRect();
+          const childCenter = (childRect.top + childRect.bottom) / 2 - rect.top - paddingTop;
+          const dist = Math.abs(clickY - childCenter);
+          if (dist < minDistance) {
+            minDistance = dist;
+            targetLine = child;
+          }
+        }
+      }
+      
+      if (children.length === 0) {
+        e.preventDefault();
+        const div = document.createElement('div');
+        const spacesCount = Math.max(0, Math.round(clickX / spaceWidth));
+        div.innerHTML = '&nbsp;'.repeat(spacesCount) + '<br>';
+        contentEl.appendChild(div);
+        
+        saveNoteInline(noteId);
+        
+        setTimeout(() => {
+          placeCaretAtEnd(div);
+        }, 10);
+        return;
       }
       
       if (targetLine) {
@@ -664,9 +744,10 @@ function setupClickAnywhereToType(bodyEl, contentEl, noteId) {
           const rangeRect = range.getBoundingClientRect();
           const textRight = rangeRect.right;
           
-          if (e.clientX > textRight + 12) {
+          if (e.clientX > textRight + spaceWidth / 2) {
+            e.preventDefault();
             const gapX = e.clientX - textRight;
-            const spacesToAdd = Math.max(0, Math.floor(gapX / 8));
+            const spacesToAdd = Math.max(0, Math.round(gapX / spaceWidth));
             if (spacesToAdd > 0) {
               const br = targetLine.querySelector('br');
               const spacesHtml = '&nbsp;'.repeat(spacesToAdd);
@@ -675,44 +756,40 @@ function setupClickAnywhereToType(bodyEl, contentEl, noteId) {
                 span.innerHTML = spacesHtml;
                 targetLine.insertBefore(span, br);
               } else {
-                targetLine.innerHTML += spacesHtml;
+                const span = document.createElement('span');
+                span.innerHTML = spacesHtml;
+                targetLine.appendChild(span);
               }
+              
               saveNoteInline(noteId);
+              
+              setTimeout(() => {
+                placeCaretAtEnd(targetLine);
+              }, 10);
             }
           }
         } catch(err) {
-          console.error(err);
+          console.error('[Autofocus] targetLine range error:', err);
         }
-      } else {
-        // Plain text editor with no block child elements
-        try {
-          const range = document.createRange();
-          range.selectNodeContents(contentEl);
-          const rangeRect = range.getBoundingClientRect();
-          const textRight = rangeRect.right;
-          if (e.clientX > textRight + 12) {
-            const gapX = e.clientX - textRight;
-            const spacesToAdd = Math.max(0, Math.floor(gapX / 8));
-            if (spacesToAdd > 0) {
-              contentEl.innerHTML += '&nbsp;'.repeat(spacesToAdd);
-              saveNoteInline(noteId);
-            }
-          }
-        } catch(err) {}
       }
     }
-    
-    setTimeout(() => contentEl.focus(), 1);
   });
 }
 
-function toggleNoteExpand(el) {
+function toggleNoteExpand(el, event) {
   const preview = el.querySelector('.pnote-preview');
   const full = el.querySelector('.pnote-full-editor') || el.querySelector('.pnote-full');
   const toolbar = el.querySelector('.note-toolbar');
   if (!preview || !full) return;
   
   const isExpanded = full.style.display !== 'none';
+  
+  if (event && isExpanded) {
+    // If note is already expanded, only collapse if the user clicks on the header (or its children)
+    if (!event.target.closest('.pnote-header')) {
+      return;
+    }
+  }
   
   preview.style.display = isExpanded ? 'block' : 'none';
   full.style.display = isExpanded ? 'none' : (full.classList.contains('pnote-full-editor') ? 'flex' : 'block');
