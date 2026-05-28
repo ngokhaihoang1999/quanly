@@ -3,7 +3,9 @@
 // Depends on: tg, switchTab, isFresh, desktopConfig globals
 
 // ── Window Controls ──
-let _isFullscreen = false;
+let _isFullscreen = localStorage.getItem('cj_last_fullscreen') === '1';
+window._isFullscreen = _isFullscreen;
+
 function _injectWindowControls() {
   if (document.getElementById('winCtrlBar')) return;
   const bar = document.createElement('div');
@@ -18,7 +20,7 @@ function _injectWindowControls() {
     b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = '#bbb'; };
     return b;
   };
-  const btnMax = mkBtn('winBtnMax', '\u25A1', 'Phóng to', 'rgba(255,255,255,0.15)');
+  const btnMax = mkBtn('winBtnMax', _isFullscreen ? '\u25A3' : '\u25A1', 'Phóng to', 'rgba(255,255,255,0.15)');
   const btnClose = mkBtn('winBtnClose', '\u2715', 'Đóng', '#e53e3e');
   bar.appendChild(btnMax);
   bar.appendChild(btnClose);
@@ -28,10 +30,18 @@ function _injectWindowControls() {
   btnMax.onclick = () => {
     try {
       const tgWA = window.Telegram?.WebApp;
-      if (_isFullscreen && tgWA && tgWA.exitFullscreen) { tgWA.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
-      else if (tgWA && tgWA.requestFullscreen) { tgWA.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
-      else if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
-      else if (tg && tg.requestFullscreen) { tg.requestFullscreen(); _isFullscreen = true; btnMax.textContent = '\u25A3'; }
+      if (_isFullscreen) {
+        if (tgWA && tgWA.exitFullscreen) { tgWA.exitFullscreen(); }
+        else if (tg && tg.exitFullscreen) { tg.exitFullscreen(); }
+        _isFullscreen = false;
+      } else {
+        if (tgWA && tgWA.requestFullscreen) { tgWA.requestFullscreen(); }
+        else if (tg && tg.requestFullscreen) { tg.requestFullscreen(); }
+        _isFullscreen = true;
+      }
+      window._isFullscreen = _isFullscreen;
+      localStorage.setItem('cj_last_fullscreen', _isFullscreen ? '1' : '0');
+      btnMax.textContent = _isFullscreen ? '\u25A3' : '\u25A1';
     } catch(e){ console.log('[WinCtrl] fullscreen err:', e); }
   };
   btnClose.onclick = () => { 

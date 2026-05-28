@@ -136,11 +136,23 @@ function getSemesterFilter() {
 }
 
 // ── Init ──
+// ── Init ──
 document.addEventListener('DOMContentLoaded', async () => {
   if (tg) {
     tg.ready();
     tg.expand();
     _injectWindowControls();
+    try {
+      const lastFullscreen = localStorage.getItem('cj_last_fullscreen') === '1';
+      if (lastFullscreen) {
+        const tgWA = window.Telegram?.WebApp;
+        if (tgWA && typeof tgWA.requestFullscreen === 'function') {
+          tgWA.requestFullscreen();
+        } else if (tg && typeof tg.requestFullscreen === 'function') {
+          tg.requestFullscreen();
+        }
+      }
+    } catch(e) { console.warn('[WinCtrl] Fullscreen restore failed:', e); }
   }
   _showPinLock();
   if (_isPinEnabled() && !_pinUnlocked) {
@@ -181,6 +193,92 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ── State Preservation Helpers (Bứt phá giới hạn Webview) ──
+
+function getInputUniqueId(input) {
+  if (input.id) return 'id:' + input.id;
+  if (input.name) {
+    const parentModal = input.closest('.modal-overlay, .modal, form, [id]');
+    const prefix = parentModal ? parentModal.id || parentModal.className.split(' ')[0] : 'body';
+    return 'name:' + prefix + '_' + input.name;
+  }
+  let path = '';
+  let el = input;
+  while (el && el.nodeType === Node.ELEMENT_NODE && el !== document.body) {
+    let siblingIndex = 1;
+    let sib = el.previousSibling;
+    while (sib) {
+      if (sib.nodeType === Node.ELEMENT_NODE && sib.tagName === el.tagName) {
+        siblingIndex++;
+      }
+      sib = sib.previousSibling;
+    }
+    path = '/' + el.tagName.toLowerCase() + '[' + siblingIndex + ']' + path;
+    el = el.parentNode;
+  }
+  return 'path:' + path;
+}
+
+function saveFormInputs() {
+  try {
+    const data = {};
+    const inputs = document.querySelectorAll('input:not([type="password"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
+    inputs.forEach(input => {
+      if (input.id && (input.id.includes('pin') || input.id.includes('Pin'))) return;
+      if (input.closest('#pinLockOverlay') || input.closest('#pinSetupModal')) return;
+      
+      const uniqueId = getInputUniqueId(input);
+      data[uniqueId] = {
+        value: input.value,
+        checked: false
+      };
+    });
+
+    const checkRadios = document.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+    checkRadios.forEach(input => {
+      if (input.id && (input.id.includes('pin') || input.id.includes('Pin'))) return;
+      if (input.closest('#pinLockOverlay') || input.closest('#pinSetupModal')) return;
+      
+      const uniqueId = getInputUniqueId(input);
+      data[uniqueId] = {
+        value: input.value,
+        checked: input.checked
+      };
+    });
+
+    localStorage.setItem('cj_last_form_inputs', JSON.stringify(data));
+  } catch(e) {
+    console.error('[State] saveFormInputs error:', e);
+  }
+}
+
+function restoreFormInputs() {
+  try {
+    const dataStr = localStorage.getItem('cj_last_form_inputs');
+    if (!dataStr) return;
+    const data = JSON.parse(dataStr);
+    
+    const inputs = document.querySelectorAll('input, textarea, select');
+    inputs.forEach(input => {
+      if (input.id && (input.id.includes('pin') || input.id.includes('Pin'))) return;
+      if (input.closest('#pinLockOverlay') || input.closest('#pinSetupModal')) return;
+
+      const uniqueId = getInputUniqueId(input);
+      if (data[uniqueId] !== undefined) {
+        const saved = data[uniqueId];
+        if (input.type === 'checkbox' || input.type === 'radio') {
+          input.checked = saved.checked;
+        } else {
+          input.value = saved.value;
+        }
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  } catch(e) {
+    console.error('[State] restoreFormInputs error:', e);
+  }
+}
+
 function saveAppState() {
   try {
     // 1. Save active main tab
@@ -216,6 +314,40 @@ function saveAppState() {
     } else {
       localStorage.removeItem('cj_last_editing_note_id');
     }
+
+    // 5. Save open modals
+    const openModals = Array.from(document.querySelectorAll('.modal-overlay.open'))
+      .map(el => el.id)
+      .filter(id => id && !id.includes('pin') && !id.includes('Pin') && id !== 'pinLockOverlay' && id !== 'pinSetupModal');
+    localStorage.setItem('cj_last_open_modals', JSON.stringify(openModals));
+
+    // 6. Save active Hapja detail ID
+    if (openModals.includes('hapjaDetailModal') && typeof _currentHapjaDetail !== 'undefined' && _currentHapjaDetail) {
+      localStorage.setItem('cj_last_hapja_detail_id', _currentHapjaDetail.id);
+    } else {
+      localStorage.removeItem('cj_last_hapja_detail_id');
+    }
+
+    // 7. Save active Record creator status
+    if (openModals.includes('addRecordModal')) {
+      localStorage.setItem('cj_last_record_modal_type', typeof currentRecordType !== 'undefined' ? currentRecordType : '');
+      const saveBtn = document.querySelector('#addRecordModal .save-btn');
+      const readOnly = saveBtn && saveBtn.style.display === 'none';
+      localStorage.setItem('cj_last_record_modal_readonly', readOnly ? '1' : '0');
+      if (typeof currentRecordId !== 'undefined' && currentRecordId) {
+        localStorage.setItem('cj_last_record_id', currentRecordId);
+      } else {
+        localStorage.removeItem('cj_last_record_id');
+      }
+    } else {
+      localStorage.removeItem('cj_last_record_modal_type');
+      localStorage.removeItem('cj_last_record_modal_readonly');
+      localStorage.removeItem('cj_last_record_id');
+    }
+
+    // 8. Serialize all typed values dynamically
+    saveFormInputs();
+
     console.log('[State] saveAppState: saved successfully.');
   } catch(e) {
     console.error('[State] saveAppState error:', e);
@@ -223,7 +355,6 @@ function saveAppState() {
 }
 
 // Bind saveAppState to page unload & visibility change events
-// This captures the native Telegram title bar Close "✕" button click!
 window.addEventListener('beforeunload', saveAppState);
 window.addEventListener('pagehide', saveAppState);
 document.addEventListener('visibilitychange', () => {
@@ -231,6 +362,28 @@ document.addEventListener('visibilitychange', () => {
     saveAppState();
   }
 });
+
+// Debounced savers for keyboard inputs & viewport scrolling
+let _inputSaveDebounce = null;
+document.addEventListener('input', e => {
+  if (e.target.id && (e.target.id.includes('pin') || e.target.id.includes('Pin'))) return;
+  if (e.target.closest('#pinLockOverlay') || e.target.closest('#pinSetupModal')) return;
+  clearTimeout(_inputSaveDebounce);
+  _inputSaveDebounce = setTimeout(() => {
+    saveAppState();
+  }, 500);
+});
+
+let _scrollSaveDebounce = null;
+document.addEventListener('scroll', e => {
+  const scrollContainer = document.getElementById('desktopPanelsWrapper');
+  if (scrollContainer && e.target === scrollContainer) {
+    clearTimeout(_scrollSaveDebounce);
+    _scrollSaveDebounce = setTimeout(() => {
+      saveAppState();
+    }, 300);
+  }
+}, true);
 
 function restoreAppState() {
   try {
@@ -254,22 +407,83 @@ function restoreAppState() {
       }, 300);
     }
     
-    // 3. Restore active note modal editing state
+    // 3. Restore active note modal editing state (with dynamic cache safety check)
     const lastEditingNoteId = localStorage.getItem('cj_last_editing_note_id');
     if (lastEditingNoteId && typeof openEditNoteModal === 'function') {
-      setTimeout(() => {
+      (async () => {
+        if (typeof _allMyNotes === 'undefined' || !_allMyNotes || !_allMyNotes.length) {
+          if (typeof loadPersonalNotes === 'function') {
+            await loadPersonalNotes();
+          }
+        }
         openEditNoteModal(lastEditingNoteId);
-      }, 600);
+      })();
     }
+
+    // 4. Restore static open modals
+    try {
+      const openModalsStr = localStorage.getItem('cj_last_open_modals');
+      if (openModalsStr) {
+        const ids = JSON.parse(openModalsStr);
+        ids.forEach(id => {
+          if (id === 'hapjaDetailModal' || id === 'addRecordModal' || id === 'createNoteModal') return; // Handled separately
+          const el = document.getElementById(id);
+          if (el) el.classList.add('open');
+        });
+      }
+    } catch(e) { console.warn('[State] Static modal restore failed:', e); }
+
+    // 5. Restore Hapja detail modal
+    const lastHapjaDetailId = localStorage.getItem('cj_last_hapja_detail_id');
+    if (lastHapjaDetailId && typeof openHapjaDetail === 'function') {
+      setTimeout(() => {
+        openHapjaDetail(lastHapjaDetailId);
+      }, 500);
+    }
+
+    // 6. Restore record creator modal
+    const lastRecordType = localStorage.getItem('cj_last_record_modal_type');
+    const lastRecordReadOnly = localStorage.getItem('cj_last_record_modal_readonly') === '1';
+    const lastRecordId = localStorage.getItem('cj_last_record_id');
+    if (lastRecordType && typeof openAddRecordModal === 'function') {
+      if (lastRecordId) {
+        (async () => {
+          try {
+            const res = await sbFetch(`/rest/v1/records?id=eq.${lastRecordId}&select=*`);
+            const rows = await res.json();
+            if (rows && rows[0]) {
+              openAddRecordModal(lastRecordType, rows[0].content, lastRecordReadOnly);
+            } else {
+              openAddRecordModal(lastRecordType, null, lastRecordReadOnly);
+            }
+          } catch(e) {
+            openAddRecordModal(lastRecordType, null, lastRecordReadOnly);
+          }
+        })();
+      } else {
+        openAddRecordModal(lastRecordType, null, lastRecordReadOnly);
+      }
+    }
+
+    // 7. Restore unsaved inputs (must be run after modals are opened)
+    setTimeout(() => {
+      restoreFormInputs();
+    }, 700);
     
-    // 4. Restore scroll positions
+    // 8. Restore scroll positions with progressive self-healing check
     const lastScroll = localStorage.getItem('cj_last_scroll_top');
     if (lastScroll) {
       const scrollContainer = document.getElementById('desktopPanelsWrapper');
       if (scrollContainer) {
-        setTimeout(() => {
-          scrollContainer.scrollTop = parseFloat(lastScroll);
-        }, 400);
+        let scrollAttempts = 0;
+        const scrollVal = parseFloat(lastScroll);
+        const scrollInterval = setInterval(() => {
+          scrollContainer.scrollTop = scrollVal;
+          scrollAttempts++;
+          if (scrollAttempts >= 10 || scrollContainer.scrollTop >= scrollVal - 5) {
+            clearInterval(scrollInterval);
+          }
+        }, 150);
       }
     }
     console.log('[State] restoreAppState: restored successfully.');
