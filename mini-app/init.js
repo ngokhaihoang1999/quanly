@@ -491,6 +491,11 @@ function switchFormTab(el, cardId) {
     if (typeof markChatAsRead === 'function') markChatAsRead(currentProfileId);
     loadProfileChat(currentProfileId);
   }
+  
+  // Auto-save state on form tab switch
+  if (typeof saveAppState === 'function') {
+    saveAppState();
+  }
 }
 function switchMainTab(el, tab) {
   haptic('light');
@@ -540,6 +545,11 @@ function switchMainTab(el, tab) {
   if (tab==='reports' && typeof loadReports === 'function') { if (!isFresh('reports')) loadReports(); }
   if (tab==='notes' && typeof initNotesTab === 'function') { initNotesTab(); }
   if (tab !== 'notes' && typeof stopNotesPoll === 'function') stopNotesPoll();
+  
+  // Auto-save state on main tab switch
+  if (typeof saveAppState === 'function') {
+    saveAppState();
+  }
 }
 
 // ── Modal Close on Overlay Click ──
@@ -726,6 +736,14 @@ function _resetHeaderStyle(header) {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', () => {
+      // Debounce scroll state save in real-time
+      clearTimeout(window._scrollSaveTimeout);
+      window._scrollSaveTimeout = setTimeout(() => {
+        try {
+          localStorage.setItem('cj_last_scroll_top', scrollContainer.scrollTop);
+        } catch(e) {}
+      }, 300);
+
       // Nếu người dùng đã chủ động thu gọn thủ công, giữ nguyên không tự động thay đổi
       if (_headerManualCollapsed) return;
 
