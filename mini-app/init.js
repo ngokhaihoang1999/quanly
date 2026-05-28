@@ -261,17 +261,29 @@ function restoreFormInputs() {
     inputs.forEach(input => {
       if (input.id && (input.id.includes('pin') || input.id.includes('Pin'))) return;
       if (input.closest('#pinLockOverlay') || input.closest('#pinSetupModal')) return;
+      
+      // Do not overwrite currently focused elements to avoid interrupting user typing
+      if (document.activeElement === input) return;
 
       const uniqueId = getInputUniqueId(input);
       if (data[uniqueId] !== undefined) {
         const saved = data[uniqueId];
+        let changed = false;
         if (input.type === 'checkbox' || input.type === 'radio') {
-          input.checked = saved.checked;
+          if (input.checked !== saved.checked) {
+            input.checked = saved.checked;
+            changed = true;
+          }
         } else {
-          input.value = saved.value;
+          if (input.value !== saved.value) {
+            input.value = saved.value;
+            changed = true;
+          }
         }
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        if (changed) {
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       }
     });
   } catch(e) {
@@ -374,6 +386,12 @@ document.addEventListener('input', e => {
   }, 500);
 });
 
+document.addEventListener('change', e => {
+  if (e.target.id && (e.target.id.includes('pin') || e.target.id.includes('Pin'))) return;
+  if (e.target.closest('#pinLockOverlay') || e.target.closest('#pinSetupModal')) return;
+  saveAppState();
+});
+
 let _scrollSaveDebounce = null;
 document.addEventListener('scroll', e => {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
@@ -465,10 +483,15 @@ function restoreAppState() {
       }
     }
 
-    // 7. Restore unsaved inputs (must be run after modals are opened)
-    setTimeout(() => {
+    // 7. Restore unsaved inputs progressively (over 3 seconds to survive async database fetches)
+    let _restoreFormAttempts = 0;
+    const _restoreFormInterval = setInterval(() => {
       restoreFormInputs();
-    }, 700);
+      _restoreFormAttempts++;
+      if (_restoreFormAttempts >= 15) {
+        clearInterval(_restoreFormInterval);
+      }
+    }, 200);
     
     // 8. Restore scroll positions with progressive self-healing check
     const lastScroll = localStorage.getItem('cj_last_scroll_top');

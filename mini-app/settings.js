@@ -225,7 +225,8 @@ function _applyTabOrder(order, hidden = []) {
     bar.appendChild(tab);
     if (key === 'staff') return;
     if (key === 'reports') return;
-    tab.style.display = hiddenSet.has(key) ? 'none' : '';
+    const isPinned = typeof _isTabPinned === 'function' && _isTabPinned(key);
+    tab.style.display = (hiddenSet.has(key) || isPinned) ? 'none' : '';
   });
   _updateTabBarMode();
 }
