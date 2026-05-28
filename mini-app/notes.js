@@ -410,43 +410,10 @@ function _initBoardNotes(container) {
       _initNoteEmbeddedMedia(mediaCanvas, noteId);
     }
 
-    // Bind click-anywhere-to-type handler (vertical autofocus space filling)
+    // Bind click-anywhere-to-type handler (2D space alignment)
     const bodyEl = el.querySelector('.board-note-body');
     const contentEl = el.querySelector('.board-note-content');
-    if (bodyEl && contentEl) {
-      bodyEl.addEventListener('mousedown', e => {
-        if (e.target.closest('button') || e.target.closest('.embedded-media-wrapper') || e.target.closest('.media-link-popover') || e.target.closest('.note-toolbar')) return;
-        
-        const rect = contentEl.getBoundingClientRect();
-        const clickY = e.clientY - rect.top;
-        
-        let contentBottom = 0;
-        try {
-          const range = document.createRange();
-          range.selectNodeContents(contentEl);
-          const rangeRect = range.getBoundingClientRect();
-          contentBottom = rangeRect.bottom - rect.top;
-        } catch(err) {
-          contentBottom = contentEl.scrollHeight || 20;
-        }
-        
-        if (clickY > contentBottom + 10) {
-          const gap = clickY - contentBottom;
-          const lineHeight = 20;
-          const linesToAdd = Math.floor(gap / lineHeight);
-          if (linesToAdd > 0) {
-            for (let i = 0; i < linesToAdd; i++) {
-              const div = document.createElement('div');
-              div.innerHTML = '<br>';
-              contentEl.appendChild(div);
-            }
-            saveNoteInline(noteId);
-          }
-        }
-        
-        setTimeout(() => contentEl.focus(), 1);
-      });
-    }
+    setupClickAnywhereToType(bodyEl, contentEl, noteId);
 
     if (isFloating) {
       document.body.appendChild(el);
@@ -636,6 +603,109 @@ function autoArrangeNotes() {
 }
 
 // ── UI Interactions (list mode) ──
+function setupClickAnywhereToType(bodyEl, contentEl, noteId) {
+  if (!bodyEl || !contentEl || bodyEl.dataset.autofocusBound) return;
+  bodyEl.dataset.autofocusBound = '1';
+  
+  bodyEl.addEventListener('mousedown', e => {
+    if (e.target.closest('button') || e.target.closest('.embedded-media-wrapper') || e.target.closest('.media-link-popover') || e.target.closest('.note-toolbar')) return;
+    
+    const rect = contentEl.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    let contentBottom = 0;
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(contentEl);
+      const rangeRect = range.getBoundingClientRect();
+      contentBottom = rangeRect.bottom - rect.top;
+    } catch(err) {
+      contentBottom = contentEl.scrollHeight || 20;
+    }
+    
+    // Case A: Click is below the text bottom -> fill Y gap with lines and X gap with spaces on last line
+    if (clickY > contentBottom + 10) {
+      const gapY = clickY - contentBottom;
+      const lineHeight = 20;
+      const linesToAdd = Math.floor(gapY / lineHeight);
+      if (linesToAdd > 0) {
+        for (let i = 0; i < linesToAdd - 1; i++) {
+          const div = document.createElement('div');
+          div.innerHTML = '<br>';
+          contentEl.appendChild(div);
+        }
+        const lastDiv = document.createElement('div');
+        const spacesCount = Math.max(0, Math.floor((clickX - 8) / 8));
+        lastDiv.innerHTML = '&nbsp;'.repeat(spacesCount) + '<br>';
+        contentEl.appendChild(lastDiv);
+        saveNoteInline(noteId);
+      }
+    } 
+    // Case B: Click is on or to the right of an existing line -> check if clicked to the right of its text
+    else {
+      const children = contentEl.children;
+      let targetLine = null;
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        const childRect = child.getBoundingClientRect();
+        const childTop = childRect.top - rect.top;
+        const childBottom = childRect.bottom - rect.top;
+        if (clickY >= childTop && clickY <= childBottom) {
+          targetLine = child;
+          break;
+        }
+      }
+      
+      if (targetLine) {
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(targetLine);
+          const rangeRect = range.getBoundingClientRect();
+          const textRight = rangeRect.right;
+          
+          if (e.clientX > textRight + 12) {
+            const gapX = e.clientX - textRight;
+            const spacesToAdd = Math.max(0, Math.floor(gapX / 8));
+            if (spacesToAdd > 0) {
+              const br = targetLine.querySelector('br');
+              const spacesHtml = '&nbsp;'.repeat(spacesToAdd);
+              if (br) {
+                const span = document.createElement('span');
+                span.innerHTML = spacesHtml;
+                targetLine.insertBefore(span, br);
+              } else {
+                targetLine.innerHTML += spacesHtml;
+              }
+              saveNoteInline(noteId);
+            }
+          }
+        } catch(err) {
+          console.error(err);
+        }
+      } else {
+        // Plain text editor with no block child elements
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(contentEl);
+          const rangeRect = range.getBoundingClientRect();
+          const textRight = rangeRect.right;
+          if (e.clientX > textRight + 12) {
+            const gapX = e.clientX - textRight;
+            const spacesToAdd = Math.max(0, Math.floor(gapX / 8));
+            if (spacesToAdd > 0) {
+              contentEl.innerHTML += '&nbsp;'.repeat(spacesToAdd);
+              saveNoteInline(noteId);
+            }
+          }
+        } catch(err) {}
+      }
+    }
+    
+    setTimeout(() => contentEl.focus(), 1);
+  });
+}
+
 function toggleNoteExpand(el) {
   const preview = el.querySelector('.pnote-preview');
   const full = el.querySelector('.pnote-full-editor') || el.querySelector('.pnote-full');
@@ -662,41 +732,7 @@ function toggleNoteExpand(el) {
     
     const bodyEl = el.querySelector('.board-note-body');
     const contentEl = el.querySelector('.board-note-content');
-    if (bodyEl && contentEl && !bodyEl.dataset.autofocusBound) {
-      bodyEl.dataset.autofocusBound = '1';
-      bodyEl.addEventListener('mousedown', e => {
-        if (e.target.closest('button') || e.target.closest('.embedded-media-wrapper') || e.target.closest('.media-link-popover') || e.target.closest('.note-toolbar')) return;
-        
-        const rect = contentEl.getBoundingClientRect();
-        const clickY = e.clientY - rect.top;
-        
-        let contentBottom = 0;
-        try {
-          const range = document.createRange();
-          range.selectNodeContents(contentEl);
-          const rangeRect = range.getBoundingClientRect();
-          contentBottom = rangeRect.bottom - rect.top;
-        } catch(err) {
-          contentBottom = contentEl.scrollHeight || 20;
-        }
-        
-        if (clickY > contentBottom + 10) {
-          const gap = clickY - contentBottom;
-          const lineHeight = 20;
-          const linesToAdd = Math.floor(gap / lineHeight);
-          if (linesToAdd > 0) {
-            for (let i = 0; i < linesToAdd; i++) {
-              const div = document.createElement('div');
-              div.innerHTML = '<br>';
-              contentEl.appendChild(div);
-            }
-            saveNoteInline(noteId);
-          }
-        }
-        
-        setTimeout(() => contentEl.focus(), 1);
-      });
-    }
+    setupClickAnywhereToType(bodyEl, contentEl, noteId);
   }
 }
 

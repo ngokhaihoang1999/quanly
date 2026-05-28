@@ -29,8 +29,9 @@ function _injectWindowControls() {
   // Actions
   btnMin.onclick = () => {
     try {
-      if (tg && typeof tg.minimize === 'function') { tg.minimize(); return; }
-      if (_isFullscreen && tg && tg.exitFullscreen) { tg.exitFullscreen(); _isFullscreen = false; btnMax.textContent = '\u25A1'; }
+      if (tg && typeof tg.minimize === 'function') {
+        tg.minimize();
+      }
     } catch(e){ console.log('[WinCtrl] minimize err:', e); }
   };
   btnMax.onclick = () => {

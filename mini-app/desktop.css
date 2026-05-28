@@ -392,6 +392,7 @@
     background: var(--accent);
     width: 48px;
   }
+}
 
   /* ── Advanced Personal Notes Upgrade - Toolbar & Inline edit styling ── */
   .board-note {
@@ -703,7 +704,6 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
-}
 
 /* ── Force modern native-like container scrolling on mobile and narrow viewports ── */
 @media (max-width: 1023px) {
