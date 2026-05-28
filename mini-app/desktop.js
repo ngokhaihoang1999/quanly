@@ -28,15 +28,20 @@ function _injectWindowControls() {
 
   // Actions
   btnMin.onclick = () => {
+    console.log('[WinCtrl] Minimize button clicked!');
+    
+    // 1. Try native WebApp minimize call
     try {
       const tgWA = window.Telegram?.WebApp;
       if (tgWA && typeof tgWA.minimize === 'function') {
+        console.log('[WinCtrl] Executing native WebApp minimize...');
         tgWA.minimize();
       }
     } catch(err) {
-      console.log('[WinCtrl] native minimize fail, using custom:', err);
+      console.warn('[WinCtrl] Native minimize failed:', err);
     }
     
+    // 2. Custom premium glassmorphic slide-minimize (bứt phá giới hạn kỹ thuật)
     try {
       if (!document.getElementById('minimizedPillStyles')) {
         const styleTag = document.createElement('style');
@@ -46,8 +51,19 @@ function _injectWindowControls() {
             0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(14, 165, 233, 0.4)); }
             50% { transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.8)); }
           }
-          body.app-minimized > *:not(#winCtrlBar):not(#minimizedTaskbarPill):not(#minimizedPillStyles) {
-            display: none !important;
+          #desktopPanelsWrapper, .header {
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          }
+          body.app-minimized #desktopPanelsWrapper,
+          body.app-minimized .header,
+          body.app-minimized .modal-overlay {
+            transform: translateY(100vh) translateY(100px) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          body.app-minimized {
+            overflow: hidden !important;
+            background: #121214 !important;
           }
           #minimizedTaskbarPill:hover {
             border-color: rgba(14, 165, 233, 0.5) !important;
@@ -98,6 +114,7 @@ function _injectWindowControls() {
       `;
 
       pill.onclick = () => {
+        console.log('[WinCtrl] Restore app clicked!');
         document.body.classList.remove('app-minimized');
         pill.style.transform = 'translateX(-50%) translateY(100px)';
         pill.style.opacity = '0';
@@ -110,6 +127,7 @@ function _injectWindowControls() {
       setTimeout(() => {
         pill.style.transform = 'translateX(-50%) translateY(0)';
         pill.style.opacity = '1';
+        console.log('[WinCtrl] Custom minimize slide complete, pill visible.');
       }, 50);
 
     } catch(e) {
