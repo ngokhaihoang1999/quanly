@@ -2550,7 +2550,6 @@ body.tour-active #cjFloatingChatWindow {
 /* Stepper horizontal */
 .guide-stepper {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   position: relative;
   padding: 10px 0 15px;
@@ -2558,6 +2557,7 @@ body.tour-active #cjFloatingChatWindow {
   overflow-x: auto;
   scrollbar-width: none;
   gap: 6px;
+  -webkit-overflow-scrolling: touch;
 }
 .guide-stepper::-webkit-scrollbar {
   display: none;
@@ -2579,8 +2579,8 @@ body.tour-active #cjFloatingChatWindow {
   gap: 6px;
   cursor: pointer;
   z-index: 2;
-  flex: 1;
-  min-width: 58px;
+  flex-shrink: 0;
+  min-width: 68px;
 }
 .guide-step-circle {
   width: 32px;
@@ -2741,32 +2741,38 @@ body.tour-active #cjFloatingChatWindow {
   color: var(--text2);
   line-height: 1.5;
 }
-/* Guide tabs */
+/* Guide tabs - Pill Scrollable */
 .guide-tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
-  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.guide-tabs::-webkit-scrollbar {
+  display: none;
 }
 .guide-tab-btn {
-  flex: 1;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text2);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
+  transition: all 0.25s ease;
+  white-space: nowrap;
 }
 .guide-tab-btn.active {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
-  box-shadow: 0 2px 8px var(--fab-shadow);
+  box-shadow: 0 4px 10px rgba(59,130,246,0.25);
 }
 .guide-wiki-item {
   background: var(--surface2);
@@ -2774,31 +2780,93 @@ body.tour-active #cjFloatingChatWindow {
   border-radius: var(--radius-sm);
   margin-bottom: 8px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.25s ease;
+  overflow: hidden;
 }
 .guide-wiki-item:hover {
   border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 .guide-wiki-header {
-  padding: 12px;
+  padding: 12px 14px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12.5px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: var(--text1);
+  gap: 8px;
 }
 .guide-wiki-body {
-  padding: 0 12px 12px;
-  font-size: 12px;
+  padding: 0 14px 14px;
+  font-size: 11.5px;
   color: var(--text2);
-  line-height: 1.5;
+  line-height: 1.55;
   border-top: 1px dashed var(--border);
   display: none;
 }
 .guide-wiki-body.open {
   display: block;
-  padding-top: 8px;
+  padding-top: 10px;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px 0;
+}
+@media (min-width: 600px) {
+  .guide-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+/* Dynamic Mobile Optimizations for Guide Center */
+@media (max-width: 480px) {
+  .guide-center-container {
+    gap: 10px;
+  }
+  .guide-tabs {
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .guide-tab-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 16px;
+  }
+  .guide-stepper {
+    padding: 8px 0 12px;
+    margin: 2px 0 6px;
+  }
+  .guide-stepper::before {
+    top: 22px;
+  }
+  .guide-step-node {
+    min-width: 60px;
+  }
+  .guide-step-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+  .guide-step-label {
+    font-size: 8px;
+  }
+  .guide-content-panel {
+    padding: 12px;
+  }
+  .guide-content-title {
+    font-size: 13.5px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+  .guide-content-body {
+    font-size: 11px;
+    line-height: 1.5;
+  }
 }
 
 /* ==========================================================================

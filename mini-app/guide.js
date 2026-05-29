@@ -389,7 +389,7 @@ function openGuideCenter() {
 
         <!-- Tab 2: 9 Tab Hồ sơ -->
         <div id="guidePane_tabs" style="display:none;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; padding:4px 0;">
+          <div class="guide-grid">
             ${PROFILE_TABS_DATA.map(item => `
               <div class="guide-profile-tab-card">
                 <div class="guide-profile-tab-header">
