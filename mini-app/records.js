@@ -1512,11 +1512,17 @@ async function saveRecord() {
       }
     }
 
+    const payload = { content: data };
+    if (reportDate) {
+      payload.created_at = `${reportDate}T12:00:00.000Z`;
+    }
+
     if (currentRecordId) {
-      await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify({ content: data }) });
+      await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify(payload) });
       showToast('✅ Đã cập nhật!');
     } else {
-      await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({ profile_id: currentProfileId, record_type: currentRecordType, content: data }) });
+      const postPayload = { profile_id: currentProfileId, record_type: currentRecordType, ...payload };
+      await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify(postPayload) });
       showToast('✅ Đã thêm!');
 
       const p = allProfiles.find(x => x.id === currentProfileId);
