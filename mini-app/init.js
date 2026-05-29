@@ -871,10 +871,11 @@ function _resetHeaderStyle(header) {
     const naturalScrollHeight = scrollContainer.scrollHeight - currentSpacerH;
     const clientHeight = scrollContainer.clientHeight;
     
-    // Nếu nội dung tự nhiên ngắn hơn hoặc bằng chiều cao container,
-    // ta hoàn toàn không cần spacer để cuộn (tránh tạo ra khoảng trống thừa thãi).
+    // Nếu ngay cả khi cộng thêm chiều cao tối thiểu 48px của footer,
+    // trang vẫn không vượt quá chiều cao hiển thị của container,
+    // tức là trang hoàn toàn không thể cuộn được (không lo bị giật).
     // Giữ spacer ở chiều cao tối thiểu 48px làm footer thẩm mỹ.
-    if (naturalScrollHeight <= clientHeight) {
+    if (naturalScrollHeight + 48 <= clientHeight) {
       if (currentSpacerH !== 48) {
         _spacer.style.height = '48px';
       }
