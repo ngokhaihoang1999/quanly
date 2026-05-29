@@ -363,10 +363,10 @@ function openGuideCenter() {
 
         <!-- Navigation Tabs -->
         <div class="guide-tabs" id="guideTabs">
-          <div class="guide-tab-btn active" id="gtab_jondo" onclick="switchGuideTab('jondo')">📋 Quy trình hồ sơ trái</div>
-          <div class="guide-tab-btn" id="gtab_tabs" onclick="switchGuideTab('tabs')">🗂️ 9 Tab Hồ Sơ</div>
-          <div class="guide-tab-btn" id="gtab_tour" onclick="switchGuideTab('tour')">🚀 Tour Giao Diện</div>
-          <div class="guide-tab-btn" id="gtab_help" onclick="switchGuideTab('help')">💡 Hỏi đáp & Trợ giúp</div>
+          <div class="guide-tab-btn active" id="gtab_jondo" onclick="switchGuideTab('jondo')">📋 Quy trình</div>
+          <div class="guide-tab-btn" id="gtab_tabs" onclick="switchGuideTab('tabs')">🗂️ 9 Tab hồ sơ</div>
+          <div class="guide-tab-btn" id="gtab_tour" onclick="switchGuideTab('tour')">🚀 Tour nhanh</div>
+          <div class="guide-tab-btn" id="gtab_help" onclick="switchGuideTab('help')">💡 Hỏi & Đáp</div>
         </div>
 
         <!-- Tab 1: Stepper quy trình -->

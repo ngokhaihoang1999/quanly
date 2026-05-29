@@ -2741,24 +2741,18 @@ body.tour-active #cjFloatingChatWindow {
   color: var(--text2);
   line-height: 1.5;
 }
-/* Guide tabs - Pill Scrollable */
+/* Guide tabs - Robust Zero-Scroll Grid Layout */
 .guide-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
   padding-bottom: 8px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--border);
-  -webkit-overflow-scrolling: touch;
-}
-.guide-tabs::-webkit-scrollbar {
-  display: none;
 }
 .guide-tab-btn {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 8px 10px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text2);
@@ -2767,6 +2761,10 @@ body.tour-active #cjFloatingChatWindow {
   cursor: pointer;
   transition: all 0.25s ease;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .guide-tab-btn.active {
   background: var(--accent);
@@ -2823,7 +2821,7 @@ body.tour-active #cjFloatingChatWindow {
 }
 
 /* Dynamic Mobile Optimizations for Guide Center */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .guide-center-container {
     gap: 10px;
   }
@@ -2879,44 +2877,80 @@ body.tour-active #cjFloatingChatWindow {
     line-height: 1.5;
   }
   
-  /* CSS vertical flowchart layout for mobile */
+  /* CSS vertical timeline layout for mobile - ultra compact timeline */
   .guide-flowchart {
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
-    padding: 12px;
+    gap: 14px;
+    padding: 16px 16px 16px 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .guide-flowchart::before {
+    content: '';
+    position: absolute;
+    left: 25px;
+    top: 24px;
+    bottom: 24px;
+    width: 2px;
+    background: var(--border);
+    z-index: 1;
   }
   .guide-flow-step {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 0 0 22px;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
     min-width: auto;
     max-width: 100%;
-    width: 100%;
-    padding: 10px 14px;
-    box-sizing: border-box;
+    width: auto;
     text-align: left;
+    position: relative;
+    z-index: 2;
+    border-radius: 0;
+  }
+  .guide-flow-step::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface2);
+    box-shadow: 0 0 0 2px var(--border);
+    transition: all 0.2s;
+  }
+  .guide-flow-step:hover::before {
+    background: var(--accent2);
+    transform: scale(1.2);
   }
   .guide-flow-step span {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    min-width: 90px;
-    color: var(--accent2);
-    display: inline-block;
+    color: var(--text1);
+    display: block;
+    margin-bottom: 2px;
   }
   .guide-flow-step small {
-    font-size: 10px;
-    color: var(--text3);
+    font-size: 11px;
+    color: var(--text2);
     margin-top: 0;
     white-space: normal;
-    flex: 1;
-    text-align: right;
+    display: block;
+    line-height: 1.4;
+    text-align: left;
+    padding-left: 0;
   }
   .guide-flow-arrow {
-    transform: rotate(90deg);
-    margin: 4px auto;
-    font-size: 14px;
+    display: none !important;
   }
 }
 
