@@ -844,118 +844,84 @@ function _resetHeaderStyle(header) {
   }
 }
 
-// _syncHeaderToScroll: Đọc scrollTop hiện tại và áp dụng trạng thái header đúng một lần sau khi restore scroll
-function _syncHeaderToScroll() {
-  if (_headerManualCollapsed) return;
-  const scrollContainer = document.getElementById('desktopPanelsWrapper');
-  const header = document.querySelector('.header');
-  if (!scrollContainer || !header) return;
-
-  const scrollTop = scrollContainer.scrollTop;
-  const scrollHeight = scrollContainer.scrollHeight;
-  const clientHeight = scrollContainer.clientHeight;
-
-  // Tính maxScroll giống hệt logic trong scroll handler
-  let maxScroll = 66;
-  const viewAsBar = header.querySelector('.view-as-bar');
-  const semesterBar = header.querySelector('.semester-bar');
-  if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
-  if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
-  maxScroll += 20;
-  const maxPossibleScroll = scrollHeight - clientHeight;
-  if (maxPossibleScroll > 20 && maxScroll > maxPossibleScroll - 10) maxScroll = Math.max(20, maxPossibleScroll - 10);
-
-  const isScrollable = (scrollHeight - clientHeight) > (maxScroll + 30);
-  if (!isScrollable) {
-    _resetHeaderStyle(header);
-    header.classList.remove('header-collapsed');
-    const btn = document.getElementById('headerCollapseBtn');
-    if (btn) { btn.textContent = '🔼'; btn.title = 'Thu gọn header'; }
-    return;
-  }
-
-  const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
-  _applyHeaderScrollProgress(header, pct);
-}
-
 // Auto-collapsible header on scroll for mobile/narrow viewports
 (function() {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
-  if (scrollContainer) {
-    scrollContainer.addEventListener('scroll', () => {
-      // Nếu đang trong quá trình restore scroll sau khi đóng hồ sơ → bỏ qua để tránh giật header
-      if (window._scrollRestoring) return;
-      // Nếu đang mở màn hình chi tiết hồ sơ (#detailView), bỏ qua toàn bộ việc co giãn header để tránh giật lag
-      if (window.isDetailViewOpen) return;
-      const detailView = document.getElementById('detailView');
-      if (detailView && (detailView.style.display === 'block' || detailView.classList.contains('active') || detailView.offsetHeight > 0)) {
-        window.isDetailViewOpen = true; // Sync state to avoid further DOM checks
-        return;
-      }
+  if (!scrollContainer) return;
 
-      // Debounce scroll state save in real-time
-      clearTimeout(window._scrollSaveTimeout);
-      window._scrollSaveTimeout = setTimeout(() => {
-        try {
-          localStorage.setItem('cj_last_scroll_top', scrollContainer.scrollTop);
-        } catch(e) {}
-      }, 300);
+  // ── Spacer linh hoạt: đảm bảo luôn đủ scroll room để tránh oscillation ──
+  // Khi trang quá ngắn, header collapse → clientHeight tăng → scrollHeight-clientHeight giảm
+  // → reset header → header mở to → lặp lại → GIẬT. Fix: bơm thêm không gian ở cuối.
+  let _spacer = document.createElement('div');
+  _spacer.id = '_hdrScrollSpacer';
+  _spacer.setAttribute('aria-hidden', 'true');
+  _spacer.style.cssText = 'display:block;width:1px;height:0;flex-shrink:0;pointer-events:none;user-select:none;';
+  scrollContainer.appendChild(_spacer);
 
-      // Nếu người dùng đã chủ động thu gọn thủ công, giữ nguyên không tự động thay đổi
-      if (_headerManualCollapsed) return;
-
-      const header = document.querySelector('.header');
-      if (!header) return;
-
-      // Đảm bảo gỡ bỏ class transitioning ngay khi cuộn để không bị delay do transition CSS
-      header.classList.remove('header-transitioning');
-
-      const scrollTop = scrollContainer.scrollTop;
-      const scrollHeight = scrollContainer.scrollHeight;
-      const clientHeight = scrollContainer.clientHeight;
-
-      // Tính toán chiều cao co giãn thực tế động để làm mốc cuộn (maxScroll)
-      let maxScroll = 66; // Chiều cao mặc định của header-top (58px) + padding chênh lệch (4px) + margin (8px)
-      const viewAsBar = header.querySelector('.view-as-bar');
-      const semesterBar = header.querySelector('.semester-bar');
-
-      if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') {
-        maxScroll += 42; // 36px + 6px margin
-      }
-      if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') {
-        maxScroll += 42; // 36px + 6px margin
-      }
-
-      // Thêm 20px đệm để tiến trình cuộn co giãn diễn ra thật từ từ, mềm mại và tinh tế
-      maxScroll += 20;
-
-      // Giới hạn maxScroll không được vượt quá khoảng cuộn tối đa thực tế của trang.
-      // Điều này đảm bảo trên các trang có độ dài vừa phải, người dùng vẫn có thể cuộn đạt 100% tiến trình thu gọn header.
-      const maxPossibleScroll = scrollHeight - clientHeight;
-      if (maxPossibleScroll > 20 && maxScroll > maxPossibleScroll - 10) {
-        maxScroll = Math.max(20, maxPossibleScroll - 10);
-      }
-
-      // Kiểm tra xem trang có đủ dài để cuộn mượt mà không (scrollHeight - clientHeight > maxScroll + 30)
-      // Điều này triệt tiêu hoàn toàn vòng lặp phản hồi chiều cao gây giật hình khi header co lại (machine-gun oscillation)
-      const isScrollable = (scrollHeight - clientHeight) > (maxScroll + 30);
-
-      if (!isScrollable) {
-        // Trang quá ngắn -> Luôn giữ header mở rộng đầy đủ để tránh giật hình
-        _resetHeaderStyle(header);
-        header.classList.remove('header-collapsed');
-        const btn = document.getElementById('headerCollapseBtn');
-        if (btn) {
-          btn.textContent = '🔼';
-          btn.title = 'Thu gọn header';
-        }
-        return;
-      }
-
-      // Tiến trình cuộn từ 0px đến maxScroll (bám sát ngón tay 1-to-1)
-      const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
-
-      _applyHeaderScrollProgress(header, pct);
-    });
+  function _updateSpacer(requiredRoom) {
+    // Đo room thực tế (trừ đi chiều cao spacer hiện tại để không tính kép)
+    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
+    const room = scrollContainer.scrollHeight - currentSpacerH - scrollContainer.clientHeight;
+    const extra = requiredRoom - room;
+    if (extra > 0) {
+      _spacer.style.height = (currentSpacerH + extra + 10) + 'px';
+    }
+    // Không thu nhỏ spacer để tránh feedback loop
   }
+
+  scrollContainer.addEventListener('scroll', () => {
+    // Guards: bỏ qua khi đang restore scroll hoặc đang mở hồ sơ
+    if (window._scrollRestoring) return;
+    if (window.isDetailViewOpen) return;
+    const detailView = document.getElementById('detailView');
+    if (detailView && (detailView.style.display === 'block' || detailView.classList.contains('active') || detailView.offsetHeight > 0)) {
+      window.isDetailViewOpen = true;
+      return;
+    }
+
+    // Debounce scroll state save
+    clearTimeout(window._scrollSaveTimeout);
+    window._scrollSaveTimeout = setTimeout(() => {
+      try { localStorage.setItem('cj_last_scroll_top', scrollContainer.scrollTop); } catch(e) {}
+    }, 300);
+
+    if (_headerManualCollapsed) return;
+
+    const header = document.querySelector('.header');
+    if (!header) return;
+
+    header.classList.remove('header-transitioning');
+
+    const scrollTop = scrollContainer.scrollTop;
+    const scrollHeight = scrollContainer.scrollHeight;
+    const clientHeight = scrollContainer.clientHeight;
+
+    // Tính maxScroll động theo các bar đang hiển thị
+    let maxScroll = 66;
+    const viewAsBar = header.querySelector('.view-as-bar');
+    const semesterBar = header.querySelector('.semester-bar');
+    if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
+    if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
+    maxScroll += 20;
+
+    // ── Tự động bơm spacer nếu trang chưa đủ dài ──
+    // Cần ít nhất (maxScroll + 40)px scroll room để animation chạy trơn tru
+    const requiredRoom = maxScroll + 40;
+    const currentRoom = scrollHeight - clientHeight;
+    if (currentRoom < requiredRoom) {
+      _updateSpacer(requiredRoom);
+      // Không cần return — tiến hành apply progress với scrollHeight cũ,
+      // lần scroll tiếp theo sẽ đo đúng với spacer đã được thêm
+    }
+
+    // Giới hạn maxScroll theo scroll room thực tế
+    const maxPossibleScroll = scrollHeight - clientHeight;
+    if (maxPossibleScroll > 20 && maxScroll > maxPossibleScroll - 10) {
+      maxScroll = Math.max(20, maxPossibleScroll - 10);
+    }
+
+    // Tính pct và áp dụng
+    const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
+    _applyHeaderScrollProgress(header, pct);
+  });
 })();
