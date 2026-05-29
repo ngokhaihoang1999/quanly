@@ -644,6 +644,10 @@ function switchMainTab(el, tab) {
   }
 
   document.getElementById('detailView').style.display = 'none';
+  window.isDetailViewOpen = false;
+  document.body.classList.remove('detail-view-open');
+  document.documentElement.classList.remove('detail-view-open');
+  currentProfileId = null;
   document.getElementById('fabBtn').style.display = (tab==='unit'||tab==='personal') ? 'flex' : 'none';
   if (tab==='unit') { if (!isFresh('dashboard')) loadDashboard(); if (!isFresh('profiles')) loadProfiles(); }
   if (tab==='personal') { if (!isFresh('dashboard')) loadDashboard(); }

@@ -957,5 +957,10 @@ body.detail-view-open #detailView {
     background: rgba(0, 0, 0, 0.08);
     border-color: rgba(0, 0, 0, 0.08);
   }
+
+  /* Retain larger top safety padding on large desktop */
+  .notif-panel {
+    padding-top: 55px !important;
+  }
 }
 

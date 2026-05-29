@@ -932,7 +932,7 @@
   height: 100vh; background: var(--surface); z-index: 600;
   box-shadow: -4px 0 24px rgba(0,0,0,0.3);
   transition: right 0.3s ease; display: flex; flex-direction: column;
-  padding-top: 55px; /* Tránh đè nút đóng/3-dot của Telegram */
+  padding-top: 0; /* Default compact for mobile / small desktop */
 }
 .notif-panel.open { right: 0; }
 .notif-panel-header {
