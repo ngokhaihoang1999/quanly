@@ -88,6 +88,12 @@ function renderNotes() {
     return;
   }
 
+  // Clear empty state if present before smart diffing
+  const emptyStateEl = container.querySelector('.empty-state');
+  if (emptyStateEl) {
+    emptyStateEl.remove();
+  }
+
   if (!_isNotesOnBoard()) {
     clearAllFloatingNotes();
   }
@@ -103,10 +109,14 @@ function renderNotes() {
   // To avoid flickering and resetting active media (audio/video players) in other notes,
   // we update note cards individually in the DOM rather than wiping container.innerHTML.
   
-  // 1. Get all current note card DOM elements
+  // 1. Get all current note card DOM elements (from both container and document.body)
   const currentCardMap = new Map();
   if (isOnBoard) {
     container.querySelectorAll('.board-note').forEach(el => {
+      const nid = el.dataset.noteId || el.id.replace('boardNote-', '');
+      if (nid) currentCardMap.set(nid, el);
+    });
+    document.querySelectorAll('body > .board-note').forEach(el => {
       const nid = el.dataset.noteId || el.id.replace('boardNote-', '');
       if (nid) currentCardMap.set(nid, el);
     });
@@ -127,10 +137,14 @@ function renderNotes() {
     }
   }
 
-  // 4. Update or append note cards
+  // 4. Update or append note cards to their correct parents (body for floating/maximized, container for static)
   notes.forEach((n, i) => {
     const cardHtml = isOnBoard ? renderBoardNoteCard(n, i) : renderNoteCard(n);
     const existingEl = currentCardMap.get(n.id);
+    
+    const isFloating = isOnBoard && (_notesBoardLayouts[n.id]?.isFloating || n._isFloating);
+    const isMaximized = isOnBoard && (_maximizedNoteId === n.id);
+    const targetParent = (isFloating || isMaximized) ? document.body : container;
 
     if (existingEl) {
       // Compare state with the last rendered state to detect changes
@@ -151,9 +165,15 @@ function renderNotes() {
         y: _notesBoardLayouts[n.id]?.y,
         w: _notesBoardLayouts[n.id]?.w,
         h: _notesBoardLayouts[n.id]?.h,
-        isFloating: _notesBoardLayouts[n.id]?.isFloating,
+        isFloating: isFloating,
+        isMaximized: isMaximized
       };
       const newStateStr = JSON.stringify(newState);
+
+      // Verify if parent is correct
+      if (existingEl.parentNode !== targetParent) {
+        targetParent.appendChild(existingEl);
+      }
 
       if (lastStateStr !== newStateStr) {
         // State changed! Check if media is currently playing in this note
@@ -191,14 +211,14 @@ function renderNotes() {
           
           existingEl.dataset.renderedState = newStateStr;
         } else {
-          // Safe to replace outerHTML
+          // Safe to replace outerHTML in-place in its current parent
           existingEl.outerHTML = cardHtml;
-          const updatedEl = isOnBoard ? container.querySelector(`#boardNote-${n.id}`) : container.querySelector(`.pnote-card[data-note-id="${n.id}"]`);
+          const updatedEl = isOnBoard ? targetParent.querySelector(`#boardNote-${n.id}`) : targetParent.querySelector(`.pnote-card[data-note-id="${n.id}"]`);
           if (updatedEl) updatedEl.dataset.renderedState = newStateStr;
         }
       }
     } else {
-      // Append new note card
+      // Append new note card to the correct parent
       const temp = document.createElement('div');
       temp.innerHTML = cardHtml;
       const newCardEl = temp.firstElementChild;
@@ -209,10 +229,10 @@ function renderNotes() {
         _sharedBy: n._sharedBy, _canEdit: n._canEdit, _shared: n._shared, _isSharedByMe: n._isSharedByMe,
         x: _notesBoardLayouts[n.id]?.x, y: _notesBoardLayouts[n.id]?.y,
         w: _notesBoardLayouts[n.id]?.w, h: _notesBoardLayouts[n.id]?.h,
-        isFloating: _notesBoardLayouts[n.id]?.isFloating,
+        isFloating: isFloating, isMaximized: isMaximized
       };
       newCardEl.dataset.renderedState = JSON.stringify(state);
-      container.appendChild(newCardEl);
+      targetParent.appendChild(newCardEl);
     }
   });
 
@@ -504,11 +524,6 @@ function _initBoardNotes(container) {
   };
   document.addEventListener('mousedown', _boardClickOutHandler);
 
-  // Clean all old floating notes from body before moving them again
-  document.querySelectorAll('body > .board-note-floating').forEach(el => {
-    el.remove();
-  });
-
   // Global click outside to close media popovers
   document.addEventListener('mousedown', (e) => {
     if (!e.target.closest('.media-link-popover') && !e.target.closest('.note-toolbar-btn')) {
@@ -516,9 +531,14 @@ function _initBoardNotes(container) {
     }
   });
 
-  container.querySelectorAll('.board-note').forEach(el => {
+  // Find notes from both notesPanelList container and document.body (floating/maximized ones)
+  const allBoardNotes = [
+    ...container.querySelectorAll('.board-note'),
+    ...document.querySelectorAll('body > .board-note')
+  ];
+
+  allBoardNotes.forEach(el => {
     const noteId = el.dataset.noteId;
-    const isFloating = _notesBoardLayouts[noteId]?.isFloating;
 
     // Bind media handlers inside the transparent overlay canvas layer, NOT the text content layer!
     const mediaCanvas = el.querySelector('.board-note-media-canvas');
@@ -530,11 +550,6 @@ function _initBoardNotes(container) {
     const bodyEl = el.querySelector('.board-note-body');
     const contentEl = el.querySelector('.board-note-content');
     setupClickAnywhereToType(bodyEl, contentEl, noteId);
-
-    if (isFloating) {
-      document.body.appendChild(el);
-      el.classList.add('board-note-floating');
-    }
 
     const header = el.querySelector('.board-note-header');
     const resizeHandle = el.querySelector('.board-note-resize');
