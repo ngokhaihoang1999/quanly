@@ -184,6 +184,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     _handleDeepLink();
     applyDesktopLayout();
+
+    // Explicitly load data for pinned tabs on startup since resize events during fullscreen
+    // transition might have triggered early layout initialization before staff credentials were loaded.
+    if (typeof _isTabPinned === 'function') {
+      if (_isTabPinned('notes') && typeof initNotesTab === 'function') {
+        if (typeof invalidateCache === 'function') invalidateCache('notes');
+        initNotesTab();
+      }
+      if (_isTabPinned('priority') && typeof loadPriority === 'function') {
+        if (typeof invalidateCache === 'function') invalidateCache('priority');
+        loadPriority();
+      }
+      if (_isTabPinned('calendar') && typeof loadCalendar === 'function') {
+        loadCalendar(true);
+      }
+    }
+
     _updateTabBarMode();
     restoreAppState();
   } catch(e) {

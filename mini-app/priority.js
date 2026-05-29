@@ -29,6 +29,7 @@ const PRIORITY_ORDER = ['duyet_hapja', 'ngu_dong', 'thieu_vai_tro', 'ket_phase',
 
 async function loadPriority() {
   const myCode = getEffectiveStaffCode();
+  if (!myCode) return;
   const listEl = document.getElementById('priorityList');
   if (!listEl) return;
 

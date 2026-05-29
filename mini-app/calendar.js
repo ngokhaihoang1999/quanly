@@ -39,6 +39,7 @@ let _calCacheData = {};
 async function loadCalendar(force = false) {
   if (calYear === undefined) initCalendar();
   const myCode = getEffectiveStaffCode();
+  if (!myCode) return;
   const scope = getScope();
   const cacheKey = 'calendar_' + calYear + '_' + calMonth;
   
