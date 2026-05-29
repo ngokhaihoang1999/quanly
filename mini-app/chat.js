@@ -168,15 +168,12 @@ function addChatMessageToDOM(msg) {
     const isMedia = msg.message.includes('/file/bot') || msg.message.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(msg.message) || msg.message.includes('imgbb.com') || msg.message.includes('postimg.cc');
 
     timeHtml = `
-      <div class="chat-message-time" style="display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%;">
+      <div class="chat-message-time" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
         <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none;">
           ${!isMedia ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
           <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
         </span>
-        <span style="flex-grow:1; text-align:right; display:inline-flex; align-items:center; justify-content:flex-end; gap:4px;">
-          <span>${timeStr}</span>
-          <span onclick="event.stopPropagation(); toggleBubbleActions(event, '${msg.id}')" style="cursor:pointer; opacity:0.6; font-size:10px; padding: 2px 4px; display:inline-block; border-radius:4px; background:var(--surface2);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" title="Thao tác">⚙️</span>
-        </span>
+        <span style="flex-grow:1; text-align:right;">${timeStr}</span>
       </div>
     `;
   }
@@ -874,13 +871,13 @@ function formatChatMessageText(text) {
     
     if (isImage) {
       return `
-        <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation(); openChatImageModal('${displayUrl}')">
+        <div class="chat-image-wrap" style="margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 240px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="openChatImageModal('${displayUrl}')">
           <img src="${displayUrl}" style="width: 100%; max-height: 180px; object-fit: cover; display: block; border-radius: 8px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
         </div>
       `;
     } else if (isVideo) {
       return `
-        <div class="chat-video-wrap" onclick="event.stopPropagation();">
+        <div class="chat-video-wrap">
           <video src="${displayUrl}" class="chat-video-player" controls playsinline preload="metadata"></video>
         </div>
       `;
@@ -899,7 +896,7 @@ function formatChatMessageText(text) {
       }, 50);
 
       return `
-        <div class="voice-player" id="voice_player_${safeId}" onclick="event.stopPropagation();">
+        <div class="voice-player" id="voice_player_${safeId}">
           <audio id="audio_${safeId}" src="${displayUrl}" preload="metadata" data-duration="${extractedDuration}" style="display:none;"></audio>
           <button type="button" class="voice-player-play-btn" id="play_btn_${safeId}" onclick="toggleVoicePlayerPlay('${safeId}')">
             <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor" class="play-icon" style="margin-left: 2px;"><path d="M1.5 12.3V1.7c0-.9 1-1.4 1.8-.9l8 5.3c.7.4.7 1.4 0 1.9l-8 5.3c-.8.5-1.8 0-1.8-.9z"/></svg>
@@ -917,16 +914,16 @@ function formatChatMessageText(text) {
       `;
     } else if (isDocFile) {
       return `
-        <div class="chat-file-card" onclick="event.stopPropagation(); window.open('${url}', '_blank')" style="display:flex; align-items:center; gap:10px; background:var(--surface2); padding:10px; border-radius:8px; border:1px solid var(--border); cursor:pointer; margin-top:6px; max-width:280px; transition:background 0.15s; user-select:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'">
+        <div class="chat-file-card" onclick="window.open('${url}', '_blank')" style="display:flex; align-items:center; gap:10px; background:var(--surface2); padding:10px; border-radius:8px; border:1px solid var(--border); cursor:pointer; margin-top:6px; max-width:280px; transition:background 0.15s; user-select:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'">
           <div style="font-size:24px;">📄</div>
           <div style="flex:1; min-width:0; text-align:left;">
-            <div style="font-size:12px; font-weight:700; color:var(--text); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${fileName}">${fileName}</div>
-            <div style="font-size:10px; color:var(--text3);">Bấm để tải xuống</div>
+             <div style="font-size:12px; font-weight:700; color:var(--text); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${fileName}">${fileName}</div>
+             <div style="font-size:10px; color:var(--text3);">Bấm để tải xuống</div>
           </div>
         </div>
       `;
     } else {
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link" style="color: inherit; text-decoration: underline; font-weight: 600; word-break: break-all;" onclick="event.stopPropagation();">${url}</a>`;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link" style="color: inherit; text-decoration: underline; font-weight: 600; word-break: break-all;">${url}</a>`;
     }
   });
 
@@ -2913,14 +2910,29 @@ document.addEventListener('MSFullscreenChange', handleFullscreenExit);
 
 // ============ GLOBAL CLIPBOARD IMAGES PASTE UPLOAD HANDLER ============
 document.addEventListener('paste', async (event) => {
-  const items = (event.clipboardData || event.originalEvent?.clipboardData)?.items;
-  if (!items) return;
-
   let file = null;
-  for (const item of items) {
-    if (item.kind === 'file' && item.type.startsWith('image/')) {
-      file = item.getAsFile();
-      break;
+
+  // Try files first
+  const files = event.clipboardData?.files || event.originalEvent?.clipboardData?.files;
+  if (files && files.length > 0) {
+    for (const f of files) {
+      if (f.type.startsWith('image/')) {
+        file = f;
+        break;
+      }
+    }
+  }
+
+  // Fallback to items
+  if (!file) {
+    const items = (event.clipboardData || event.originalEvent?.clipboardData)?.items;
+    if (items) {
+      for (const item of items) {
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          file = item.getAsFile();
+          break;
+        }
+      }
     }
   }
 
@@ -2928,15 +2940,18 @@ document.addEventListener('paste', async (event) => {
 
   const activeEl = document.activeElement;
   
-  // 1. Profile Chat Input focused
-  if (activeEl && activeEl.id === 'profileChatInput') {
+  // 1. If Record Modal is open
+  const recordModal = document.getElementById('addRecordModal');
+  const isRecordModalOpen = recordModal && recordModal.classList.contains('open');
+  if (isRecordModalOpen) {
     event.preventDefault();
-    await uploadChatClipboardImageDirectly(file, currentProfileId, 'profileChatInput', 'chat_category', false);
+    await uploadRecordClipboardImageDirectly(file);
     return;
   }
 
-  // 2. Floating Chat Input focused
-  if (activeEl && activeEl.id === 'cjFloatingChatInput') {
+  // 2. If Floating Chat Window is open and active
+  const floatingWin = document.getElementById('cjFloatingChatWindow');
+  if (floatingWin && floatingWin.style.display === 'flex') {
     event.preventDefault();
     const profileId = window._activeFloatingProfileId;
     if (profileId) {
@@ -2945,16 +2960,30 @@ document.addEventListener('paste', async (event) => {
     return;
   }
 
-  // 3. Record Modal focused (checking if focused inside #addRecordModal or if modal is open)
-  const recordModal = document.getElementById('addRecordModal');
-  const isRecordModalOpen = recordModal && recordModal.classList.contains('open');
-  if (isRecordModalOpen && activeEl && (activeEl.closest('#addRecordModal') || activeEl.id === 'rm_image_file')) {
-    event.preventDefault();
-    await uploadRecordClipboardImageDirectly(file);
-    return;
+  // 3. If Profile Detail View is open
+  if (document.body.classList.contains('detail-view-open')) {
+    // Check if a Note is focused
+    if (activeEl && activeEl.classList.contains('board-note-content')) {
+      event.preventDefault();
+      const noteId = activeEl.id.replace('noteContent-', '');
+      if (noteId) {
+        await uploadNoteClipboardImageDirectly(file, noteId, activeEl);
+      }
+      return;
+    }
+
+    // Check if the Chat tab is active
+    const chatTab = document.getElementById('chatTab');
+    if (chatTab && chatTab.classList.contains('active')) {
+      event.preventDefault();
+      if (currentProfileId) {
+        await uploadChatClipboardImageDirectly(file, currentProfileId, 'profileChatInput', 'chat_category', false);
+      }
+      return;
+    }
   }
 
-  // 4. Notes contenteditable focused
+  // 4. General Note editor focused (e.g. on Notes board tab)
   if (activeEl && activeEl.classList.contains('board-note-content')) {
     event.preventDefault();
     const noteId = activeEl.id.replace('noteContent-', '');
