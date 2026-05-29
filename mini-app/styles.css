@@ -2892,11 +2892,12 @@ body.tour-active #cjFloatingChatWindow {
   .guide-flowchart::before {
     content: '';
     position: absolute;
-    left: 25px;
+    left: 24px;
     top: 24px;
     bottom: 24px;
     width: 2px;
     background: var(--border);
+    transform: translateX(-50%);
     z-index: 1;
   }
   .guide-flow-step {
@@ -2918,7 +2919,7 @@ body.tour-active #cjFloatingChatWindow {
   .guide-flow-step::before {
     content: '';
     position: absolute;
-    left: -2px;
+    left: 4px;
     top: 4px;
     width: 8px;
     height: 8px;
@@ -2926,11 +2927,12 @@ body.tour-active #cjFloatingChatWindow {
     background: var(--accent);
     border: 2px solid var(--surface2);
     box-shadow: 0 0 0 2px var(--border);
+    transform: translateX(-50%);
     transition: all 0.2s;
   }
   .guide-flow-step:hover::before {
     background: var(--accent2);
-    transform: scale(1.2);
+    transform: translateX(-50%) scale(1.2);
   }
   .guide-flow-step span {
     font-size: 12px;
