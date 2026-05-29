@@ -200,19 +200,13 @@ const ProfileTransition = (() => {
     if (typeof haptic === 'function') haptic('medium');
   }
 
-  function _restoreScrollSafe(delay = 60) {
-    // Block scroll handler temporarily to prevent header jitter during layout settle
+  function close() {
+    // ── Lock scroll handler IMMEDIATELY — before ANY layout change ──
+    // Removing 'detail-view-open' causes layout reflow → scroll event fires → header jiggles.
+    // We must set this flag here, at the very top, before touching anything.
     window._scrollRestoring = true;
     clearTimeout(window._scrollRestoringTimer);
-    _restoreScroll();
-    window._scrollRestoringTimer = setTimeout(() => {
-      window._scrollRestoring = false;
-      // Apply correct header state once, cleanly, after layout has settled
-      if (typeof _syncHeaderToScroll === 'function') _syncHeaderToScroll();
-    }, 300);
-  }
 
-  function close() {
     const dv = document.getElementById('detailView');
     if (!dv || dv.style.display === 'none') { 
       _restoreTabs(); 
@@ -220,7 +214,8 @@ const ProfileTransition = (() => {
       window.isDetailViewOpen = false;
       document.body.classList.remove('detail-view-open');
       document.documentElement.classList.remove('detail-view-open');
-      setTimeout(_restoreScrollSafe, 60); 
+      _restoreScroll();
+      window._scrollRestoringTimer = setTimeout(() => { window._scrollRestoring = false; }, 350);
       _reset(); 
       return; 
     }
@@ -231,7 +226,8 @@ const ProfileTransition = (() => {
       window.isDetailViewOpen = false;
       document.body.classList.remove('detail-view-open');
       document.documentElement.classList.remove('detail-view-open');
-      setTimeout(_restoreScrollSafe, 60); 
+      _restoreScroll();
+      window._scrollRestoringTimer = setTimeout(() => { window._scrollRestoring = false; }, 350);
       _reset();
       return;
     }
@@ -244,7 +240,9 @@ const ProfileTransition = (() => {
       window.isDetailViewOpen = false;
       document.body.classList.remove('detail-view-open');
       document.documentElement.classList.remove('detail-view-open');
-      _restoreScrollSafe();
+      _restoreScroll();
+      // Release lock after layout fully settles (header stays expanded — user scrolls to collapse naturally)
+      window._scrollRestoringTimer = setTimeout(() => { window._scrollRestoring = false; }, 350);
 
       if (_pid) {
         requestAnimationFrame(() => {
