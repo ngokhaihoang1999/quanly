@@ -916,6 +916,21 @@ function _resetHeaderStyle(header) {
     const scrollHeight = scrollContainer.scrollHeight;
     const clientHeight = scrollContainer.clientHeight;
 
+    // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
+    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
+    const naturalScrollHeight = scrollHeight - currentSpacerH;
+
+    // Nếu nội dung tự nhiên ngắn hơn hoặc bằng chiều cao hiển thị hiện tại,
+    // ta hoàn toàn không cho phép co giãn header và giữ spacer ở mức 0px.
+    // Điều này chặn đứng hoàn toàn hiện tượng giật khi người dùng cố tình kéo/miết màn hình ngắn.
+    if (naturalScrollHeight <= clientHeight) {
+      if (currentSpacerH !== 0) {
+        _spacer.style.height = '0px';
+      }
+      _resetHeaderStyle(header);
+      return;
+    }
+
     // Tính maxScroll động theo các bar đang hiển thị
     let maxScroll = 66;
     const viewAsBar = header.querySelector('.view-as-bar');
