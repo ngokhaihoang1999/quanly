@@ -1784,17 +1784,48 @@ function toggleFloatNote(noteId) {
   renderNotes();
 }
 
-function uploadNoteMedia(input, noteId) {
+async function uploadNoteMedia(input, noteId) {
   const file = input.files[0];
   if (!file) return;
   if (file.size > 3 * 1024 * 1024) {
     showToast('⚠️ Vui lòng chọn tệp nhỏ hơn 3MB!');
+    input.value = '';
     return;
   }
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    insertMediaUrl(noteId, e.target.result, input);
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
+
+  showToast('⏳ Đang tải tệp đính kèm...');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && data.url) {
+      insertMediaUrl(noteId, data.url, input);
+      showToast('✅ Đã tải tệp đính kèm!');
+    } else {
+      throw new Error('No URL returned from proxy server');
+    }
+  } catch (e) {
+    showToast('⚠️ Tải tệp thất bại, đang chuyển sang chế độ dự phòng...');
+    console.error('uploadNoteMedia error:', e);
+    
+    // Fallback to base64 DataURL
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      insertMediaUrl(noteId, ev.target.result, input);
+    };
+    reader.readAsDataURL(file);
+  } finally {
+    input.value = '';
+  }
 }

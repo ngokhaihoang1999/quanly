@@ -165,13 +165,18 @@ function addChatMessageToDOM(msg) {
 
   let timeHtml = `<div class="chat-message-time">${timeStr}</div>`;
   if (isMe) {
+    const isMedia = msg.message.includes('/file/bot') || msg.message.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(msg.message) || msg.message.includes('imgbb.com') || msg.message.includes('postimg.cc');
+
     timeHtml = `
-      <div class="chat-message-time" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <div class="chat-message-time" style="display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%;">
         <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none;">
-          <span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>
+          ${!isMedia ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
           <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
         </span>
-        <span style="flex-grow:1; text-align:right;">${timeStr}</span>
+        <span style="flex-grow:1; text-align:right; display:inline-flex; align-items:center; justify-content:flex-end; gap:4px;">
+          <span>${timeStr}</span>
+          <span onclick="event.stopPropagation(); toggleBubbleActions(event, '${msg.id}')" style="cursor:pointer; opacity:0.6; font-size:10px; padding: 2px 4px; display:inline-block; border-radius:4px; background:var(--surface2);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" title="Thao tác">⚙️</span>
+        </span>
       </div>
     `;
   }
@@ -2905,3 +2910,189 @@ document.addEventListener('fullscreenchange', handleFullscreenExit);
 document.addEventListener('webkitfullscreenchange', handleFullscreenExit);
 document.addEventListener('mozfullscreenchange', handleFullscreenExit);
 document.addEventListener('MSFullscreenChange', handleFullscreenExit);
+
+// ============ GLOBAL CLIPBOARD IMAGES PASTE UPLOAD HANDLER ============
+document.addEventListener('paste', async (event) => {
+  const items = (event.clipboardData || event.originalEvent?.clipboardData)?.items;
+  if (!items) return;
+
+  let file = null;
+  for (const item of items) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      file = item.getAsFile();
+      break;
+    }
+  }
+
+  if (!file) return; // No image in clipboard
+
+  const activeEl = document.activeElement;
+  
+  // 1. Profile Chat Input focused
+  if (activeEl && activeEl.id === 'profileChatInput') {
+    event.preventDefault();
+    await uploadChatClipboardImageDirectly(file, currentProfileId, 'profileChatInput', 'chat_category', false);
+    return;
+  }
+
+  // 2. Floating Chat Input focused
+  if (activeEl && activeEl.id === 'cjFloatingChatInput') {
+    event.preventDefault();
+    const profileId = window._activeFloatingProfileId;
+    if (profileId) {
+      await uploadChatClipboardImageDirectly(file, profileId, 'cjFloatingChatInput', 'cjFloatingChatCategory', true);
+    }
+    return;
+  }
+
+  // 3. Record Modal focused (checking if focused inside #addRecordModal or if modal is open)
+  const recordModal = document.getElementById('addRecordModal');
+  const isRecordModalOpen = recordModal && recordModal.classList.contains('open');
+  if (isRecordModalOpen && activeEl && (activeEl.closest('#addRecordModal') || activeEl.id === 'rm_image_file')) {
+    event.preventDefault();
+    await uploadRecordClipboardImageDirectly(file);
+    return;
+  }
+
+  // 4. Notes contenteditable focused
+  if (activeEl && activeEl.classList.contains('board-note-content')) {
+    event.preventDefault();
+    const noteId = activeEl.id.replace('noteContent-', '');
+    if (noteId) {
+      await uploadNoteClipboardImageDirectly(file, noteId, activeEl);
+    }
+    return;
+  }
+});
+
+// Helper for pasting inside main chat and floating chat
+async function uploadChatClipboardImageDirectly(file, profileId, inputId, catSelectId, isFloating = false) {
+  showToast('⏳ Đang tải ảnh từ clipboard...');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+
+    const data = await res.json();
+    if (data && data.url) {
+      const sender = getEffectiveStaffCode();
+      const catSelect = document.getElementById(catSelectId);
+      const category = catSelect ? catSelect.value : 'general';
+
+      const dbRes = await sbFetch('/rest/v1/profile_chats', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          profile_id: profileId,
+          sender_code: sender,
+          message: data.url,
+          category: category
+        })
+      });
+
+      if (dbRes.ok) {
+        const newMsgArr = await dbRes.json();
+        if (newMsgArr && newMsgArr[0]) {
+          if (isFloating) {
+            if (typeof addFloatingChatMessageToDOM === 'function') addFloatingChatMessageToDOM(newMsgArr[0]);
+          } else {
+            if (typeof addChatMessageToDOM === 'function') addChatMessageToDOM(newMsgArr[0]);
+          }
+          await markChatAsRead(profileId);
+          showToast('✅ Đã gửi ảnh từ clipboard');
+        }
+      }
+    }
+  } catch (e) {
+    showToast('❌ Gửi ảnh clipboard thất bại');
+    console.error('uploadChatClipboardImageDirectly error:', e);
+  }
+}
+
+// Helper for pasting inside the Report (Record) Modal
+async function uploadRecordClipboardImageDirectly(file) {
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('⚠️ Vui lòng chọn ảnh nhỏ hơn 3MB!');
+    return;
+  }
+
+  showToast('⏳ Đang tải ảnh từ clipboard lên...');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?document=true`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+
+    const data = await res.json();
+    if (data && data.url) {
+      const urlEl = document.getElementById('rm_image_url');
+      if (urlEl) urlEl.value = data.url;
+      
+      const preview = document.getElementById('rm_image_preview');
+      if (preview) preview.src = data.url;
+      
+      const container = document.getElementById('rm_image_preview_container');
+      if (container) container.style.display = 'block';
+      
+      showToast('✅ Đã dán và tải ảnh thành công!');
+    }
+  } catch (e) {
+    showToast('❌ Tải ảnh clipboard thất bại');
+    console.error('uploadRecordClipboardImageDirectly error:', e);
+  }
+}
+
+// Helper for pasting inside Notes (Ghi chú)
+async function uploadNoteClipboardImageDirectly(file, noteId, triggerEl) {
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('⚠️ Vui lòng chọn ảnh nhỏ hơn 3MB!');
+    return;
+  }
+
+  showToast('⏳ Đang tải ảnh từ clipboard...');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+
+    const data = await res.json();
+    if (data && data.url) {
+      if (typeof insertMediaUrl === 'function') {
+        insertMediaUrl(noteId, data.url, triggerEl);
+        showToast('✅ Đã dán ảnh thành công!');
+      }
+    }
+  } catch (e) {
+    showToast('❌ Dán ảnh thất bại, đang dùng chế độ dự phòng...');
+    console.error('uploadNoteClipboardImageDirectly error:', e);
+
+    // Fallback to base64 DataURL
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      if (typeof insertMediaUrl === 'function') {
+        insertMediaUrl(noteId, ev.target.result, triggerEl);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}

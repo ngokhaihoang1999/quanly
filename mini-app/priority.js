@@ -64,6 +64,27 @@ function savePrioritySettings(settings) {
   } catch(e) {}
 }
 
+let _priorityFilter = 'personal'; // 'personal' | 'unit'
+
+function getSeenAutoPriorities() {
+  try {
+    const saved = localStorage.getItem('cj_seen_auto_priorities');
+    return saved ? JSON.parse(saved) : [];
+  } catch(e) { return []; }
+}
+
+function toggleSeenAutoPriority(taskId) {
+  try {
+    let list = getSeenAutoPriorities();
+    const idx = list.indexOf(taskId);
+    if (idx >= 0) {
+      list.splice(idx, 1);
+    } else {
+      list.push(taskId);
+    }
+    localStorage.setItem('cj_seen_auto_priorities', JSON.stringify(list));
+  } catch(e) {}
+}
 
 async function loadPriority() {
   const myCode = getEffectiveStaffCode();
@@ -75,6 +96,7 @@ async function loadPriority() {
 
   try {
     const settings = getPrioritySettings();
+    const seenAuto = getSeenAutoPriorities();
 
     // Get all staff in my managed scope (including GVBB from fruit_roles)
     const scopeCodes = typeof getMyManagedStaffCodes === 'function' ? await getMyManagedStaffCodes() : [myCode];
@@ -94,57 +116,63 @@ async function loadPriority() {
     const pendingHapjas = hapjaRes ? await hapjaRes.json() : [];
     const tasks = await tasksRes.json();
 
-    // === Build groups ===
-    const groups = {};
+    const allItems = [];
 
-    // Group 1: Duyệt Hapja — direct from check_hapja table
+    // 1. Duyệt Hapja — direct from check_hapja table
     if (settings.enabledTypes['duyet_hapja'] && pendingHapjas.length > 0) {
-      groups['duyet_hapja'] = pendingHapjas.map(h => ({
-        id: h.id,
-        profile_id: null,
-        task_type: 'duyet_hapja',
-        title: h.full_name,
-        meta: `NDD: ${h.data?.ndd_staff_code || h.created_by}`,
-        is_seen: false,
-        created_at: h.created_at,
-        deadline: null,
-        hapja_id: h.id
-      }));
+      pendingHapjas.forEach(h => {
+        const id = `duyet_hapja_${h.id}`;
+        allItems.push({
+          id: id,
+          profile_id: null,
+          task_type: 'duyet_hapja',
+          title: h.full_name,
+          meta: `NDD: ${h.data?.ndd_staff_code || h.created_by}`,
+          is_seen: seenAuto.includes(id),
+          created_at: h.created_at,
+          deadline: null,
+          hapja_id: h.id,
+          created_by: h.created_by,
+          ndd_staff_code: h.data?.ndd_staff_code || null
+        });
+      });
     }
 
-    // Groups from priority_tasks table (filter by active settings)
+    // 2. DB priority tasks
     tasks.forEach(t => {
       if (!settings.enabledTypes[t.task_type]) return; // Skip if disabled
-      if (!groups[t.task_type]) groups[t.task_type] = [];
-      const pName = t.title || 'N/A';
-      groups[t.task_type].push({
-        id: t.id,
+      allItems.push({
+        id: String(t.id),
         profile_id: t.profile_id,
         task_type: t.task_type,
-        title: pName,
+        title: t.title || 'N/A',
         meta: null,
-        is_seen: t.is_seen,
+        is_seen: !!t.is_seen,
         created_at: t.created_at,
-        deadline: t.deadline
+        deadline: t.deadline,
+        staff_code: t.staff_code
       });
     });
 
-    // === Auto-detect: dormant, missing roles, sinka completeness ===
-    // Uses cached allProfiles (loaded by profiles.js) — NO extra API calls for profile/role data
+    // 3. Auto-detect: dormant, missing roles, sinka completeness
     try {
       const codeSet = new Set(scopeCodes);
       const nowMs = Date.now();
       const DAY_MS = 86400000;
       const PHASE_LABELS_P = { new: 'Mới', chakki: 'Chakki', tu_van_hinh: 'TV Hình', tu_van: 'Tư vấn', bb: 'BB', center: 'Center' };
 
-      // Use allProfiles for profile data (already in memory)
-      const myProfiles = (allProfiles || []).filter(p =>
-        p.ndd_staff_code && codeSet.has(p.ndd_staff_code) && p.fruit_status !== 'dropout' && p.fruit_status !== 'pause'
-      );
+      // Scan target profiles: those in managed scope OR where current user has a role
+      const targetProfiles = (allProfiles || []).filter(p => {
+        if (p.fruit_status === 'dropout' || p.fruit_status === 'pause') return false;
+        if (p.ndd_staff_code && codeSet.has(p.ndd_staff_code)) return true;
+        const isNdd = p.ndd_staff_code === myCode;
+        const isTvv = p.tvv_staff_code && p.tvv_staff_code.split(',').map(x => x.trim()).includes(myCode);
+        const isGvbb = p.gvbb_staff_code && p.gvbb_staff_code.split(',').map(x => x.trim()).includes(myCode);
+        return isNdd || isTvv || isGvbb;
+      });
 
-      if (myProfiles.length > 0) {
-        // Batch fetch last activity for these profiles AND Sinka data
-        const pids = myProfiles.map(p => p.id);
+      if (targetProfiles.length > 0) {
+        const pids = targetProfiles.map(p => p.id);
         const pidsIn = pids.map(id => `"${id}"`).join(',');
         
         // Parallel fetch of records, sessions, and Sinka (form_hanh_chinh)
@@ -176,30 +204,38 @@ async function loadPriority() {
           'sk_gvbb_ten', 'sk_so_lan_bb', 'sk_ly_do_center', 'sk_8_9_thang', 'sk_thu_gio_hoc', 'sk_bao_an_ai_biet'
         ];
 
-        myProfiles.forEach(p => {
+        // Gather candidates for role checking
+        const tvvCandidates = [];
+        const gvbbCandidates = [];
+
+        targetProfiles.forEach(p => {
           const pid = p.id;
           const lastAct = actMap[pid] || (p.created_at ? new Date(p.created_at).getTime() : 0);
           const daysSince = lastAct ? Math.floor((nowMs - lastAct) / DAY_MS) : 999;
 
           // 😴 Dormant: > dormantDays
           if (settings.enabledTypes['ngu_dong'] && daysSince > settings.dormantDays) {
-            if (!groups['ngu_dong']) groups['ngu_dong'] = [];
-            groups['ngu_dong'].push({
-              id: `auto_nd_${pid}`, profile_id: pid, task_type: 'ngu_dong',
-              title: p.full_name, meta: `${daysSince} ngày không hoạt động · ${PHASE_LABELS_P[p.phase] || p.phase}`,
-              is_seen: true, created_at: new Date(lastAct).toISOString(), deadline: null, _auto: true
+            const taskId = `auto_nd_${pid}`;
+            allItems.push({
+              id: taskId,
+              profile_id: pid,
+              task_type: 'ngu_dong',
+              title: p.full_name,
+              meta: `${daysSince} ngày không hoạt động · ${PHASE_LABELS_P[p.phase] || p.phase}`,
+              is_seen: seenAuto.includes(taskId),
+              created_at: new Date(lastAct).toISOString(),
+              deadline: null,
+              _auto: true
             });
           }
 
-          // 🔵 Missing TVV/GVBB: verify against fruit_roles (cache may be stale)
+          // Role candidates for verification
           if (settings.enabledTypes['thieu_vai_tro']) {
             if (!p.tvv_staff_code && !['new', 'chakki'].includes(p.phase)) {
-              if (!groups['_tvv_check']) groups['_tvv_check'] = [];
-              groups['_tvv_check'].push(p);
+              tvvCandidates.push(p);
             }
             if (!p.gvbb_staff_code && ['tu_van', 'bb', 'center'].includes(p.phase)) {
-              if (!groups['_gvbb_check']) groups['_gvbb_check'] = [];
-              groups['_gvbb_check'].push(p);
+              gvbbCandidates.push(p);
             }
           }
 
@@ -215,67 +251,96 @@ async function loadPriority() {
             });
             const pct = Math.round((filledCount / SINKA_CORE_FIELDS.length) * 100);
             if (pct < 60) {
-              if (!groups['sinka_chua_hoan_thien']) groups['sinka_chua_hoan_thien'] = [];
-              groups['sinka_chua_hoan_thien'].push({
-                id: `auto_sk_${pid}`, profile_id: pid, task_type: 'sinka_chua_hoan_thien',
+              const taskId = `auto_sk_${pid}`;
+              allItems.push({
+                id: taskId,
+                profile_id: pid,
+                task_type: 'sinka_chua_hoan_thien',
                 title: `${p.full_name} — Thẻ HV chưa hoàn thiện`,
                 meta: `Đã điền ${filledCount}/${SINKA_CORE_FIELDS.length} trường core (${pct}%) · GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
+                is_seen: seenAuto.includes(taskId),
+                created_at: p.created_at,
+                deadline: null,
+                _auto: true
               });
             }
           }
         });
-      }
 
-      // Batch-verify missing TVV/GVBB against DB fruit_roles
-      const tvvCandidates = groups['_tvv_check'] || [];
-      const gvbbCandidates = groups['_gvbb_check'] || [];
-      const allCandidatePids = [...new Set([...tvvCandidates, ...gvbbCandidates].map(p => p.id))];
-      if (allCandidatePids.length > 0) {
-        try {
-          const idsStr = allCandidatePids.map(id => `"${id}"`).join(',');
-          const frRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=in.(${idsStr})&select=profile_id,fruit_roles(role_type)`);
-          const frData = await frRes.json();
-          // Build role sets per profile
-          const roleMap = {};
-          (frData || []).forEach(fg => {
-            const pid = fg.profile_id;
-            if (!roleMap[pid]) roleMap[pid] = new Set();
-            (fg.fruit_roles || []).forEach(r => roleMap[pid].add(r.role_type));
-          });
-          // Only flag truly missing TVV
-          tvvCandidates.forEach(p => {
-            if (!roleMap[p.id]?.has('tvv')) {
-              if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-              groups['thieu_vai_tro'].push({
-                id: `auto_tvv_${p.id}`, profile_id: p.id, task_type: 'thieu_vai_tro',
-                title: `${p.full_name} — chưa có TVV`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-              });
-            }
-          });
-          // Only flag truly missing GVBB
-          gvbbCandidates.forEach(p => {
-            if (!roleMap[p.id]?.has('gvbb')) {
-              if (!groups['thieu_vai_tro']) groups['thieu_vai_tro'] = [];
-              groups['thieu_vai_tro'].push({
-                id: `auto_gvbb_${p.id}`, profile_id: p.id, task_type: 'thieu_vai_tro',
-                title: `${p.full_name} — chưa có GVBB`, meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
-                is_seen: true, created_at: p.created_at, deadline: null, _auto: true
-              });
-            }
-          });
-        } catch(e) { console.warn('Role verify fail:', e); }
+        // Batch-verify missing TVV/GVBB roles against Supabase
+        const allCandidatePids = [...new Set([...tvvCandidates, ...gvbbCandidates].map(p => p.id))];
+        if (allCandidatePids.length > 0) {
+          try {
+            const idsStr = allCandidatePids.map(id => `"${id}"`).join(',');
+            const frRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=in.(${idsStr})&select=profile_id,fruit_roles(role_type)`);
+            const frData = await frRes.json();
+            // Build role sets per profile
+            const roleMap = {};
+            (frData || []).forEach(fg => {
+              const pid = fg.profile_id;
+              if (!roleMap[pid]) roleMap[pid] = new Set();
+              (fg.fruit_roles || []).forEach(r => roleMap[pid].add(r.role_type));
+            });
+
+            // TVV checks
+            tvvCandidates.forEach(p => {
+              if (!roleMap[p.id]?.has('tvv')) {
+                const taskId = `auto_tvv_${p.id}`;
+                allItems.push({
+                  id: taskId,
+                  profile_id: p.id,
+                  task_type: 'thieu_vai_tro',
+                  title: `${p.full_name} — chưa có TVV`,
+                  meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+                  is_seen: seenAuto.includes(taskId),
+                  created_at: p.created_at,
+                  deadline: null,
+                  _auto: true
+                });
+              }
+            });
+
+            // GVBB checks
+            gvbbCandidates.forEach(p => {
+              if (!roleMap[p.id]?.has('gvbb')) {
+                const taskId = `auto_gvbb_${p.id}`;
+                allItems.push({
+                  id: taskId,
+                  profile_id: p.id,
+                  task_type: 'thieu_vai_tro',
+                  title: `${p.full_name} — chưa có GVBB`,
+                  meta: `GĐ: ${PHASE_LABELS_P[p.phase] || p.phase}`,
+                  is_seen: seenAuto.includes(taskId),
+                  created_at: p.created_at,
+                  deadline: null,
+                  _auto: true
+                });
+              }
+            });
+          } catch(e) { console.warn('Role verify fail:', e); }
+        }
       }
-      delete groups['_tvv_check'];
-      delete groups['_gvbb_check'];
     } catch(e) { console.warn('Priority auto-detect:', e); }
 
-    // Calculate total displayed count based on settings
-    const totalCount = Object.keys(groups).reduce((sum, k) => {
-      if (!settings.enabledTypes[k]) return sum;
-      return sum + groups[k].length;
-    }, 0);
+    // === Classify into Personal vs Unit ===
+    const personalItems = [];
+    const unitItems = [];
+
+    allItems.forEach(item => {
+      item.is_personal = checkIfItemPersonal(item, myCode);
+      if (item.is_personal) {
+        personalItems.push(item);
+      } else {
+        unitItems.push(item);
+      }
+    });
+
+    const unseenPersonalCount = personalItems.filter(i => !i.is_seen).length;
+    const unseenUnitCount = unitItems.filter(i => !i.is_seen).length;
+    const overallUnseenCount = unseenPersonalCount + unseenUnitCount;
+
+    // === Update Tab Badge ===
+    updatePriorityBadge(overallUnseenCount);
 
     // === Build Settings Panel UI ===
     const isSettingsOpen = !!window._prioritySettingsOpen;
@@ -312,15 +377,45 @@ async function loadPriority() {
       </div>
     `;
 
-    if (totalCount === 0) {
-      listEl.innerHTML = settingsHtml + '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Tốt lắm!</div><div class="empty-sub">Không có việc ưu tiên cần xử lý</div></div>';
-      updatePriorityBadge(0);
+    // === Filter Pills UI ===
+    const filterPillsHtml = `
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button onclick="setPriorityFilter('personal')" style="
+          flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+          background: ${_priorityFilter === 'personal' ? 'var(--accent)' : 'var(--surface)'};
+          color: ${_priorityFilter === 'personal' ? 'white' : 'var(--text2)'};
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+        ">
+          👤 Cá nhân ${unseenPersonalCount > 0 ? `<span style="background: ${_priorityFilter === 'personal' ? 'rgba(255,255,255,0.25)' : '#ef4444'}; color: white; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px;">${unseenPersonalCount}</span>` : ''}
+        </button>
+        <button onclick="setPriorityFilter('unit')" style="
+          flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+          background: ${_priorityFilter === 'unit' ? 'var(--accent)' : 'var(--surface)'};
+          color: ${_priorityFilter === 'unit' ? 'white' : 'var(--text2)'};
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+        ">
+          🏢 Đơn vị ${unseenUnitCount > 0 ? `<span style="background: ${_priorityFilter === 'unit' ? 'rgba(255,255,255,0.25)' : '#ef4444'}; color: white; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px;">${unseenUnitCount}</span>` : ''}
+        </button>
+      </div>
+    `;
+
+    const activeItems = _priorityFilter === 'personal' ? personalItems : unitItems;
+
+    if (activeItems.length === 0) {
+      listEl.innerHTML = settingsHtml + filterPillsHtml + '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Tốt lắm!</div><div class="empty-sub">Không có việc ưu tiên trong mục này</div></div>';
       if (typeof markFresh === 'function') markFresh('priority');
       return;
     }
 
+    // Group active items for display
+    const groups = {};
+    activeItems.forEach(item => {
+      if (!groups[item.task_type]) groups[item.task_type] = [];
+      groups[item.task_type].push(item);
+    });
+
     // === Render List ===
-    let html = settingsHtml;
+    let html = settingsHtml + filterPillsHtml;
     PRIORITY_ORDER.forEach(type => {
       if (!settings.enabledTypes[type]) return; // Skip disabled
       const items = groups[type];
@@ -348,23 +443,64 @@ async function loadPriority() {
           clickAction = `openHapjaDetail('${t.hapja_id}');markPriorityItemSeen('${t.id}',null,'duyet_hapja')`;
         }
 
-        html += `<div class="priority-item ${unseenCls} ${overdueCls}" onclick="${clickAction}">
-          <div class="priority-item-dot" style="background:${
-            type==='duyet_hapja'?'#f97316':
-            type==='ngu_dong'?'#ef4444':
-            type==='thieu_vai_tro'?'#3b82f6':
-            type==='sinka_chua_hoan_thien'?'#a855f7':
-            type==='chot_tv_1'?'#ef4444':
-            type==='viet_bc_tv'?'#f97316':
-            type==='lap_group'?'#8b5cf6':'#22c55e'
-          }"></div>
-          <div class="priority-item-main">
-            <div class="priority-item-name">${t.title}</div>
-            <div class="priority-item-meta">${t.meta || timeAgo}${deadlineStr ? ` · ${deadlineStr}` : ''}</div>
+        html += `<div class="priority-item ${unseenCls} ${overdueCls}" onclick="${clickAction}" style="
+          display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 12px; margin-bottom: 8px; transition: all 0.2s; border: 1px solid var(--border); background: var(--surface);
+          opacity: ${t.is_seen ? '0.65' : '1'};
+        ">
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+            <div class="priority-item-dot" style="
+              width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+              background: ${
+                type==='duyet_hapja'?'#f97316':
+                type==='ngu_dong'?'#ef4444':
+                type==='thieu_vai_tro'?'#3b82f6':
+                type==='sinka_chua_hoan_thien'?'#a855f7':
+                type==='chot_tv_1'?'#ef4444':
+                type==='viet_bc_tv'?'#f97316':
+                type==='lap_group'?'#8b5cf6':'#22c55e'
+              }
+            "></div>
+            <div style="flex: 1; min-width: 0;">
+              <div class="priority-item-name" style="font-size: 13.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.title}</div>
+              <div class="priority-item-meta" style="font-size: 11px; color: var(--text3); margin-top: 3px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                ${t.meta || timeAgo}${deadlineStr ? ` · ${deadlineStr}` : ''}
+              </div>
+            </div>
           </div>
-          ${!t.is_seen && type !== 'duyet_hapja' && !t._auto ? `
-            <button onclick="event.stopPropagation();markPriorityItemSeen('${t.id}','${t.profile_id}','${t.task_type}')" class="priority-seen-btn" title="Đã xem">👁</button>
-          ` : ''}
+
+          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            <!-- Quick action button -->
+            ${type === 'viet_bc_tv' ? `
+              <button onclick="event.stopPropagation(); openBaoCaoTVFromPriority('${t.profile_id}')" style="
+                padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;
+              ">
+                📝 Báo cáo
+              </button>
+            ` : ''}
+            ${type === 'viet_bc_bb' ? `
+              <button onclick="event.stopPropagation(); openBaoCaoBBFromPriority('${t.profile_id}')" style="
+                padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;
+              ">
+                📝 Báo cáo
+              </button>
+            ` : ''}
+            ${type === 'duyet_hapja' ? `
+              <button onclick="event.stopPropagation(); openHapjaDetail('${t.hapja_id}'); markPriorityItemSeen('${t.id}',null,'duyet_hapja')" style="
+                padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;
+              ">
+                📋 Xem/Duyệt
+              </button>
+            ` : ''}
+
+            <!-- Seen eye toggle -->
+            <button onclick="event.stopPropagation(); togglePriorityItemSeen('${t.id}', '${t.profile_id}', '${t.task_type}')" style="
+              background: none; border: none; font-size: 15px; cursor: pointer; padding: 4px 8px; display: flex; align-items: center; justify-content: center;
+              opacity: ${t.is_seen ? '0.4' : '1'};
+              color: ${t.is_seen ? 'var(--text3)' : 'var(--accent)'};
+            " title="${t.is_seen ? 'Đánh dấu chưa xem' : 'Đánh dấu đã xem'}">
+              👁️
+            </button>
+          </div>
         </div>`;
       });
 
@@ -372,12 +508,94 @@ async function loadPriority() {
     });
 
     listEl.innerHTML = html;
-    updatePriorityBadge(totalCount);
     if (typeof markFresh === 'function') markFresh('priority');
 
   } catch(e) {
     console.error('loadPriority:', e);
     listEl.innerHTML = '<div class="empty-state"><div class="empty-sub">❌ Lỗi tải</div></div>';
+  }
+}
+
+function checkIfItemPersonal(item, myCode) {
+  if (item.task_type === 'duyet_hapja') {
+    const creator = item.created_by || '';
+    const ndd = item.ndd_staff_code || '';
+    if (creator === myCode || ndd === myCode) {
+      return true;
+    }
+    return false;
+  }
+
+  if (item.profile_id) {
+    const p = allProfiles.find(x => x.id === item.profile_id);
+    if (p) {
+      const isNdd = p.ndd_staff_code === myCode;
+      const isTvv = p.tvv_staff_code && p.tvv_staff_code.split(',').map(x => x.trim()).includes(myCode);
+      const isGvbb = p.gvbb_staff_code && p.gvbb_staff_code.split(',').map(x => x.trim()).includes(myCode);
+
+      if (isNdd && ['chot_tv_1', 'lap_group', 'thieu_vai_tro', 'ngu_dong'].includes(item.task_type)) {
+        return true;
+      }
+      if (isGvbb && ['viet_bc_bb', 'ngu_dong', 'sinka_chua_hoan_thien'].includes(item.task_type)) {
+        return true;
+      }
+      if (isTvv && ['viet_bc_tv', 'ngu_dong'].includes(item.task_type)) {
+        return true;
+      }
+    }
+  } else if (item.staff_code) {
+    return item.staff_code === myCode;
+  }
+  return false;
+}
+
+function setPriorityFilter(filterVal) {
+  _priorityFilter = filterVal;
+  loadPriority();
+}
+
+function openBaoCaoTVFromPriority(profileId) {
+  if (!profileId) return;
+  openProfileById(profileId);
+  setTimeout(() => {
+    openBaoCaoTV();
+  }, 350);
+}
+
+function openBaoCaoBBFromPriority(profileId) {
+  if (!profileId) return;
+  openProfileById(profileId);
+  setTimeout(() => {
+    openAddRecordModal('bien_ban');
+  }, 350);
+}
+
+async function togglePriorityItemSeen(taskId, profileId, taskType) {
+  if (taskType === 'duyet_hapja' || String(taskId).startsWith('auto_')) {
+    let list = getSeenAutoPriorities();
+    const idx = list.indexOf(taskId);
+    if (idx >= 0) {
+      list.splice(idx, 1);
+    } else {
+      list.push(taskId);
+    }
+    localStorage.setItem('cj_seen_auto_priorities', JSON.stringify(list));
+    loadPriority();
+  } else {
+    try {
+      const res = await sbFetch(`/rest/v1/priority_tasks?id=eq.${taskId}&select=is_seen`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const newSeen = !data[0].is_seen;
+        await sbFetch(`/rest/v1/priority_tasks?id=eq.${taskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_seen: newSeen })
+        });
+      }
+      loadPriority();
+    } catch(e) {
+      console.warn('togglePriorityItemSeen:', e);
+    }
   }
 }
 
@@ -448,13 +666,21 @@ async function handlePriorityClick(taskId, profileId, taskType) {
 }
 
 async function markPriorityItemSeen(taskId, profileId, taskType) {
-  if (taskType === 'duyet_hapja' || taskType === 'sinka_chua_hoan_thien') return; // auto-detect or hapja
-  try {
-    await sbFetch(`/rest/v1/priority_tasks?id=eq.${taskId}`, {
-      method: 'PATCH', body: JSON.stringify({ is_seen: true })
-    });
-    loadPriority(); // refresh to push seen items down
-  } catch(e) { console.warn('markPriorityItemSeen:', e); }
+  if (taskType === 'duyet_hapja' || String(taskId).startsWith('auto_')) {
+    let list = getSeenAutoPriorities();
+    if (!list.includes(taskId)) {
+      list.push(taskId);
+      localStorage.setItem('cj_seen_auto_priorities', JSON.stringify(list));
+    }
+    loadPriority();
+  } else {
+    try {
+      await sbFetch(`/rest/v1/priority_tasks?id=eq.${taskId}`, {
+        method: 'PATCH', body: JSON.stringify({ is_seen: true })
+      });
+      loadPriority();
+    } catch(e) { console.warn('markPriorityItemSeen:', e); }
+  }
 }
 
 // ============ AUTO-CREATE PRIORITY TASKS ============
