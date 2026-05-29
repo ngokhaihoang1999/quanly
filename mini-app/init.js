@@ -849,47 +849,36 @@ function _resetHeaderStyle(header) {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
   if (!scrollContainer) return;
 
-  // ── Spacer linh hoạt & Footer thẩm mỹ ──
-  // Đảm bảo luôn đủ scroll room để tránh oscillation (giật hình) khi cuộn header.
-  // Đồng thời đóng vai trò làm Footer trang trí sang trọng cho Mini App.
+  // ── Spacer linh hoạt để tránh oscillation (giật hình) khi cuộn header ──
   let _spacer = document.createElement('div');
   _spacer.id = '_hdrScrollSpacer';
   _spacer.setAttribute('aria-hidden', 'true');
-  _spacer.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:48px;flex-shrink:0;pointer-events:none;user-select:none;overflow:hidden;box-sizing:border-box;margin-top:16px;';
-  
-  _spacer.innerHTML = `
-    <div class="spacer-footer-content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text3);font-size:10px;font-weight:500;text-align:center;width:100%;height:100%;transition:opacity 0.3s;box-sizing:border-box;opacity:0.85;padding-bottom:12px;">
-      <span style="font-size:12px;color:var(--accent2);opacity:0.7;margin-bottom:1px;">✦</span>
-      <span style="letter-spacing:0.5px;text-transform:uppercase;color:var(--text2);font-weight:600;font-size:9.5px;">Checking Jondo</span>
-      <span style="opacity:0.5;font-size:9px;">Hệ thống Quản lý Trái quả</span>
-    </div>
-  `;
+  _spacer.style.cssText = 'display:block;width:1px;height:0;flex-shrink:0;pointer-events:none;user-select:none;';
   scrollContainer.appendChild(_spacer);
 
   function _updateSpacer(requiredRoom) {
-    const currentSpacerH = parseFloat(_spacer.style.height) || 48;
+    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
     const naturalScrollHeight = scrollContainer.scrollHeight - currentSpacerH;
     const clientHeight = scrollContainer.clientHeight;
     
-    // Nếu ngay cả khi cộng thêm chiều cao tối thiểu 48px của footer,
-    // trang vẫn không vượt quá chiều cao hiển thị của container,
-    // tức là trang hoàn toàn không thể cuộn được (không lo bị giật).
-    // Giữ spacer ở chiều cao tối thiểu 48px làm footer thẩm mỹ.
-    if (naturalScrollHeight + 48 <= clientHeight) {
-      if (currentSpacerH !== 48) {
-        _spacer.style.height = '48px';
+    // Nếu nội dung tự nhiên ngắn hơn hoặc bằng chiều cao container,
+    // ta hoàn toàn không cần spacer để cuộn (tránh tạo ra khoảng trống thừa thãi).
+    // Giữ spacer ở chiều cao 0px.
+    if (naturalScrollHeight <= clientHeight) {
+      if (currentSpacerH !== 0) {
+        _spacer.style.height = '0px';
       }
       return;
     }
     
     // Nếu có cuộn tự nhiên, tính toán room thực tế và bù thêm spacer nếu cần
     const naturalRoom = naturalScrollHeight - clientHeight;
-    const targetH = Math.max(48, requiredRoom - naturalRoom + 2);
+    const targetH = Math.max(0, requiredRoom - naturalRoom + 2);
     
     // Chỉ cập nhật khi chiều cao mục tiêu khác với chiều cao hiện tại (tránh reflow không cần thiết)
     if (Math.abs(targetH - currentSpacerH) > 1) {
       if (targetH < currentSpacerH) {
-        // Chỉ cho phép thu nhỏ nếu không gây ra oscillation (room sau khi thu nhỏ vẫn >= requiredRoom)
+        // Chỉ cho phép thu nhỏ nếu room sau khi thu nhỏ vẫn >= requiredRoom
         const roomAfterShrink = naturalScrollHeight + targetH - clientHeight;
         if (roomAfterShrink >= requiredRoom || scrollContainer.scrollTop < 10) {
           _spacer.style.height = targetH + 'px';
