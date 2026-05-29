@@ -362,8 +362,7 @@ async function loadJourney(profileId, currentPhase) {
           <div class="tl-btvn-card tl-clickable" onclick="viewRecord('${btvnId}','btvn')">
             <span class="tl-icon" style="font-size:15px;margin-right:4px;">📝</span>
             <div class="tl-btvn-info">
-              <span class="tl-label">BTVN</span>
-              ${dateStr ? `<span class="tl-date">${dateStr}</span>` : ''}
+              ${dateStr ? `<span class="tl-date" style="margin-top:0;">${dateStr}</span>` : ''}
             </div>
             <div class="tl-btn-group-btvn">
               <button onclick="event.stopPropagation();editRecord('${btvnId}','btvn')" title="Chỉnh sửa BTVN" class="tl-edit-btn visible" style="opacity:1;">✏️</button>

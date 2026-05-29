@@ -346,7 +346,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      left: calc(33% - 1.5px);
+      left: calc(22% - 1.5px);
       width: 3px;
       background: var(--accent);
       z-index: 2;
@@ -358,7 +358,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      left: calc(66% - 1.5px);
+      left: calc(62% - 1.5px);
       width: 3px;
       background: #0ea5e9;
       z-index: 2;
@@ -374,9 +374,9 @@
     .tl-item:last-child { border-bottom: none; }
     .tl-item:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
     .tl-left {
-      flex: 0 0 33%;
-      width: 33%;
-      max-width: 33%;
+      flex: 0 0 22%;
+      width: 22%;
+      max-width: 22%;
       min-width: 0;
       display: flex;
       align-items: center;
@@ -386,9 +386,9 @@
       box-sizing: border-box;
     }
     .tl-right {
-      flex: 0 0 33%;
-      width: 33%;
-      max-width: 33%;
+      flex: 0 0 40%;
+      width: 40%;
+      max-width: 40%;
       min-width: 0;
       display: flex;
       align-items: center;
@@ -462,11 +462,11 @@
     /* Icons & labels */
     .tl-icon { font-size: 13px; flex-shrink: 0; line-height: 1; }
     .tl-label {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
       color: var(--text);
-      line-height: 1.35;
-      word-break: break-word;
+      line-height: 1.3;
+      word-break: normal;
       overflow-wrap: break-word;
     }
     .tl-label-kt { color: var(--green); font-weight: 700; }
@@ -478,7 +478,7 @@
       min-width: 0;
     }
     .tl-left-info .tl-label {
-      word-break: break-word;
+      word-break: normal;
       overflow-wrap: break-word;
     }
     .tl-date { font-size: 10px; color: var(--text3); white-space: nowrap; flex-shrink: 0; display: block; }
@@ -490,7 +490,7 @@
       min-width: 0;
     }
     .tl-right-info .tl-label {
-      word-break: break-word;
+      word-break: normal;
       overflow-wrap: break-word;
     }
     .tl-right-info .tl-date { display: block; }

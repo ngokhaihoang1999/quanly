@@ -103,8 +103,22 @@ async function openProfileById(id, evt, initialTabId) {
   }
   openProfile(p, cardEl, initialTabId);
 }
-async function openProfile(p, cardEl, initialTabId) {
   currentProfileId = p.id;
+
+  // Reset header style to fully expanded when opening profile
+  const header = document.querySelector('.header');
+  if (header) {
+    header.classList.remove('header-collapsed');
+    if (typeof _resetHeaderStyle === 'function') {
+      _resetHeaderStyle(header);
+    }
+    const btn = document.getElementById('headerCollapseBtn');
+    if (btn) {
+      btn.textContent = '🔼';
+      btn.title = 'Thu gọn header';
+    }
+  }
+
   window.isDetailViewOpen = true;
   document.body.classList.add('detail-view-open');
   document.documentElement.classList.add('detail-view-open');

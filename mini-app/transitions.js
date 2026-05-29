@@ -95,7 +95,7 @@ const TabIndicator = (() => {
 // ============ 3. PROFILE TRANSITION (Card Blink) ============
 const ProfileTransition = (() => {
   let _pid = null, _cardEl = null, _containerId = null;
-  let _scroll = { windowY: 0, panel: 0, main: 0 };
+  let _scroll = { windowY: 0, panel: 0, main: 0, wrapper: 0 };
 
   const CONTAINERS = ['profileList', 'dashMyList', 'dashSubUnits', 'dashUnitList', 'staffList', 'unitPopupList'];
 
@@ -105,6 +105,8 @@ const ProfileTransition = (() => {
     _scroll.panel = p ? p.scrollTop : 0;
     const m = document.getElementById('mainContent');
     _scroll.main = m ? m.scrollTop : 0;
+    const w = document.getElementById('desktopPanelsWrapper');
+    _scroll.wrapper = w ? w.scrollTop : 0;
   }
 
   function _restoreScroll() {
@@ -113,6 +115,8 @@ const ProfileTransition = (() => {
     if (p) p.scrollTop = _scroll.panel;
     const m = document.getElementById('mainContent');
     if (m) m.scrollTop = _scroll.main;
+    const w = document.getElementById('desktopPanelsWrapper');
+    if (w) w.scrollTop = _scroll.wrapper;
   }
 
   function _blink(card) {
@@ -198,11 +202,25 @@ const ProfileTransition = (() => {
 
   function close() {
     const dv = document.getElementById('detailView');
-    if (!dv || dv.style.display === 'none') { _restoreTabs(); dv && (dv.style.display = 'none'); setTimeout(_restoreScroll, 60); _reset(); return; }
+    if (!dv || dv.style.display === 'none') { 
+      _restoreTabs(); 
+      dv && (dv.style.display = 'none'); 
+      window.isDetailViewOpen = false;
+      document.body.classList.remove('detail-view-open');
+      document.documentElement.classList.remove('detail-view-open');
+      setTimeout(_restoreScroll, 60); 
+      _reset(); 
+      return; 
+    }
 
     if (!MotionPrefs.canAnimate()) {
       dv.style.display = 'none';
-      _restoreTabs(); setTimeout(_restoreScroll, 60); _reset();
+      _restoreTabs(); 
+      window.isDetailViewOpen = false;
+      document.body.classList.remove('detail-view-open');
+      document.documentElement.classList.remove('detail-view-open');
+      setTimeout(_restoreScroll, 60); 
+      _reset();
       return;
     }
 
@@ -211,6 +229,9 @@ const ProfileTransition = (() => {
     setTimeout(() => {
       dv.style.display = 'none';
       _restoreTabs();
+      window.isDetailViewOpen = false;
+      document.body.classList.remove('detail-view-open');
+      document.documentElement.classList.remove('detail-view-open');
       _restoreScroll();
 
       if (_pid) {
