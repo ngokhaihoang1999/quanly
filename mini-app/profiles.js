@@ -103,6 +103,7 @@ async function openProfileById(id, evt, initialTabId) {
   }
   openProfile(p, cardEl, initialTabId);
 }
+async function openProfile(p, cardEl, initialTabId) {
   currentProfileId = p.id;
 
   // Reset header style to fully expanded when opening profile
