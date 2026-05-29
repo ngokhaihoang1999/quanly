@@ -340,6 +340,25 @@
       margin: 0 auto;
       width: 100%;
     }
+    .tl-header-row {
+      display: flex;
+      align-items: stretch;
+      background: var(--surface2) !important;
+      border-bottom: 1px solid var(--border) !important;
+    }
+    .tl-header-cell {
+      justify-content: center !important;
+      align-items: center !important;
+      font-weight: 700 !important;
+      color: var(--text2) !important;
+      font-size: 11px !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+      background: none !important;
+      padding: 8px 6px !important;
+      box-sizing: border-box !important;
+      min-height: 32px !important;
+    }
     /* Left continuous vertical line (milestones & reports) */
     .tl-container::before {
       content: '';

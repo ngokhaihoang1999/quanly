@@ -354,6 +354,13 @@ async function loadJourney(profileId, currentPhase) {
       const hoverOut = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.remove('visible'))`;
 
       let html = '<div class="tl-container">';
+      html += `
+        <div class="tl-header-row">
+          <div class="tl-left tl-header-cell">Sự kiện</div>
+          <div class="tl-right tl-header-cell">Báo cáo</div>
+          <div class="tl-btvn tl-header-cell">BTVN</div>
+        </div>
+      `;
 
       // Helper function to render a BTVN card in the 3rd column
       const renderBtvnCard = (btvnId, dateStr) => {
