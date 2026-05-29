@@ -848,50 +848,10 @@ function _resetHeaderStyle(header) {
   });
 }
 
-// Auto-collapsible header on scroll for mobile/narrow viewports
+// Scroll position saver for transition restore
 (function() {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
   if (!scrollContainer) return;
-
-  // ── Spacer linh hoạt để tránh oscillation (giật hình) khi cuộn header ──
-  let _spacer = document.createElement('div');
-  _spacer.id = '_hdrScrollSpacer';
-  _spacer.setAttribute('aria-hidden', 'true');
-  _spacer.style.cssText = 'display:block;width:1px;height:0;flex-shrink:0;pointer-events:none;user-select:none;';
-  scrollContainer.appendChild(_spacer);
-
-  function _updateSpacer(requiredRoom) {
-    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
-    const naturalScrollHeight = scrollContainer.scrollHeight - currentSpacerH;
-    const clientHeight = scrollContainer.clientHeight;
-    
-    // Nếu nội dung tự nhiên ngắn hơn hoặc bằng chiều cao container,
-    // ta hoàn toàn không cần spacer để cuộn (tránh tạo ra khoảng trống thừa thãi).
-    // Giữ spacer ở chiều cao 0px.
-    if (naturalScrollHeight <= clientHeight) {
-      if (currentSpacerH !== 0) {
-        _spacer.style.height = '0px';
-      }
-      return;
-    }
-    
-    // Nếu có cuộn tự nhiên, tính toán room thực tế và bù thêm spacer nếu cần
-    const naturalRoom = naturalScrollHeight - clientHeight;
-    const targetH = Math.max(0, requiredRoom - naturalRoom + 2);
-    
-    // Chỉ cập nhật khi chiều cao mục tiêu khác với chiều cao hiện tại (tránh reflow không cần thiết)
-    if (Math.abs(targetH - currentSpacerH) > 1) {
-      if (targetH < currentSpacerH) {
-        // Chỉ cho phép thu nhỏ nếu room sau khi thu nhỏ vẫn >= requiredRoom
-        const roomAfterShrink = naturalScrollHeight + targetH - clientHeight;
-        if (roomAfterShrink >= requiredRoom || scrollContainer.scrollTop < 10) {
-          _spacer.style.height = targetH + 'px';
-        }
-      } else {
-        _spacer.style.height = targetH + 'px';
-      }
-    }
-  }
 
   scrollContainer.addEventListener('scroll', () => {
     // Guards: bỏ qua khi đang restore scroll hoặc đang mở hồ sơ
@@ -908,59 +868,5 @@ function _resetHeaderStyle(header) {
     window._scrollSaveTimeout = setTimeout(() => {
       try { localStorage.setItem('cj_last_scroll_top', scrollContainer.scrollTop); } catch(e) {}
     }, 300);
-
-    if (_headerManualCollapsed) return;
-
-    const header = document.querySelector('.header');
-    if (!header) return;
-
-    header.classList.remove('header-transitioning');
-
-    const scrollTop = scrollContainer.scrollTop;
-    const scrollHeight = scrollContainer.scrollHeight;
-    const clientHeight = scrollContainer.clientHeight;
-
-    // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
-    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
-    const naturalScrollHeight = scrollHeight - currentSpacerH;
-
-    // Chỉ tắt co giãn header nếu trang hoàn toàn không thể cuộn tự nhiên (naturalScrollHeight <= clientHeight + 4)
-    // giúp chặn đứng hoàn toàn hiện tượng giật khi kéo trang ngắn trên mobile,
-    // mà không gây bất kỳ ảnh hưởng nào đến độ mượt mà hay khóa cứng hiệu ứng khi cuộn.
-    if (naturalScrollHeight <= clientHeight + 4) {
-      if (currentSpacerH !== 0) {
-        _spacer.style.height = '0px';
-      }
-      _resetHeaderStyle(header);
-      return;
-    }
-
-    // Tính maxScroll động theo các bar đang hiển thị
-    let maxScroll = 66;
-    const viewAsBar = header.querySelector('.view-as-bar');
-    const semesterBar = header.querySelector('.semester-bar');
-    if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
-    if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
-    maxScroll += 20;
-
-    // ── Tự động bơm spacer nếu trang chưa đủ dài ──
-    // Chỉ cần tối thiểu (maxScroll + 8)px scroll room để animation chạy cực kỳ mượt mà
-    const requiredRoom = maxScroll + 8;
-    const currentRoom = scrollHeight - clientHeight;
-    if (currentRoom < requiredRoom) {
-      _updateSpacer(requiredRoom);
-      // Không cần return — tiến hành apply progress với scrollHeight cũ,
-      // lần scroll tiếp theo sẽ đo đúng với spacer đã được thêm
-    }
-
-    // Giới hạn maxScroll theo scroll room thực tế
-    const maxPossibleScroll = scrollHeight - clientHeight;
-    if (maxPossibleScroll > 20 && maxScroll > maxPossibleScroll - 10) {
-      maxScroll = Math.max(20, maxPossibleScroll - 10);
-    }
-
-    // Tính pct và áp dụng
-    const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
-    _applyHeaderScrollProgress(header, pct);
   });
 })();
