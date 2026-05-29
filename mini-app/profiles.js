@@ -105,6 +105,9 @@ async function openProfileById(id, evt, initialTabId) {
 }
 async function openProfile(p, cardEl, initialTabId) {
   currentProfileId = p.id;
+  window.isDetailViewOpen = true;
+  document.body.classList.add('detail-view-open');
+  document.documentElement.classList.add('detail-view-open');
   // Animated profile transition
   if (typeof ProfileTransition !== 'undefined') {
     ProfileTransition.open(cardEl, p.id);

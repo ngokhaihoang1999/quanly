@@ -111,7 +111,13 @@
     .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; }
     .section-count { background: var(--surface2); border: 1px solid var(--border); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; color: var(--accent2); }
-    .detail-view { display: none; }
+    .detail-view {
+      display: none;
+      will-change: transform, opacity;
+      transform: translate3d(0,0,0);
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
     .detail-view.active { display: block; }
     .back-btn { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text2); font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 20px; cursor: pointer; margin-bottom: 16px; width: fit-content; }
     .profile-detail-header { background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; text-align: center; }
@@ -330,19 +336,31 @@
       overflow: hidden;
       border: 1px solid var(--border);
       position: relative;
-      max-width: 600px;
+      max-width: 800px;
       margin: 0 auto;
       width: 100%;
     }
-    /* Single continuous vertical line */
+    /* Left continuous vertical line (milestones & reports) */
     .tl-container::before {
       content: '';
       position: absolute;
       top: 0;
       bottom: 0;
-      left: calc(45% - 1px);
+      left: calc(33% - 1.5px);
       width: 3px;
       background: var(--accent);
+      z-index: 2;
+      pointer-events: none;
+    }
+    /* Right continuous vertical line (reports & BTVN cyan border) */
+    .tl-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(66% - 1.5px);
+      width: 3px;
+      background: #0ea5e9;
       z-index: 2;
       pointer-events: none;
     }
@@ -356,9 +374,9 @@
     .tl-item:last-child { border-bottom: none; }
     .tl-item:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
     .tl-left {
-      flex: 0 0 45%;
-      width: 45%;
-      max-width: 45%;
+      flex: 0 0 33%;
+      width: 33%;
+      max-width: 33%;
       min-width: 0;
       display: flex;
       align-items: center;
@@ -368,12 +386,71 @@
       box-sizing: border-box;
     }
     .tl-right {
-      flex: 1 1 0;
+      flex: 0 0 33%;
+      width: 33%;
+      max-width: 33%;
       min-width: 0;
       display: flex;
       align-items: center;
       gap: 5px;
       padding: 7px 8px 7px 8px;
+      box-sizing: border-box;
+    }
+    .tl-btvn {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      padding: 7px 8px;
+      box-sizing: border-box;
+      background: color-mix(in srgb, #0ea5e9 4%, transparent);
+    }
+    .tl-btvn-standalone {
+      background: color-mix(in srgb, #0ea5e9 2%, transparent);
+    }
+    .tl-btvn-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid color-mix(in srgb, #0ea5e9 30%, var(--border));
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      width: 100%;
+      box-sizing: border-box;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .tl-btvn-card:hover {
+      border-color: #0ea5e9;
+      background: var(--surface);
+    }
+    .tl-btvn-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex: 1;
+      min-width: 0;
+    }
+    .tl-btvn-info .tl-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .tl-btvn-card .tl-date {
+      font-size: 9px;
+    }
+    .tl-btn-group-btvn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tl-btn-group-btvn .tl-edit-btn,
+    .tl-btn-group-btvn .tl-del-btn {
+      opacity: 1 !important;
+      visibility: visible !important;
+      display: inline-block !important;
     }
     /* Major milestone row */
     .tl-major .tl-left { background: var(--surface2); font-weight: 700; }

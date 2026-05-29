@@ -177,7 +177,7 @@ const ProfileTransition = (() => {
     document.getElementById('fabBtn').style.display = (active === 'unit' || active === 'personal') ? 'flex' : 'none';
   }
 
-  function _reset() { currentProfileId = null; _pid = null; _cardEl = null; _containerId = null; }
+  function _reset() { currentProfileId = null; _pid = null; _cardEl = null; _containerId = null; window.isDetailViewOpen = false; document.body.classList.remove('detail-view-open'); document.documentElement.classList.remove('detail-view-open'); }
 
   function open(cardEl, profileId) {
     _pid = profileId;
@@ -185,6 +185,7 @@ const ProfileTransition = (() => {
     _containerId = _findContainer(cardEl);
     _saveScroll();
     _blink(cardEl);
+    window.isDetailViewOpen = true;
 
     setTimeout(() => {
       const dv = document.getElementById('detailView');
@@ -262,7 +263,7 @@ const SwipeHandler = (() => {
       else if (Math.abs(_dy) > 15) { _tracking = false; return; }
       return;
     }
-    e.preventDefault();
+    // Passive listener does not allow preventDefault, touch-action: pan-y covers it natively
     if (!_ticking) {
       requestAnimationFrame(() => {
         if (_swiping && _el) {
@@ -310,7 +311,7 @@ const SwipeHandler = (() => {
     _el = document.getElementById('mainContent');
     if (!_el) return;
     _el.addEventListener('pointerdown', onDown, { passive: true });
-    _el.addEventListener('pointermove', onMove, { passive: false });
+    _el.addEventListener('pointermove', onMove, { passive: true });
     _el.addEventListener('pointerup', onUp, { passive: true });
     _el.addEventListener('pointercancel', onUp, { passive: true });
   }

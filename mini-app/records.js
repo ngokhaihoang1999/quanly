@@ -184,11 +184,13 @@ async function loadJourney(profileId, currentPhase) {
 
     let events = [];
 
-    // Separate mo_kt and bai_dac_biet records for lookup
+    // Separate mo_kt, bai_dac_biet, and btvn records for lookup
     const moKtRecords = recs.filter(r => r.record_type === 'mo_kt');
     const matchedMoKtIds = new Set();
     const bdbRecords = recs.filter(r => r.record_type === 'bai_dac_biet');
     const matchedBdbIds = new Set();
+    const btvnRecords = recs.filter(r => r.record_type === 'btvn');
+    const matchedBtvnIds = new Set();
 
     // 1. Chakki — ALWAYS at bottom (oldest anchor)
     if (hapjas.length > 0) {
@@ -227,12 +229,7 @@ async function loadJourney(profileId, currentPhase) {
       else if (r.record_type === 'pv_gvbb')     { icon='🎤'; text='PV GVBB'; isMajor = true; }
       else if (r.record_type === 'dky_center')   { icon='📝'; text='ĐKý Center'; isMajor = true; }
       else if (r.record_type === 'pv_hs')        { icon='🎓'; text='PV HS'; isMajor = true; }
-      else if (r.record_type === 'btvn') {
-        const bbId = r.content?.bb_record_id;
-        const bb = bbId ? recs.find(x => x.id === bbId) : null;
-        const bLabel = bb ? ` (Buổi ${bb.content?.buoi_thu || '?'})` : '';
-        icon='📝'; text=`Bài tập về nhà${bLabel}`;
-      }
+      else if (r.record_type === 'btvn') { return; } // skipped, handled via 3rd column or standalone row
       else if (r.record_type === 'team_meeting') { icon='🤝'; text='Team Meeting'; isMajor = true; }
       else if (r.record_type === 'mo_kt')       { return; }
       else if (r.record_type === 'note')        { return; }
@@ -264,12 +261,50 @@ async function loadJourney(profileId, currentPhase) {
         }
       }
 
+      // Check if this bien_ban has a matching BTVN
+      let hasBTVN = false, btvnRecordId = null, btvnDeletable = false;
+      if (r.record_type === 'bien_ban') {
+        const btvnMatch = btvnRecords.find(b => b.content?.bb_record_id === r.id);
+        if (btvnMatch) {
+          hasBTVN = true;
+          btvnRecordId = btvnMatch.id;
+          btvnDeletable = true; // BTVN is always deletable!
+          matchedBtvnIds.add(btvnMatch.id);
+        }
+      }
+
       // Use report_date from content when available (user-customized date), fall back to created_at
       const _eventDate = r.content?.report_date ? r.content.report_date + 'T12:00:00' : r.created_at;
       events.push({
         date: _eventDate, icon, text, sortDate: new Date(_eventDate).getTime(),
         deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type,
-        isMajor, _buoiThu, hasKT, ktRecordId, hasBDB, bdbRecordId
+        isMajor, _buoiThu, hasKT, ktRecordId, hasBDB, bdbRecordId,
+        hasBTVN, btvnRecordId, btvnDeletable
+      });
+    });
+
+    // 4. Standalone BTVN records
+    btvnRecords.forEach(b => {
+      if (matchedBtvnIds.has(b.id)) return;
+      const _eventDate = b.content?.report_date ? b.content.report_date + 'T12:00:00' : b.created_at;
+      events.push({
+        date: _eventDate,
+        icon: '📝',
+        text: 'Bài tập về nhà (Tự do)',
+        sortDate: new Date(_eventDate).getTime(),
+        deletable: false,
+        _type: 'record',
+        _id: b.id,
+        _rtype: 'btvn',
+        isMajor: false,
+        _buoiThu: null,
+        hasKT: false,
+        ktRecordId: null,
+        hasBDB: false,
+        bdbRecordId: null,
+        hasBTVN: true, // Render as BTVN card
+        btvnRecordId: b.id,
+        btvnDeletable: true
       });
     });
 
@@ -320,6 +355,24 @@ async function loadJourney(profileId, currentPhase) {
 
       let html = '<div class="tl-container">';
 
+      // Helper function to render a BTVN card in the 3rd column
+      const renderBtvnCard = (btvnId, dateStr) => {
+        if (!btvnId) return '';
+        return `
+          <div class="tl-btvn-card tl-clickable" onclick="viewRecord('${btvnId}','btvn')">
+            <span class="tl-icon" style="font-size:15px;margin-right:4px;">📝</span>
+            <div class="tl-btvn-info">
+              <span class="tl-label">BTVN</span>
+              ${dateStr ? `<span class="tl-date">${dateStr}</span>` : ''}
+            </div>
+            <div class="tl-btn-group-btvn">
+              <button onclick="event.stopPropagation();editRecord('${btvnId}','btvn')" title="Chỉnh sửa BTVN" class="tl-edit-btn visible" style="opacity:1;">✏️</button>
+              <button onclick="event.stopPropagation();deleteEventRecord('${btvnId}','btvn')" title="Xóa BTVN" class="tl-del-btn visible" style="opacity:1;">🗑</button>
+            </div>
+          </div>
+        `;
+      };
+
       finalEvents.forEach((e) => {
         const d = e.date ? shinDate(e.date) : '';
 
@@ -348,7 +401,7 @@ async function loadJourney(profileId, currentPhase) {
         }
 
         if (e.hasKT || e.hasBDB) {
-          // ── SPLIT ROW: milestone(s) left + BB report right ──
+          // ── SPLIT ROW: milestone(s) left + BB report middle + BTVN right ──
           let leftHtml = '';
           if (e.hasKT) {
             const ktDel = `<button onclick="event.stopPropagation();deleteEventRecordKt('${e.ktRecordId}')" title="Hủy Mở KT" class="tl-del-btn">🗑</button>`;
@@ -384,6 +437,9 @@ async function loadJourney(profileId, currentPhase) {
               </div>
               <div class="tl-btn-group">${editBtn}${delBtn}</div>
             </div>
+            <div class="tl-btvn">
+              ${e.hasBTVN ? renderBtvnCard(e.btvnRecordId, d) : ''}
+            </div>
           </div>`;
         } else if (e.isMajor) {
           // ── MAJOR EVENT: left column only ── (with date edit)
@@ -401,18 +457,31 @@ async function loadJourney(profileId, currentPhase) {
               <div class="tl-btn-group">${dateEditBtn}${delBtn}</div>
             </div>
             <div class="tl-right"></div>
+            <div class="tl-btvn"></div>
+          </div>`;
+        } else if (e._rtype === 'btvn') {
+          // ── STANDALONE BTVN: right column only ──
+          html += `<div class="tl-item tl-btvn-standalone" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+            <div class="tl-left"></div>
+            <div class="tl-right"></div>
+            <div class="tl-btvn">
+              ${renderBtvnCard(e.btvnRecordId, d)}
+            </div>
           </div>`;
         } else {
-          // ── REPORT: right column only ──
-          html += `<div class="tl-item tl-report-row" ${viewAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          // ── REPORT: middle column only ──
+          html += `<div class="tl-item tl-report-row" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
             <div class="tl-left"></div>
-            <div class="tl-right">
+            <div class="tl-right tl-clickable" ${viewAttr}>
               <span class="tl-icon" style="flex-shrink:0">${e.icon}</span>
               <div class="tl-right-info">
                 <span class="tl-label">${e.text}</span>
                 ${d ? `<span class="tl-date">${d}</span>` : ''}
               </div>
               <div class="tl-btn-group">${editBtn}${delBtn}</div>
+            </div>
+            <div class="tl-btvn">
+              ${e.hasBTVN ? renderBtvnCard(e.btvnRecordId, d) : ''}
             </div>
           </div>`;
         }
@@ -658,11 +727,12 @@ async function deleteEventSession(sessionId, sessionNum) {
   } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }
 }
 
-// ── Delete single BC record (newest of current phase only) ──
+// ── Delete single BC record (newest of current phase only, except for BTVN which is unrestricted) ──
 async function deleteEventRecord(recordId, recordType) {
-  const labels = { tu_van:'Báo cáo TV', bien_ban:'Báo cáo BB' };
+  const labels = { tu_van:'Báo cáo TV', bien_ban:'Báo cáo BB', btvn:'Bài tập về nhà' };
   const label = labels[recordType] || recordType;
-  if (!await showConfirmAsync(`Xóa "${label}" mới nhất?`)) return;
+  const confirmMsg = recordType === 'btvn' ? `Xóa "${label}" này?` : `Xóa "${label}" mới nhất?`;
+  if (!await showConfirmAsync(confirmMsg)) return;
   try {
     await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
     showToast(`✅ Đã xóa ${label}`);

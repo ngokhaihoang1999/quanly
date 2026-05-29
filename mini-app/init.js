@@ -561,6 +561,9 @@ function backToList() {
     tTab.style.display = 'block';
   }
   document.getElementById('detailView').style.display = 'none';
+  window.isDetailViewOpen = false;
+  document.body.classList.remove('detail-view-open');
+  document.documentElement.classList.remove('detail-view-open');
   document.getElementById('fabBtn').style.display = (activeTab==='unit'||activeTab==='personal')?'flex':'none';
   currentProfileId = null;
 }
@@ -842,6 +845,14 @@ function _resetHeaderStyle(header) {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', () => {
+      // Nếu đang mở màn hình chi tiết hồ sơ (#detailView), bỏ qua toàn bộ việc co giãn header để tránh giật lag
+      if (window.isDetailViewOpen) return;
+      const detailView = document.getElementById('detailView');
+      if (detailView && (detailView.style.display === 'block' || detailView.classList.contains('active') || detailView.offsetHeight > 0)) {
+        window.isDetailViewOpen = true; // Sync state to avoid further DOM checks
+        return;
+      }
+
       // Debounce scroll state save in real-time
       clearTimeout(window._scrollSaveTimeout);
       window._scrollSaveTimeout = setTimeout(() => {

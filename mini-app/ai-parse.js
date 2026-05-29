@@ -314,11 +314,11 @@ async function executeAIParse(formType) {
     if (formType === 'thong_tin') {
       filledCount = fillInfoSheet(json);
     } else if (formType === 'tu_van') {
-      filledCount = fillRecordModal('tu_van', json);
+      filledCount = await fillRecordModal('tu_van', json);
     } else if (formType === 'bien_ban') {
-      filledCount = fillRecordModal('bien_ban', json);
+      filledCount = await fillRecordModal('bien_ban', json);
     } else if (formType === 'btvn') {
-      filledCount = fillRecordModal('btvn', json);
+      filledCount = await fillRecordModal('btvn', json);
     } else if (formType === 'chien_luoc') {
       filledCount = fillStrategyForm(json);
     } else if (formType === 'hapja') {
@@ -451,7 +451,7 @@ function fillInfoSheet(json) {
 
 // ── Fill BC TV / BC BB (inside modal) ───────────────────────────────────────
 
-function fillRecordModal(type, json) {
+async function fillRecordModal(type, json) {
   // First open the modal if not already open
   var modal = document.getElementById('addRecordModal');
   var isOpen = modal && modal.classList.contains('open');
@@ -459,49 +459,36 @@ function fillRecordModal(type, json) {
   if (!isOpen) {
     // Open the record modal first, then fill after render
     if (typeof openAddRecordModal === 'function') {
-      openAddRecordModal(type);
+      await openAddRecordModal(type);
     }
   }
 
-  // Use setTimeout to wait for modal DOM to render
   var count = 0;
-  var fillFn = function() {
-    if (type === 'btvn') {
-      if (json.qas && Array.isArray(json.qas)) {
-        var container = document.getElementById('btvn_qa_container');
-        if (container) {
-          container.innerHTML = ''; // clear all
-          json.qas.forEach(function(qa) {
-            if (typeof addBTVNQA === 'function') addBTVNQA();
-            var blocks = container.querySelectorAll('.qa-block');
-            var last = blocks[blocks.length - 1];
-            if (last) {
-              var qInput = last.querySelector('.btvn-q');
-              var aInput = last.querySelector('.btvn-a');
-              if (qInput) { qInput.value = qa.q || ''; _highlightField(qInput); }
-              if (aInput) { aInput.value = qa.a || ''; _highlightField(aInput); }
-              count++;
-            }
-          });
-        }
+  if (type === 'btvn') {
+    if (json.qas && Array.isArray(json.qas)) {
+      var container = document.getElementById('btvn_qa_container');
+      if (container) {
+        container.innerHTML = ''; // clear all
+        json.qas.forEach(function(qa) {
+          if (typeof addBTVNQA === 'function') addBTVNQA();
+          var blocks = container.querySelectorAll('.qa-block');
+          var last = blocks[blocks.length - 1];
+          if (last) {
+            var qInput = last.querySelector('.btvn-q');
+            var aInput = last.querySelector('.btvn-a');
+            if (qInput) { qInput.value = qa.q || ''; _highlightField(qInput); }
+            if (aInput) { aInput.value = qa.a || ''; _highlightField(aInput); }
+            count++;
+          }
+        });
       }
-    } else {
-      Object.keys(json).forEach(function(key) {
-        if (json[key] && _setField(key, json[key])) count++;
-      });
     }
-    return count;
-  };
-
-  if (!isOpen) {
-    // Modal just opened — wait for DOM
-    setTimeout(fillFn, 200);
-    // We can't return correct count synchronously, but the toast is shown from executeAIParse
-    // Estimate count from json
-    return Object.values(json).filter(function(v) { return v && v !== ''; }).length;
   } else {
-    return fillFn();
+    Object.keys(json).forEach(function(key) {
+      if (json[key] && _setField(key, json[key])) count++;
+    });
   }
+  return count;
 }
 
 // ── Fill Chiến lược (strategy tab) ──────────────────────────────────────────

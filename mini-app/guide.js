@@ -74,18 +74,18 @@ const JONDO_STEPS_DATA = [
     content: `
       <p><b>Quy trình khởi tạo và sàng lọc học viên mới (Hapja):</b></p>
       <ul>
-        <li><b>Cách tạo:</b> Bấm vào nút <b>➕ (FAB - Floating Action Button)</b> màu nổi bật ở góc dưới bên phải màn hình chính của ứng dụng.</li>
+        <li><b>Cách tạo:</b> Bấm vào nút <b>➕ (Tạo Phiếu Check Hapja)</b> màu nổi bật ở góc dưới bên phải màn hình chính của ứng dụng.</li>
         <li><b>Nhập thông tin:</b> Điền đầy đủ, chính xác các trường thông tin cơ bản: Họ tên học viên, năm sinh, số điện thoại liên hệ, khu vực sinh sống, Tư vấn viên (TVV) trực tiếp chăm sóc, và đặc biệt là các thông tin đánh giá ban đầu về điều kiện tham gia (Hapja).</li>
-        <li><b>Lưu Bản nháp (Draft):</b> Nếu đang điền dở mà vô tình đóng modal, hệ thống sẽ tự động lưu bản nháp vào thiết bị. Khi mở lại biểu mẫu, bạn sẽ nhận được thông báo để khôi phục hoặc xóa bản nháp tùy chọn.</li>
+        <li><b>Lưu Bản nháp (Draft):</b> Nếu đang điền dở mà vô tình đóng cửa, hệ thống sẽ tự động lưu bản nháp vào thiết bị. Khi mở lại biểu mẫu, bạn sẽ nhận được thông báo để khôi phục hoặc xóa bản nháp tùy chọn.</li>
         <li><b>Chờ duyệt:</b> Sau khi nhấn gửi, thông tin học viên sẽ được lưu dưới dạng phiếu <i>Chờ duyệt</i> trong tab <b>Check Hapja</b>.</li>
-        <li><b>Duyệt phiếu:</b> Cấp quản lý được phân quyền (Tổ trưởng <b>GYJN</b>, Tổ phó <b>BGYJN</b>, Nhóm trưởng <b>TJN</b>, Khu vực trưởng <b>YJYN</b>) sẽ vào danh sách kiểm tra thông tin. Nếu đủ tiêu chuẩn, quản lý bấm <b>Duyệt ✅</b>. Hệ thống sẽ tự động tạo hồ sơ học viên chính thức trong cơ sở dữ liệu và chuyển sang giai đoạn tiếp theo.</li>
+        <li><b>Duyệt phiếu:</b> Cấp quản lý được phân quyền (GGN Jondo) sẽ vào danh sách kiểm tra thông tin. Nếu đủ tiêu chuẩn, quản lý bấm <b>Duyệt ✅</b>. Hệ thống sẽ tự động tạo hồ sơ học viên chính thức trong cơ sở dữ liệu và chuyển sang giai đoạn tiếp theo.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>FAB ➕</span><small>Tạo phiếu & Lưu nháp</small></div>
+        <div class="guide-flow-step"><span>Nút Tạo➕</span><small>Tạo phiếu & Lưu nháp</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Phiếu Hapja 📋</span><small>Chờ quản lý duyệt</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Duyệt ✅</span><small>GYJN / TJN / YJYN</small></div>
+        <div class="guide-flow-step"><span>Duyệt ✅</span><small>GGN Jondo</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Khởi tạo 👤</span><small>Tự động lập hồ sơ</small></div>
       </div>
@@ -117,25 +117,25 @@ const JONDO_STEPS_DATA = [
   },
   {
     step: 3,
-    title: "3. Nhật ký & Báo cáo Tư vấn (TV) 💬",
-    label: "Nhật ký TV",
+    title: "3. Chốt lịch & Báo cáo Tư vấn (TV) 💬",
+    label: "Tư vấn",
     icon: "💬",
     keywords: ["tư vấn", "tv", "báo cáo", "nhật ký", "tình trạng", "tâm lý", "ghi chú"],
     content: `
       <p><b>Quản lý cuộc hẹn và Ghi nhận báo cáo Tư vấn tâm lý:</b></p>
       <ul>
-        <li><b>Đặt lịch chốt TV:</b> NDD hoặc quản lý đặt lịch hẹn tư vấn trực tiếp trên hệ thống. <b>Lưu ý tự động hóa:</b> Sau 1 tiếng kể từ thời điểm giờ hẹn chốt TV, hệ thống sẽ tự động tạo một công việc <i>"Viết Báo cáo Tư vấn"</i> trong tab <b>Ưu tiên</b> của TVV/NDD để nhắc nhở họ làm báo cáo kịp thời.</li>
-        <li><b>Quy trình Tư vấn:</b> TVV thực hiện các buổi trò chuyện sâu (thường có ít nhất 2 lần tư vấn). Sử dụng các công cụ trắc nghiệm tính cách chính xác như <b>Enneagram</b>, <b>MBTI</b> hoặc bảng phân tích Điểm hái trái (nỗi sợ, trở ngại lớn nhất) để thấu hiểu sâu sắc thế giới nội tâm của học viên.</li>
-        <li><b>Ghi nhận báo cáo:</b> TVV hoặc người được phân quyền truy cập hồ sơ nhấn nút <b>➕ Thêm ghi nhận</b> để lưu lại diễn biến buổi tư vấn. Nội dung báo cáo bao gồm: Ngày giờ, công cụ áp dụng, đánh giá mức độ tin cậy/tiếp thu, các điểm tâm lý nhạy cảm cần lưu ý và đề xuất định hướng hỗ trợ tiếp theo.</li>
+        <li><b>Đặt lịch chốt TV:</b> NDD hoặc quản lý đặt lịch hẹn tư vấn trực tiếp trên hệ thống, có thời gian và Tư vấn viên (TVV) cụ thể. <b>Lưu ý tự động hóa:</b> Sau 1 tiếng kể từ thời điểm giờ hẹn chốt TV, hệ thống sẽ tự động tạo một công việc <i>"Viết Báo cáo Tư vấn"</i> trong tab <b>Ưu tiên</b> của TVV/NDD để nhắc nhở họ làm báo cáo kịp thời.</li>
+        <li><b>Quy trình Tư vấn:</b> TVV thực hiện các buổi trò chuyện sâu (thường có ít nhất 2 lần tư vấn). Sử dụng các công cụ trắc nghiệm tính cách chính xác như <b>Enneagram</b> và một số công cụ khác tuỳ theo mỗi học viên.</li>
+        <li><b>Ghi nhận báo cáo:</b> TVV hoặc người được phân quyền truy cập hồ sơ nhấn nút <b>📝 Viết báo cáo Tư vấn</b> để lưu lại diễn biến buổi tư vấn. Nội dung báo cáo bao gồm: Ngày giờ, công cụ áp dụng, đánh giá mức độ tin cậy/tiếp thu, các điểm tâm lý nhạy cảm cần lưu ý và đề xuất định hướng hỗ trợ tiếp theo.</li>
       </ul>
       <div class="guide-flowchart">
         <div class="guide-flow-step"><span>Hẹn Lịch 📅</span><small>Tự động tạo task sau 1h</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Trắc Nghiệm 🧠</span><small>Enneagram, MBTI</small></div>
-        <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Phân Tích 📝</span><small>Tìm điểm chạm tâm lý</small></div>
+        <div class="guide-flow-step"><span>Tư vấn</span><small>Enneagram,...</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Báo Cáo 💬</span><small>Ghi nhận hồ sơ hệ thống</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Chốt tiếp theo 📅</span><small>Hoặc chuyển sang group TV-BB</small></div>
       </div>
     `
   },
@@ -144,50 +144,51 @@ const JONDO_STEPS_DATA = [
     title: "4. Nhóm hỗ trợ & Telegram (Group TV-BB) 🤝",
     label: "Group TV-BB",
     icon: "🤝",
-    keywords: ["telegram", "nhóm", "group", "chat", "thảo luận", "liên kết", "kết nối", "tv-bb"],
+    keywords: ["telegram", "nhóm", "group", "chat", "thảo luận", "liên kết", "kết nối", "tv-bb", "bot"],
     content: `
       <p><b>Liên kết và Đồng bộ thông tin qua Nhóm hỗ trợ (Group Telegram):</b></p>
       <ul>
-        <li><b>Phân công Nhân sự phụ trách:</b> Mỗi học viên sẽ được đồng hành bởi một nhóm nhân sự chuyên biệt bao gồm: Tư vấn viên (TVV), Người dẫn dắt (NDD), Giáo viên BB (GVBB) và các nhân sự hỗ trợ (Lá).</li>
-        <li><b>Lập group Telegram:</b> NDD tạo một nhóm chat riêng trên Telegram với tất cả thành viên phụ trách trên kèm theo **Bot Quản lý** của hệ thống.</li>
-        <li><b>Liên kết Group:</b> Bấm vào biểu tượng Telegram hoặc nút <b>Liên kết Group</b> trong hồ sơ học viên để gắn đường link chat vào hệ thống.</li>
-        <li><b>Bot báo cáo tự động:</b> Khi liên kết thành công, hệ thống sẽ kích hoạt webhook. Mọi thao tác quan trọng trên app (giao bài tập về nhà mới, học viên nộp bài tập, giáo viên chấm bài xong, cập nhật báo cáo buổi học BB mới, hoặc hoàn thành các mốc tiến độ hồ sơ) sẽ tự động được Bot gửi tin nhắn tức thời vào nhóm Telegram để toàn bộ nhân sự phụ trách cùng nắm bắt và hỗ trợ kịp thời.</li>
+        <li><b>Phân công Nhân sự phụ trách:</b> Mỗi học viên sẽ được đồng hành bởi một nhóm nhân sự chuyên biệt bao gồm: Tư vấn viên (TVV), Người dẫn dắt (NDD), Giáo viên BB (GVBB) và các nhân sự hỗ trợ (Lá). Đặc biệt phải tìm được GVBB phù hợp với học viên trước khi lập Group.</li>
+        <li><b>Lập group Telegram:</b> Người được phân công tạo một nhóm chat riêng trên Telegram với tất cả thành viên phụ trách trên kèm theo <b>Bot Quản lý</b> của hệ thống.</li>
+        <li><b>Liên kết Group:</b> Vào hồ sơ của học viên, bấm vào trạng thái <b>Chưa kết nối Group</b> để được hướng dẫn các bước kết nối Hồ sơ vs Group thông qua <b>Bot Quản lý</b> (lưu ý cần cho bot quyền Admin).</li>
+        <li><b>Tương tác với Bot:</b> Khi liên kết thành công. Mọi thao tác quan trọng trên app (cập nhật báo cáo buổi học BB mới, bài tập về nhà, hoặc hoàn thành các mốc tiến độ hồ sơ) sẽ tự động được Bot gửi tin nhắn tức thời vào nhóm Telegram để toàn bộ nhân sự phụ trách cùng nắm bắt và hỗ trợ kịp thời. Ngoài ra có thể sử dụng những tính năng tương tác với Bot để phục vụ cho công việc chăm sóc và quản lý học viên.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Phân Sự 👥</span><small>TVV, NDD, GVBB, Lá</small></div>
+        <div class="guide-flow-step"><span>Tìm GVBB 👤</span><small>Phù hợp với học viên</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Lập Nhóm 💬</span><small>Group Telegram riêng</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Liên Kết 🔗</span><small>Dán link vào hồ sơ</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Webhook 🤖</span><small>Bot đẩy tin nhắn auto</small></div>
+        <div class="guide-flow-step"><span>Tương tác Bot 🤖</span><small>Quản lý & Hỗ trợ</small></div>
       </div>
     `
   },
   {
     step: 5,
-    title: "5. Theo dõi 4 Mốc Tiến độ ⭐",
-    label: "Tiến độ",
+    title: "5. Dạy và báo cáo BB + 4 Mốc Tiến độ ⭐",
+    label: "Tiến độ BB",
     icon: "⭐",
-    keywords: ["milestone", "mốc", "bài đặc biệt", "tiến độ", "phỏng vấn", "đăng ký center", "đk center"],
+    keywords: ["milestone", "mốc", "bài đặc biệt", "tiến độ", "phỏng vấn", "đăng ký center", "đk center", "bb", "báo cáo"],
     content: `
-      <p><b>Đánh giá chất lượng hồ sơ qua 4 Mốc Tiến độ quan trọng:</b></p>
+      <p><b>Dạy học và đánh giá chất lượng hồ sơ qua các mốc tiến độ:</b></p>
       <ul>
-        <li>Để đảm bảo học viên tiếp thu tốt kiến thức và sẵn sàng chuyển sang giai đoạn học tập chuyên sâu cao hơn, hệ thống giám sát chặt chẽ 4 mốc tiến độ chính (tương ứng với các nút tích hoàn thành trong hồ sơ):</li>
-        <li>1️⃣ <b>Bài đặc biệt:</b> Bài viết hoặc bài thu hoạch tâm đắc của học viên để đánh giá mức độ thấu hiểu và khao khát thay đổi bản thân.</li>
-        <li>2️⃣ <b>Phỏng vấn GVBB:</b> Buổi phỏng vấn và đánh giá chuyên môn trực tiếp từ Giáo viên BB hướng dẫn, xác nhận học viên đã nắm vững các kiến thức nền tảng.</li>
+        <li><b>Dạy và báo cáo BB:</b> GVBB sẽ lên lịch học với học viên, và sau mỗi buổi học sẽ vào tab <b>BB</b> để cập nhật chi tiết buổi học/buổi gặp gỡ trong <b>Viết báo cáo BB</b>.</li>
+        <li><b>4 mốc quan trọng:</b> Để đảm bảo học viên tiếp thu tốt kiến thức và sẵn sàng chuyển sang giai đoạn học tập chuyên sâu cao hơn, hệ thống giám sát chặt chẽ 4 mốc tiến độ chính (tương ứng với các nút tích hoàn thành trong hồ sơ):</li>
+        <li>1️⃣ <b>Bài đặc biệt:</b> Buổi học đặc biệt với Trợ giảng.</li>
+        <li>2️⃣ <b>Phỏng vấn GVBB:</b> Buổi phỏng vấn giữa GVBB và Center.</li>
         <li>3️⃣ <b>Đăng ký Center:</b> Đăng ký chính thức lớp học chuyên sâu, xác nhận lịch trình sinh hoạt và cam kết thời gian của học viên.</li>
-        <li>4️⃣ <b>Phỏng vấn Học viên:</b> Cuộc gặp gỡ, phỏng vấn chất lượng cuối cùng từ đại diện quản lý cấp trên để kiểm định tấm lòng và sự an toàn của học viên.</li>
+        <li>4️⃣ <b>Phỏng vấn Học viên:</b> Cuộc gặp gỡ, phỏng vấn giữa học viên với Trợ giảng để kiểm định tấm lòng và sự an toàn của học viên.</li>
         <li><b>Quy trình cập nhật:</b> Khi hoàn thành mốc nào, GVBB hoặc quản lý phụ trách sẽ bấm hoàn thành mốc đó trực tiếp trong tab Giai đoạn. Cả 4 mốc này phải được hoàn thành 100% thì hệ thống mới cho phép mở chức năng chốt chuyển sang lớp Center.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Bài Đặc Biệt 📝</span><small>Mốc 1</small></div>
+        <div class="guide-flow-step"><span>Báo cáo BB 👨‍🏫</span><small>Dạy và cập nhật</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>PV GVBB 🎤</span><small>Mốc 2</small></div>
+        <div class="guide-flow-step"><span>Mốc 1 & 2 ⭐</span><small>Bài ĐB & PV GVBB</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>ĐK Center 🏛️</span><small>Mốc 3</small></div>
+        <div class="guide-flow-step"><span>Mốc 3 & 4 ⭐</span><small>ĐK Center & PV HV</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>PV Học Viên 🤝</span><small>Mốc 4 (Hoàn thành)</small></div>
+        <div class="guide-flow-step"><span>Hoàn thành 💯</span><small>Mở nút chốt</small></div>
       </div>
     `
   },
@@ -198,21 +199,23 @@ const JONDO_STEPS_DATA = [
     icon: "🏛️",
     keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "thẻ hv", "hoàn thành"],
     content: `
-      <p><b>Hoàn tất biểu mẫu Sinka và Chốt hồ sơ nhập học lớp Center:</b></p>
+      <p><b>Hoàn tất hồ sơ hành chính ĐK BB/Sinka và chốt danh sách lên lớp Center:</b></p>
       <ul>
-        <li><b>Phiếu Sinka (Thẻ học viên):</b> Đây là phiếu lý lịch nhập học chi tiết của học viên. Phiếu Sinka cần được điền tích lũy và cập nhật <i>liên tục và xuyên suốt</i> ngay sau khi học viên bước vào giai đoạn Tư vấn. Tuyệt đối tránh dồn việc điền Sinka vào phút chót.</li>
+        <li><b>ĐK BB:</b> Đây là thẻ thông tin đăng kí BB, hỗ trợ cho SGN báo cáo dễ dàng hơn về quá trình học BB của học viên.</li>
+        <li><b>Phiếu Sinka (Thẻ học viên):</b> Đây là phiếu lý lịch nhập học chi tiết của học viên. Phiếu Sinka cần được điền tích lũy và cập nhật <i>liên tục và xuyên suốt</i> ngay sau khi học viên bước vào giai đoạn Tư vấn. Tránh dồn việc điền Sinka vào phút chót.</li>
         <li><b>Điền thông tin Sinka:</b> Vào tab <b>Thẻ HV</b> trong hồ sơ học viên. Điền chi tiết các trường thông tin hành chính, học vấn, công việc, đặc điểm tính cách, và nhận xét chung của nhóm hỗ trợ. Bấm <b>Lưu thông tin Sinka</b> để cập nhật dữ liệu.</li>
+        <li><b>Tải phiếu Sinka:</b> Trong tab <b>Thẻ HV</b> sẽ có chức năng tải <b>📄 Word</b>, bấm vào để tải Thẻ HV dưới dạng Word đã được đặt tên đúng cú pháp.</li>
         <li><b>Nút Chốt Center:</b> Khi học viên đã hoàn thành đầy đủ cả 4 mốc tiến độ quan trọng ở giai đoạn học BB, nút <b>🏛️ Chốt Center</b> sẽ tự động hiển thị trong tab Giai đoạn.</li>
-        <li><b>Chốt Center & Xuất File Word:</b> Người được phân quyền bấm <b>Chốt Center</b> để chính thức đóng hồ sơ giai đoạn BB và chuyển học viên lên danh sách lớp Center. Luôn sẵn sàng tải thẻ học viên Center dưới dạng file Word đẹp mắt.</li>
+        <li><b>Chốt Center:</b> Người được phân quyền bấm <b>Chốt Center</b> để chính thức đóng hồ sơ giai đoạn BB và chuyển học viên lên danh sách lớp Center.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Nhập Sinka 📜</span><small>Điền tích lũy</small></div>
+        <div class="guide-flow-step"><span>Nhập Sinka 📜</span><small>Điền tích lũy & ĐK BB</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Tải Word 📄</span><small>Xuất Thẻ HV Center</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Đủ 4 mốc BB ⭐</span><small>Mở nút chốt</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Bấm Chốt Center 🏛️</span><small>Lên lớp Center</small></div>
-        <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Tải Word 📄</span><small>Xuất Thẻ HV Center</small></div>
+        <div class="guide-flow-step"><span>Chốt Center 🏛️</span><small>Lên lớp Center</small></div>
       </div>
     `
   }
@@ -261,7 +264,7 @@ const PROFILE_TABS_DATA = [
       &nbsp;&nbsp; - <i>Lập group TV-BB:</i> Tự động kiểm tra điều kiện nhân sự trước khi cho phép liên kết nhóm Telegram hỗ trợ.<br/>
       &nbsp;&nbsp; - <i>Mở KT (Kinh Thánh):</i> Đánh dấu bước tiến quan trọng khi bắt đầu tiết lộ nội dung Kinh thánh cho học viên.<br/>
       &nbsp;&nbsp; - <i>Chốt Center:</i> Nút bấm quan trọng nhất để hoàn thành giai đoạn học BB và chuyển lên lớp Center 100 buổi.<br/>
-      • <b>Mẹo thao tác:</b> Hãy chắc chắn cập nhật các thông tin nhân sự và hoàn thành đầy đủ 4 mốc tiến độ BB trước khi thực hiện chuyển giai đoạn.`
+      • <b>Mẹo thao tác:</b> Có thể bấm hoàn tác khi lỡ bấm chuyển giai đoạn ngoài ý muốn, chỉnh sửa Chốt Tư vấn và Báo cáo, xoá các báo cáo TV và BB theo trình tự.`
   },
   {
     id: "tv",
@@ -270,25 +273,25 @@ const PROFILE_TABS_DATA = [
     desc: `<b>Quản lý Lịch hẹn & Nhật ký Tư vấn tâm lý:</b><br/>
       • <b>Nội dung:</b> Ghi nhận thời gian các buổi hẹn tư vấn và toàn bộ báo cáo chi tiết sau mỗi lần gặp gỡ. Thường quy trình có tối thiểu 2 lần tư vấn chính thức trước khi học viên bước vào khóa học.<br/>
       • <b>Các trường thông tin cốt lõi:</b> Lần tư vấn thứ mấy, tên công cụ áp dụng (ví dụ: trắc nghiệm tâm lý Enneagram, MBTI), kết quả bài test, vấn đề/nhu cầu khai thác được, phản hồi sau tư vấn, Điểm hái trái của học viên và đề xuất hướng đi tiếp theo.<br/>
-      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian hẹn chốt TV, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo TV"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/NDD, giúp hạn chế tối đa việc quên ghi nhận báo cáo.`
+      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian hẹn chốt TV, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo TV"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/NDD, giúp hạn chế tối đa việc quên ghi nhận báo cáo.<br/>
+      • <b>Mẹo thao tác:</b> Dùng <b>AI nhập nhanh</b> để có thể nhập nhanh nội dung báo cáo, cần xem xét và chỉnh sửa trước khi lưu.`
   },
   {
     id: "bb",
     title: "4. BB (Học tập)",
     icon: "📖",
     desc: `<b>Giám sát Mạch bài giảng 12 buổi BB & 4 Mốc hồ sơ:</b><br/>
-      • <b>Nội dung:</b> Nhật ký chi tiết của Giáo viên BB (GVBB) ghi lại sau mỗi buổi dạy về mức độ phản hồi, thái độ tiếp thu, và các thông tin khai thác mới của học viên.<br/>
-      • <b>Nhắc lịch dạy tiếp theo:</b> Khi lưu báo cáo buổi học, GVBB nhập thời gian dự kiến cho buổi tiếp theo. Đúng 1 giờ sau giờ học đó, hệ thống sẽ tự động tạo task <i>"Viết BC BB buổi N"</i> trong tab <b>Ưu tiên</b>.<br/>
-      • <b>Bảng kiểm soát 4 mốc tiến độ BB:</b> Nơi GVBB hoặc quản lý tích chọn xác nhận hoàn thành: <i>Bài đặc biệt</i>, <i>Phỏng vấn GVBB</i>, <i>Đăng ký Center</i>, và <i>Phỏng vấn Học viên</i>. Đây là điều kiện tiên quyết để được Chốt Center.`
+      • <b>Nội dung:</b> GVBB bấm vào <b>📝 Viết báo cáo BB</b> sau mỗi buổi dạy về mức độ phản hồi, thái độ tiếp thu, và các thông tin khai thác mới của học viên.<br/>
+      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian dạy BB, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo BB"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/GVBB, giúp hạn chế tối đa việc quên ghi nhận báo cáo.<br/>
+      • <b>Nhắc lịch dạy tiếp theo:</b> Khi lưu báo cáo buổi học, GVBB nhập thời gian dự kiến cho buổi tiếp theo. Đúng 1 giờ sau giờ học đó, hệ thống sẽ tự động tạo task <i>"Viết BC BB buổi N"</i> trong tab <b>Ưu tiên</b>.`
   },
   {
     id: "btvn",
     title: "5. BTVN (Bài tập)",
     icon: "📝",
     desc: `<b>Quản lý Giao bài & Chấm bài tập về nhà:</b><br/>
-      • <b>Nội dung:</b> Giáo viên BB giao các bài tập rèn luyện tư duy kèm theo thời hạn nộp cụ thể trực tiếp trên hệ thống.<br/>
-      • <b>Trạng thái làm bài:</b> Theo dõi trạng thái nộp bài qua các nhãn màu trực quan: 🔴 <i>Chưa làm</i>, 🟡 <i>Đã nộp</i> (chờ chấm), 🟢 <i>Đã chấm</i>. Giáo viên có thể chấm điểm và viết nhận xét chi tiết bài làm.<br/>
-      • <b>Đồng bộ Telegram:</b> Mỗi khi có bài tập mới được giao, học viên nộp bài hoặc giáo viên hoàn thành chấm bài, Bot Telegram của hệ thống sẽ tự động gửi thông báo chi tiết vào nhóm hỗ trợ TV-BB giúp việc phối hợp đôn đốc học viên cực kỳ nhịp nhàng.`
+      • <b>Nội dung:</b> GVBB báo cáo lại bài làm của học viên từ nội dung câu hỏi được giao.<br/>
+      • <b>Mẹo thao tác:</b> Dùng <b>AI nhập nhanh</b> để nhập nhanh câu hỏi và câu trả lời của học viên.`
   },
   {
     id: "notes",
@@ -313,9 +316,9 @@ const PROFILE_TABS_DATA = [
     title: "8. Thẻ HV (Sinka)",
     icon: "📜",
     desc: `<b>Điền Sinka Lý lịch & Xuất file Word nhập học:</b><br/>
-      • <b>Nội dung:</b> Biểu mẫu Sinka thu thập thông tin lý lịch nhập học chi tiết của học viên (tiểu sử gia đình, hoàn cảnh học tập, xu hướng tâm lý, công việc hiện tại, nhận xét của nhóm hỗ trợ).<br/>
+      • <b>Nội dung:</b> Biểu mẫu Thẻ HV thu thập thông tin lý lịch nhập học chi tiết của học viên (tiểu sử gia đình, hoàn cảnh học tập, xu hướng tâm lý, công việc hiện tại, nhận xét của nhóm hỗ trợ). Bên cạnh đó là mẫu ĐK BB hỗ trợ cho việc báo cáo về quá trình học BB của học viên.<br/>
       • <b>Điền thông tin tích lũy:</b> Nên điền tích lũy dần thông tin ngay từ giai đoạn tư vấn học viên để dữ liệu đầy đủ và chính xác nhất.<br/>
-      • <b>Tự động điền & Xuất Word (.docx):</b> Hệ thống tự động lấy các thông tin hành chính có sẵn trong hồ sơ để điền sẵn vào biểu mẫu Sinka. Khi học viên sẵn sàng nhập học, người dùng chỉ cần bấm nút xuất thẻ để tải ngay file Word (.docx) mẫu Thẻ Học viên Center chính thức được thiết kế chuẩn chỉ để lưu trữ vật lý.`
+      • <b>Tự động điền & Xuất Word (.docx):</b> Hệ thống tự động lấy các thông tin hành chính có sẵn trong hồ sơ để điền sẵn vào biểu mẫu Thẻ HV. Khi học viên sẵn sàng nhập học, người dùng chỉ cần bấm nút xuất thẻ để tải ngay file Word (.docx) mẫu Thẻ Học viên Center chính thức được thiết kế chuẩn chỉ để lưu trữ vật lý.`
   },
   {
     id: "mindmap",
