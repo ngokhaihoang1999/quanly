@@ -916,28 +916,33 @@ function _resetHeaderStyle(header) {
     const scrollHeight = scrollContainer.scrollHeight;
     const clientHeight = scrollContainer.clientHeight;
 
-    // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
-    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
-    const naturalScrollHeight = scrollHeight - currentSpacerH;
-
-    // Nếu nội dung tự nhiên ngắn hơn hoặc bằng chiều cao hiển thị hiện tại,
-    // ta hoàn toàn không cho phép co giãn header và giữ spacer ở mức 0px.
-    // Điều này chặn đứng hoàn toàn hiện tượng giật khi người dùng cố tình kéo/miết màn hình ngắn.
-    if (naturalScrollHeight <= clientHeight) {
-      if (currentSpacerH !== 0) {
-        _spacer.style.height = '0px';
-      }
-      _resetHeaderStyle(header);
-      return;
-    }
-
-    // Tính maxScroll động theo các bar đang hiển thị
+    // Tính maxScroll động theo các bar đang hiển thị trước để dùng cho các phép tính toán
     let maxScroll = 66;
     const viewAsBar = header.querySelector('.view-as-bar');
     const semesterBar = header.querySelector('.semester-bar');
     if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
     if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
     maxScroll += 20;
+
+    // Tính toán lượng header hiện đang co lại để khôi phục chiều cao viewport mở rộng tĩnh (expanded client height)
+    // Điều này giữ cho phép so sánh chiều cao luôn nhất quán trong suốt hành trình cuộn, tránh bị khóa cứng hoặc giật cục.
+    const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
+    const expandedClientHeight = clientHeight - (pct * maxScroll);
+
+    // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
+    const currentSpacerH = parseFloat(_spacer.style.height) || 0;
+    const naturalScrollHeight = scrollHeight - currentSpacerH;
+
+    // So sánh với expandedClientHeight (chiều cao hiển thị khi header mở to hết cỡ)
+    // giúp chặn đứng hoàn toàn hiện tượng giật khi kéo trang ngắn, 
+    // mà không gây khóa cứng hay giật cục khi cuộn trên các trang trung bình/dài.
+    if (naturalScrollHeight <= expandedClientHeight) {
+      if (currentSpacerH !== 0) {
+        _spacer.style.height = '0px';
+      }
+      _resetHeaderStyle(header);
+      return;
+    }
 
     // ── Tự động bơm spacer nếu trang chưa đủ dài ──
     // Chỉ cần tối thiểu (maxScroll + 8)px scroll room để animation chạy cực kỳ mượt mà
