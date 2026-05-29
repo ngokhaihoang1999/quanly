@@ -670,10 +670,15 @@ function showReportPopup(contentHtml, recordId, recordType, copyText) {
   document.getElementById('reportViewBody').innerHTML = contentHtml;
   // Store copy text
   window._reportCopyText = copyText || '';
-  // Actions: Copy + Edit + Close
+  // Actions: Copy + Delete (if BTVN) + Edit + Close
   const acts = document.getElementById('reportViewActions');
+  let delBtnHtml = '';
+  if (recordType === 'btvn') {
+    delBtnHtml = `<button onclick="document.getElementById('reportViewModal').classList.remove('open');deleteEventRecord('${recordId}','${recordType}')" style="padding:10px 14px;border-radius:var(--radius-sm);border:1px solid rgba(239, 68, 68, 0.4);background:rgba(239, 68, 68, 0.08);color:var(--red);font-size:13px;cursor:pointer;" title="Xóa BTVN">🗑️</button>`;
+  }
   acts.innerHTML = `
     <button onclick="copyToClipboard(window._reportCopyText)" style="padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;cursor:pointer;" title="Copy báo cáo">📋</button>
+    ${delBtnHtml}
     <button onclick="document.getElementById('reportViewModal').classList.remove('open');editRecord('${recordId}','${recordType}')" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">✏️ Chỉnh sửa</button>
     <button onclick="document.getElementById('reportViewModal').classList.remove('open')" style="flex:1;padding:10px;border-radius:var(--radius-sm);border:none;background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;">Đóng</button>`;
   modal.classList.add('open');

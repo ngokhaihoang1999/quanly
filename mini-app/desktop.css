@@ -962,5 +962,70 @@ body.detail-view-open #detailView {
   .notif-panel {
     padding-top: 55px !important;
   }
+
+  /* ============ TIMELINE MOBILE & SMALL DESKTOP OVERRIDES ============ */
+  .tl-container::before {
+    left: calc(38% - 1.5px) !important;
+  }
+  .tl-container::after {
+    left: calc(85% - 1.5px) !important;
+  }
+  .tl-left {
+    flex: 0 0 38% !important;
+    width: 38% !important;
+    max-width: 38% !important;
+    padding: 6px 6px !important;
+  }
+  .tl-right {
+    flex: 0 0 47% !important;
+    width: 47% !important;
+    max-width: 47% !important;
+    padding: 6px 6px !important;
+  }
+  .tl-btvn {
+    flex: 0 0 15% !important;
+    width: 15% !important;
+    max-width: 15% !important;
+    padding: 6px !important;
+    justify-content: center !important;
+  }
+  .tl-btvn-card {
+    justify-content: center !important;
+    padding: 6px !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    margin: 0 auto !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important;
+    border-color: color-mix(in srgb, #0ea5e9 40%, var(--border)) !important;
+  }
+  .tl-btvn-card .tl-icon {
+    margin-right: 0 !important;
+    font-size: 14px !important;
+  }
+  .tl-btvn-card .tl-btvn-info {
+    display: none !important;
+  }
+  .tl-btvn-card .tl-btn-group-btvn {
+    display: none !important;
+  }
+  .tl-date {
+    font-size: 8.5px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    display: block !important;
+    margin-top: 3px !important;
+    opacity: 0.85 !important;
+    line-height: 1.25 !important;
+  }
+  .tl-label {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
 }
 
