@@ -926,7 +926,7 @@ function _resetHeaderStyle(header) {
 
     // Tính toán lượng header hiện đang co lại để khôi phục chiều cao viewport mở rộng tĩnh (expanded client height)
     // Điều này giữ cho phép so sánh chiều cao luôn nhất quán trong suốt hành trình cuộn, tránh bị khóa cứng hoặc giật cục.
-    const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
+    let pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
     const expandedClientHeight = clientHeight - (pct * maxScroll);
 
     // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
@@ -961,7 +961,7 @@ function _resetHeaderStyle(header) {
     }
 
     // Tính pct và áp dụng
-    const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
+    pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
     _applyHeaderScrollProgress(header, pct);
   });
 })();
