@@ -920,22 +920,14 @@ function _resetHeaderStyle(header) {
     const scrollHeight = scrollContainer.scrollHeight;
     const clientHeight = scrollContainer.clientHeight;
 
-    // Đo chiều cao header hiện tại và khôi phục chiều cao expandedClientHeight chuẩn xác bằng pixel
-    if (!window._expandedHeaderHeight || window._expandedHeaderHeight < 50) {
-      window._expandedHeaderHeight = header.offsetHeight;
-    }
-    const currentHeaderH = header.offsetHeight;
-    const collapsedAmt = Math.max(0, window._expandedHeaderHeight - currentHeaderH);
-    const expandedClientHeight = clientHeight - collapsedAmt;
-
     // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
     const currentSpacerH = parseFloat(_spacer.style.height) || 0;
     const naturalScrollHeight = scrollHeight - currentSpacerH;
 
-    // So sánh với expandedClientHeight (chiều cao hiển thị khi header mở to hết cỡ)
-    // giúp chặn đứng hoàn toàn hiện tượng giật khi kéo trang ngắn, 
-    // mà không gây khóa cứng hay giật cục khi cuộn trên các trang trung bình/dài.
-    if (naturalScrollHeight <= expandedClientHeight) {
+    // Chỉ tắt co giãn header nếu trang hoàn toàn không thể cuộn tự nhiên (naturalScrollHeight <= clientHeight + 4)
+    // giúp chặn đứng hoàn toàn hiện tượng giật khi kéo trang ngắn trên mobile,
+    // mà không gây bất kỳ ảnh hưởng nào đến độ mượt mà hay khóa cứng hiệu ứng khi cuộn.
+    if (naturalScrollHeight <= clientHeight + 4) {
       if (currentSpacerH !== 0) {
         _spacer.style.height = '0px';
       }
