@@ -89,20 +89,147 @@ function renderNotes() {
   }
 
   if (!_isNotesOnBoard()) {
-    // Mobile/small screen: clean up all floating/maximized notes from the body
     clearAllFloatingNotes();
   }
 
-  if (_isNotesOnBoard()) {
-    // Board mode
+  const isOnBoard = _isNotesOnBoard();
+  if (isOnBoard) {
     container.classList.add('notes-board');
-    container.innerHTML = notes.map((n, i) => renderBoardNoteCard(n, i)).join('');
-    // Attach drag/resize handlers after DOM render
-    requestAnimationFrame(() => _initBoardNotes(container));
   } else {
-    // List mode (mobile)
     container.classList.remove('notes-board');
-    container.innerHTML = notes.map(n => renderNoteCard(n)).join('');
+  }
+
+  // --- SMART DOM DIFFING ---
+  // To avoid flickering and resetting active media (audio/video players) in other notes,
+  // we update note cards individually in the DOM rather than wiping container.innerHTML.
+  
+  // 1. Get all current note card DOM elements
+  const currentCardMap = new Map();
+  if (isOnBoard) {
+    container.querySelectorAll('.board-note').forEach(el => {
+      const nid = el.dataset.noteId || el.id.replace('boardNote-', '');
+      if (nid) currentCardMap.set(nid, el);
+    });
+  } else {
+    container.querySelectorAll('.pnote-card').forEach(el => {
+      const nid = el.dataset.noteId;
+      if (nid) currentCardMap.set(nid, el);
+    });
+  }
+
+  // 2. We will build a set of new note IDs
+  const newNoteIds = new Set(notes.map(n => n.id));
+
+  // 3. Remove DOM elements for notes that are deleted
+  for (const [nid, el] of currentCardMap.entries()) {
+    if (!newNoteIds.has(nid)) {
+      el.remove();
+    }
+  }
+
+  // 4. Update or append note cards
+  notes.forEach((n, i) => {
+    const cardHtml = isOnBoard ? renderBoardNoteCard(n, i) : renderNoteCard(n);
+    const existingEl = currentCardMap.get(n.id);
+
+    if (existingEl) {
+      // Compare state with the last rendered state to detect changes
+      const lastStateStr = existingEl.dataset.renderedState;
+      const newState = {
+        title: n.title,
+        content: n.content,
+        color: n.color,
+        reminder_at: n.reminder_at,
+        reminder_sent: n.reminder_sent,
+        linked_profile_id: n.linked_profile_id,
+        cal_date: n.cal_date,
+        _sharedBy: n._sharedBy,
+        _canEdit: n._canEdit,
+        _shared: n._shared,
+        _isSharedByMe: n._isSharedByMe,
+        x: _notesBoardLayouts[n.id]?.x,
+        y: _notesBoardLayouts[n.id]?.y,
+        w: _notesBoardLayouts[n.id]?.w,
+        h: _notesBoardLayouts[n.id]?.h,
+        isFloating: _notesBoardLayouts[n.id]?.isFloating,
+      };
+      const newStateStr = JSON.stringify(newState);
+
+      if (lastStateStr !== newStateStr) {
+        // State changed! Check if media is currently playing in this note
+        const audio = existingEl.querySelector('audio, video');
+        const isPlaying = audio && (!audio.paused || audio.currentTime > 0);
+        
+        const temp = document.createElement('div');
+        temp.innerHTML = cardHtml;
+        const newCardEl = temp.firstElementChild;
+        newCardEl.dataset.renderedState = newStateStr;
+
+        // Check if user has active focus in the text editor
+        const editor = existingEl.querySelector('.board-note-content, .pnote-full-editor');
+        const isFocused = editor && document.activeElement && editor.contains(document.activeElement);
+
+        if (isFocused || isPlaying) {
+          // Keep editor and media intact, update color, title, badges, position
+          existingEl.style.backgroundColor = newCardEl.style.backgroundColor;
+          existingEl.style.borderColor = newCardEl.style.borderColor;
+          
+          const header = existingEl.querySelector('.board-note-header, .pnote-header');
+          const newHeader = newCardEl.querySelector('.board-note-header, .pnote-header');
+          if (header && newHeader) header.outerHTML = newHeader.outerHTML;
+
+          const badges = existingEl.querySelector('.pnote-badges');
+          const newBadges = newCardEl.querySelector('.pnote-badges');
+          if (badges && newBadges) badges.innerHTML = newBadges.innerHTML;
+
+          if (isOnBoard) {
+            existingEl.style.left = newCardEl.style.left;
+            existingEl.style.top = newCardEl.style.top;
+            existingEl.style.width = newCardEl.style.width;
+            existingEl.style.height = newCardEl.style.height;
+          }
+          
+          existingEl.dataset.renderedState = newStateStr;
+        } else {
+          // Safe to replace outerHTML
+          existingEl.outerHTML = cardHtml;
+          const updatedEl = isOnBoard ? container.querySelector(`#boardNote-${n.id}`) : container.querySelector(`.pnote-card[data-note-id="${n.id}"]`);
+          if (updatedEl) updatedEl.dataset.renderedState = newStateStr;
+        }
+      }
+    } else {
+      // Append new note card
+      const temp = document.createElement('div');
+      temp.innerHTML = cardHtml;
+      const newCardEl = temp.firstElementChild;
+      const state = {
+        title: n.title, content: n.content, color: n.color,
+        reminder_at: n.reminder_at, reminder_sent: n.reminder_sent,
+        linked_profile_id: n.linked_profile_id, cal_date: n.cal_date,
+        _sharedBy: n._sharedBy, _canEdit: n._canEdit, _shared: n._shared, _isSharedByMe: n._isSharedByMe,
+        x: _notesBoardLayouts[n.id]?.x, y: _notesBoardLayouts[n.id]?.y,
+        w: _notesBoardLayouts[n.id]?.w, h: _notesBoardLayouts[n.id]?.h,
+        isFloating: _notesBoardLayouts[n.id]?.isFloating,
+      };
+      newCardEl.dataset.renderedState = JSON.stringify(state);
+      container.appendChild(newCardEl);
+    }
+  });
+
+  // 5. In List mode, enforce DOM order by sorting elements
+  if (!isOnBoard) {
+    const cards = Array.from(container.querySelectorAll('.pnote-card'));
+    cards.sort((a, b) => {
+      const idxA = notes.findIndex(n => n.id === a.dataset.noteId);
+      const idxB = notes.findIndex(n => n.id === b.dataset.noteId);
+      return idxA - idxB;
+    });
+    cards.forEach(card => container.appendChild(card));
+  }
+
+  // 6. Post-render initializers
+  if (isOnBoard) {
+    requestAnimationFrame(() => _initBoardNotes(container));
   }
 }
 
