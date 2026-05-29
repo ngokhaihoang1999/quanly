@@ -935,6 +935,14 @@ function _resetHeaderStyle(header) {
       return;
     }
 
+    // Tính maxScroll động theo các bar đang hiển thị
+    let maxScroll = 66;
+    const viewAsBar = header.querySelector('.view-as-bar');
+    const semesterBar = header.querySelector('.semester-bar');
+    if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
+    if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
+    maxScroll += 20;
+
     // ── Tự động bơm spacer nếu trang chưa đủ dài ──
     // Chỉ cần tối thiểu (maxScroll + 8)px scroll room để animation chạy cực kỳ mượt mà
     const requiredRoom = maxScroll + 8;
