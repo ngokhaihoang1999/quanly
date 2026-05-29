@@ -83,7 +83,7 @@
       <div class="chip" onclick="setStatusFilter('pause',this)">⏸️Pause</div>
       <div class="chip" onclick="setStatusFilter('dropout',this)">🔴 Drop-out</div>
     </div>
-    <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm kiếm theo tên..." id="searchInput" oninput="filterProfiles()" /></div>
+    <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm kiếm theo tên..." id="searchInput" oninput="filterProfiles()" autocomplete="off" /></div>
     <div id="profileList">
       <div class="profile-card skeleton" style="height:68px;"></div>
       <div class="profile-card skeleton" style="height:68px;opacity:0.7;"></div>
@@ -894,7 +894,7 @@
       <div class="pnote-color-opt" data-color="purple" onclick="selectNoteColor(this)" style="width:32px;height:32px;border-radius:50%;background:#ede9fe;border:3px solid transparent;cursor:pointer;"></div>
     </div>
   </div>
-  <div class="field-group"><label>🔗 Gắn hồ sơ (tuỳ chọn)</label><input type="text" id="pnote_link_profile" placeholder="Tìm tên trái quả..." data-profile-id="" /></div>
+  <div class="field-group"><label>🔗 Gắn hồ sơ (tuỳ chọn)</label><input type="text" id="pnote_link_profile" placeholder="Tìm tên trái quả..." data-profile-id="" autocomplete="off" /></div>
   <div class="field-group"><label>📅 Gắn vào lịch (tuỳ chọn)</label><input type="date" id="pnote_cal_date" /></div>
   <div class="field-group" style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 12px;">
     <label>🔔 Nhắc nhở (tuỳ chọn)</label>
@@ -921,7 +921,7 @@
   <div class="modal-handle"></div>
   <div class="modal-title">📤 Share ghi chú</div>
   <input type="hidden" id="shareNoteId" />
-  <div class="field-group"><label>Người nhận <span style="color:var(--red);">*</span></label><input type="text" id="shareNoteStaff" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." /></div>
+  <div class="field-group"><label>Người nhận <span style="color:var(--red);">*</span></label><input type="text" id="shareNoteStaff" data-list="staffSuggest" placeholder="Tìm mã JD hoặc tên..." autocomplete="off" /></div>
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:8px 0;"><input type="checkbox" id="shareNoteCanEdit" /> Cho phép sửa</label>
   <button class="save-btn" onclick="addNoteShare()" style="margin-bottom:12px;">📤 Share</button>
   <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Đã share cho:</div>
@@ -937,7 +937,7 @@
 <script src="reports.js?v=2026052734"></script>
 <script src="transitions.js?v=2026052734"></script>
 <!-- ── Core + Extracted Modules (dependency order) ── -->
-<script src="core.js?v=2026052734"></script>
+<script src="core.js?v=2026052909"></script>
 <script src="pin.js?v=2026052734"></script>
 <script src="permissions.js?v=2026052734"></script>
 <script src="desktop.js?v=2026052821"></script>

@@ -385,10 +385,21 @@ function setStaffInputValue(id, code) {
 
 function initCustomAutocomplete() {
   document.addEventListener('focusin', e => {
-    if (e.target.tagName === 'INPUT' && (e.target.hasAttribute('data-list') || e.target.dataset.acWrap)) {
-      const listA = e.target.getAttribute('data-list');
-      if (listA === 'staffSuggest' || listA === 'teamAddDatalist' || e.target.dataset.acWrap) {
-        attachAutocomplete(e.target);
+    const el = e.target;
+    if (el.tagName === 'INPUT') {
+      // Globally disable native browser autocomplete/autofill dropdowns (annoying "Saved info" overlays)
+      const type = el.type || 'text';
+      if (['text', 'number', 'tel', 'search', 'email'].includes(type)) {
+        if (el.getAttribute('autocomplete') !== 'off') {
+          el.setAttribute('autocomplete', 'off');
+        }
+      }
+
+      if (el.hasAttribute('data-list') || el.dataset.acWrap) {
+        const listA = el.getAttribute('data-list');
+        if (listA === 'staffSuggest' || listA === 'teamAddDatalist' || el.dataset.acWrap) {
+          attachAutocomplete(el);
+        }
       }
     }
   });
