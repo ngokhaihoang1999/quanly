@@ -43,6 +43,11 @@ body.detail-view-open #detailView {
 }
 
 @media (min-width: 1024px) {
+  /* ── Mobile Safety Spacer: Hidden on desktop to prevent flex layout column issue ── */
+  #_hdrScrollSpacer {
+    display: none !important;
+  }
+
   /* ── Main tabs: inside panelCenter on desktop ── */
   #panelCenter > .tab-bar {
     flex-shrink: 0;
