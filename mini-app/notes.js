@@ -24,13 +24,13 @@ async function loadPersonalNotes() {
     const res1 = await sbFetch(`/rest/v1/personal_notes?owner_staff_code=eq.${encodeURIComponent(sc)}&order=updated_at.desc`);
     _allMyNotes = res1.ok ? await res1.json() : [];
 
-    // Fetch ALL share records involving me (either shared WITH me or shared BY me)
+    // Fetch ALL share records involving me, joining the corresponding notes
     const encodedSc = encodeURIComponent(sc);
-    const res2 = await sbFetch(`/rest/v1/note_shares?or=(shared_with.eq.${encodedSc},shared_by.eq.${encodedSc})&select=*`);
+    const res2 = await sbFetch(`/rest/v1/note_shares?or=(shared_with.eq.${encodedSc},shared_by.eq.${encodedSc})&select=*,personal_notes(*)`);
     const shares = res2.ok ? await res2.json() : [];
     
     // Separate shares
-    const sharesWithMe = shares.filter(s => s.shared_with === sc);
+    const sharesWithMe = shares.filter(s => s.shared_with === sc && s.personal_notes);
     const sharesByMe = shares.filter(s => s.shared_by === sc);
 
     // Tag my own notes that I've shared
@@ -39,24 +39,13 @@ async function loadPersonalNotes() {
       n._isSharedByMe = mySharedNoteIds.has(n.id);
     });
 
-    _sharedWithMeNotes = [];
-    if (sharesWithMe.length > 0) {
-      const noteIds = sharesWithMe.map(s => s.note_id).filter(Boolean);
-      const res3 = await sbFetch(`/rest/v1/personal_notes?id=in.(${noteIds.join(',')})&select=*`);
-      const sharedNotes = res3.ok ? await res3.json() : [];
-      const noteMap = {};
-      sharedNotes.forEach(n => noteMap[n.id] = n);
-      
-      _sharedWithMeNotes = sharesWithMe
-        .filter(s => noteMap[s.note_id])
-        .map(s => ({
-          ...noteMap[s.note_id],
-          _shared: true,
-          _sharedBy: s.shared_by,
-          _canEdit: s.can_edit,
-          _shareId: s.id
-        }));
-    }
+    _sharedWithMeNotes = sharesWithMe.map(s => ({
+      ...s.personal_notes,
+      _shared: true,
+      _sharedBy: s.shared_by,
+      _canEdit: s.can_edit,
+      _shareId: s.id
+    }));
 
     _dataCache['notes'] = Date.now();
     renderNotes();
