@@ -842,6 +842,10 @@ function _resetHeaderStyle(header) {
     semesterBar.style.overflow = '';
     semesterBar.style.pointerEvents = '';
   }
+  // Đo và ghi lại chiều cao header khi mở to hết cỡ
+  requestAnimationFrame(() => {
+    window._expandedHeaderHeight = header.offsetHeight;
+  });
 }
 
 // Auto-collapsible header on scroll for mobile/narrow viewports
@@ -916,18 +920,13 @@ function _resetHeaderStyle(header) {
     const scrollHeight = scrollContainer.scrollHeight;
     const clientHeight = scrollContainer.clientHeight;
 
-    // Tính maxScroll động theo các bar đang hiển thị trước để dùng cho các phép tính toán
-    let maxScroll = 66;
-    const viewAsBar = header.querySelector('.view-as-bar');
-    const semesterBar = header.querySelector('.semester-bar');
-    if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
-    if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
-    maxScroll += 20;
-
-    // Tính toán lượng header hiện đang co lại để khôi phục chiều cao viewport mở rộng tĩnh (expanded client height)
-    // Điều này giữ cho phép so sánh chiều cao luôn nhất quán trong suốt hành trình cuộn, tránh bị khóa cứng hoặc giật cục.
-    let pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
-    const expandedClientHeight = clientHeight - (pct * maxScroll);
+    // Đo chiều cao header hiện tại và khôi phục chiều cao expandedClientHeight chuẩn xác bằng pixel
+    if (!window._expandedHeaderHeight || window._expandedHeaderHeight < 50) {
+      window._expandedHeaderHeight = header.offsetHeight;
+    }
+    const currentHeaderH = header.offsetHeight;
+    const collapsedAmt = Math.max(0, window._expandedHeaderHeight - currentHeaderH);
+    const expandedClientHeight = clientHeight - collapsedAmt;
 
     // Đo room thực tế của phần nội dung tự nhiên (không tính spacer)
     const currentSpacerH = parseFloat(_spacer.style.height) || 0;
