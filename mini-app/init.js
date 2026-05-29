@@ -844,11 +844,47 @@ function _resetHeaderStyle(header) {
   }
 }
 
+// _syncHeaderToScroll: Đọc scrollTop hiện tại và áp dụng trạng thái header đúng một lần sau khi restore scroll
+function _syncHeaderToScroll() {
+  if (_headerManualCollapsed) return;
+  const scrollContainer = document.getElementById('desktopPanelsWrapper');
+  const header = document.querySelector('.header');
+  if (!scrollContainer || !header) return;
+
+  const scrollTop = scrollContainer.scrollTop;
+  const scrollHeight = scrollContainer.scrollHeight;
+  const clientHeight = scrollContainer.clientHeight;
+
+  // Tính maxScroll giống hệt logic trong scroll handler
+  let maxScroll = 66;
+  const viewAsBar = header.querySelector('.view-as-bar');
+  const semesterBar = header.querySelector('.semester-bar');
+  if (viewAsBar && window.getComputedStyle(viewAsBar).display !== 'none') maxScroll += 42;
+  if (semesterBar && window.getComputedStyle(semesterBar).display !== 'none') maxScroll += 42;
+  maxScroll += 20;
+  const maxPossibleScroll = scrollHeight - clientHeight;
+  if (maxPossibleScroll > 20 && maxScroll > maxPossibleScroll - 10) maxScroll = Math.max(20, maxPossibleScroll - 10);
+
+  const isScrollable = (scrollHeight - clientHeight) > (maxScroll + 30);
+  if (!isScrollable) {
+    _resetHeaderStyle(header);
+    header.classList.remove('header-collapsed');
+    const btn = document.getElementById('headerCollapseBtn');
+    if (btn) { btn.textContent = '🔼'; btn.title = 'Thu gọn header'; }
+    return;
+  }
+
+  const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
+  _applyHeaderScrollProgress(header, pct);
+}
+
 // Auto-collapsible header on scroll for mobile/narrow viewports
 (function() {
   const scrollContainer = document.getElementById('desktopPanelsWrapper');
   if (scrollContainer) {
     scrollContainer.addEventListener('scroll', () => {
+      // Nếu đang trong quá trình restore scroll sau khi đóng hồ sơ → bỏ qua để tránh giật header
+      if (window._scrollRestoring) return;
       // Nếu đang mở màn hình chi tiết hồ sơ (#detailView), bỏ qua toàn bộ việc co giãn header để tránh giật lag
       if (window.isDetailViewOpen) return;
       const detailView = document.getElementById('detailView');

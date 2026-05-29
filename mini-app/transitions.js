@@ -200,6 +200,18 @@ const ProfileTransition = (() => {
     if (typeof haptic === 'function') haptic('medium');
   }
 
+  function _restoreScrollSafe(delay = 60) {
+    // Block scroll handler temporarily to prevent header jitter during layout settle
+    window._scrollRestoring = true;
+    clearTimeout(window._scrollRestoringTimer);
+    _restoreScroll();
+    window._scrollRestoringTimer = setTimeout(() => {
+      window._scrollRestoring = false;
+      // Apply correct header state once, cleanly, after layout has settled
+      if (typeof _syncHeaderToScroll === 'function') _syncHeaderToScroll();
+    }, 300);
+  }
+
   function close() {
     const dv = document.getElementById('detailView');
     if (!dv || dv.style.display === 'none') { 
@@ -208,7 +220,7 @@ const ProfileTransition = (() => {
       window.isDetailViewOpen = false;
       document.body.classList.remove('detail-view-open');
       document.documentElement.classList.remove('detail-view-open');
-      setTimeout(_restoreScroll, 60); 
+      setTimeout(_restoreScrollSafe, 60); 
       _reset(); 
       return; 
     }
@@ -219,7 +231,7 @@ const ProfileTransition = (() => {
       window.isDetailViewOpen = false;
       document.body.classList.remove('detail-view-open');
       document.documentElement.classList.remove('detail-view-open');
-      setTimeout(_restoreScroll, 60); 
+      setTimeout(_restoreScrollSafe, 60); 
       _reset();
       return;
     }
@@ -232,7 +244,7 @@ const ProfileTransition = (() => {
       window.isDetailViewOpen = false;
       document.body.classList.remove('detail-view-open');
       document.documentElement.classList.remove('detail-view-open');
-      _restoreScroll();
+      _restoreScrollSafe();
 
       if (_pid) {
         requestAnimationFrame(() => {
