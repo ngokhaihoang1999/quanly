@@ -514,6 +514,18 @@ async function viewRecord(recordId, recordType) {
       }
     }
 
+    if (c.image_url) {
+      sections += `
+        <div style="margin-top:14px; border-top: 1px dashed var(--border); padding-top:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">📸 Hình ảnh đính kèm</div>
+          <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; max-width:240px; cursor:pointer;" onclick="if(typeof openChatImageModal === 'function') openChatImageModal('${c.image_url}')">
+            <img src="${c.image_url}" style="width:100%; display:block;" />
+          </div>
+          ${c.image_desc ? `<div style="font-size:11.5px;color:var(--text2);margin-top:6px;font-style:italic;line-height:1.4;">📝 ${escHtml(c.image_desc)}</div>` : ''}
+        </div>
+      `;
+    }
+
     // Build plain-text for copy (Telegram-friendly format)
     let copyText = '';
     const addCopyLine = (icon, label, value) => {
@@ -529,6 +541,11 @@ async function viewRecord(recordId, recordType) {
       addCopyLine('💭', 'Phản hồi của trái', c.phan_hoi);
       addCopyLine('🎯', 'Điểm hái trái', c.diem_hai);
       addCopyLine('📋', 'Đề xuất TVV', c.de_xuat);
+      if (c.image_url) {
+        copyText += `📸 Ảnh: ${c.image_url}\n`;
+        if (c.image_desc) copyText += `📝 Mô tả: ${c.image_desc}\n`;
+        copyText += `\n`;
+      }
     } else if (isBB) {
       let buoiTiepCopy = '';
       if (c.buoi_tiep) { try { buoiTiepCopy = shinDateTime(c.buoi_tiep); } catch(e) {} }
@@ -542,6 +559,10 @@ async function viewRecord(recordId, recordType) {
       addCopyLine('📋', 'Đề xuất chăm sóc', c.de_xuat_cs);
       if (buoiTiepCopy) copyText += `📅 Buổi tiếp: ${buoiTiepCopy}\n`;
       if (c.noi_dung_tiep) copyText += `📝 Nội dung tiếp: ${c.noi_dung_tiep}\n`;
+      if (c.image_url) {
+        copyText += `\n📸 Ảnh: ${c.image_url}\n`;
+        if (c.image_desc) copyText += `📝 Mô tả: ${c.image_desc}\n`;
+      }
     } else if (isTeamMeeting) {
       copyText += `🤝 TEAM MEETING\n`;
       copyText += `🍎 ${pName}\n━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -1216,7 +1237,20 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div class="field-group"><label>Vấn đề / Nhu cầu / Thông tin khai thác được</label><textarea id="rm_van_de" style="min-height:100px;" placeholder="...">${c.van_de||''}</textarea></div>
       <div class="field-group"><label>Phản hồi / Cảm nhận của trái sau tư vấn</label><textarea id="rm_phan_hoi" placeholder="...">${c.phan_hoi||''}</textarea></div>
       <div class="field-group"><label>Điểm hái trái</label><textarea id="rm_diem_hai" placeholder="...">${c.diem_hai||''}</textarea></div>
-      <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>`;
+      <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>
+      <div class="field-group">
+        <label>📸 Ảnh đính kèm (gợi ý: kết quả bài test, sơ đồ...)</label>
+        <input type="file" id="rm_image_file" accept="image/*" style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
+        <input type="hidden" id="rm_image_url" value="${c.image_url||''}" />
+        <div id="rm_image_preview_container" style="margin-top:8px; display:${c.image_url?'block':'none'}; border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative; max-width:240px;">
+          <img id="rm_image_preview" src="${c.image_url||''}" style="width:100%; display:block;" />
+          <button type="button" onclick="removeRecordImage()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:10;">×</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>📝 Mô tả ảnh đính kèm</label>
+        <input type="text" id="rm_image_desc" placeholder="Nhập mô tả cho hình ảnh..." value="${c.image_desc||''}" />
+      </div>`;
   } else if (isBB) {
     const parseBuoiTiep = (val) => {
       if (!val) return { date: '', time: '' };
@@ -1249,7 +1283,20 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
         </div>
         <input type="hidden" id="rm_has_kt_content" value="${_ktState}" />
       </div>
-      <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>`;
+      <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>
+      <div class="field-group">
+        <label>📸 Ảnh đính kèm (gợi ý: sơ đồ, kết quả buổi học...)</label>
+        <input type="file" id="rm_image_file" accept="image/*" style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
+        <input type="hidden" id="rm_image_url" value="${c.image_url||''}" />
+        <div id="rm_image_preview_container" style="margin-top:8px; display:${c.image_url?'block':'none'}; border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative; max-width:240px;">
+          <img id="rm_image_preview" src="${c.image_url||''}" style="width:100%; display:block;" />
+          <button type="button" onclick="removeRecordImage()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:10;">×</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>📝 Mô tả ảnh đính kèm</label>
+        <input type="text" id="rm_image_desc" placeholder="Nhập mô tả cho hình ảnh..." value="${c.image_desc||''}" />
+      </div>`;
   } else if (isTeamMeeting) {
     body.innerHTML = `
       <div class="field-group"><label>📅 Ngày họp</label><input type="date" id="rm_report_date" value="${_reportDate}"/></div>
@@ -1321,6 +1368,8 @@ async function saveRecord() {
       phan_hoi: document.getElementById('rm_phan_hoi')?.value,
       diem_hai: document.getElementById('rm_diem_hai')?.value,
       de_xuat: document.getElementById('rm_de_xuat')?.value,
+      image_url: document.getElementById('rm_image_url')?.value || '',
+      image_desc: document.getElementById('rm_image_desc')?.value || '',
     };
   } else if (isBB) {
     const ktVal = document.getElementById('rm_has_kt_content')?.value;
@@ -1342,6 +1391,8 @@ async function saveRecord() {
       buoi_tiep: buoiTiepISO,
       noi_dung_tiep: document.getElementById('rm_noi_dung_tiep')?.value,
       has_kt_content: ktVal === 'yes',
+      image_url: document.getElementById('rm_image_url')?.value || '',
+      image_desc: document.getElementById('rm_image_desc')?.value || '',
     };
   } else if (isTeamMeeting) {
     data = {
@@ -1841,4 +1892,62 @@ async function editEventDate(recordId) {
       } catch(e) { showToast('❌ Lỗi đổi ngày'); console.error(e); }
     };
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+}
+
+async function uploadRecordImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('⚠️ Vui lòng chọn ảnh nhỏ hơn 3MB!');
+    input.value = '';
+    return;
+  }
+
+  showToast('⏳ Đang tải ảnh lên...');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?document=true`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload failed: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && data.url) {
+      document.getElementById('rm_image_url').value = data.url;
+      const preview = document.getElementById('rm_image_preview');
+      if (preview) preview.src = data.url;
+      const container = document.getElementById('rm_image_preview_container');
+      if (container) container.style.display = 'block';
+      showToast('✅ Đã tải ảnh thành công!');
+    } else {
+      throw new Error('No URL returned from proxy server');
+    }
+  } catch (e) {
+    showToast('❌ Tải ảnh thất bại');
+    console.error('uploadRecordImage error:', e);
+  } finally {
+    input.value = '';
+  }
+}
+
+function removeRecordImage() {
+  const urlEl = document.getElementById('rm_image_url');
+  if (urlEl) urlEl.value = '';
+  
+  const fileEl = document.getElementById('rm_image_file');
+  if (fileEl) fileEl.value = '';
+  
+  const preview = document.getElementById('rm_image_preview');
+  if (preview) preview.src = '';
+  
+  const container = document.getElementById('rm_image_preview_container');
+  if (container) container.style.display = 'none';
 }

@@ -3,7 +3,7 @@
 
 const APP_TOUR_STEPS = [
   {
-    element: '#headerAvatar',
+    element: '#headerAvatar .header-avatar-wrapper',
     title: '⚙️ Cá nhân hóa & Cài đặt',
     text: 'Nhấp vào ảnh đại diện của bạn để thay đổi biệt danh, màu sắc chủ đề, ghim các tab làm việc nhanh và thiết lập mã PIN bảo mật.',
     tab: 'unit'
@@ -27,31 +27,31 @@ const APP_TOUR_STEPS = [
     tab: 'unit'
   },
   {
-    element: '#dashUnitTitle',
+    element: '#mainTabBar .tab[data-tab="unit"]',
     title: '🏢 Tab Đơn vị (Dashboard)',
     text: 'Hiển thị các chỉ số đo lường (Metrics) tổng quan của toàn bộ hệ thống và danh sách học viên cấp dưới phân theo từng nhóm.',
     tab: 'unit'
   },
   {
-    element: '#dashMyListTitle',
+    element: '#mainTabBar .tab[data-tab="personal"]',
     title: '👤 Tab Cá nhân',
     text: 'Đây là không gian làm việc riêng của bạn. Hiển thị danh sách học viên (Trái) do chính bạn trực tiếp phụ trách chăm sóc.',
     tab: 'personal'
   },
   {
-    element: '#tab-priority .section-title',
+    element: '#mainTabBar .tab[data-tab="priority"]',
     title: '⚡ Tab Ưu tiên',
     text: 'Tổng hợp danh sách các đầu việc quan trọng cần xử lý gấp (nhắc nhở viết báo cáo, hoàn thành mốc tiến độ hồ sơ).',
     tab: 'priority'
   },
   {
-    element: '#calendarNav',
+    element: '#mainTabBar .tab[data-tab="calendar"]',
     title: '📅 Tab Lịch hẹn',
     text: 'Theo dõi lịch biểu, các cuộc hẹn phỏng vấn học viên hoặc các sự kiện quan trọng trong tháng cực kỳ trực quan.',
     tab: 'calendar'
   },
   {
-    element: '#notesFilterChips',
+    element: '#mainTabBar .tab[data-tab="notes"]',
     title: '📝 Tab Notes (Ghi chú)',
     text: 'Tạo nhanh các note cá nhân hoặc note chia sẻ với các nhân sự khác trong hệ thống để phối hợp làm việc mượt mà.',
     tab: 'notes'
@@ -125,7 +125,7 @@ const JONDO_STEPS_DATA = [
       <p><b>Quản lý cuộc hẹn và Ghi nhận báo cáo Tư vấn tâm lý:</b></p>
       <ul>
         <li><b>Đặt lịch chốt TV:</b> NDD hoặc quản lý đặt lịch hẹn tư vấn trực tiếp trên hệ thống. <b>Lưu ý tự động hóa:</b> Sau 1 tiếng kể từ thời điểm giờ hẹn chốt TV, hệ thống sẽ tự động tạo một công việc <i>"Viết Báo cáo Tư vấn"</i> trong tab <b>Ưu tiên</b> của TVV/NDD để nhắc nhở họ làm báo cáo kịp thời.</li>
-        <li><b>Quy trình Tư vấn:</b> TVV thực hiện các buổi trò chuyện sâu (thường có ít nhất 2 lần tư vấn). Sử dụng các công cụ trắc nghiệm tính cách chính xác như <b>Enneagram</b>, <b>MBTI</b> hoặc bảng phân tích điểm hại (nỗi sợ, khó khăn) để thấu hiểu sâu sắc thế giới nội tâm của học viên.</li>
+        <li><b>Quy trình Tư vấn:</b> TVV thực hiện các buổi trò chuyện sâu (thường có ít nhất 2 lần tư vấn). Sử dụng các công cụ trắc nghiệm tính cách chính xác như <b>Enneagram</b>, <b>MBTI</b> hoặc bảng phân tích Điểm hái trái (nỗi sợ, trở ngại lớn nhất) để thấu hiểu sâu sắc thế giới nội tâm của học viên.</li>
         <li><b>Ghi nhận báo cáo:</b> TVV hoặc người được phân quyền truy cập hồ sơ nhấn nút <b>➕ Thêm ghi nhận</b> để lưu lại diễn biến buổi tư vấn. Nội dung báo cáo bao gồm: Ngày giờ, công cụ áp dụng, đánh giá mức độ tin cậy/tiếp thu, các điểm tâm lý nhạy cảm cần lưu ý và đề xuất định hướng hỗ trợ tiếp theo.</li>
       </ul>
       <div class="guide-flowchart">
@@ -200,7 +200,7 @@ const JONDO_STEPS_DATA = [
     content: `
       <p><b>Hoàn tất biểu mẫu Sinka và Chốt hồ sơ nhập học lớp Center:</b></p>
       <ul>
-        <li><b>Phiếu Sinka (Thẻ học viên):</b> Đây là phiếu lý lịch nhập học chi tiết của học viên. Phiếu Sinka cần được điền tích lũy và cập nhật <i>liên tục và xuyên suốt</i> ngay sau khi học viên bước vào giai đoạn Tư vấn (phase <code>tu_van</code>). Tuyệt đối tránh dồn việc điền Sinka vào phút chót.</li>
+        <li><b>Phiếu Sinka (Thẻ học viên):</b> Đây là phiếu lý lịch nhập học chi tiết của học viên. Phiếu Sinka cần được điền tích lũy và cập nhật <i>liên tục và xuyên suốt</i> ngay sau khi học viên bước vào giai đoạn Tư vấn. Tuyệt đối tránh dồn việc điền Sinka vào phút chót.</li>
         <li><b>Điền thông tin Sinka:</b> Vào tab <b>Thẻ HV</b> trong hồ sơ học viên. Điền chi tiết các trường thông tin hành chính, học vấn, công việc, đặc điểm tính cách, và nhận xét chung của nhóm hỗ trợ. Bấm <b>Lưu thông tin Sinka</b> để cập nhật dữ liệu.</li>
         <li><b>Nút Chốt Center:</b> Khi học viên đã hoàn thành đầy đủ cả 4 mốc tiến độ quan trọng ở giai đoạn học BB, nút <b>🏛️ Chốt Center</b> sẽ tự động hiển thị trong tab Giai đoạn.</li>
         <li><b>Chốt Center & Xuất File Word:</b> Người được phân quyền bấm <b>Chốt Center</b> để chính thức đóng hồ sơ giai đoạn BB và chuyển học viên lên danh sách lớp Center. Luôn sẵn sàng tải thẻ học viên Center dưới dạng file Word đẹp mắt.</li>
@@ -210,7 +210,7 @@ const JONDO_STEPS_DATA = [
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Đủ 4 mốc BB ⭐</span><small>Mở nút chốt</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Bấm Chốt Center 🏛️</span><small>Chuyển phase Center</small></div>
+        <div class="guide-flow-step"><span>Bấm Chốt Center 🏛️</span><small>Lên lớp Center</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Tải Word 📄</span><small>Xuất Thẻ HV Center</small></div>
       </div>
@@ -255,13 +255,13 @@ const PROFILE_TABS_DATA = [
     id: "stage",
     title: "2. Giai đoạn",
     icon: "🗓️",
-    desc: `<b>Kiểm soát Vòng đời Học tập & Lịch trình (5 Phase):</b><br/>
-      • <b>Nội dung:</b> Quản lý quá trình chuyển giao từng bước một cách chặt chẽ qua 5 Phase: <code>Chakki</code> ➔ <code>TV Hình</code> ➔ <code>Tư vấn</code> ➔ <code>BB (Học tập)</code> ➔ <code>Center</code>.<br/>
+    desc: `<b>Kiểm soát Vòng đời Học tập & Lịch trình (5 Giai đoạn):</b><br/>
+      • <b>Nội dung:</b> Quản lý quá trình chuyển giao từng bước một cách chặt chẽ qua 5 Giai đoạn: <b>Chakki</b> ➔ <b>TV Hình</b> ➔ <b>Tư vấn</b> ➔ <b>BB (Học tập)</b> ➔ <b>Center</b>.<br/>
       • <b>Các nút hành động nghiệp vụ quan trọng:</b><br/>
       &nbsp;&nbsp; - <i>Lập group TV-BB:</i> Tự động kiểm tra điều kiện nhân sự trước khi cho phép liên kết nhóm Telegram hỗ trợ.<br/>
       &nbsp;&nbsp; - <i>Mở KT (Kinh Thánh):</i> Đánh dấu bước tiến quan trọng khi bắt đầu tiết lộ nội dung Kinh thánh cho học viên.<br/>
       &nbsp;&nbsp; - <i>Chốt Center:</i> Nút bấm quan trọng nhất để hoàn thành giai đoạn học BB và chuyển lên lớp Center 100 buổi.<br/>
-      • <b>Mẹo thao tác:</b> Hãy chắc chắn cập nhật các thông tin nhân sự và hoàn thành đầy đủ 4 mốc tiến độ BB trước khi thực hiện chuyển phase.`
+      • <b>Mẹo thao tác:</b> Hãy chắc chắn cập nhật các thông tin nhân sự và hoàn thành đầy đủ 4 mốc tiến độ BB trước khi thực hiện chuyển giai đoạn.`
   },
   {
     id: "tv",
@@ -269,7 +269,7 @@ const PROFILE_TABS_DATA = [
     icon: "💬",
     desc: `<b>Quản lý Lịch hẹn & Nhật ký Tư vấn tâm lý:</b><br/>
       • <b>Nội dung:</b> Ghi nhận thời gian các buổi hẹn tư vấn và toàn bộ báo cáo chi tiết sau mỗi lần gặp gỡ. Thường quy trình có tối thiểu 2 lần tư vấn chính thức trước khi học viên bước vào khóa học.<br/>
-      • <b>Tích hợp trắc nghiệm tính cách:</b> Cho phép lưu trữ và hiển thị kết quả phân tích các bài test tâm lý (Enneagram, MBTI), phân tích rõ "điểm hại" (nỗi sợ, trở ngại lớn nhất) và đề xuất phương án dẫn dắt cụ thể.<br/>
+      • <b>Các trường thông tin cốt lõi:</b> Lần tư vấn thứ mấy, tên công cụ áp dụng (ví dụ: trắc nghiệm tâm lý Enneagram, MBTI), kết quả bài test, vấn đề/nhu cầu khai thác được, phản hồi sau tư vấn, Điểm hái trái của học viên và đề xuất hướng đi tiếp theo.<br/>
       • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian hẹn chốt TV, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo TV"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/NDD, giúp hạn chế tối đa việc quên ghi nhận báo cáo.`
   },
   {
@@ -288,7 +288,7 @@ const PROFILE_TABS_DATA = [
     desc: `<b>Quản lý Giao bài & Chấm bài tập về nhà:</b><br/>
       • <b>Nội dung:</b> Giáo viên BB giao các bài tập rèn luyện tư duy kèm theo thời hạn nộp cụ thể trực tiếp trên hệ thống.<br/>
       • <b>Trạng thái làm bài:</b> Theo dõi trạng thái nộp bài qua các nhãn màu trực quan: 🔴 <i>Chưa làm</i>, 🟡 <i>Đã nộp</i> (chờ chấm), 🟢 <i>Đã chấm</i>. Giáo viên có thể chấm điểm và viết nhận xét chi tiết bài làm.<br/>
-      • <b>Đong bộ Telegram:</b> Mỗi khi có bài tập mới được giao, học viên nộp bài hoặc giáo viên hoàn thành chấm bài, Bot Telegram của hệ thống sẽ tự động gửi thông báo chi tiết vào nhóm hỗ trợ TV-BB giúp việc phối hợp đôn đốc học viên cực kỳ nhịp nhàng.`
+      • <b>Đồng bộ Telegram:</b> Mỗi khi có bài tập mới được giao, học viên nộp bài hoặc giáo viên hoàn thành chấm bài, Bot Telegram của hệ thống sẽ tự động gửi thông báo chi tiết vào nhóm hỗ trợ TV-BB giúp việc phối hợp đôn đốc học viên cực kỳ nhịp nhàng.`
   },
   {
     id: "notes",
@@ -700,6 +700,11 @@ async function executeTourStep() {
     currentHighlightedEl.classList.remove('tour-highlight-static');
   }
 
+  // Clear previous ancestor highlights
+  document.querySelectorAll('.tour-ancestor-highlight').forEach(el => {
+    el.classList.remove('tour-ancestor-highlight');
+  });
+
   const targetEl = document.querySelector(step.element);
   if (!targetEl || targetEl.style.display === 'none' || getComputedStyle(targetEl).display === 'none') {
     // If target element is not visible or doesn't exist, skip to next step
@@ -720,6 +725,13 @@ async function executeTourStep() {
   const computedPos = window.getComputedStyle(targetEl).position;
   if (computedPos === 'static') {
     targetEl.classList.add('tour-highlight-static');
+  }
+
+  // Apply ancestor highlights to overcome stacking contexts (like .header with z-index)
+  let parent = targetEl.parentElement;
+  while (parent && parent !== document.body) {
+    parent.classList.add('tour-ancestor-highlight');
+    parent = parent.parentElement;
   }
 
   // Render tooltip content
@@ -814,6 +826,11 @@ function endAppTour(completed = false) {
     currentHighlightedEl.classList.remove('tour-highlight-static');
     currentHighlightedEl = null;
   }
+
+  // Clear all ancestor highlights
+  document.querySelectorAll('.tour-ancestor-highlight').forEach(el => {
+    el.classList.remove('tour-ancestor-highlight');
+  });
   
   if (tourOverlayEl) {
     tourOverlayEl.remove();

@@ -242,7 +242,17 @@ async function runAIAnalysis() {
     var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
     var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
 
-    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+(p.phase||'chakki')+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do: '+p.dropout_reason : '')+'\nNg\u01b0\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
+    var friendlyPhase = {
+      'new': 'Chakki',
+      'chakki': 'Chakki',
+      'tu_van_hinh': 'TV Hình',
+      'tu_van': 'Tư vấn',
+      'bb': 'BB (Học tập)',
+      'center': 'Center',
+      'completed': 'Hoàn thành'
+    }[p.phase] || p.phase || 'Chakki';
+
+    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+friendlyPhase+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do: '+p.dropout_reason : '')+'\nNg\u01b0\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
     if (Object.keys(d).length) {
       context += 'PHIEU THONG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
@@ -426,7 +436,17 @@ async function buildChatCtx() {
   var nddName = window._rolesDisplay?.ndd || 'chưa rõ';
   var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
   var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
-  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+(p.phase||'chakki')+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
+  var friendlyPhase = {
+    'new': 'Chakki',
+    'chakki': 'Chakki',
+    'tu_van_hinh': 'TV Hình',
+    'tu_van': 'Tư vấn',
+    'bb': 'BB (Học tập)',
+    'center': 'Center',
+    'completed': 'Hoàn thành'
+  }[p.phase] || p.phase || 'Chakki';
+
+  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+friendlyPhase+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
   if (Object.keys(d).length) {
     ctx += 'PHI\u1ebeU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){
