@@ -651,6 +651,7 @@ function startAppTour() {
   const settingsPanel = document.getElementById('personalizationPanel');
   if (settingsPanel) settingsPanel.classList.remove('open');
 
+  document.body.classList.add('tour-active');
   currentTourIndex = 0;
   createTourElements();
   executeTourStep();
@@ -754,6 +755,9 @@ async function executeTourStep() {
   // Position tooltip
   positionTourTooltip(targetEl);
   
+  // Position pointing arrow pointing at the target element!
+  positionTourArrow(targetEl);
+  
   // Fade in elements
   tourOverlayEl.style.opacity = '1';
   tourTooltipEl.style.opacity = '1';
@@ -795,6 +799,37 @@ function positionTourTooltip(targetEl) {
   tourTooltipEl.style.left = `${left}px`;
 }
 
+// Position a bouncing pointing finger directly at the highlighted element
+function positionTourArrow(targetEl) {
+  let arrow = document.getElementById('tourArrow');
+  if (!arrow) {
+    arrow = document.createElement('div');
+    arrow.id = 'tourArrow';
+    document.body.appendChild(arrow);
+  }
+  
+  const rect = targetEl.getBoundingClientRect();
+  
+  // Reset classes
+  arrow.className = 'tour-arrow';
+  
+  let top = rect.top - 48; // Floating 48px above the top edge
+  let left = rect.left + rect.width / 2 - 18; // Centered horizontally
+  arrow.className = 'tour-arrow tour-arrow-down';
+  arrow.innerHTML = '👇';
+  
+  // If there's not enough room above (e.g. top of screen), point up from below:
+  if (top < 10) {
+    top = rect.bottom + 12;
+    arrow.className = 'tour-arrow tour-arrow-up';
+    arrow.innerHTML = '👆';
+  }
+  
+  arrow.style.top = `${top}px`;
+  arrow.style.left = `${left}px`;
+  arrow.style.display = 'block';
+}
+
 // Proceed to the next step
 function nextTourStep() {
   currentTourIndex++;
@@ -821,6 +856,12 @@ function exitAppTour() {
 
 // Clean up and end the tour
 function endAppTour(completed = false) {
+  document.body.classList.remove('tour-active');
+  
+  // Remove pointing arrow
+  const arrow = document.getElementById('tourArrow');
+  if (arrow) arrow.remove();
+
   if (currentHighlightedEl) {
     currentHighlightedEl.classList.remove('tour-highlight');
     currentHighlightedEl.classList.remove('tour-highlight-static');

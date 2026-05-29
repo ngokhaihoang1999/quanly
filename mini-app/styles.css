@@ -2421,6 +2421,33 @@
 .tour-ancestor-highlight {
   z-index: 10000 !important;
 }
+/* Stacking context cap for floating elements during active tour */
+body.tour-active #cjFloatingChatHead,
+body.tour-active #cjFloatingChatHeadBack,
+body.tour-active #cjFloatingChatHeadBadge,
+body.tour-active #cjFloatingChatWindow {
+  z-index: 9998 !important;
+}
+
+@keyframes tourBounceDown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+@keyframes tourBounceUp {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.tour-arrow {
+  position: fixed;
+  z-index: 10002;
+  font-size: 36px;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+}
+.tour-arrow-down { animation: tourBounceDown 1s infinite ease-in-out; }
+.tour-arrow-up { animation: tourBounceUp 1s infinite ease-in-out; }
 .tour-tooltip {
   position: fixed;
   z-index: 10001;
