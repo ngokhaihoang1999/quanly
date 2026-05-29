@@ -960,7 +960,7 @@ function _resetHeaderStyle(header) {
     }
 
     // Tính pct và áp dụng
-    pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
+    const pct = Math.min(Math.max(scrollTop, 0) / maxScroll, 1);
     _applyHeaderScrollProgress(header, pct);
   });
 })();
