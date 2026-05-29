@@ -82,7 +82,19 @@ function renderNotes() {
   const countEl = document.getElementById('notesCount');
   if (countEl) countEl.textContent = notes.length;
 
+  const isOnBoard = _isNotesOnBoard();
+
+  // Self-healing layout check: if the DOM contains card types of the opposite layout,
+  // wipe the container and body elements clean to prevent layout collision and duplicate cards.
+  const hasBoardNotes = container.querySelector('.board-note') || document.querySelector('body > .board-note');
+  const hasListNotes = container.querySelector('.pnote-card');
+  if ((isOnBoard && hasListNotes) || (!isOnBoard && hasBoardNotes)) {
+    clearAllFloatingNotes();
+    container.innerHTML = '';
+  }
+
   if (notes.length === 0) {
+    clearAllFloatingNotes();
     container.classList.remove('notes-board');
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">${_notesFilter === 'shared' ? '📤' : '📝'}</div><div class="empty-sub">${_notesFilter === 'shared' ? 'Chưa có ghi chú được share' : 'Chưa có ghi chú nào'}</div></div>`;
     return;
@@ -94,11 +106,10 @@ function renderNotes() {
     emptyStateEl.remove();
   }
 
-  if (!_isNotesOnBoard()) {
+  if (!isOnBoard) {
     clearAllFloatingNotes();
   }
 
-  const isOnBoard = _isNotesOnBoard();
   if (isOnBoard) {
     container.classList.add('notes-board');
   } else {
