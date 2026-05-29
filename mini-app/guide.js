@@ -17,7 +17,7 @@ const APP_TOUR_STEPS = [
   {
     element: '#guideBtn',
     title: '❓ Cẩm nang hướng dẫn',
-    text: 'Đây chính là nút mở Cẩm nang hướng dẫn này bất cứ lúc nào để tra cứu quy trình Quản lý Jondo hoặc chạy lại tour giao diện.',
+    text: 'Đây chính là nút mở Cẩm nang hướng dẫn này bất cứ lúc nào để tra cứu Quy trình hồ sơ trái hoặc chạy lại tour giao diện.',
     tab: 'unit'
   },
   {
@@ -72,21 +72,22 @@ const JONDO_STEPS_DATA = [
     icon: "📋",
     keywords: ["hapja", "duyệt", "sàng lọc", "tạo học viên", "thêm học viên", "học viên mới", "khởi tạo"],
     content: `
-      <p><b>Quy trình khởi tạo học viên mới:</b></p>
+      <p><b>Quy trình khởi tạo và sàng lọc học viên mới (Hapja):</b></p>
       <ul>
-        <li>Bấm nút <b>➕ (FAB)</b> ở góc dưới bên phải màn hình chính.</li>
-        <li>Điền đầy đủ thông tin ban đầu của học viên (Họ tên, năm sinh, TVV phụ trách, v.v.).</li>
-        <li>Sau khi gửi, phiếu sẽ nằm ở trạng thái <i>Chờ duyệt</i> trong mục <b>Check Hapja</b>.</li>
-        <li><b>Cấp quản lý được phân quyền (như Tổ trưởng, Nhóm trưởng, Khu vực trưởng)</b> sẽ vào xem xét thông tin và bấm duyệt. Khi được duyệt, hồ sơ (Profile) chính thức của học viên sẽ tự động được hệ thống tạo lập.</li>
+        <li><b>Cách tạo:</b> Bấm vào nút <b>➕ (FAB - Floating Action Button)</b> màu nổi bật ở góc dưới bên phải màn hình chính của ứng dụng.</li>
+        <li><b>Nhập thông tin:</b> Điền đầy đủ, chính xác các trường thông tin cơ bản: Họ tên học viên, năm sinh, số điện thoại liên hệ, khu vực sinh sống, Tư vấn viên (TVV) trực tiếp chăm sóc, và đặc biệt là các thông tin đánh giá ban đầu về điều kiện tham gia (Hapja).</li>
+        <li><b>Lưu Bản nháp (Draft):</b> Nếu đang điền dở mà vô tình đóng modal, hệ thống sẽ tự động lưu bản nháp vào thiết bị. Khi mở lại biểu mẫu, bạn sẽ nhận được thông báo để khôi phục hoặc xóa bản nháp tùy chọn.</li>
+        <li><b>Chờ duyệt:</b> Sau khi nhấn gửi, thông tin học viên sẽ được lưu dưới dạng phiếu <i>Chờ duyệt</i> trong tab <b>Check Hapja</b>.</li>
+        <li><b>Duyệt phiếu:</b> Cấp quản lý được phân quyền (Tổ trưởng <b>GYJN</b>, Tổ phó <b>BGYJN</b>, Nhóm trưởng <b>TJN</b>, Khu vực trưởng <b>YJYN</b>) sẽ vào danh sách kiểm tra thông tin. Nếu đủ tiêu chuẩn, quản lý bấm <b>Duyệt ✅</b>. Hệ thống sẽ tự động tạo hồ sơ học viên chính thức trong cơ sở dữ liệu và chuyển sang giai đoạn tiếp theo.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>FAB ➕</span><small>Tạo phiếu</small></div>
+        <div class="guide-flow-step"><span>FAB ➕</span><small>Tạo phiếu & Lưu nháp</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Phiếu Hapja 📋</span><small>Chờ duyệt</small></div>
+        <div class="guide-flow-step"><span>Phiếu Hapja 📋</span><small>Chờ quản lý duyệt</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Duyệt ✅</span><small>Bởi quản lý</small></div>
+        <div class="guide-flow-step"><span>Duyệt ✅</span><small>GYJN / TJN / YJYN</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Tạo Profile 👤</span><small>Mở hồ sơ</small></div>
+        <div class="guide-flow-step"><span>Khởi tạo 👤</span><small>Tự động lập hồ sơ</small></div>
       </div>
     `
   },
@@ -97,20 +98,20 @@ const JONDO_STEPS_DATA = [
     icon: "👤",
     keywords: ["profile", "hồ sơ", "trạng thái", "alive", "pause", "dropout", "nghỉ học", "tạm dừng", "hoạt động"],
     content: `
-      <p><b>Quản lý thông tin & Vòng đời học viên:</b></p>
+      <p><b>Quản lý Thông tin hành chính & Vòng đời học tập của học viên:</b></p>
       <ul>
-        <li>Trong Profile học viên, bạn có thể xem/sửa các trường thông tin hành chính, số điện thoại, người kết nối.</li>
-        <li><b>Quản lý trạng thái học viên:</b></li>
-        <li>🟢 <b>Alive:</b> Học viên đang hoạt động, học tập bình thường.</li>
-        <li>⏸️ <b>Pause:</b> Học viên tạm dừng học (do bận, ốm, chuyển khóa). Cần theo dõi để kích hoạt lại.</li>
-        <li>🔴 <b>Drop-out:</b> Học viên đã nghỉ học hẳn. Khi chuyển trạng thái này, cần chọn lý do cụ thể (tài chính, thời gian, mất liên lạc, v.v.) để hệ thống thống kê.</li>
+        <li><b>Xem & Chỉnh sửa hồ sơ:</b> Tại màn hình chi tiết của học viên, người dẫn dắt (NDD) hoặc quản lý có thể cập nhật các thông tin cơ bản: SĐT, người kết nối, phân công nhân sự phụ trách (TVV, GVBB, Lá), điều chỉnh tổ nhóm học tập.</li>
+        <li><b>Quản lý 3 trạng thái cốt lõi:</b></li>
+        <li>🟢 <b>Alive (Hoạt động):</b> Học viên đang tham gia đầy đủ các buổi gặp mặt, học tập BB hoặc lớp Center bình thường. Đây là trạng thái mặc định của mọi học viên mới được duyệt.</li>
+        <li>⏸️ <b>Pause (Tạm dừng):</b> Dùng khi học viên tạm thời nghỉ học ngắn hạn (do ốm đau, bận việc gia đình đột xuất, đi du lịch, đổi ca học). Khi ở trạng thái này, nhóm hỗ trợ cần liên tục tương tác giữ ấm mối quan hệ để kích hoạt trở lại trạng thái hoạt động (🟢 Alive).</li>
+        <li>🔴 <b>Drop-out (Nghỉ học hẳn):</b> Dùng khi học viên chính thức nghỉ học hoặc không thể tiếp tục hỗ trợ. <b>Yêu cầu bắt buộc:</b> Khi chuyển sang trạng thái này, hệ thống sẽ yêu cầu bạn chọn một lý do cụ thể (áp lực gia đình, bận công việc/thời gian, rào cản tài chính, mất liên lạc hoàn toàn, thái độ không phù hợp, v.v.). Đây là cơ sở dữ liệu cực kỳ quan trọng để hệ thống phân tích và cải tiến phương pháp chăm sóc.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span style="color:var(--green)">Alive 🟢</span><small>Hoạt động</small></div>
+        <div class="guide-flow-step"><span style="color:var(--green)">Alive 🟢</span><small>Đang hoạt động</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span style="color:var(--yellow)">Pause ⏸️</span><small>Tạm dừng</small></div>
+        <div class="guide-flow-step"><span style="color:var(--yellow)">Pause ⏸️</span><small>Hỗ trợ giữ ấm</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span style="color:var(--red)">Drop-out 🔴</span><small>Nghỉ học</small></div>
+        <div class="guide-flow-step"><span style="color:var(--red)">Drop-out 🔴</span><small>Thống kê lý do</small></div>
       </div>
     `
   },
@@ -121,19 +122,20 @@ const JONDO_STEPS_DATA = [
     icon: "💬",
     keywords: ["tư vấn", "tv", "báo cáo", "nhật ký", "tình trạng", "tâm lý", "ghi chú"],
     content: `
-      <p><b>Theo dõi sát sao tình hình học viên:</b></p>
+      <p><b>Quản lý cuộc hẹn và Ghi nhận báo cáo Tư vấn tâm lý:</b></p>
       <ul>
-        <li>Trong hồ sơ học viên, chọn mục <b>Nhật ký tư vấn (TV)</b>.</li>
-        <li>Người thực hiện tư vấn (TVV) sẽ nhấn <b>➕ Thêm ghi nhận</b> để nhập báo cáo sau mỗi buổi tư vấn.</li>
-        <li>Báo cáo bao gồm: Ngày tư vấn, nội dung trao đổi, đánh giá mức độ tiếp thu, và các ghi chú tâm lý đặc biệt.</li>
-        <li>Người dẫn dắt (NDD) và Tổ trưởng sẽ theo dõi sát sao nội dung này để cùng thảo luận hướng hỗ trợ tốt nhất.</li>
+        <li><b>Đặt lịch chốt TV:</b> NDD hoặc quản lý đặt lịch hẹn tư vấn trực tiếp trên hệ thống. <b>Lưu ý tự động hóa:</b> Sau 1 tiếng kể từ thời điểm giờ hẹn chốt TV, hệ thống sẽ tự động tạo một công việc <i>"Viết Báo cáo Tư vấn"</i> trong tab <b>Ưu tiên</b> của TVV/NDD để nhắc nhở họ làm báo cáo kịp thời.</li>
+        <li><b>Quy trình Tư vấn:</b> TVV thực hiện các buổi trò chuyện sâu (thường có ít nhất 2 lần tư vấn). Sử dụng các công cụ trắc nghiệm tính cách chính xác như <b>Enneagram</b>, <b>MBTI</b> hoặc bảng phân tích điểm hại (nỗi sợ, khó khăn) để thấu hiểu sâu sắc thế giới nội tâm của học viên.</li>
+        <li><b>Ghi nhận báo cáo:</b> TVV hoặc người được phân quyền truy cập hồ sơ nhấn nút <b>➕ Thêm ghi nhận</b> để lưu lại diễn biến buổi tư vấn. Nội dung báo cáo bao gồm: Ngày giờ, công cụ áp dụng, đánh giá mức độ tin cậy/tiếp thu, các điểm tâm lý nhạy cảm cần lưu ý và đề xuất định hướng hỗ trợ tiếp theo.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Gặp gỡ 🤝</span><small>Lên lịch TV</small></div>
+        <div class="guide-flow-step"><span>Hẹn Lịch 📅</span><small>Tự động tạo task sau 1h</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Tư vấn 💬</span><small>Thực hiện TV</small></div>
+        <div class="guide-flow-step"><span>Trắc Nghiệm 🧠</span><small>Enneagram, MBTI</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Báo cáo TV 📝</span><small>Ghi nhận buổi TV</small></div>
+        <div class="guide-flow-step"><span>Phân Tích 📝</span><small>Tìm điểm chạm tâm lý</small></div>
+        <div class="guide-flow-arrow">➔</div>
+        <div class="guide-flow-step"><span>Báo Cáo 💬</span><small>Ghi nhận hồ sơ hệ thống</small></div>
       </div>
     `
   },
@@ -144,20 +146,21 @@ const JONDO_STEPS_DATA = [
     icon: "🤝",
     keywords: ["telegram", "nhóm", "group", "chat", "thảo luận", "liên kết", "kết nối", "tv-bb"],
     content: `
-      <p><b>Phối hợp hỗ trợ đồng bộ:</b></p>
+      <p><b>Liên kết và Đồng bộ thông tin qua Nhóm hỗ trợ (Group Telegram):</b></p>
       <ul>
-        <li>Mỗi học viên có một <b>Nhóm hỗ trợ (Group TV-BB)</b> gồm Tư vấn viên (TVV), Người dẫn dắt (NDD), Giáo viên (GVBB) và Lá (nếu có).</li>
-        <li>Trong Profile, bấm vào biểu tượng Telegram hoặc nút <b>Liên kết Group</b> để gắn link nhóm Telegram hỗ trợ.</li>
-        <li>Khi liên kết thành công, mọi thông báo quan trọng của học viên (báo cáo BTVN mới, cập nhật mốc tiến độ) sẽ tự động gửi thẳng vào group Telegram này thông qua Telegram Bot của hệ thống, giúp các nhân sự không bị bỏ lỡ thông tin.</li>
+        <li><b>Phân công Nhân sự phụ trách:</b> Mỗi học viên sẽ được đồng hành bởi một nhóm nhân sự chuyên biệt bao gồm: Tư vấn viên (TVV), Người dẫn dắt (NDD), Giáo viên BB (GVBB) và các nhân sự hỗ trợ (Lá).</li>
+        <li><b>Lập group Telegram:</b> NDD tạo một nhóm chat riêng trên Telegram với tất cả thành viên phụ trách trên kèm theo **Bot Quản lý** của hệ thống.</li>
+        <li><b>Liên kết Group:</b> Bấm vào biểu tượng Telegram hoặc nút <b>Liên kết Group</b> trong hồ sơ học viên để gắn đường link chat vào hệ thống.</li>
+        <li><b>Bot báo cáo tự động:</b> Khi liên kết thành công, hệ thống sẽ kích hoạt webhook. Mọi thao tác quan trọng trên app (giao bài tập về nhà mới, học viên nộp bài tập, giáo viên chấm bài xong, cập nhật báo cáo buổi học BB mới, hoặc hoàn thành các mốc tiến độ hồ sơ) sẽ tự động được Bot gửi tin nhắn tức thời vào nhóm Telegram để toàn bộ nhân sự phụ trách cùng nắm bắt và hỗ trợ kịp thời.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Phân sự 👥</span><small>TVV, NDD, GVBB</small></div>
+        <div class="guide-flow-step"><span>Phân Sự 👥</span><small>TVV, NDD, GVBB, Lá</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Group Telegram 💬</span><small>Tạo group</small></div>
+        <div class="guide-flow-step"><span>Lập Nhóm 💬</span><small>Group Telegram riêng</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Liên kết 🔗</span><small>Gắn link group</small></div>
+        <div class="guide-flow-step"><span>Liên Kết 🔗</span><small>Dán link vào hồ sơ</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Bot Auto 🤖</span><small>Báo cáo tự động</small></div>
+        <div class="guide-flow-step"><span>Webhook 🤖</span><small>Bot đẩy tin nhắn auto</small></div>
       </div>
     `
   },
@@ -168,23 +171,23 @@ const JONDO_STEPS_DATA = [
     icon: "⭐",
     keywords: ["milestone", "mốc", "bài đặc biệt", "tiến độ", "phỏng vấn", "đăng ký center", "đk center"],
     content: `
-      <p><b>Kiểm soát tiến độ hoàn thành hồ sơ:</b></p>
+      <p><b>Đánh giá chất lượng hồ sơ qua 4 Mốc Tiến độ quan trọng:</b></p>
       <ul>
-        <li>Tiến độ của một Jondo được đánh giá qua 4 mốc quan trọng (được ghi nhận bởi Giáo viên BB hoặc nhân sự phụ trách):</li>
-        <li>1. <b>Bài đặc biệt:</b> Bài viết hoặc thu hoạch đặc biệt của học viên.</li>
-        <li>2. <b>Phỏng vấn GVBB:</b> Đánh giá chuyên môn từ Giáo viên hướng dẫn.</li>
-        <li>3. <b>Đăng ký Center:</b> Đăng ký cơ sở học tập chính thức cho học viên.</li>
-        <li>4. <b>Phỏng vấn Học viên:</b> Buổi phỏng vấn cuối cùng kiểm tra chất lượng.</li>
-        <li>Khi hoàn thành mốc nào, nhân sự phụ trách sẽ bấm ghi nhận mốc đó trong dòng thời gian của hồ sơ.</li>
+        <li>Để đảm bảo học viên tiếp thu tốt kiến thức và sẵn sàng chuyển sang giai đoạn học tập chuyên sâu cao hơn, hệ thống giám sát chặt chẽ 4 mốc tiến độ chính (tương ứng với các nút tích hoàn thành trong hồ sơ):</li>
+        <li>1️⃣ <b>Bài đặc biệt:</b> Bài viết hoặc bài thu hoạch tâm đắc của học viên để đánh giá mức độ thấu hiểu và khao khát thay đổi bản thân.</li>
+        <li>2️⃣ <b>Phỏng vấn GVBB:</b> Buổi phỏng vấn và đánh giá chuyên môn trực tiếp từ Giáo viên BB hướng dẫn, xác nhận học viên đã nắm vững các kiến thức nền tảng.</li>
+        <li>3️⃣ <b>Đăng ký Center:</b> Đăng ký chính thức lớp học chuyên sâu, xác nhận lịch trình sinh hoạt và cam kết thời gian của học viên.</li>
+        <li>4️⃣ <b>Phỏng vấn Học viên:</b> Cuộc gặp gỡ, phỏng vấn chất lượng cuối cùng từ đại diện quản lý cấp trên để kiểm định tấm lòng và sự an toàn của học viên.</li>
+        <li><b>Quy trình cập nhật:</b> Khi hoàn thành mốc nào, GVBB hoặc quản lý phụ trách sẽ bấm hoàn thành mốc đó trực tiếp trong tab Giai đoạn. Cả 4 mốc này phải được hoàn thành 100% thì hệ thống mới cho phép mở chức năng chốt chuyển sang lớp Center.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Bài đặc biệt ⭐</span><small>Mốc 1</small></div>
+        <div class="guide-flow-step"><span>Bài Đặc Biệt 📝</span><small>Mốc 1</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>PV GVBB 🎤</span><small>Mốc 2</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>ĐKý Center 📝</span><small>Mốc 3</small></div>
+        <div class="guide-flow-step"><span>ĐK Center 🏛️</span><small>Mốc 3</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>PV Học viên 🎓</span><small>Mốc 4</small></div>
+        <div class="guide-flow-step"><span>PV Học Viên 🤝</span><small>Mốc 4 (Hoàn thành)</small></div>
       </div>
     `
   },
@@ -195,22 +198,21 @@ const JONDO_STEPS_DATA = [
     icon: "🏛️",
     keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "thẻ hv", "hoàn thành"],
     content: `
-      <p><b>Hoàn tất hồ sơ Jondo chuyển lên lớp Center:</b></p>
+      <p><b>Hoàn tất biểu mẫu Sinka và Chốt hồ sơ nhập học lớp Center:</b></p>
       <ul>
-        <li><b>Phiếu Sinka (Thẻ HV):</b> Đây là báo cáo thông tin tổng hợp của học viên, được điền <i>xuyên suốt và liên tục</i> ngay sau khi bước vào giai đoạn Lập group TV-BB (phase <code>tu_van</code> trở đi).</li>
-        <li><b>Điều kiện Chốt Center:</b> Sau khi học viên hoàn thành đầy đủ cả 4 mốc tiến độ quan trọng ở giai đoạn học BB (Bài đặc biệt, PV GVBB, ĐK Center, PV Học viên), nút <b>🏛️ Chốt Center</b> sẽ hiển thị.</li>
-        <li><b>Hoàn thành:</b> Nhấn nút để chính thức chốt hồ sơ chuyển sang giai đoạn Center. Bạn có thể vào tab <b>Thẻ HV</b> để kiểm tra thông tin Sinka đã tích lũy và bấm <b>Xuất file Word (Thẻ học viên)</b> để tải xuống mẫu thẻ nhập học chính thức.</li>
+        <li><b>Phiếu Sinka (Thẻ học viên):</b> Đây là phiếu lý lịch nhập học chi tiết của học viên. Phiếu Sinka cần được điền tích lũy và cập nhật <i>liên tục và xuyên suốt</i> ngay sau khi học viên bước vào giai đoạn Tư vấn (phase <code>tu_van</code>). Tuyệt đối tránh dồn việc điền Sinka vào phút chót.</li>
+        <li><b>Điền thông tin Sinka:</b> Vào tab <b>Thẻ HV</b> trong hồ sơ học viên. Điền chi tiết các trường thông tin hành chính, học vấn, công việc, đặc điểm tính cách, và nhận xét chung của nhóm hỗ trợ. Bấm <b>Lưu thông tin Sinka</b> để cập nhật dữ liệu.</li>
+        <li><b>Nút Chốt Center:</b> Khi học viên đã hoàn thành đầy đủ cả 4 mốc tiến độ quan trọng ở giai đoạn học BB, nút <b>🏛️ Chốt Center</b> sẽ tự động hiển thị trong tab Giai đoạn.</li>
+        <li><b>Chốt Center & Xuất File Word:</b> Người được phân quyền bấm <b>Chốt Center</b> để chính thức đóng hồ sơ giai đoạn BB và chuyển học viên lên danh sách lớp Center. Luôn sẵn sàng tải thẻ học viên Center dưới dạng file Word đẹp mắt.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Lập Group TV-BB 🤝</span><small>Giai đoạn TV</small></div>
+        <div class="guide-flow-step"><span>Nhập Sinka 📜</span><small>Điền tích lũy</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Điền Sinka 📝</span><small>Tích lũy liên tục</small></div>
+        <div class="guide-flow-step"><span>Đủ 4 mốc BB ⭐</span><small>Mở nút chốt</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Đủ 4 mốc BB ⭐</span><small>Giai đoạn BB</small></div>
+        <div class="guide-flow-step"><span>Bấm Chốt Center 🏛️</span><small>Chuyển phase Center</small></div>
         <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Chốt Center 🏛️</span><small>Bấm nút chuyển phase</small></div>
-        <div class="guide-flow-arrow">➔</div>
-        <div class="guide-flow-step"><span>Xuất Word 📄</span><small>Thẻ học viên</small></div>
+        <div class="guide-flow-step"><span>Tải Word 📄</span><small>Xuất Thẻ HV Center</small></div>
       </div>
     `
   }
@@ -244,55 +246,85 @@ const PROFILE_TABS_DATA = [
     id: "info",
     title: "1. Thông tin",
     icon: "ℹ️",
-    desc: "<b>Quản lý thông tin hành chính & liên hệ:</b> Nơi xem và cập nhật thông tin cá nhân (họ tên, năm sinh, SĐT), người kết nối, TVV phụ trách, nhóm/tổ quản lý và ghi chú cơ bản của học viên."
+    desc: `<b>Quản lý Hồ sơ Hành chính & Liên hệ:</b><br/>
+      • <b>Nội dung:</b> Nơi tập trung toàn bộ lý lịch hành chính cốt lõi gồm Họ tên, năm sinh, SĐT liên lạc cá nhân, liên kết người giới thiệu/người dẫn dắt (NDD), Tư vấn viên (TVV) phụ trách, và phân khu đơn vị sinh hoạt (Tổ/Nhóm/Khu vực).<br/>
+      • <b>Phân quyền:</b> Chỉ Admin, Người dẫn dắt trực tiếp (NDD) và các cấp quản lý từ Đơn vị trở lên (Tổ trưởng GYJN+) mới có quyền chỉnh sửa các thông tin này để bảo mật dữ liệu tuyệt đối.<br/>
+      • <b>Tính năng nổi bật:</b> Hỗ trợ tính năng <i>Lưu nháp tự động (Auto-Save Draft)</i> khi chỉnh sửa. Nếu xảy ra sự cố sập app, mất mạng hoặc vô tình đóng modal, hệ thống sẽ lưu tạm để bạn khôi phục lại ngay lần mở sau mà không bị mất dữ liệu đã nhập.`
   },
   {
     id: "stage",
     title: "2. Giai đoạn",
     icon: "🗓️",
-    desc: "<b>Theo dõi vòng đời học tập (5 Phase):</b> Quản lý quá trình chuyển giai đoạn từ Chakki ➔ TV Hình ➔ Tư vấn ➔ BB ➔ Center. Chứa các nút chuyển phase quan trọng như <i>Lập group TV-BB</i>, <i>Mở KT</i> và <i>Chốt Center</i>."
+    desc: `<b>Kiểm soát Vòng đời Học tập & Lịch trình (5 Phase):</b><br/>
+      • <b>Nội dung:</b> Quản lý quá trình chuyển giao từng bước một cách chặt chẽ qua 5 Phase: <code>Chakki</code> ➔ <code>TV Hình</code> ➔ <code>Tư vấn</code> ➔ <code>BB (Học tập)</code> ➔ <code>Center</code>.<br/>
+      • <b>Các nút hành động nghiệp vụ quan trọng:</b><br/>
+      &nbsp;&nbsp; - <i>Lập group TV-BB:</i> Tự động kiểm tra điều kiện nhân sự trước khi cho phép liên kết nhóm Telegram hỗ trợ.<br/>
+      &nbsp;&nbsp; - <i>Mở KT (Kinh Thánh):</i> Đánh dấu bước tiến quan trọng khi bắt đầu tiết lộ nội dung Kinh thánh cho học viên.<br/>
+      &nbsp;&nbsp; - <i>Chốt Center:</i> Nút bấm quan trọng nhất để hoàn thành giai đoạn học BB và chuyển lên lớp Center 100 buổi.<br/>
+      • <b>Mẹo thao tác:</b> Hãy chắc chắn cập nhật các thông tin nhân sự và hoàn thành đầy đủ 4 mốc tiến độ BB trước khi thực hiện chuyển phase.`
   },
   {
     id: "tv",
     title: "3. TV (Tư vấn)",
     icon: "💬",
-    desc: "<b>Quản lý lịch hẹn & báo cáo tư vấn:</b> Lưu trữ lịch hẹn và nội dung chi tiết các buổi tư vấn (sử dụng công cụ test tâm lý như Enneagram, MBTI, phân tích điểm hại và đề xuất hướng đi tiếp theo của TVV)."
+    desc: `<b>Quản lý Lịch hẹn & Nhật ký Tư vấn tâm lý:</b><br/>
+      • <b>Nội dung:</b> Ghi nhận thời gian các buổi hẹn tư vấn và toàn bộ báo cáo chi tiết sau mỗi lần gặp gỡ. Thường quy trình có tối thiểu 2 lần tư vấn chính thức trước khi học viên bước vào khóa học.<br/>
+      • <b>Tích hợp trắc nghiệm tính cách:</b> Cho phép lưu trữ và hiển thị kết quả phân tích các bài test tâm lý (Enneagram, MBTI), phân tích rõ "điểm hại" (nỗi sợ, trở ngại lớn nhất) và đề xuất phương án dẫn dắt cụ thể.<br/>
+      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian hẹn chốt TV, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo TV"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/NDD, giúp hạn chế tối đa việc quên ghi nhận báo cáo.`
   },
   {
     id: "bb",
     title: "4. BB (Học tập)",
     icon: "📖",
-    desc: "<b>Theo dõi 12 buổi học BB & 4 Mốc tiến độ:</b> Ghi nhận báo cáo sau mỗi buổi học của GVBB (phản ứng, khai thác mới). Đây cũng là nơi hiển thị 4 nút tích mốc tiến độ hồ sơ (Bài đặc biệt, PV GVBB, ĐK Center, PV HS) trước khi chốt Center."
+    desc: `<b>Giám sát Mạch bài giảng 12 buổi BB & 4 Mốc hồ sơ:</b><br/>
+      • <b>Nội dung:</b> Nhật ký chi tiết của Giáo viên BB (GVBB) ghi lại sau mỗi buổi dạy về mức độ phản hồi, thái độ tiếp thu, và các thông tin khai thác mới của học viên.<br/>
+      • <b>Nhắc lịch dạy tiếp theo:</b> Khi lưu báo cáo buổi học, GVBB nhập thời gian dự kiến cho buổi tiếp theo. Đúng 1 giờ sau giờ học đó, hệ thống sẽ tự động tạo task <i>"Viết BC BB buổi N"</i> trong tab <b>Ưu tiên</b>.<br/>
+      • <b>Bảng kiểm soát 4 mốc tiến độ BB:</b> Nơi GVBB hoặc quản lý tích chọn xác nhận hoàn thành: <i>Bài đặc biệt</i>, <i>Phỏng vấn GVBB</i>, <i>Đăng ký Center</i>, và <i>Phỏng vấn Học viên</i>. Đây là điều kiện tiên quyết để được Chốt Center.`
   },
   {
     id: "btvn",
     title: "5. BTVN (Bài tập)",
     icon: "📝",
-    desc: "<b>Giao và chấm bài tập về nhà:</b> GVBB hoặc nhân sự phụ trách giao bài tập kèm hạn nộp. Hệ thống tự động thông báo và ghi nhận trạng thái làm bài/nộp bài của học viên."
+    desc: `<b>Quản lý Giao bài & Chấm bài tập về nhà:</b><br/>
+      • <b>Nội dung:</b> Giáo viên BB giao các bài tập rèn luyện tư duy kèm theo thời hạn nộp cụ thể trực tiếp trên hệ thống.<br/>
+      • <b>Trạng thái làm bài:</b> Theo dõi trạng thái nộp bài qua các nhãn màu trực quan: 🔴 <i>Chưa làm</i>, 🟡 <i>Đã nộp</i> (chờ chấm), 🟢 <i>Đã chấm</i>. Giáo viên có thể chấm điểm và viết nhận xét chi tiết bài làm.<br/>
+      • <b>Đong bộ Telegram:</b> Mỗi khi có bài tập mới được giao, học viên nộp bài hoặc giáo viên hoàn thành chấm bài, Bot Telegram của hệ thống sẽ tự động gửi thông báo chi tiết vào nhóm hỗ trợ TV-BB giúp việc phối hợp đôn đốc học viên cực kỳ nhịp nhàng.`
   },
   {
     id: "notes",
     title: "6. Ghi chú",
     icon: "🗒️",
-    desc: "<b>Ghi chú nội bộ:</b> Không gian lưu trữ các ghi nhận nhanh, thông tin nhạy cảm hoặc nhắc nhở riêng của nhóm hỗ trợ để phối hợp chăm sóc học viên đồng bộ."
+    desc: `<b>Không gian Ghi chép nội bộ & Bảo an nhạy cảm:</b><br/>
+      • <b>Nội dung:</b> Lưu trữ các ghi chép nhanh, thông báo khẩn cấp, các phát hiện tâm lý nhạy cảm hoặc kế hoạch bảo an đặc biệt dành riêng cho học viên.<br/>
+      • <b>Lưu trữ an toàn:</b> Mọi thông tin tại đây được bảo mật tuyệt đối, chỉ hiển thị với các thành viên trong nhóm hỗ trợ trực tiếp và các cấp quản lý đơn vị phụ trách.<br/>
+      • <b>Mẹo cộng tác:</b> Các thành viên có thể đọc và cập nhật liên tục để hiểu rõ hiện trạng mới nhất của học viên trước khi tiến hành dạy học hoặc tư vấn, tránh tình trạng thông tin bị lệch pha giữa TVV, NDD và GVBB.`
   },
   {
     id: "discuss",
     title: "7. Thảo luận",
     icon: "💬",
-    desc: "<b>Kênh chat nội bộ nhóm hỗ trợ:</b> Nơi trao đổi trực tiếp giữa TVV, NDD, GVBB và các Lá phụ trách học viên để thảo luận nhanh các vấn đề phát sinh mà không cần nhắn qua ứng dụng ngoài."
+    desc: `<b>Kênh Chat nội bộ Bảo mật & Tức thời:</b><br/>
+      • <b>Nội dung:</b> Phòng chat nội bộ thời gian thực tích hợp sẵn ngay trong hồ sơ học viên, cho phép TVV, NDD, GVBB và các Lá trao đổi, bàn bạc phương án hỗ trợ học viên mọi lúc mọi nơi.<br/>
+      • <b>Chức năng nâng cao:</b> Hỗ trợ gửi tin nhắn văn bản, emoji, tag tên đồng nghiệp (@mention), ghi âm giọng nói trực tiếp (Voice message), gửi tệp tin đa phương tiện (ảnh, video) kèm trình phát đa phương tiện độc lập ngay trong app.<br/>
+      • <b>Lợi ích:</b> Giúp tập trung toàn bộ lịch sử thảo luận về học viên tại một nơi duy nhất trên hệ thống, không bị trôi tin nhắn hoặc lộ lọt thông tin nhạy cảm ra các nền tảng chat công cộng bên ngoài.`
   },
   {
     id: "sinkacard",
     title: "8. Thẻ HV (Sinka)",
     icon: "📜",
-    desc: "<b>Báo cáo tổng hợp & Thẻ nhập học Sinka:</b> Được điền xuyên suốt ngay sau khi lập group TV-BB để tích lũy thông tin hành chính chi tiết. Hỗ trợ tự động điền dữ liệu từ hồ sơ và xuất file Word mẫu Thẻ Học viên Center chính thức."
+    desc: `<b>Điền Sinka Lý lịch & Xuất file Word nhập học:</b><br/>
+      • <b>Nội dung:</b> Biểu mẫu Sinka thu thập thông tin lý lịch nhập học chi tiết của học viên (tiểu sử gia đình, hoàn cảnh học tập, xu hướng tâm lý, công việc hiện tại, nhận xét của nhóm hỗ trợ).<br/>
+      • <b>Điền thông tin tích lũy:</b> Nên điền tích lũy dần thông tin ngay từ giai đoạn tư vấn học viên để dữ liệu đầy đủ và chính xác nhất.<br/>
+      • <b>Tự động điền & Xuất Word (.docx):</b> Hệ thống tự động lấy các thông tin hành chính có sẵn trong hồ sơ để điền sẵn vào biểu mẫu Sinka. Khi học viên sẵn sàng nhập học, người dùng chỉ cần bấm nút xuất thẻ để tải ngay file Word (.docx) mẫu Thẻ Học viên Center chính thức được thiết kế chuẩn chỉ để lưu trữ vật lý.`
   },
   {
     id: "mindmap",
     title: "9. Tư Duy",
     icon: "🗺️",
-    desc: "<b>Sơ đồ mindmap trực quan:</b> Tổng hợp tóm tắt tâm lý, nhu cầu, công cụ tư vấn và định hướng chăm sóc dưới dạng sơ đồ tư duy hình cây trực quan (lazy-load Markmap CDN)."
+    desc: `<b>Sơ đồ Tư duy Tâm lý (Mindmap) Trực quan:</b><br/>
+      • <b>Nội dung:</b> Biến toàn bộ các dữ liệu phân tích tâm lý, hoàn cảnh, khó khăn và chiến lược dẫn dắt học viên thành một sơ đồ tư duy dạng cây tương tác cực kỳ trực quan và sinh động.<br/>
+      • <b>Công nghệ tích hợp:</b> Sử dụng thư viện <b>Markmap CDN</b> cao cấp để biên dịch mã Markdown thành sơ đồ SVG tương tác. Bạn có thể thu phóng (zoom in/out), kéo di chuyển (drag) và đóng/mở các nút nhánh sơ đồ một cách mượt mà.<br/>
+      • <b>Lợi ích:</b> Giúp người xem (đặc biệt là quản lý cấp trên hoặc GVBB mới nhận lớp) chỉ cần nhìn lướt qua trong 30 giây là nắm bắt được toàn bộ chiến lược chăm sóc và "chìa khóa tâm lý" của học viên.`
   }
 ];
 
@@ -331,8 +363,9 @@ function openGuideCenter() {
 
         <!-- Navigation Tabs -->
         <div class="guide-tabs" id="guideTabs">
-          <div class="guide-tab-btn active" id="gtab_jondo" onclick="switchGuideTab('jondo')">📋 Quản lý Jondo</div>
+          <div class="guide-tab-btn active" id="gtab_jondo" onclick="switchGuideTab('jondo')">📋 Quy trình hồ sơ trái</div>
           <div class="guide-tab-btn" id="gtab_tabs" onclick="switchGuideTab('tabs')">🗂️ 9 Tab Hồ Sơ</div>
+          <div class="guide-tab-btn" id="gtab_tour" onclick="switchGuideTab('tour')">🚀 Tour Giao Diện</div>
           <div class="guide-tab-btn" id="gtab_help" onclick="switchGuideTab('help')">💡 Hỏi đáp & Trợ giúp</div>
         </div>
 
@@ -369,7 +402,35 @@ function openGuideCenter() {
           </div>
         </div>
 
-        <!-- Tab 3: FAQ & Tour launcher -->
+        <!-- Tab 3: Tour giao diện -->
+        <div id="guidePane_tour" style="display:none;">
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position:relative; overflow:hidden;">
+            <div style="font-size:18px; font-weight:800; color:var(--accent); margin-bottom:6px;">🚀 Khám Phá Giao Diện Hệ Thống</div>
+            <div style="font-size:12px; color:var(--text2); max-width:480px; margin:0 auto 14px; line-height:1.5;">
+              Nhấp vào nút dưới đây để kích hoạt Tour hướng dẫn trực tiếp. Hệ thống sẽ làm nổi bật từng vị trí nút bấm và giải thích trực quan cách vận hành ứng dụng.
+            </div>
+            <button class="form-btn" onclick="closeModal('guideCenterModal'); startAppTour();" style="background:linear-gradient(135deg,var(--accent),var(--accent2)); margin:0 auto; display:flex; align-items:center; justify-content:center; gap:8px; max-width:320px; font-weight:700; box-shadow:0 4px 12px var(--fab-shadow);">
+              ✨ Bắt đầu Tour hướng dẫn tương tác
+            </button>
+          </div>
+          
+          <div style="font-weight:700; font-size:12px; color:var(--text1); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; padding-left:4px;">Danh sách 10 bước hướng dẫn giao diện</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            ${APP_TOUR_STEPS.map((step, index) => `
+              <div style="display:flex; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; transition:border-color 0.2s;">
+                <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px; flex-shrink:0; box-shadow:0 2px 5px var(--fab-shadow);">
+                  ${index + 1}
+                </div>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <div style="font-weight:700; font-size:13px; color:var(--accent);">${step.title}</div>
+                  <div style="font-size:11.5px; color:var(--text2); line-height:1.45;">${step.text}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Tab 4: FAQ -->
         <div id="guidePane_help" style="display:none;">
           <div style="display:flex; flex-direction:column; gap:8px;">
             ${WIKI_ITEMS.map((item, index) => `
@@ -383,13 +444,6 @@ function openGuideCenter() {
                 </div>
               </div>
             `).join('')}
-            
-            <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:14px; text-align:center;">
-              <div style="font-size:11px; color:var(--text2); margin-bottom:8px;">Bạn muốn làm quen nhanh các nút bấm chính trên màn hình?</div>
-              <button class="form-btn" onclick="closeModal('guideCenterModal'); startAppTour();" style="background:linear-gradient(135deg,var(--accent),var(--accent2)); margin:0; display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
-                🚀 Bắt đầu Tour hướng dẫn giao diện (10 bước)
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -416,10 +470,12 @@ function switchGuideTab(tab) {
   activeGuideTab = tab;
   document.getElementById('guidePane_jondo').style.display = tab === 'jondo' ? 'block' : 'none';
   document.getElementById('guidePane_tabs').style.display = tab === 'tabs' ? 'block' : 'none';
+  document.getElementById('guidePane_tour').style.display = tab === 'tour' ? 'block' : 'none';
   document.getElementById('guidePane_help').style.display = tab === 'help' ? 'block' : 'none';
 
   document.getElementById('gtab_jondo').classList.toggle('active', tab === 'jondo');
   document.getElementById('gtab_tabs').classList.toggle('active', tab === 'tabs');
+  document.getElementById('gtab_tour').classList.toggle('active', tab === 'tour');
   document.getElementById('gtab_help').classList.toggle('active', tab === 'help');
   
   // Clear search query
@@ -490,6 +546,7 @@ function onGuideSearch(query) {
     // Restore active pane
     document.getElementById('guidePane_jondo').style.display = activeGuideTab === 'jondo' ? 'block' : 'none';
     document.getElementById('guidePane_tabs').style.display = activeGuideTab === 'tabs' ? 'block' : 'none';
+    document.getElementById('guidePane_tour').style.display = activeGuideTab === 'tour' ? 'block' : 'none';
     document.getElementById('guidePane_help').style.display = activeGuideTab === 'help' ? 'block' : 'none';
     if (activeGuideTab === 'jondo') {
       selectGuideStep(activeGuideStep);
@@ -502,6 +559,7 @@ function onGuideSearch(query) {
   if (tabs) tabs.style.display = 'none';
   document.getElementById('guidePane_jondo').style.display = 'block';
   document.getElementById('guidePane_tabs').style.display = 'none';
+  document.getElementById('guidePane_tour').style.display = 'none';
   document.getElementById('guidePane_help').style.display = 'none';
   
   // Search Jondo steps
@@ -539,7 +597,7 @@ function onGuideSearch(query) {
   let html = `<div style="display:flex;flex-direction:column;gap:12px;">`;
   
   if (matchedSteps.length > 0) {
-    html += `<div style="font-weight:700;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;">Tiến trình Quản lý Jondo (${matchedSteps.length})</div>`;
+    html += `<div style="font-weight:700;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;">Quy trình hồ sơ trái (${matchedSteps.length})</div>`;
     matchedSteps.forEach(step => {
       html += `
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:6px;">
