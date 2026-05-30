@@ -2045,7 +2045,7 @@
   max-width: 85%;
   margin-bottom: 1px;
   align-self: flex-start;
-  height: auto !important;
+  height: fit-content !important;
   min-height: 0 !important;
   flex: 0 0 auto !important;
 }
@@ -2055,9 +2055,10 @@
   flex-direction: row-reverse;
   width: 100%;
   max-width: 85%;
-  height: auto !important;
+  height: fit-content !important;
   min-height: 0 !important;
   flex: 0 0 auto !important;
+  align-items: flex-end;
 }
 
 .chat-message-avatar {
@@ -2072,7 +2073,7 @@
   min-width: 0;
   flex: 1 1 auto !important;
   align-items: flex-start;
-  height: auto !important;
+  height: fit-content !important;
   min-height: 0 !important;
 }
 
