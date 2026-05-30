@@ -313,7 +313,7 @@ async function openProfile(p, cardEl, initialTabId) {
     </div>
   `;
 
-  if (tvv1Code) {
+  if (tvv1Code || tvv2Code) {
     tvvTimelineRowsHtml += `
       <!-- TVV Row 2 -->
       <div onclick="promptEditTVVSession('${p.id}', 2, '${tvv2Code||''}')" 
@@ -334,7 +334,7 @@ async function openProfile(p, cardEl, initialTabId) {
     `;
   }
 
-  if (tvv1Code && tvv2Code) {
+  if ((tvv1Code && tvv2Code) || tvv3Code) {
     tvvTimelineRowsHtml += `
       <!-- TVV Row 3 -->
       <div onclick="promptEditTVVSession('${p.id}', 3, '${tvv3Code||''}')" 
