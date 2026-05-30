@@ -101,10 +101,12 @@
   <!-- TỔ -->
   <div id="tab-staff" style="display:none;">
     <div class="search-wrap"><span class="icon">🔍</span><input type="text" placeholder="Tìm theo tên, mã JD..." id="staffSearchInput" oninput="filterStaff()" /></div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px; margin-bottom:16px;">
+      <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin:0; width:100%;">➕ Đăng ký Nhân sự mới</button>
+      <button class="sync-sheet-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="margin:0; width:100%; display:none;">🔄 Tái đồng bộ toàn bộ Data ➔ Sheet</button>
+    </div>
     <div class="section-header"><div class="section-title">Tất cả Nhân sự</div><div class="section-count" id="staffCount">--</div></div>
     <div id="staffList"><div class="staff-card skeleton" style="height:68px;"></div></div>
-    <button class="add-record-btn" onclick="openAddStaffModal()" id="btnAddStaff" style="margin-top:12px;">➕ Đăng ký Nhân sự mới</button>
-    <button class="sync-sheet-btn" onclick="bulkSyncDatabaseToSheet()" id="btnSyncSheet" style="display:none;">🔄 Tái đồng bộ toàn bộ Data ➔ Sheet</button>
   </div>
 
   <!-- LỊCH -->
