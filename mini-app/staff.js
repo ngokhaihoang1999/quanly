@@ -75,7 +75,11 @@ async function addStaffBulk() {
   const btn = document.querySelector('#addStaffModal .save-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang thêm...'; }
   try {
-    const body = codes.map(c => ({ staff_code: c, full_name: null, position: 'td' }));
+    const body = codes.map(c => {
+      const parts = c.split('-');
+      const defaultName = parts[1] ? parts[1].trim() : c;
+      return { staff_code: c, full_name: defaultName, position: 'td' };
+    });
     const res = await sbFetch('/rest/v1/staff', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify(body) });
     if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Lỗi'); }
     closeModal('addStaffModal');
