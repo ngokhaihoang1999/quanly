@@ -493,6 +493,7 @@ async function loadInfoSheet(profileId) {
       const hd = hjRows[0].data || {};
       if (!d.t2_hinh_thuc && hd.hinh_thuc) { const htEl = document.getElementById('t2_hinh_thuc'); if (htEl) htEl.value = hd.hinh_thuc; }
       if (!d.t2_ngay_chakki && hd.ngay_chakki) { const ckEl = document.getElementById('t2_ngay_chakki'); if (ckEl) ckEl.value = hd.ngay_chakki; }
+    }
     if (typeof adjustAllTextareaHeights === 'function') {
       setTimeout(adjustAllTextareaHeights, 50);
     }
