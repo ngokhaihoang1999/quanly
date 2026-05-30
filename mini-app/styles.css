@@ -2041,6 +2041,7 @@
   display: flex;
   gap: 6px;
   align-items: flex-start;
+  width: 100%;
   max-width: 85%;
   margin-bottom: 1px;
   align-self: flex-start;
@@ -2051,6 +2052,7 @@
 .chat-message-row--me {
   align-self: flex-end;
   flex-direction: row-reverse;
+  width: 100%;
   max-width: 85%;
   height: auto !important;
   min-height: 0 !important;

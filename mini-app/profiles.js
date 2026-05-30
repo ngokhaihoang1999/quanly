@@ -398,7 +398,9 @@ async function openProfile(p, cardEl, initialTabId) {
       <div class="profile-summary-grid" style="display:flex; flex-wrap:wrap; gap:16px; border-top:1px solid var(--border); padding-top:14px;">
         <!-- NDD Section -->
         <div class="profile-summary-col" style="border-left:3px solid var(--green); padding-left:12px; flex:1 0 180px; min-width:180px;">
-          <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px;">👑 NDD</div>
+          <div style="margin-bottom:6px;">
+            <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(34,197,94,0.12); color:#22c55e; padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(34,197,94,0.2);">NDD</span>
+          </div>
           <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
             ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'Chưa có'}</span>`}
           </div>
@@ -406,8 +408,8 @@ async function openProfile(p, cardEl, initialTabId) {
 
         <!-- GVBB Section -->
         <div class="profile-summary-col" style="border-left:3px solid var(--accent); padding-left:12px; position:relative; flex:1 0 180px; min-width:180px;">
-          <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px; display:flex; align-items:center; gap:6px;">
-            <span>🧭 GVBB</span>
+          <div style="margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+            <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(99,102,241,0.12); color:var(--accent); padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(99,102,241,0.2);">GVBB</span>
             ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:10px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
           </div>
           <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
@@ -418,7 +420,9 @@ async function openProfile(p, cardEl, initialTabId) {
 
       <!-- Bottom: TVV timeline vertical stack -->
       <div style="border-top:1px solid var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">🗣️ TVV</div>
+        <div style="margin-bottom:4px;">
+          <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(168,85,247,0.12); color:#a855f7; padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(168,85,247,0.2);">TVV</span>
+        </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           ${tvvTimelineRowsHtml}
         </div>
@@ -426,7 +430,9 @@ async function openProfile(p, cardEl, initialTabId) {
 
       <!-- Bottom: Lá (Support) section -->
       <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:6px;">
-        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">🍃 Lá</div>
+        <div style="margin-bottom:4px;">
+          <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(20,184,166,0.12); color:#14b8a6; padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(20,184,166,0.2);">Lá</span>
+        </div>
         <div>
           ${renderRoleBadges(p.id, 'la', rolesInfo.la, hasFullEdit)}
         </div>
