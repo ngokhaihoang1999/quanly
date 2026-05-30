@@ -952,62 +952,7 @@ async function saveScheduleTV() {
     }
 
     // Sync TVV roles in fruit_roles to match the TVVs across all sessions of this profile
-    try {
-      const sessionsRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=tvv_staff_code`);
-      const sessions = await sessionsRes.json();
-      const uniqueTvvs = [...new Set((sessions || []).map(s => s.tvv_staff_code).filter(Boolean))];
-
-      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${currentProfileId}&select=id`);
-      const fgs = await fgRes.json();
-      let fgId = fgs[0]?.id;
-      if (!fgId) {
-        const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
-          telegram_group_id: null, profile_id: currentProfileId, level: 'tu_van'
-        })});
-        const newFgs = await newFgRes.json();
-        fgId = newFgs[0]?.id;
-      }
-
-      if (fgId) {
-        // Fetch existing TVV roles in the group
-        const existingRolesRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&role_type=eq.tvv&select=id,staff_code`);
-        const existingRoles = await existingRolesRes.json();
-
-        // Target list of staff_code in fruit_roles
-        const targetStaffCodes = uniqueTvvs.map(t => isStaffRegistered(t) ? t : `tg:${t}`);
-
-        // Roles to delete and insert
-        const toDelete = existingRoles.filter(r => !targetStaffCodes.includes(r.staff_code));
-        const toInsert = targetStaffCodes.filter(code => !existingRoles.some(r => r.staff_code === code));
-
-        // Delete no longer needed roles
-        for (const r of toDelete) {
-          await sbFetch(`/rest/v1/fruit_roles?id=eq.${r.id}`, { method: 'DELETE' });
-        }
-
-        // Insert new roles
-        for (const code of toInsert) {
-          const rawCode = code.startsWith('tg:') ? code.slice(3) : code;
-          const isReg = isStaffRegistered(rawCode);
-          const roleData = {
-            fruit_group_id: fgId,
-            staff_code: code,
-            role_type: 'tvv',
-            assigned_by: getEffectiveStaffCode()
-          };
-          if (!isReg) {
-            roleData.display_name = rawCode;
-          }
-          await sbFetch('/rest/v1/fruit_roles', { method: 'POST', body: JSON.stringify(roleData) });
-        }
-
-        // TVV bổ sung → cập nhật priority task chot_tv_1
-        if (typeof updateChotTV1Task === 'function') {
-          const pp = allProfiles.find(x => x.id === currentProfileId);
-          updateChotTV1Task(currentProfileId, pp?.full_name || '', true, !!dt);
-        }
-      }
-    } catch(e) { console.warn('Sync TVV roles fail:', e); }
+    await syncTVVRolesFromSessions(currentProfileId);
 
     closeModal('scheduleTVModal');
     if (editingSessionId) {
@@ -2084,3 +2029,70 @@ function removeRecordImage() {
   const container = document.getElementById('rm_image_preview_container');
   if (container) container.style.display = 'none';
 }
+
+// Global sync function for TVV roles across all consultation sessions
+async function syncTVVRolesFromSessions(profileId) {
+  try {
+    const sessionsRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=tvv_staff_code`);
+    const sessions = await sessionsRes.json();
+    const uniqueTvvs = [...new Set((sessions || []).map(s => s.tvv_staff_code).filter(Boolean))];
+
+    const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id`);
+    const fgs = await fgRes.json();
+    let fgId = fgs[0]?.id;
+    if (!fgId) {
+      const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+        telegram_group_id: null, profile_id: profileId, level: 'tu_van'
+      })});
+      const newFgs = await newFgRes.json();
+      fgId = newFgs[0]?.id;
+    }
+
+    if (fgId) {
+      // Fetch existing TVV roles in the group
+      const existingRolesRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&role_type=eq.tvv&select=id,staff_code`);
+      const existingRoles = await existingRolesRes.json();
+
+      // Target list of staff_code in fruit_roles
+      const targetStaffCodes = uniqueTvvs.map(t => isStaffRegistered(t) ? t : `tg:${t}`);
+
+      // Roles to delete and insert
+      const toDelete = existingRoles.filter(r => !targetStaffCodes.includes(r.staff_code));
+      const toInsert = targetStaffCodes.filter(code => !existingRoles.some(r => r.staff_code === code));
+
+      // Delete no longer needed roles
+      for (const r of toDelete) {
+        await sbFetch(`/rest/v1/fruit_roles?id=eq.${r.id}`, { method: 'DELETE' });
+      }
+
+      // Insert new roles
+      for (const code of toInsert) {
+        const rawCode = code.startsWith('tg:') ? code.slice(3) : code;
+        const isReg = isStaffRegistered(rawCode);
+        const roleData = {
+          fruit_group_id: fgId,
+          staff_code: code,
+          role_type: 'tvv',
+          assigned_by: getEffectiveStaffCode()
+        };
+        if (!isReg) {
+          roleData.display_name = rawCode;
+        }
+        await sbFetch('/rest/v1/fruit_roles', { method: 'POST', body: JSON.stringify(roleData) });
+      }
+
+      // TVV bổ sung → cập nhật priority task chot_tv_1
+      if (typeof updateChotTV1Task === 'function') {
+        const pp = allProfiles.find(x => x.id === profileId);
+        const allSessionsRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=scheduled_at`);
+        const allSessions = await allSessionsRes.json();
+        const hasSchedule = (allSessions || []).some(s => s.scheduled_at);
+        updateChotTV1Task(profileId, pp?.full_name || '', true, hasSchedule);
+      }
+    }
+  } catch(e) {
+    console.warn('syncTVVRolesFromSessions fail:', e);
+  }
+}
+
+window.syncTVVRolesFromSessions = syncTVVRolesFromSessions;

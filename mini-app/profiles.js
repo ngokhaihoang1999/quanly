@@ -144,11 +144,12 @@ async function openProfile(p, cardEl, initialTabId) {
   let realGroupTitle = '';
   let realGroupInviteLink = '';
   let latestInfo = '';
+  let sessionsRows = [];
   try {
     const [fgRes, rRes, sRes, dkRes] = await Promise.all([
       sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(id,staff_code,role_type,display_name)`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
-      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=id,session_number,tool,tvv_staff_code,created_at,scheduled_at&order=session_number.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
     ]);
     // ── Parse fruit_groups ──
@@ -177,12 +178,28 @@ async function openProfile(p, cardEl, initialTabId) {
       });
     });
     // ── Parse latest activity ──
-    latestInfo = latestActivityLabel((await rRes.json())[0]||null, (await sRes.json())[0]||null);
+    const latestRecord = (await rRes.json())[0]||null;
+    sessionsRows = await sRes.json();
+    const sortedSessions = [...sessionsRows].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    const latestSession = sortedSessions[0] || null;
+    latestInfo = latestActivityLabel(latestRecord, latestSession);
+    
     // ── Parse ĐK Center milestone ──
     const dkRows = await dkRes.json();
     window._hasDKCenter = !!(dkRows && dkRows.length > 0);
   } catch(e) { window._hasDKCenter = false; }
 
+  const tvv1 = sessionsRows.find(s => s.session_number === 1) || null;
+  const tvv2 = sessionsRows.find(s => s.session_number === 2) || null;
+  const tvv3 = sessionsRows.find(s => s.session_number === 3) || null;
+  
+  const tvv1Code = tvv1 ? tvv1.tvv_staff_code : null;
+  const tvv2Code = tvv2 ? tvv2.tvv_staff_code : null;
+  const tvv3Code = tvv3 ? tvv3.tvv_staff_code : null;
+  
+  const tvv1Display = tvv1Code ? (tvv1Code.startsWith('tg:') ? tvv1Code.replace('tg:', '') : getStaffLabel(tvv1Code)) : 'Chưa phân công';
+  const tvv2Display = tvv2Code ? (tvv2Code.startsWith('tg:') ? tvv2Code.replace('tg:', '') : getStaffLabel(tvv2Code)) : 'Chưa phân công';
+  const tvv3Display = tvv3Code ? (tvv3Code.startsWith('tg:') ? tvv3Code.replace('tg:', '') : getStaffLabel(tvv3Code)) : 'Chưa phân công';
 
   const nddCode    = p.ndd_staff_code || rolesInfo.ndd || null;
   const tvvCode    = rolesInfo.tvv.length ? rolesInfo.tvv[0].code : null; // primary TVV
@@ -216,7 +233,6 @@ async function openProfile(p, cardEl, initialTabId) {
     ? `<div onclick="showGroupConnectGuide()" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;font-size:11px;color:var(--red);font-weight:600;cursor:pointer;">
         ⚠️ Chưa kết nối Group <span style="opacity:0.5;font-size:12px;">›</span>
        </div>` : '';
-
 
   const canToggleStatus = hasFullEdit || isProfileNDD;
   const statusBtn = canToggleStatus
@@ -253,49 +269,136 @@ async function openProfile(p, cardEl, initialTabId) {
   const canEditSem = hasPermission('edit_profile') || hasPermission('manage_semester') || isProfileNDD;
   const semTag = `<span ${canEditSem ? `onclick="event.stopPropagation();promptChangeSemester('${p.id}', '${p.semester_id||''}')" style="cursor:pointer;"` : 'style="opacity:0.8;"'} class="semester-badge" title="Nhấn để Đổi Khai Giảng cho Trái này">📅 ${semName}</span>`;
 
-  // ONE unified card
+  // ONE unified card with premium layout
   document.getElementById('profileSummaryCard').innerHTML = `
-    <div style="background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;">
-      <!-- Top: avatar + name + badges + refresh -->
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-        <div style="cursor:${canEditColor?'pointer':'default'};flex-shrink:0;" ${avatarClick}>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:16px; position:relative; overflow:hidden;">
+      <!-- Premium card gradient background reflection -->
+      <div style="position:absolute; top:-50px; right:-50px; width:150px; height:150px; background:radial-gradient(circle, rgba(124,106,247,0.1) 0%, transparent 70%); pointer-events:none;"></div>
+      
+      <!-- Top section: avatar + name + status badges -->
+      <div style="display:flex; align-items:center; gap:16px; position:relative;">
+        <div style="cursor:${canEditColor?'pointer':'default'}; flex-shrink:0;" ${avatarClick}>
           ${avatarHtml}
         </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:18px;font-weight:700;margin-bottom:4px;word-break:break-word;line-height:1.3;">${p.full_name}</div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:20px; font-weight:800; margin-bottom:6px; color:var(--text1); word-break:break-word; line-height:1.2; letter-spacing:-0.3px;">${p.full_name}</div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             ${statusBtn}
-            <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${PHASE_COLORS[ph]};color:white;">${PHASE_LABELS[ph]||ph}</span>
+            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:12px; background:${PHASE_COLORS[ph]}; color:white; box-shadow:0 2px 6px rgba(0,0,0,0.08);">${PHASE_LABELS[ph]||ph}</span>
             ${ktHtml}
             ${dkCenterHtml}
             ${semTag}
-            ${p.birth_year ? `<span style="font-size:11px;color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px;color:var(--text2);">${p.gender}</span>` : '')}
-
+            ${p.birth_year ? `<span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; background:var(--surface2); color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; background:var(--surface2); color:var(--text2);">${p.gender}</span>` : '')}
           </div>
           ${reasonHtml}
           ${bbNoGroupWarning}
         </div>
-        <button data-share-id="${p.id}" data-share-name="${(p.full_name||'').replace(/"/g,'&quot;')}" onclick="shareProfile(this.dataset.shareId, this.dataset.shareName)" title="Chia sẻ hồ sơ" style="
-          flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
-          background:var(--accent);color:white;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;padding:0;
-          "><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
-        <button id="profileRefreshBtn" onclick="refreshProfileInPlace()" title="Đồng bộ dữ liệu mới nhất" style="
-          flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
-          background:var(--surface2);color:var(--text2);font-size:16px;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;transition:all 0.2s;align-self:flex-start;
-          ">🔄</button>
+        <div style="display:flex; gap:8px; align-self:flex-start;">
+          <button data-share-id="${p.id}" data-share-name="${(p.full_name||'').replace(/"/g,'&quot;')}" onclick="shareProfile(this.dataset.shareId, this.dataset.shareName)" title="Chia sẻ hồ sơ" style="
+            width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+            background:var(--accent); color:white; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0; box-shadow:0 3px 10px rgba(124, 106, 247, 0.2);
+            " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <button id="profileRefreshBtn" onclick="refreshProfileInPlace()" title="Đồng bộ dữ liệu mới nhất" style="
+            width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+            background:var(--surface2); color:var(--text2); font-size:16px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0;
+            " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">🔄</button>
+        </div>
       </div>
-      <!-- Bottom: roles grid + latest -->
-      <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
-        <div><span style="color:var(--text3);">NDD:</span> ${nddCode ? `<b onclick="showStaffCard('${nddCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</b>` : `<b>${nddDisplay||'---'}</b>`}</div>
-        <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<b style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</b>` : `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>`) : `<b>${gvbbDisplay||'---'}</b>`}${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? ` <span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer;font-size:12px;" title="Đổi GVBB">✏️</span>` : ''}</div>
-        <div style="grid-column: span 2; display:flex; align-items:center; flex-wrap:wrap; margin-top:2px;"><span style="color:var(--text3); margin-right:4px;">TVV:</span> ${renderRoleBadges(p.id, 'tvv', rolesInfo.tvv, hasFullEdit)}</div>
-        <div style="grid-column: span 2; display:flex; align-items:center; flex-wrap:wrap; margin-top:2px;"><span style="color:var(--text3); margin-right:4px;">Lá:</span> ${renderRoleBadges(p.id, 'la', rolesInfo.la, hasFullEdit)}</div>
-        ${latestInfo ? `<div style="grid-column: span 2; color:var(--accent);font-size:11px;margin-top:4px;">⏱ ${latestInfo}</div>` : ''}
+
+      <!-- Middle: GVBB & NDD elegantly grouped with Left-Border accent highlights -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; border-top:1px solid var(--border); padding-top:14px;">
+        <!-- NDD Section -->
+        <div style="border-left:3px solid var(--green); padding-left:12px; min-width:0;">
+          <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px;">👑 Người Dẫn Đường (NDD)</div>
+          <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+            ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'—'}</span>`}
+          </div>
+        </div>
+
+        <!-- GVBB Section -->
+        <div style="border-left:3px solid var(--accent); padding-left:12px; min-width:0; position:relative;">
+          <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px; display:flex; align-items:center; gap:6px;">
+            <span>🧭 Giảng Viên Bán Bản (GVBB)</span>
+            ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:10px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
+          </div>
+          <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+            ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<span style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</span>` : `<span onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</span>`) : `<span style="color:var(--text3);">${gvbbDisplay||'—'}</span>`}
+          </div>
+        </div>
       </div>
+
+      <!-- Bottom: TVV timeline card grid -->
+      <div style="border-top:1px solid var(--border); padding-top:14px;">
+        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.3px;">🗣️ Tiến Trình Tư Vấn (TVV Lần 1, 2, 3)</div>
+        <div class="tvv-timeline-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <!-- Card 1: TVV Lần 1 -->
+          <div onclick="promptEditTVVSession('${p.id}', 1, '${tvv1Code||''}')" 
+               style="cursor:pointer; padding:12px; border-radius:12px; transition:all 0.2s; position:relative; display:flex; flex-direction:column; justify-content:center;
+                      ${tvv1Code ? 'background:rgba(124,106,247,0.05); border:1px solid rgba(124,106,247,0.3);' : 'background:transparent; border:1px dashed var(--border); opacity:0.75;'}"
+               onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv1Code ? 'rgba(124,106,247,0.3)' : 'var(--border)'}'">
+            <div style="font-size:9.5px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+              <span>Lần 1</span>
+              ${tvv1Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800;">🟢</span>' : '<span style="color:var(--text3); font-size:9px;">⚪</span>'}
+            </div>
+            <div style="font-size:12px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${tvv1Display}">
+              ${tvv1Display}
+            </div>
+            ${tvv1 ? `<div style="font-size:9px; color:var(--text3); margin-top:3px; opacity:0.85;">🛠️ ${tvv1.tool || 'Enneagram'}</div>` : ''}
+          </div>
+
+          <!-- Card 2: TVV Lần 2 -->
+          <div onclick="promptEditTVVSession('${p.id}', 2, '${tvv2Code||''}')" 
+               style="cursor:pointer; padding:12px; border-radius:12px; transition:all 0.2s; position:relative; display:flex; flex-direction:column; justify-content:center;
+                      ${tvv2Code ? 'background:rgba(124,106,247,0.05); border:1px solid rgba(124,106,247,0.3);' : 'background:transparent; border:1px dashed var(--border); opacity:0.75;'}"
+               onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv2Code ? 'rgba(124,106,247,0.3)' : 'var(--border)'}'">
+            <div style="font-size:9.5px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+              <span>Lần 2</span>
+              ${tvv2Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800;">🟢</span>' : '<span style="color:var(--text3); font-size:9px;">⚪</span>'}
+            </div>
+            <div style="font-size:12px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${tvv2Display}">
+              ${tvv2Display}
+            </div>
+            ${tvv2 ? `<div style="font-size:9px; color:var(--text3); margin-top:3px; opacity:0.85;">🛠️ ${tvv2.tool || 'Enneagram'}</div>` : ''}
+          </div>
+
+          <!-- Card 3: TVV Lần 3 -->
+          <div onclick="promptEditTVVSession('${p.id}', 3, '${tvv3Code||''}')" 
+               style="cursor:pointer; padding:12px; border-radius:12px; transition:all 0.2s; position:relative; display:flex; flex-direction:column; justify-content:center;
+                      ${tvv3Code ? 'background:rgba(124,106,247,0.05); border:1px solid rgba(124,106,247,0.3);' : 'background:transparent; border:1px dashed var(--border); opacity:0.75;'}"
+               onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv3Code ? 'rgba(124,106,247,0.3)' : 'var(--border)'}'">
+            <div style="font-size:9.5px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+              <span>Lần 3</span>
+              ${tvv3Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800;">🟢</span>' : '<span style="color:var(--text3); font-size:9px;">⚪</span>'}
+            </div>
+            <div style="font-size:12px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${tvv3Display}">
+              ${tvv3Display}
+            </div>
+            ${tvv3 ? `<div style="font-size:9px; color:var(--text3); margin-top:3px; opacity:0.85;">🛠️ ${tvv3.tool || 'Enneagram'}</div>` : ''}
+          </div>
+        </div>
       </div>
-    </div>`;
+
+      <!-- Bottom: Lá (Support) section -->
+      <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:6px;">
+        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">🍃 Người Hỗ Trợ Kết Nối (Lá)</div>
+        <div>
+          ${renderRoleBadges(p.id, 'la', rolesInfo.la, hasFullEdit)}
+        </div>
+      </div>
+
+      <!-- Latest Activity Footer -->
+      ${latestInfo ? `
+        <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; align-items:center; gap:8px; font-size:11px; color:var(--accent); font-weight:600;">
+          <span>⏱️ Hoạt động gần nhất:</span>
+          <span style="flex:1; min-width:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${latestInfo}</span>
+        </div>
+      ` : ''}
+    </div>
+  `;`;
 
   // Tab TV: hiện khi có TVV, bất kể phase (vì Chốt TV có thể xảy ra ở phase Chakki)
   const tabTV = document.getElementById('tabTV');
@@ -1201,3 +1304,103 @@ async function promptAddRole(profileId, roleType) {
     } catch(e) { showToast('❌ Lỗi'); console.error(e); }
   };
 }
+
+// ── Inline TVV Editor for Timeline Sessions ──
+async function promptEditTVVSession(profileId, sessionNumber, currentTvvCode) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+  
+  const currentLabel = currentTvvCode ? getStaffLabel(currentTvvCode) : '';
+  
+  overlay.innerHTML = `<div style="background:var(--surface,#fff);border-radius:16px;padding:24px;min-width:320px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text1,#333);display:flex;align-items:center;gap:6px;">🗣️ TVV Lần ${sessionNumber}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Chọn hoặc nhập mã TVV mới:</div>
+    <input type="text" id="_editTvvInput" data-list="staffSuggest" placeholder="Mã TĐ hoặc tên..." value="${currentTvvCode ? `${currentTvvCode}${currentLabel ? ' — ' + currentLabel : ''}` : ''}"
+      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface2,#f5f5f5);color:var(--text1,#333);font-size:14px;outline:none;"/>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">
+      <button id="_editTvvCancel" style="padding:8px 16px;border-radius:8px;background:var(--surface2,#eee);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:13px;cursor:pointer;">Hủy</button>
+      <button id="_editTvvSave" style="padding:8px 16px;border-radius:8px;background:var(--accent,#3b82f6);border:none;color:white;font-size:13px;font-weight:600;cursor:pointer;">Lưu thay đổi</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  
+  setTimeout(() => {
+    const inp = document.getElementById('_editTvvInput');
+    if (inp) {
+      inp.focus();
+      if (typeof initComboboxes === 'function') initComboboxes();
+    }
+  }, 100);
+
+  overlay.querySelector('#_editTvvCancel').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  
+  overlay.querySelector('#_editTvvSave').onclick = async () => {
+    const raw = document.getElementById('_editTvvInput').value.trim();
+    const saveBtn = overlay.querySelector('#_editTvvSave');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '⌛ Đang lưu...';
+    
+    try {
+      let staffCode = null;
+      if (raw) {
+        const parsedCode = getStaffCodeFromInput('_editTvvInput');
+        const registered = isStaffRegistered(parsedCode);
+        staffCode = registered ? parsedCode : raw;
+        
+        if (!registered) {
+          const ok = typeof showConfirmAsync === 'function'
+            ? await showConfirmAsync(`⚠️ "${raw}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`)
+            : confirm(`⚠️ "${raw}" chưa đăng ký.\n\nVẫn tiếp tục?`);
+          if (!ok) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Lưu thay đổi';
+            return;
+          }
+        }
+      }
+      
+      // Check if session exists
+      const checkRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&session_number=eq.${sessionNumber}&select=id`);
+      const checks = await checkRes.json();
+      
+      if (checks && checks.length > 0) {
+        // PATCH
+        const sessId = checks[0].id;
+        await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ tvv_staff_code: staffCode })
+        });
+      } else {
+        // INSERT
+        await sbFetch('/rest/v1/consultation_sessions', {
+          method: 'POST',
+          body: JSON.stringify({
+            profile_id: profileId,
+            session_number: sessionNumber,
+            tool: 'Enneagram',
+            tvv_staff_code: staffCode,
+            created_by: getEffectiveStaffCode()
+          })
+        });
+      }
+      
+      // Sync permissions trigger
+      if (typeof syncTVVRolesFromSessions === 'function') {
+        await syncTVVRolesFromSessions(profileId);
+      }
+      
+      overlay.remove();
+      showToast('✅ Đã cập nhật TVV');
+      
+      if (typeof _getCache !== 'undefined') _getCache.clear();
+      await _refreshCurrentProfile();
+    } catch(e) {
+      showToast('❌ Lỗi lưu TVV');
+      console.error(e);
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Lưu thay đổi';
+    }
+  };
+}
+window.promptEditTVVSession = promptEditTVVSession;
