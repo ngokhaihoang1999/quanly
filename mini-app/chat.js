@@ -13,6 +13,30 @@ const CHAT_COMMON_EMOJIS = [
   '🙏', '🤝', '💪', '🎉', '✨', '🌟', '🔥', '❤️', '💔', '✔️'
 ];
 
+// Beautiful distinct color palette for group chat sender nicknames (Telegram aesthetic)
+const CHAT_SENDER_COLORS = [
+  '#e91e63', // pink
+  '#9c27b0', // purple
+  '#673ab7', // deep purple
+  '#3f51b5', // indigo
+  '#2196f3', // blue
+  '#00af9c', // teal
+  '#0d9e4f', // green
+  '#d97706', // orange
+  '#ea580c'  // red-orange
+];
+
+function getChatSenderColor(str) {
+  if (!str) return CHAT_SENDER_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % CHAT_SENDER_COLORS.length;
+  return CHAT_SENDER_COLORS[index];
+}
+
+
 // Initialize and load chat history
 async function loadProfileChat(profileId) {
   currentProfileId = profileId;
@@ -257,7 +281,7 @@ function addChatMessageToDOM(msg) {
     <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
-        ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
+        ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
         <div class="${bubbleClass}" ${onclickHtml} style="${inlineStyle}">
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
@@ -2508,7 +2532,7 @@ function addFloatingChatMessageToDOM(msg) {
     <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
-        ${!isMe ? `<div class="chat-message-sender">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
+        ${!isMe ? `<div class="chat-message-sender" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
         <div class="${bubbleClass}" ${onclickHtml} style="${inlineStyle}">
           ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
@@ -3768,14 +3792,19 @@ function showQuickReactionPicker(event, msgId, isMe, isFloating = false) {
   const picker = document.createElement('div');
   picker.className = 'quick-reaction-picker';
   
+  const pickerWidth = 240;
   // Adjust top offset to position above bubble
   const topPos = window.scrollY + rect.top - 46;
-  const leftPos = window.scrollX + rect.left + (rect.width - 240) / 2;
+  
+  // Center relative to bubble, but clamp within viewport limits to prevent overflowing on mobile
+  let leftPos = window.scrollX + rect.left + (rect.width - pickerWidth) / 2;
+  const maxLeft = window.scrollX + window.innerWidth - pickerWidth - 10;
+  leftPos = Math.max(10, Math.min(leftPos, maxLeft));
   
   picker.style.cssText = `
     position: absolute;
     top: ${topPos}px;
-    left: ${Math.max(10, leftPos)}px;
+    left: ${leftPos}px;
     display: flex;
     gap: 8px;
     padding: 6px 10px;
@@ -3865,7 +3894,7 @@ function renderMessageReactionsHtml(reactions, msgId, isMe, isFloating = false) 
 
   const alignStyle = isMe ? 'align-self: flex-end; margin-right: 12px; margin-left: 0;' : 'align-self: flex-start; margin-left: 12px; margin-right: 0;';
   
-  let html = `<div class="chat-message-reactions" style="display: flex; gap: 4px; padding: 2px 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; font-size: 11px; width: fit-content; margin-top: -4px; z-index: 5; box-shadow: 0 1px 3px rgba(0,0,0,0.05); user-select: none; ${alignStyle}">`;
+  let html = `<div class="chat-message-reactions" style="${alignStyle}">`;
   
   let hasActiveReactions = false;
   for (const [emoji, users] of Object.entries(reactions)) {
@@ -3878,9 +3907,24 @@ function renderMessageReactionsHtml(reactions, msgId, isMe, isFloating = false) 
       const didIReact = users.includes(myCode);
       const activeStyle = didIReact ? 'background: rgba(124, 106, 247, 0.15); border-radius: 6px; padding: 1px 4px; border: 1px solid rgba(124,106,247,0.3);' : '';
 
+      // Generate overlapping avatars row
+      let avatarsHtml = '<div class="chat-reaction-avatars-row">';
+      users.forEach(uCode => {
+        const staffObj = allStaff.find(s => s.staff_code === uCode);
+        const uName = staffObj ? (staffObj.nickname || staffObj.full_name) : uCode;
+        const uInitial = uName ? getNameInitial(uName) : '?';
+        const uColor = staffObj?.staff_avatar_color || 'var(--accent)';
+        avatarsHtml += `
+          <div class="chat-reaction-avatar" style="background: ${uColor};" title="${uName} (${uCode})">
+            ${uInitial}
+          </div>
+        `;
+      });
+      avatarsHtml += '</div>';
+
       html += `
         <span onclick="event.stopPropagation(); toggleMessageReaction('${msgId}', '${emoji}')" style="cursor: pointer; display: inline-flex; align-items: center; gap: 2px; ${activeStyle}" title="${users.join(', ')}">
-          ${emoji}${countStr}
+          ${emoji}${countStr}${avatarsHtml}
         </span>
       `;
     }
