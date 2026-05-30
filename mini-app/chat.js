@@ -250,7 +250,7 @@ function addChatMessageToDOM(msg) {
   if (isPureMedia) {
     inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
   } else {
-    inlineStyle = 'display: block; width: fit-content; max-width: 85%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
+    inlineStyle = 'display: block; width: fit-content; max-width: 100%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
   }
 
   const html = `

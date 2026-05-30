@@ -2066,6 +2066,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1; /* Allow proper responsive sizing without collapsing */
   align-items: flex-start;
   height: auto !important;
   min-height: 0 !important;
@@ -2107,8 +2108,8 @@
   transition: all 0.2s;
   display: block;
   width: fit-content;
-  max-width: 85%;
-  min-width: 50px;
+  max-width: 100% !important; /* Constrain inside row max-width (85%) */
+  min-width: 60px !important;
   height: auto;
   min-height: 0;
 }

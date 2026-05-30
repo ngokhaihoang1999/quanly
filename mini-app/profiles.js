@@ -302,7 +302,7 @@ async function openProfile(p, cardEl, initialTabId) {
          onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv1Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
       <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
         <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 1</span>
-        <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;" title="${tvv1Display}">
+        <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv1Display}">
           ${tvv1Display}
         </div>
         ${tvv1 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv1.tool || 'Enneagram'}</span>` : ''}
@@ -322,7 +322,7 @@ async function openProfile(p, cardEl, initialTabId) {
            onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv2Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
         <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
           <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 2</span>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;" title="${tvv2Display}">
+          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv2Display}">
             ${tvv2Display}
           </div>
           ${tvv2 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv2.tool || 'Enneagram'}</span>` : ''}
@@ -343,7 +343,7 @@ async function openProfile(p, cardEl, initialTabId) {
            onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv3Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
         <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
           <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 3</span>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;" title="${tvv3Display}">
+          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv3Display}">
             ${tvv3Display}
           </div>
           ${tvv3 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv3.tool || 'Enneagram'}</span>` : ''}
@@ -399,7 +399,7 @@ async function openProfile(p, cardEl, initialTabId) {
         <!-- NDD Section -->
         <div class="profile-summary-col" style="border-left:3px solid var(--green); padding-left:12px; flex:1 0 180px; min-width:180px;">
           <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px;">👑 NDD</div>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
             ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'Chưa có'}</span>`}
           </div>
         </div>
@@ -410,7 +410,7 @@ async function openProfile(p, cardEl, initialTabId) {
             <span>🧭 GVBB</span>
             ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:10px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
           </div>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
             ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<span style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</span>` : `<span onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</span>`) : `<span style="color:var(--text3);">${gvbbDisplay||'Chưa có'}</span>`}
           </div>
         </div>
@@ -434,9 +434,9 @@ async function openProfile(p, cardEl, initialTabId) {
 
       <!-- Latest Activity Footer -->
       ${latestInfo ? `
-        <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; align-items:center; gap:8px; font-size:11px; color:var(--accent); font-weight:600;">
-          <span>⏱️ Hoạt động gần nhất:</span>
-          <span style="flex:1; min-width:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${latestInfo}</span>
+        <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; align-items:flex-start; gap:8px; font-size:11px; color:var(--accent); font-weight:600; flex-wrap:wrap;">
+          <span style="white-space:nowrap;">⏱️ Hoạt động gần nhất:</span>
+          <span style="flex:1; min-width:120px; white-space:normal; word-break:break-word; line-height:1.4;">${latestInfo}</span>
         </div>
       ` : ''}
     </div>
