@@ -145,6 +145,8 @@ async function openProfile(p, cardEl, initialTabId) {
   let realGroupInviteLink = '';
   let latestInfo = '';
   let sessionsRows = [];
+  window._hasDKCenter = false;
+
   try {
     const [fgRes, rRes, sRes, dkRes] = await Promise.all([
       sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(id,staff_code,role_type,display_name)`),
@@ -152,42 +154,63 @@ async function openProfile(p, cardEl, initialTabId) {
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=id,session_number,tool,tvv_staff_code,created_at,scheduled_at&order=session_number.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
     ]);
+
     // ── Parse fruit_groups ──
-    const fgs = await fgRes.json();
-    const sortedFGs = (fgs||[]).sort((a, b) => {
-      const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
-      const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
-      return bReal - aReal;
-    });
-    sortedFGs.forEach(fg => {
-      const gid = fg.telegram_group_id;
-      if (gid && gid > -1000000000000) {
-        hasRealBBGroup = true;
-        realGroupId = fg.telegram_group_id;
-        realGroupTitle = fg.telegram_group_title || 'Group BB';
-        if (fg.invite_link) realGroupInviteLink = fg.invite_link;
+    if (fgRes && fgRes.ok) {
+      const fgs = await fgRes.json();
+      if (Array.isArray(fgs)) {
+        const sortedFGs = [...fgs].sort((a, b) => {
+          const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
+          const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
+          return bReal - aReal;
+        });
+        sortedFGs.forEach(fg => {
+          const gid = fg.telegram_group_id;
+          if (gid && gid > -1000000000000) {
+            hasRealBBGroup = true;
+            realGroupId = fg.telegram_group_id;
+            realGroupTitle = fg.telegram_group_title || 'Group BB';
+            if (fg.invite_link) realGroupInviteLink = fg.invite_link;
+          }
+          (fg.fruit_roles||[]).forEach(r => {
+            if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
+            if (r.role_type==='tvv') rolesInfo.tvv.push({ id: r.id, code: r.staff_code, displayName: r.display_name || null });
+            if (r.role_type==='la') rolesInfo.la.push({ id: r.id, code: r.staff_code, displayName: r.display_name || null });
+            if (r.role_type==='gvbb' && !rolesInfo.gvbb) {
+              rolesInfo.gvbb = r.staff_code;
+              rolesInfo.gvbbDisplayName = r.display_name || null;
+            }
+          });
+        });
       }
-      (fg.fruit_roles||[]).forEach(r => {
-        if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
-        if (r.role_type==='tvv') rolesInfo.tvv.push({ id: r.id, code: r.staff_code, displayName: r.display_name || null });
-        if (r.role_type==='la') rolesInfo.la.push({ id: r.id, code: r.staff_code, displayName: r.display_name || null });
-        if (r.role_type==='gvbb' && !rolesInfo.gvbb) {
-          rolesInfo.gvbb = r.staff_code;
-          rolesInfo.gvbbDisplayName = r.display_name || null;
-        }
-      });
-    });
+    }
+
     // ── Parse latest activity ──
-    const latestRecord = (await rRes.json())[0]||null;
-    sessionsRows = await sRes.json();
+    let latestRecord = null;
+    if (rRes && rRes.ok) {
+      const rData = await rRes.json();
+      if (Array.isArray(rData)) latestRecord = rData[0] || null;
+    }
+
+    if (sRes && sRes.ok) {
+      const sData = await sRes.json();
+      if (Array.isArray(sData)) {
+        sessionsRows = sData;
+      }
+    }
+
     const sortedSessions = [...sessionsRows].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     const latestSession = sortedSessions[0] || null;
     latestInfo = latestActivityLabel(latestRecord, latestSession);
     
     // ── Parse ĐK Center milestone ──
-    const dkRows = await dkRes.json();
-    window._hasDKCenter = !!(dkRows && dkRows.length > 0);
-  } catch(e) { window._hasDKCenter = false; }
+    if (dkRes && dkRes.ok) {
+      const dkRows = await dkRes.json();
+      window._hasDKCenter = !!(dkRows && dkRows.length > 0);
+    }
+  } catch(e) {
+    console.error('Error fetching or parsing profile details:', e);
+  }
 
   const tvv1 = sessionsRows.find(s => s.session_number === 1) || null;
   const tvv2 = sessionsRows.find(s => s.session_number === 2) || null;
