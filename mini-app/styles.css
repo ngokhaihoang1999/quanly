@@ -2108,8 +2108,8 @@
   word-wrap: break-word !important;
   white-space: pre-wrap;
   transition: all 0.2s;
-  display: block;
-  width: fit-content;
+  box-sizing: border-box;
+  align-self: flex-start;
   max-width: 100% !important; /* Constrain inside row max-width (85%) */
   min-width: 60px !important;
   height: auto;
@@ -2122,7 +2122,7 @@
   border-color: transparent;
   border-radius: 12px 4px 12px 12px;
   box-shadow: 0 3px 10px rgba(124, 106, 247, 0.15);
-  margin-left: auto; /* Align user bubble to the right side of parent content */
+  align-self: flex-end;
 }
 
 .chat-message-bubble--media-only {

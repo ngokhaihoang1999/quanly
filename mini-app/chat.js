@@ -249,8 +249,6 @@ function addChatMessageToDOM(msg) {
   let inlineStyle = '';
   if (isPureMedia) {
     inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
-  } else {
-    inlineStyle = 'display: block; width: fit-content; max-width: 100%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
   }
 
   const html = `
@@ -826,7 +824,7 @@ function updateChatMessageInDOM(msg) {
       if (msg.category === 'warning') bubble.classList.add('chat-message-bubble--warning');
       if (msg.category === 'strategy') bubble.classList.add('chat-message-bubble--strategy');
       if (msg.category === 'important') bubble.classList.add('chat-message-bubble--important');
-      bubble.style.cssText = 'display: block; width: fit-content; max-width: 85%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
+      bubble.style.cssText = '';
     }
 
     let messageText = '';
@@ -2372,8 +2370,6 @@ function addFloatingChatMessageToDOM(msg) {
   let inlineStyle = '';
   if (isPureMedia) {
     inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
-  } else {
-    inlineStyle = 'display: block; width: fit-content; max-width: 85%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
   }
 
   const html = `
