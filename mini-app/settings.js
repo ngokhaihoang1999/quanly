@@ -451,7 +451,7 @@ function showStaffCard(code) {
       (unit ? '<div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:10px;">🏢 ' + unit + '</div>' : '') +
       ((s.gender||s.birth_year) ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">' + (s.gender||'') + bStr + '</div>' : '') +
       (s.motto ? '<div style="font-size:13px;font-style:italic;color:var(--accent);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:10px;">💪 ' + s.motto + '</div>' : '') +
-      (s.bio ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;">' + s.bio + '</div>' : '') +
+      (s.bio ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px;white-space:pre-wrap;">' + s.bio + '</div>' : '') +
       '<button onclick="document.getElementById(\'staffCardModal\').remove()" style="width:100%;padding:11px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;">Đóng</button>' +
     '</div>';
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });

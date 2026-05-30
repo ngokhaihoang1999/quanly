@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     _handleDeepLink();
     applyDesktopLayout();
+    if (typeof upgradeInputsToTextareas === 'function') upgradeInputsToTextareas();
 
     // Explicitly load data for pinned tabs on startup since resize events during fullscreen
     // transition might have triggered early layout initialization before staff credentials were loaded.
@@ -575,6 +576,9 @@ function switchFormTab(el, cardId) {
   document.querySelectorAll('.form-card').forEach(c=>c.classList.remove('active')); 
   const card = document.getElementById(cardId);
   card.classList.add('active');
+  if (typeof adjustAllTextareaHeights === 'function') {
+    setTimeout(adjustAllTextareaHeights, 100);
+  }
   
   if (typeof navSlide === 'function') navSlide(card, dir);
   
@@ -870,3 +874,60 @@ function _resetHeaderStyle(header) {
     }, 300);
   });
 })();
+
+function upgradeInputsToTextareas() {
+  const containers = [
+    document.getElementById('infoSheet'),
+    document.getElementById('sinkaTab')
+  ];
+  
+  containers.forEach(container => {
+    if (!container) return;
+    
+    const inputs = container.querySelectorAll('input[type="text"]');
+    inputs.forEach(input => {
+      if (input.id === 't2_ngay_chakki' || input.id === 'sk_ngay_ghi_chep') return;
+      if (input.classList.contains('no-upgrade')) return;
+
+      const textarea = document.createElement('textarea');
+      
+      Array.from(input.attributes).forEach(attr => {
+        if (attr.name !== 'type') {
+          textarea.setAttribute(attr.name, attr.value);
+        }
+      });
+      
+      textarea.className = input.className;
+      textarea.classList.add('auto-resize-textarea');
+      
+      textarea.style.cssText = input.style.cssText;
+      textarea.style.resize = 'none';
+      textarea.style.overflowY = 'hidden';
+      textarea.style.minHeight = '38px';
+      textarea.style.height = '38px';
+      textarea.style.lineHeight = '1.4';
+      textarea.style.boxSizing = 'border-box';
+      textarea.style.fontFamily = 'inherit';
+      textarea.style.padding = '9px 12px';
+
+      textarea.value = input.value;
+      
+      const adjustHeight = () => {
+        textarea.style.height = '38px';
+        const newHeight = textarea.scrollHeight;
+        if (newHeight > 38) {
+          textarea.style.height = newHeight + 'px';
+        }
+      };
+      
+      textarea.addEventListener('input', adjustHeight);
+      textarea.addEventListener('change', adjustHeight);
+      textarea.addEventListener('focus', adjustHeight);
+      
+      textarea.adjustHeight = adjustHeight;
+      
+      input.parentNode.replaceChild(textarea, input);
+    });
+  });
+}
+

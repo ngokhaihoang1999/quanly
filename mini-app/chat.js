@@ -266,6 +266,7 @@ async function sendProfileChatMessage() {
   }
 
   input.value = ''; // clear input immediately to feel fast
+  input.dispatchEvent(new Event('input', { bubbles: true }));
   haptic('light');
 
   // Hide and reset temp media preview
@@ -2081,6 +2082,7 @@ async function sendFloatingChatMessage() {
   const sender = getEffectiveStaffCode();
   
   input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
   input.focus();
   
   try {
@@ -2993,6 +2995,23 @@ document.addEventListener('paste', async (event) => {
   if (!file) return; // No image in clipboard
 
   const activeEl = document.activeElement;
+
+  // DIRECT CHAT INPUT FOCUS DETECTION (100% RELIABLE)
+  if (activeEl && activeEl.id === 'profileChatInput') {
+    event.preventDefault();
+    if (currentProfileId) {
+      await uploadChatClipboardImageDirectly(file, currentProfileId, 'profileChatInput', 'chat_category', false);
+    }
+    return;
+  }
+  if (activeEl && activeEl.id === 'cjFloatingChatInput') {
+    event.preventDefault();
+    const profileId = window._activeFloatingProfileId;
+    if (profileId) {
+      await uploadChatClipboardImageDirectly(file, profileId, 'cjFloatingChatInput', 'cjFloatingChatCategory', true);
+    }
+    return;
+  }
   
   // 1. If Record Modal is open
   const recordModal = document.getElementById('addRecordModal');
@@ -3202,3 +3221,66 @@ async function uploadNoteClipboardImageDirectly(file, noteId, triggerEl) {
     reader.readAsDataURL(file);
   }
 }
+
+// Auto-resizing textarea & chat input key handlers
+function handleChatInputKeyDown(event, isFloating) {
+  if (event.key === 'Enter') {
+    if (!event.shiftKey) {
+      event.preventDefault();
+      if (isFloating) {
+        sendFloatingChatMessage();
+      } else {
+        sendProfileChatMessage();
+      }
+    }
+  } else if (event.key === 'Escape' && !isFloating) {
+    cancelEditChatMessage();
+  }
+}
+
+function initAutoResizeTextarea(textareaId, defaultHeightStr) {
+  const textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+  
+  if (textarea._autoResizeInitialized) return;
+  textarea._autoResizeInitialized = true;
+
+  const adjustHeight = () => {
+    textarea.style.height = defaultHeightStr;
+    const newHeight = Math.min(textarea.scrollHeight, 150);
+    textarea.style.height = newHeight + 'px';
+  };
+
+  textarea.addEventListener('input', adjustHeight);
+  textarea.addEventListener('change', adjustHeight);
+  
+  textarea.resetHeight = () => {
+    textarea.style.height = defaultHeightStr;
+  };
+  
+  adjustHeight();
+}
+
+function adjustAllTextareaHeights() {
+  document.querySelectorAll('.auto-resize-textarea').forEach(textarea => {
+    textarea.style.height = '38px';
+    const newHeight = textarea.scrollHeight;
+    if (newHeight > 38) {
+      textarea.style.height = newHeight + 'px';
+    }
+  });
+}
+
+// Auto-initialize chat inputs
+document.addEventListener('DOMContentLoaded', () => {
+  initAutoResizeTextarea('profileChatInput', '36px');
+  initAutoResizeTextarea('cjFloatingChatInput', '32px');
+});
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(() => {
+    initAutoResizeTextarea('profileChatInput', '36px');
+    initAutoResizeTextarea('cjFloatingChatInput', '32px');
+  }, 100);
+}
+

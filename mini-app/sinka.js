@@ -121,6 +121,9 @@ async function loadSinka(profileId) {
   } catch(e) { console.warn('loadSinka DB error:', e); }
 
   _sinkaLoaded = true;
+  if (typeof adjustAllTextareaHeights === 'function') {
+    setTimeout(adjustAllTextareaHeights, 50);
+  }
 }
 
 // ── Auto-fill logic ──

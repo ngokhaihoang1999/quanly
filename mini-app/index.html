@@ -6,7 +6,7 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026052929" />
+  <link rel="stylesheet" href="styles.css?v=2026053051" />
   <link rel="stylesheet" href="desktop.css?v=2026052932" />
   <link rel="stylesheet" href="avatar.css?v=2026052734" />
   <link rel="stylesheet" href="reports.css?v=2026052734" />
@@ -336,8 +336,8 @@
           </div>
 
           <!-- Input row -->
-          <div class="chat-input-row" id="chatInputRow" style="display:flex; gap:6px; align-items:center; width:100%;">
-            <input type="text" id="profileChatInput" placeholder="Nhập tin nhắn... (@ để tag)" class="chat-text-input" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px;" onkeydown="if(event.key==='Enter') sendProfileChatMessage(); else if(event.key==='Escape') cancelEditChatMessage();" autocomplete="off" spellcheck="false" name="chat_msg_input_field" />
+          <div class="chat-input-row" id="chatInputRow" style="display:flex; gap:6px; align-items:flex-end; width:100%;">
+            <textarea id="profileChatInput" placeholder="Nhập tin nhắn... (@ để tag)" class="chat-text-input" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px; resize:none; height:36px; max-height:120px; overflow-y:auto; font-family:inherit; line-height:1.4; box-sizing:border-box;" onkeydown="handleChatInputKeyDown(event, false)" autocomplete="off" spellcheck="false" name="chat_msg_input_field" rows="1"></textarea>
             <button class="save-btn chat-send-btn" onclick="sendProfileChatMessage()" style="margin:0; padding:9px 16px; width:auto; font-size:13px; flex-shrink:0; height:36px; display:flex; align-items:center; justify-content:center;">Gửi</button>
           </div>
           <!-- Emoji picker container -->
@@ -950,11 +950,11 @@
 <script src="pin.js?v=2026052734"></script>
 <script src="permissions.js?v=2026052734"></script>
 <script src="desktop.js?v=2026052821"></script>
-<script src="settings.js?v=2026052822"></script>
+<script src="settings.js?v=2026053051"></script>
 <script src="fruit-actions.js?v=2026052734"></script>
 <!-- ── Feature Modules ── -->
 <script src="dashboard.js?v=2026053045"></script>
-<script src="profiles.js?v=2026052931"></script>
+<script src="profiles.js?v=2026053051"></script>
 <script src="hapja.js?v=2026053045"></script>
 <script src="records.js?v=2026053045"></script>
 <script src="staff.js?v=2026053046"></script>
@@ -963,16 +963,16 @@
 <script src="notification.js?v=2026052734"></script>
 <script src="priority.js?v=2026053045"></script>
 <script src="notes.js?v=2026053045"></script>
-<script src="sinka.js?v=2026052734"></script>
+<script src="sinka.js?v=2026053051"></script>
 <script src="dkbb.js?v=2026052734"></script>
 <script src="strategy.js?v=2026052734"></script>
 <script src="lacie.js?v=2026052734"></script>
 <script src="ai-parse.js?v=2026052920"></script>
 <script src="mindmap.js?v=2026052917"></script>
-<script src="chat.js?v=2026053045"></script>
+<script src="chat.js?v=2026053051"></script>
 <script src="guide.js?v=2026052920"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=2026053045"></script>
+<script src="init.js?v=2026053051"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;
@@ -1101,8 +1101,8 @@ window._lazyMarkmap = function() {
       </div>
 
       <!-- Row 2: Message Input & Send Button -->
-      <div id="cjFloatingChatInputRow" style="display:flex; gap:8px; align-items:center; width:100%;">
-        <input type="text" id="cjFloatingChatInput" placeholder="Nhập tin nhắn... (@ để tag)" style="flex:1; min-width:0; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; height:32px; outline:none;" onkeydown="if(event.key==='Enter') sendFloatingChatMessage();" autocomplete="off" spellcheck="false" />
+      <div id="cjFloatingChatInputRow" style="display:flex; gap:8px; align-items:flex-end; width:100%;">
+        <textarea id="cjFloatingChatInput" placeholder="Nhập tin nhắn... (@ để tag)" style="flex:1; min-width:0; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; resize:none; height:32px; max-height:100px; overflow-y:auto; outline:none; font-family:inherit; line-height:1.4; box-sizing:border-box;" onkeydown="handleChatInputKeyDown(event, true)" autocomplete="off" spellcheck="false" rows="1"></textarea>
         <button onclick="sendFloatingChatMessage()" style="padding:6px 14px; font-size:12px; font-weight:700; background:var(--accent); color:white; border:none; border-radius:8px; cursor:pointer; height:32px; flex-shrink:0; transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Gửi</button>
       </div>
     </div>
