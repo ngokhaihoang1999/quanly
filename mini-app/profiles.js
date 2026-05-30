@@ -220,23 +220,23 @@ async function openProfile(p, cardEl, initialTabId) {
   const tvv2Code = tvv2 ? tvv2.tvv_staff_code : null;
   const tvv3Code = tvv3 ? tvv3.tvv_staff_code : null;
   
-  const tvv1Display = tvv1Code ? (tvv1Code.startsWith('tg:') ? tvv1Code.replace('tg:', '') : getStaffLabel(tvv1Code)) : 'Chưa phân công';
-  const tvv2Display = tvv2Code ? (tvv2Code.startsWith('tg:') ? tvv2Code.replace('tg:', '') : getStaffLabel(tvv2Code)) : 'Chưa phân công';
-  const tvv3Display = tvv3Code ? (tvv3Code.startsWith('tg:') ? tvv3Code.replace('tg:', '') : getStaffLabel(tvv3Code)) : 'Chưa phân công';
+  const tvv1Display = tvv1Code ? (tvv1Code.startsWith('tg:') ? tvv1Code.replace('tg:', '') : getStaffLabel(tvv1Code)) : 'Chưa có';
+  const tvv2Display = tvv2Code ? (tvv2Code.startsWith('tg:') ? tvv2Code.replace('tg:', '') : getStaffLabel(tvv2Code)) : 'Chưa có';
+  const tvv3Display = tvv3Code ? (tvv3Code.startsWith('tg:') ? tvv3Code.replace('tg:', '') : getStaffLabel(tvv3Code)) : 'Chưa có';
 
   const nddCode    = p.ndd_staff_code || rolesInfo.ndd || null;
   const tvvCode    = rolesInfo.tvv.length ? rolesInfo.tvv[0].code : null; // primary TVV
   const gvbbCode   = rolesInfo.gvbb || null;
-  const nddDisplay = nddCode ? getStaffLabel(nddCode) : '—';
+  const nddDisplay = nddCode ? getStaffLabel(nddCode) : 'Chưa có';
   // TVV: handle tg: prefix with display_name fallback (same as GVBB)
   const tvvDisplay = rolesInfo.tvv.length
-    ? rolesInfo.tvv.map(t => (t.code && typeof t.code === 'string' && t.code.startsWith('tg:')) ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code || '')).join(', ') : '—';
+    ? rolesInfo.tvv.map(t => (t.code && typeof t.code === 'string' && t.code.startsWith('tg:')) ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code || '')).join(', ') : 'Chưa có';
   // GVBB: if staff_code starts with 'tg:' → show display_name (unregistered user)
   const gvbbDisplay = gvbbCode
     ? ((typeof gvbbCode === 'string' && gvbbCode.startsWith('tg:')) ? (rolesInfo.gvbbDisplayName || gvbbCode.replace('tg:','')) : getStaffLabel(gvbbCode))
-    : '—';
+    : 'Chưa có';
   const laDisplay = rolesInfo.la.length
-    ? rolesInfo.la.map(t => (t.code && typeof t.code === 'string' && t.code.startsWith('tg:')) ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code || '')).join(', ') : '—';
+    ? rolesInfo.la.map(t => (t.code && typeof t.code === 'string' && t.code.startsWith('tg:')) ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code || '')).join(', ') : 'Chưa có';
 
   // Per-profile role of current user
   const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);
@@ -333,81 +333,87 @@ async function openProfile(p, cardEl, initialTabId) {
       </div>
 
       <!-- Middle: GVBB & NDD elegantly grouped with Left-Border accent highlights -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; border-top:1px solid var(--border); padding-top:14px;">
+      <div style="display:flex; flex-wrap:wrap; gap:16px; border-top:1px solid var(--border); padding-top:14px;">
         <!-- NDD Section -->
-        <div style="border-left:3px solid var(--green); padding-left:12px; min-width:0;">
-          <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px;">👑 Người Dẫn Đường (NDD)</div>
+        <div style="border-left:3px solid var(--green); padding-left:12px; min-width:140px; flex:1;">
+          <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px;">👑 NDD</div>
           <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-            ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'—'}</span>`}
+            ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'Chưa có'}</span>`}
           </div>
         </div>
 
         <!-- GVBB Section -->
-        <div style="border-left:3px solid var(--accent); padding-left:12px; min-width:0; position:relative;">
+        <div style="border-left:3px solid var(--accent); padding-left:12px; min-width:140px; flex:1; position:relative;">
           <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px; display:flex; align-items:center; gap:6px;">
-            <span>🧭 Giảng Viên Bán Bản (GVBB)</span>
+            <span>🧭 GVBB</span>
             ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:10px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
           </div>
           <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-            ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<span style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</span>` : `<span onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</span>`) : `<span style="color:var(--text3);">${gvbbDisplay||'—'}</span>`}
+            ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<span style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</span>` : `<span onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</span>`) : `<span style="color:var(--text3);">${gvbbDisplay||'Chưa có'}</span>`}
           </div>
         </div>
       </div>
 
-      <!-- Bottom: TVV timeline card grid -->
-      <div style="border-top:1px solid var(--border); padding-top:14px;">
-        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.3px;">🗣️ Tiến Trình Tư Vấn (TVV Lần 1, 2, 3)</div>
-        <div class="tvv-timeline-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-          <!-- Card 1: TVV Lần 1 -->
+      <!-- Bottom: TVV timeline vertical stack -->
+      <div style="border-top:1px solid var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">🗣️ TVV</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <!-- TVV Row 1 -->
           <div onclick="promptEditTVVSession('${p.id}', 1, '${tvv1Code||''}')" 
-               style="cursor:pointer; padding:12px; border-radius:12px; transition:all 0.2s; position:relative; display:flex; flex-direction:column; justify-content:center;
-                      ${tvv1Code ? 'background:rgba(124,106,247,0.05); border:1px solid rgba(124,106,247,0.3);' : 'background:transparent; border:1px dashed var(--border); opacity:0.75;'}"
-               onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv1Code ? 'rgba(124,106,247,0.3)' : 'var(--border)'}'">
-            <div style="font-size:9.5px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-              <span>Lần 1</span>
-              ${tvv1Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800;">🟢</span>' : '<span style="color:var(--text3); font-size:9px;">⚪</span>'}
+               style="cursor:pointer; padding:10px 14px; border-radius:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:12px;
+                      ${tvv1Code ? 'background:rgba(124,106,247,0.04); border:1px solid rgba(124,106,247,0.25);' : 'background:transparent; border:1px dashed var(--border); opacity:0.85;'}"
+               onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv1Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+              <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 1</span>
+              <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;" title="${tvv1Display}">
+                ${tvv1Display}
+              </div>
+              ${tvv1 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv1.tool || 'Enneagram'}</span>` : ''}
             </div>
-            <div style="font-size:12px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${tvv1Display}">
-              ${tvv1Display}
+            <div style="display:flex; align-items:center; flex-shrink:0;">
+              ${tvv1Code ? '<span style="color:var(--accent); font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:10px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
             </div>
-            ${tvv1 ? `<div style="font-size:9px; color:var(--text3); margin-top:3px; opacity:0.85;">🛠️ ${tvv1.tool || 'Enneagram'}</div>` : ''}
           </div>
 
-          <!-- Card 2: TVV Lần 2 -->
+          <!-- TVV Row 2 -->
           <div onclick="promptEditTVVSession('${p.id}', 2, '${tvv2Code||''}')" 
-               style="cursor:pointer; padding:12px; border-radius:12px; transition:all 0.2s; position:relative; display:flex; flex-direction:column; justify-content:center;
-                      ${tvv2Code ? 'background:rgba(124,106,247,0.05); border:1px solid rgba(124,106,247,0.3);' : 'background:transparent; border:1px dashed var(--border); opacity:0.75;'}"
-               onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv2Code ? 'rgba(124,106,247,0.3)' : 'var(--border)'}'">
-            <div style="font-size:9.5px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-              <span>Lần 2</span>
-              ${tvv2Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800;">🟢</span>' : '<span style="color:var(--text3); font-size:9px;">⚪</span>'}
+               style="cursor:pointer; padding:10px 14px; border-radius:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:12px;
+                      ${tvv2Code ? 'background:rgba(124,106,247,0.04); border:1px solid rgba(124,106,247,0.25);' : 'background:transparent; border:1px dashed var(--border); opacity:0.85;'}"
+               onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv2Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+              <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 2</span>
+              <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;" title="${tvv2Display}">
+                ${tvv2Display}
+              </div>
+              ${tvv2 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv2.tool || 'Enneagram'}</span>` : ''}
             </div>
-            <div style="font-size:12px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${tvv2Display}">
-              ${tvv2Display}
+            <div style="display:flex; align-items:center; flex-shrink:0;">
+              ${tvv2Code ? '<span style="color:var(--accent); font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:10px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
             </div>
-            ${tvv2 ? `<div style="font-size:9px; color:var(--text3); margin-top:3px; opacity:0.85;">🛠️ ${tvv2.tool || 'Enneagram'}</div>` : ''}
           </div>
 
-          <!-- Card 3: TVV Lần 3 -->
+          <!-- TVV Row 3 -->
           <div onclick="promptEditTVVSession('${p.id}', 3, '${tvv3Code||''}')" 
-               style="cursor:pointer; padding:12px; border-radius:12px; transition:all 0.2s; position:relative; display:flex; flex-direction:column; justify-content:center;
-                      ${tvv3Code ? 'background:rgba(124,106,247,0.05); border:1px solid rgba(124,106,247,0.3);' : 'background:transparent; border:1px dashed var(--border); opacity:0.75;'}"
-               onmouseover="this.style.transform='translateY(-1px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv3Code ? 'rgba(124,106,247,0.3)' : 'var(--border)'}'">
-            <div style="font-size:9.5px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-              <span>Lần 3</span>
-              ${tvv3Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800;">🟢</span>' : '<span style="color:var(--text3); font-size:9px;">⚪</span>'}
+               style="cursor:pointer; padding:10px 14px; border-radius:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:12px;
+                      ${tvv3Code ? 'background:rgba(124,106,247,0.04); border:1px solid rgba(124,106,247,0.25);' : 'background:transparent; border:1px dashed var(--border); opacity:0.85;'}"
+               onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv3Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+              <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 3</span>
+              <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;" title="${tvv3Display}">
+                ${tvv3Display}
+              </div>
+              ${tvv3 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv3.tool || 'Enneagram'}</span>` : ''}
             </div>
-            <div style="font-size:12px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${tvv3Display}">
-              ${tvv3Display}
+            <div style="display:flex; align-items:center; flex-shrink:0;">
+              ${tvv3Code ? '<span style="color:var(--accent); font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:10px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
             </div>
-            ${tvv3 ? `<div style="font-size:9px; color:var(--text3); margin-top:3px; opacity:0.85;">🛠️ ${tvv3.tool || 'Enneagram'}</div>` : ''}
           </div>
         </div>
       </div>
 
       <!-- Bottom: Lá (Support) section -->
       <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:6px;">
-        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">🍃 Người Hỗ Trợ Kết Nối (Lá)</div>
+        <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">🍃 Lá</div>
         <div>
           ${renderRoleBadges(p.id, 'la', rolesInfo.la, hasFullEdit)}
         </div>
