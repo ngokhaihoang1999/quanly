@@ -3324,6 +3324,34 @@ body.tour-active #cjFloatingChatWindow {
   }
 }
 
+/* ==========================================================================
+   ADAPTIVE RESPONSIVE PROFILES DETAIL CARD FOR MOBILE
+   ========================================================================== */
+@media (max-width: 480px) {
+  .profile-summary-header {
+    display: block !important;
+    position: relative !important;
+  }
+  .profile-summary-header-info {
+    padding-right: 0 !important;
+    margin-top: 12px !important;
+    width: 100% !important;
+  }
+  .profile-summary-actions {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+  }
+  .profile-summary-grid {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .profile-summary-col {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
 
 
 

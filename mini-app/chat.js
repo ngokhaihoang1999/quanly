@@ -212,7 +212,7 @@ function addChatMessageToDOM(msg) {
     ` : '';
 
     const metaHtml = `
-      <span class="chat-message-meta-inline">
+      <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
         ${actionsHtml}
         <span class="chat-message-time-val">${timeStr}</span>
       </span>
@@ -220,9 +220,9 @@ function addChatMessageToDOM(msg) {
 
     if (catIcon) {
       messageContentHtml = `
-        <div class="chat-message-body-with-icon">
+        <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start;">
           <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-          <div class="chat-message-text" style="flex: 1; padding-top: 2px;">
+          <div class="chat-message-text" style="flex: 1; padding-top: 2px; display: inline; word-break: break-word; overflow-wrap: break-word;">
             ${messageText}
             ${metaHtml}
           </div>
@@ -230,7 +230,7 @@ function addChatMessageToDOM(msg) {
       `;
     } else {
       messageContentHtml = `
-        <div class="chat-message-text">
+        <div class="chat-message-text" style="display: inline; word-break: break-word; overflow-wrap: break-word;">
           ${messageText}
           ${metaHtml}
         </div>
@@ -246,12 +246,19 @@ function addChatMessageToDOM(msg) {
 
   const onclickHtml = (isMe && !isPureMedia) ? `onclick="toggleBubbleActions(event, '${msg.id}')" style="cursor:pointer;"` : '';
 
+  let inlineStyle = '';
+  if (isPureMedia) {
+    inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
+  } else {
+    inlineStyle = 'display: block; width: fit-content; max-width: 85%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
+  }
+
   const html = `
     <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
-        <div class="${bubbleClass}" ${onclickHtml}>
+        <div class="${bubbleClass}" ${onclickHtml} style="${inlineStyle}">
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
@@ -809,15 +816,17 @@ function updateChatMessageInDOM(msg) {
       catIcon = '🔔';
     }
 
-    // Set bubble class
+    // Set bubble class and inline styles to bypass WebView caching
     bubble.className = 'chat-message-bubble';
     if (isPureMedia) {
       bubble.classList.add('chat-message-bubble--media-only');
+      bubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
     } else {
       if (isMe) bubble.classList.add('chat-message-bubble--me');
       if (msg.category === 'warning') bubble.classList.add('chat-message-bubble--warning');
       if (msg.category === 'strategy') bubble.classList.add('chat-message-bubble--strategy');
       if (msg.category === 'important') bubble.classList.add('chat-message-bubble--important');
+      bubble.style.cssText = 'display: block; width: fit-content; max-width: 85%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
     }
 
     let messageText = '';
@@ -838,7 +847,7 @@ function updateChatMessageInDOM(msg) {
       ` : '';
 
       const metaHtml = `
-        <span class="chat-message-meta-inline">
+        <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
           <span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>
           ${actionsHtml}
           <span class="chat-message-time-val">${timeStr}</span>
@@ -847,9 +856,9 @@ function updateChatMessageInDOM(msg) {
 
       if (catIcon) {
         messageContentHtml = `
-          <div class="chat-message-body-with-icon">
+          <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start;">
             <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-            <div class="chat-message-text" style="flex: 1; padding-top: 2px;">
+            <div class="chat-message-text" style="flex: 1; padding-top: 2px; display: inline; word-break: break-word; overflow-wrap: break-word;">
               ${messageText}
               ${metaHtml}
             </div>
@@ -857,7 +866,7 @@ function updateChatMessageInDOM(msg) {
         `;
       } else {
         messageContentHtml = `
-          <div class="chat-message-text">
+          <div class="chat-message-text" style="display: inline; word-break: break-word; overflow-wrap: break-word;">
             ${messageText}
             ${metaHtml}
           </div>
@@ -1089,9 +1098,42 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
           </div>
         `;
       }
+      
+      let deleteBtnHtml = '';
+      if (isMe && msgId) {
+        deleteBtnHtml = `
+          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ff6b6b;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            padding: 0;
+            margin: 0;
+          " onmouseover="this.style.background='rgba(239, 68, 68, 0.9)'; this.style.color='#fff'; this.style.borderColor='rgba(255,255,255,0.4)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.6)'; this.style.color='#ff6b6b'; this.style.borderColor='rgba(255,255,255,0.25)';">
+            🗑️
+          </button>
+        `;
+      }
+
       return `
         <div class="chat-image-wrap" style="margin-top: 0px; border-radius: 12px; overflow: hidden; max-width: 280px; cursor: pointer; position: relative; border: 1px solid var(--border);" onclick="openChatImageModal('${displayUrl}')">
           <img src="${displayUrl}" style="width: 100%; max-height: 240px; object-fit: cover; display: block; border-radius: 12px;" onerror="this.onerror=null; this.src='https://placehold.co/240x150?text=Hình+ảnh+lỗi';" />
+          ${deleteBtnHtml}
           ${overlayHtml}
         </div>
       `;
@@ -1116,9 +1158,42 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
           </div>
         `;
       }
+
+      let deleteBtnHtml = '';
+      if (isMe && msgId) {
+        deleteBtnHtml = `
+          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ff6b6b;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            padding: 0;
+            margin: 0;
+          " onmouseover="this.style.background='rgba(239, 68, 68, 0.9)'; this.style.color='#fff'; this.style.borderColor='rgba(255,255,255,0.4)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.6)'; this.style.color='#ff6b6b'; this.style.borderColor='rgba(255,255,255,0.25)';">
+            🗑️
+          </button>
+        `;
+      }
+
       return `
         <div class="chat-video-wrap" style="margin-top: 0px; border-radius: 12px; overflow: hidden; max-width: 280px; position: relative;">
           <video src="${displayUrl}" class="chat-video-player" style="border-radius: 12px; max-height: 240px; display: block;" controls playsinline preload="metadata"></video>
+          ${deleteBtnHtml}
           ${overlayHtml}
         </div>
       `;
@@ -2260,7 +2335,7 @@ function addFloatingChatMessageToDOM(msg) {
     ` : '';
 
     const metaHtml = `
-      <span class="chat-message-meta-inline">
+      <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
         ${actionsHtml}
         <span class="chat-message-time-val">${timeStr}</span>
       </span>
@@ -2268,9 +2343,9 @@ function addFloatingChatMessageToDOM(msg) {
 
     if (catIcon) {
       messageContentHtml = `
-        <div class="chat-message-body-with-icon">
+        <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start;">
           <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-          <div class="chat-message-text" style="flex:1; padding-top:2px;">
+          <div class="chat-message-text" style="flex: 1; padding-top: 2px; display: inline; word-break: break-word; overflow-wrap: break-word;">
             ${messageText}
             ${metaHtml}
           </div>
@@ -2278,7 +2353,7 @@ function addFloatingChatMessageToDOM(msg) {
       `;
     } else {
       messageContentHtml = `
-        <div class="chat-message-text">
+        <div class="chat-message-text" style="display: inline; word-break: break-word; overflow-wrap: break-word;">
           ${messageText}
           ${metaHtml}
         </div>
@@ -2294,12 +2369,19 @@ function addFloatingChatMessageToDOM(msg) {
   
   const onclickHtml = (isMe && !isPureMedia) ? `onclick="toggleBubbleActions(event, 'fl_${msg.id}')" style="cursor:pointer;"` : '';
   
+  let inlineStyle = '';
+  if (isPureMedia) {
+    inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
+  } else {
+    inlineStyle = 'display: block; width: fit-content; max-width: 85%; min-width: 60px; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box;';
+  }
+
   const html = `
     <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
       ${avatarHtmlBlock}
       <div class="chat-message-content">
         ${!isMe ? `<div class="chat-message-sender">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
-        <div class="${bubbleClass}" ${onclickHtml}>
+        <div class="${bubbleClass}" ${onclickHtml} style="${inlineStyle}">
           ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
