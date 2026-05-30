@@ -15,11 +15,15 @@
     .chat-messages-area {
       display: flex !important;
       flex-direction: column !important;
-      justify-content: flex-end !important;
       gap: 6px !important;
+    }
+    .chat-messages-area::before {
+      content: '';
+      flex: 1 1 auto;
     }
     .chat-messages-area > * {
       flex-shrink: 0 !important;
+      flex-grow: 0 !important;
     }
     .chat-message-row {
       display: flex !important;
@@ -1017,7 +1021,7 @@
 <script src="lacie.js?v=2026052734"></script>
 <script src="ai-parse.js?v=2026052920"></script>
 <script src="mindmap.js?v=2026052917"></script>
-<script src="chat.js?v=2026053074"></script>
+<script src="chat.js?v=2026053091"></script>
 <script src="guide.js?v=2026052920"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
 <script src="init.js?v=2026053051"></script>

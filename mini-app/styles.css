@@ -2023,12 +2023,17 @@
   scrollbar-width: thin;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: flex-end !important;
   gap: 6px !important;
 }
-/* When messages overflow, let them scroll naturally from top */
+/* Push messages to bottom when few, without breaking scroll */
+.chat-messages-area::before {
+  content: '';
+  flex: 1 1 auto;
+}
+/* Prevent children from stretching vertically */
 .chat-messages-area > * {
   flex-shrink: 0 !important;
+  flex-grow: 0 !important;
 }
 [data-theme="dark"] .chat-messages-area {
   background: #0d0d12 !important;

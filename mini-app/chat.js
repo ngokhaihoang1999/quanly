@@ -268,21 +268,24 @@ function addChatMessageToDOM(msg) {
     </div>
   `;
 
-  const onclickHtml = isPureMedia ? '' : `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})" style="cursor:pointer;"`;
+  const onclickBubble = isPureMedia ? '' : `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})"`;
 
-  let inlineStyle = '';
+  let bubbleInline = 'cursor:pointer; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   if (isPureMedia) {
-    inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
+    bubbleInline = 'display:block; border-radius:12px; border:none; background:transparent; padding:0; margin:0; box-shadow:none; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   }
 
   const reactionsHtml = typeof renderMessageReactionsHtml === 'function' ? renderMessageReactionsHtml(msg.reactions, msg.id, isMe, false) : '';
 
+  const rowInline = 'height:auto !important; min-height:0 !important; flex:0 0 auto !important; max-height:none !important;';
+  const contentInline = 'height:auto !important; min-height:0 !important; flex:1 1 auto !important;';
+
   const html = `
-    <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
+    <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}" style="${rowInline}">
       ${avatarHtmlBlock}
-      <div class="chat-message-content">
+      <div class="chat-message-content" style="${contentInline}">
         ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
-        <div class="${bubbleClass}" ${onclickHtml} style="${inlineStyle}">
+        <div class="${bubbleClass}" ${onclickBubble} style="${bubbleInline}">
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
@@ -2519,21 +2522,24 @@ function addFloatingChatMessageToDOM(msg) {
     </div>
   `;
   
-  const onclickHtml = isPureMedia ? '' : `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})" style="cursor:pointer;"`;
+  const onclickBubble = isPureMedia ? '' : `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})"`;
   
-  let inlineStyle = '';
+  let bubbleInline = 'cursor:pointer; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   if (isPureMedia) {
-    inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
+    bubbleInline = 'display:block; border-radius:12px; border:none; background:transparent; padding:0; margin:0; box-shadow:none; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   }
 
   const reactionsHtml = typeof renderMessageReactionsHtml === 'function' ? renderMessageReactionsHtml(msg.reactions, msg.id, isMe, true) : '';
 
+  const rowInline = 'height:auto !important; min-height:0 !important; flex:0 0 auto !important; max-height:none !important;';
+  const contentInline = 'height:auto !important; min-height:0 !important; flex:1 1 auto !important;';
+
   const html = `
-    <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
+    <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}" style="${rowInline}">
       ${avatarHtmlBlock}
-      <div class="chat-message-content">
+      <div class="chat-message-content" style="${contentInline}">
         ${!isMe ? `<div class="chat-message-sender" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
-        <div class="${bubbleClass}" ${onclickHtml} style="${inlineStyle}">
+        <div class="${bubbleClass}" ${onclickBubble} style="${bubbleInline}">
           ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
