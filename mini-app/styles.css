@@ -3348,8 +3348,8 @@ body.tour-active #cjFloatingChatWindow {
 }
 .profile-summary-actions {
   position: absolute !important;
-  top: 20px !important;
-  right: 20px !important;
+  top: 0 !important;
+  right: 0 !important;
   z-index: 10;
   display: flex !important;
   gap: 8px !important;
@@ -3361,8 +3361,8 @@ body.tour-active #cjFloatingChatWindow {
   gap: 16px;
 }
 .profile-summary-col {
-  flex: 1 1 180px !important; /* Automatic vertical stacking when container is narrow */
-  min-width: 0 !important;
+  flex: 1 0 180px !important; /* Force vertical stacking on narrow containers, do not shrink below 180px */
+  min-width: 180px !important;
 }
 
 
