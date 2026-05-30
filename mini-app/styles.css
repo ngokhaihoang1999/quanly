@@ -2044,12 +2044,16 @@
   max-width: 85%;
   margin-bottom: 1px;
   align-self: flex-start;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 .chat-message-row--me {
   align-self: flex-end;
   flex-direction: row-reverse;
   max-width: 85%;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 .chat-message-avatar {
@@ -2063,6 +2067,8 @@
   gap: 2px;
   min-width: 0;
   align-items: flex-start;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 .chat-message-row--me .chat-message-content {
@@ -3327,29 +3333,36 @@ body.tour-active #cjFloatingChatWindow {
 /* ==========================================================================
    ADAPTIVE RESPONSIVE PROFILES DETAIL CARD FOR MOBILE
    ========================================================================== */
-@media (max-width: 480px) {
-  .profile-summary-header {
-    display: block !important;
-    position: relative !important;
-  }
-  .profile-summary-header-info {
-    padding-right: 0 !important;
-    margin-top: 12px !important;
-    width: 100% !important;
-  }
-  .profile-summary-actions {
-    position: absolute !important;
-    top: 0 !important;
-    right: 0 !important;
-  }
-  .profile-summary-grid {
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-  .profile-summary-col {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
+/* Container-aware fluid and responsive layouts for profile details card */
+.profile-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  width: 100%;
+}
+.profile-summary-header-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 88px !important; /* Enforce spacing on all screens to clear absolute actions */
+}
+.profile-summary-actions {
+  position: absolute !important;
+  top: 20px !important;
+  right: 20px !important;
+  z-index: 10;
+  display: flex !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+.profile-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.profile-summary-col {
+  flex: 1 1 180px !important; /* Automatic vertical stacking when container is narrow */
+  min-width: 0 !important;
 }
 
 

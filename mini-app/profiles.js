@@ -361,11 +361,11 @@ async function openProfile(p, cardEl, initialTabId) {
       <div style="position:absolute; top:-50px; right:-50px; width:150px; height:150px; background:radial-gradient(circle, rgba(124,106,247,0.1) 0%, transparent 70%); pointer-events:none;"></div>
       
       <!-- Top section: avatar + name + status badges -->
-      <div class="profile-summary-header" style="display:flex; align-items:center; gap:16px; position:relative;">
+      <div class="profile-summary-header">
         <div style="cursor:${canEditColor?'pointer':'default'}; flex-shrink:0;" ${avatarClick}>
           ${avatarHtml}
         </div>
-        <div class="profile-summary-header-info" style="flex:1; min-width:0; padding-right:88px;">
+        <div class="profile-summary-header-info">
           <div style="font-size:20px; font-weight:800; margin-bottom:6px; color:var(--text1); word-break:break-word; line-height:1.2; letter-spacing:-0.3px;">${p.full_name}</div>
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             ${statusBtn}
@@ -378,7 +378,7 @@ async function openProfile(p, cardEl, initialTabId) {
           ${reasonHtml}
           ${bbNoGroupWarning}
         </div>
-        <div class="profile-summary-actions" style="display:flex; gap:8px; align-self:flex-start;">
+        <div class="profile-summary-actions">
           <button data-share-id="${p.id}" data-share-name="${(p.full_name||'').replace(/"/g,'&quot;')}" onclick="shareProfile(this.dataset.shareId, this.dataset.shareName)" title="Chia sẻ hồ sơ" style="
             width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
             background:var(--accent); color:white; cursor:pointer;
@@ -395,9 +395,9 @@ async function openProfile(p, cardEl, initialTabId) {
       </div>
 
       <!-- Middle: GVBB & NDD elegantly grouped with Left-Border accent highlights -->
-      <div class="profile-summary-grid" style="display:flex; flex-wrap:wrap; gap:16px; border-top:1px solid var(--border); padding-top:14px;">
+      <div class="profile-summary-grid" style="border-top:1px solid var(--border); padding-top:14px;">
         <!-- NDD Section -->
-        <div class="profile-summary-col" style="border-left:3px solid var(--green); padding-left:12px; min-width:140px; flex:1;">
+        <div class="profile-summary-col" style="border-left:3px solid var(--green); padding-left:12px;">
           <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px;">👑 NDD</div>
           <div style="font-size:13px; font-weight:700; color:var(--text1); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
             ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'Chưa có'}</span>`}
@@ -405,7 +405,7 @@ async function openProfile(p, cardEl, initialTabId) {
         </div>
 
         <!-- GVBB Section -->
-        <div class="profile-summary-col" style="border-left:3px solid var(--accent); padding-left:12px; min-width:140px; flex:1; position:relative;">
+        <div class="profile-summary-col" style="border-left:3px solid var(--accent); padding-left:12px; position:relative;">
           <div style="font-size:10px; color:var(--text3); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.3px; display:flex; align-items:center; gap:6px;">
             <span>🧭 GVBB</span>
             ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:10px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
