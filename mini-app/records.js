@@ -1322,6 +1322,17 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div class="field-group">
         <label>📸 Ảnh đính kèm (gợi ý: kết quả bài test, sơ đồ...)</label>
         <input type="file" id="rm_image_file" accept="image/*" style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
+        
+        <!-- Premium clipboard instruction block -->
+        <div style="border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; text-align: center; background: rgba(124,106,247,0.03); margin-top: 6px; box-sizing: border-box; pointer-events: none;">
+          <div style="font-size: 12.5px; font-weight: 700; color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px;">
+            📋 Hỗ trợ dán ảnh từ Clipboard
+          </div>
+          <div style="font-size: 11px; color: var(--text3);">
+            Nhấn <b>Ctrl + V</b> trên máy tính hoặc nhấn giữ và chọn Dán trên điện thoại để tải lên nhanh chóng.
+          </div>
+        </div>
+
         <input type="hidden" id="rm_image_url" value="${c.image_url||''}" />
         <div id="rm_image_preview_container" style="margin-top:8px; display:${c.image_url?'block':'none'}; border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative; max-width:240px;">
           <img id="rm_image_preview" src="${c.image_url||''}" style="width:100%; display:block;" />
@@ -1368,6 +1379,17 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div class="field-group">
         <label>📸 Ảnh đính kèm (gợi ý: sơ đồ, kết quả buổi học...)</label>
         <input type="file" id="rm_image_file" accept="image/*" style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
+        
+        <!-- Premium clipboard instruction block -->
+        <div style="border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; text-align: center; background: rgba(124,106,247,0.03); margin-top: 6px; box-sizing: border-box; pointer-events: none;">
+          <div style="font-size: 12.5px; font-weight: 700; color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 2px;">
+            📋 Hỗ trợ dán ảnh từ Clipboard
+          </div>
+          <div style="font-size: 11px; color: var(--text3);">
+            Nhấn <b>Ctrl + V</b> trên máy tính hoặc nhấn giữ và chọn Dán trên điện thoại để tải lên nhanh chóng.
+          </div>
+        </div>
+
         <input type="hidden" id="rm_image_url" value="${c.image_url||''}" />
         <div id="rm_image_preview_container" style="margin-top:8px; display:${c.image_url?'block':'none'}; border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative; max-width:240px;">
           <img id="rm_image_preview" src="${c.image_url||''}" style="width:100%; display:block;" />
@@ -1991,6 +2013,21 @@ async function uploadRecordImage(input) {
     return;
   }
 
+  // Instant local preview for immediate visual feedback
+  let localUrl = '';
+  try {
+    localUrl = URL.createObjectURL(file);
+    const preview = document.getElementById('rm_image_preview');
+    if (preview) preview.src = localUrl;
+    const container = document.getElementById('rm_image_preview_container');
+    if (container) {
+      container.style.display = 'block';
+      container.style.opacity = '0.6'; // show a nice semi-transparent loading state
+    }
+  } catch (e) {
+    console.warn('Failed to create local Object URL:', e);
+  }
+
   showToast('⏳ Đang tải ảnh lên...');
   try {
     const formData = new FormData();
@@ -2012,7 +2049,10 @@ async function uploadRecordImage(input) {
       const preview = document.getElementById('rm_image_preview');
       if (preview) preview.src = data.url;
       const container = document.getElementById('rm_image_preview_container');
-      if (container) container.style.display = 'block';
+      if (container) {
+        container.style.display = 'block';
+        container.style.opacity = '1'; // restore full opacity
+      }
       showToast('✅ Đã tải ảnh thành công!');
     } else {
       throw new Error('No URL returned from proxy server');
@@ -2020,8 +2060,14 @@ async function uploadRecordImage(input) {
   } catch (e) {
     showToast('❌ Tải ảnh thất bại');
     console.error('uploadRecordImage error:', e);
+    // Hide preview container on error if not loaded
+    const container = document.getElementById('rm_image_preview_container');
+    if (container) container.style.display = 'none';
   } finally {
     input.value = '';
+    if (localUrl) {
+      try { URL.revokeObjectURL(localUrl); } catch (e) {}
+    }
   }
 }
 

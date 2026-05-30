@@ -201,6 +201,45 @@ function addChatMessageToDOM(msg) {
   msgArea.scrollTop = msgArea.scrollHeight;
 }
 
+// Global media staging state
+window._tempUploadMediaUrl = null;
+
+function showTempMediaPreview(url, fileName) {
+  const container = document.getElementById('chatTempMediaPreview');
+  const thumbContainer = document.getElementById('chatTempMediaThumbnailContainer');
+  const nameEl = document.getElementById('chatTempMediaFileName');
+  
+  if (!container || !thumbContainer || !nameEl) return;
+  
+  window._tempUploadMediaUrl = url;
+  
+  // Choose icon / image preview
+  let thumbnailHtml = '';
+  const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || url.includes('image');
+  const isVideo = /\.(mp4|webm|mov|m4v|3gp)/i.test(url);
+  const isAudio = /\.(mp3|wav|m4a|ogg|aac|opus)/i.test(url);
+  
+  if (isImage) {
+    thumbnailHtml = `<img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;" />`;
+  } else if (isVideo) {
+    thumbnailHtml = `<span style="font-size:18px;">🎥</span>`;
+  } else if (isAudio) {
+    thumbnailHtml = `<span style="font-size:18px;">🎵</span>`;
+  } else {
+    thumbnailHtml = `<span style="font-size:18px;">📄</span>`;
+  }
+  
+  thumbContainer.innerHTML = thumbnailHtml;
+  nameEl.textContent = fileName || 'Tệp đính kèm';
+  container.style.display = 'flex';
+}
+
+function clearTempMediaPreview() {
+  window._tempUploadMediaUrl = null;
+  const container = document.getElementById('chatTempMediaPreview');
+  if (container) container.style.display = 'none';
+}
+
 // Send chat message
 async function sendProfileChatMessage() {
   if (window._editingMessageId) {
@@ -213,12 +252,24 @@ async function sendProfileChatMessage() {
   if (!input || !currentProfileId) return;
 
   const text = input.value.trim();
+  const mediaUrl = window._tempUploadMediaUrl;
   const category = catSelect ? catSelect.value : 'general';
   
-  if (!text) return;
+  if (!text && !mediaUrl) return;
+
+  // Combine media and caption text into a single message
+  let finalMessageText = '';
+  if (mediaUrl) {
+    finalMessageText = mediaUrl + (text ? '\n' + text : '');
+  } else {
+    finalMessageText = text;
+  }
 
   input.value = ''; // clear input immediately to feel fast
   haptic('light');
+
+  // Hide and reset temp media preview
+  clearTempMediaPreview();
 
   const sender = getEffectiveStaffCode();
   
@@ -229,7 +280,7 @@ async function sendProfileChatMessage() {
       body: JSON.stringify({
         profile_id: currentProfileId,
         sender_code: sender,
-        message: text,
+        message: finalMessageText,
         category: category
       })
     });
@@ -243,11 +294,14 @@ async function sendProfileChatMessage() {
     await markChatAsRead(currentProfileId);
 
     // Parse tag/mentions and notify
-    await parseMentionsAndNotify(text, currentProfileId);
+    await parseMentionsAndNotify(finalMessageText, currentProfileId);
   } catch(e) {
     showToast('❌ Lỗi gửi tin nhắn');
     console.error('sendProfileChatMessage:', e);
     input.value = text; // restore on error
+    if (mediaUrl) {
+      showTempMediaPreview(mediaUrl, 'Khôi phục tệp');
+    }
   }
 }
 
@@ -985,9 +1039,9 @@ async function uploadChatImage(input) {
 
     const data = await res.json();
     if (data && data.url) {
-      // Send the proxy URL to the chat DB
-      await sendProxyImageMessage(data.url);
-      showToast('✅ Đã gửi tệp đính kèm');
+      // Stage the URL in our temp preview box
+      showTempMediaPreview(data.url, file.name);
+      showToast('✅ Tệp đã sẵn sàng, nhập nội dung và bấm gửi');
     } else {
       throw new Error('No URL returned from proxy server');
     }
@@ -3011,32 +3065,34 @@ async function uploadChatClipboardImageDirectly(file, profileId, inputId, catSel
 
     const data = await res.json();
     if (data && data.url) {
-      const sender = getEffectiveStaffCode();
-      const catSelect = document.getElementById(catSelectId);
-      const category = catSelect ? catSelect.value : 'general';
+      if (isFloating) {
+        const sender = getEffectiveStaffCode();
+        const catSelect = document.getElementById(catSelectId);
+        const category = catSelect ? catSelect.value : 'general';
 
-      const dbRes = await sbFetch('/rest/v1/profile_chats', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          profile_id: profileId,
-          sender_code: sender,
-          message: data.url,
-          category: category
-        })
-      });
+        const dbRes = await sbFetch('/rest/v1/profile_chats', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({
+            profile_id: profileId,
+            sender_code: sender,
+            message: data.url,
+            category: category
+          })
+        });
 
-      if (dbRes.ok) {
-        const newMsgArr = await dbRes.json();
-        if (newMsgArr && newMsgArr[0]) {
-          if (isFloating) {
+        if (dbRes.ok) {
+          const newMsgArr = await dbRes.json();
+          if (newMsgArr && newMsgArr[0]) {
             if (typeof addFloatingChatMessageToDOM === 'function') addFloatingChatMessageToDOM(newMsgArr[0]);
-          } else {
-            if (typeof addChatMessageToDOM === 'function') addChatMessageToDOM(newMsgArr[0]);
+            await markChatAsRead(profileId);
+            showToast('✅ Đã gửi ảnh từ clipboard');
           }
-          await markChatAsRead(profileId);
-          showToast('✅ Đã gửi ảnh từ clipboard');
         }
+      } else {
+        // Stage in our temp preview box
+        showTempMediaPreview(data.url, file.name || 'clipboard_image.png');
+        showToast('✅ Đã tải ảnh clipboard lên bộ nhớ tạm chat');
       }
     }
   } catch (e) {
@@ -3045,11 +3101,26 @@ async function uploadChatClipboardImageDirectly(file, profileId, inputId, catSel
   }
 }
 
-// Helper for pasting inside the Report (Record) Modal
+// Helper for pasting inside the Report (Record) Modal (with instant local preview!)
 async function uploadRecordClipboardImageDirectly(file) {
   if (file.size > 3 * 1024 * 1024) {
     showToast('⚠️ Vui lòng chọn ảnh nhỏ hơn 3MB!');
     return;
+  }
+
+  // Instant local preview for immediate visual feedback
+  let localUrl = '';
+  try {
+    localUrl = URL.createObjectURL(file);
+    const preview = document.getElementById('rm_image_preview');
+    if (preview) preview.src = localUrl;
+    const container = document.getElementById('rm_image_preview_container');
+    if (container) {
+      container.style.display = 'block';
+      container.style.opacity = '0.6'; // show uploading state
+    }
+  } catch (e) {
+    console.warn('Failed to create local Object URL:', e);
   }
 
   showToast('⏳ Đang tải ảnh từ clipboard lên...');
@@ -3069,18 +3140,24 @@ async function uploadRecordClipboardImageDirectly(file) {
     if (data && data.url) {
       const urlEl = document.getElementById('rm_image_url');
       if (urlEl) urlEl.value = data.url;
-      
       const preview = document.getElementById('rm_image_preview');
       if (preview) preview.src = data.url;
-      
       const container = document.getElementById('rm_image_preview_container');
-      if (container) container.style.display = 'block';
-      
+      if (container) {
+        container.style.display = 'block';
+        container.style.opacity = '1';
+      }
       showToast('✅ Đã dán và tải ảnh thành công!');
     }
   } catch (e) {
     showToast('❌ Tải ảnh clipboard thất bại');
     console.error('uploadRecordClipboardImageDirectly error:', e);
+    const container = document.getElementById('rm_image_preview_container');
+    if (container) container.style.display = 'none';
+  } finally {
+    if (localUrl) {
+      try { URL.revokeObjectURL(localUrl); } catch (e) {}
+    }
   }
 }
 

@@ -32,6 +32,10 @@ async function submitCreateHapja() {
   const henTV = document.getElementById('hj_hen_tv')?.value;
 
   if (!ndd) { showToast('⚠️ Vui lòng chọn NDD'); return; }
+  if (typeof isStaffRegistered === 'function' && !isStaffRegistered(ndd)) { 
+    showToast('⚠️ Mã NDD (JD) này không có trong danh sách đăng ký!'); 
+    return; 
+  }
   if (!ngayChakki) { showToast('⚠️ Vui lòng chọn Ngày chakki'); return; }
   if (!concept) { showToast('⚠️ Vui lòng nhập Concept'); return; }
   if (!fullName) { showToast('⚠️ Vui lòng nhập Họ tên (mục 1)'); return; }
@@ -307,6 +311,11 @@ async function saveHapjaEdit(id) {
   const gender = val('gender');
   
   if (!fullName) { showToast('⚠️ Họ tên không được trống'); return; }
+  if (!ndd) { showToast('⚠️ Mã NDD không được để trống'); return; }
+  if (typeof isStaffRegistered === 'function' && !isStaffRegistered(ndd)) { 
+    showToast('⚠️ Mã NDD (JD) này không có trong danh sách đăng ký!'); 
+    return; 
+  }
   
   // Fetch current status to determine if this is a revision response
   let currentStatus = 'pending';

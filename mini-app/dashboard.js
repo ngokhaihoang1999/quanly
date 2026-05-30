@@ -111,11 +111,19 @@ async function loadDashboard(force = false) {
         console.error('Failed to fetch unit roles:', err);
       }
 
-      // Approved Hapja by unit members (filtered by semester) — used for Hapja cumulative metric
-      const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&created_by=in.(${codeFilter})&select=*&order=created_at.desc${semF}`);
+      // Fetch all approved check_hapjas for this semester (without restricting by created_by)
+      const ahRes = await sbFetch(`/rest/v1/check_hapja?status=eq.approved&select=*&order=created_at.desc${semF}`);
       if (ahRes.ok) {
-        approvedHapjaList = await ahRes.json();
-        if (!Array.isArray(approvedHapjaList)) approvedHapjaList = [];
+        const allApproved = await ahRes.json();
+        if (Array.isArray(allApproved)) {
+          // Filter approved hapjas in-memory: NDD is in unit
+          approvedHapjaList = allApproved.filter(h => {
+            const nddCode = h.data?.ndd_staff_code || h.created_by;
+            return unitStaffCodes.includes(nddCode);
+          });
+        } else {
+          approvedHapjaList = [];
+        }
         // Persist to window so popup can always access it regardless of closure
         window._approvedHapjaList = approvedHapjaList;
       } else {
@@ -146,11 +154,19 @@ async function loadDashboard(force = false) {
         }
       });
 
-      // Pending + revision hapja for section below
-      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=in.(${codeFilter})&select=*&order=created_at.desc&limit=20${semF}`);
+      // Pending + revision hapjas (queried widely, filtered in-memory by NDD role)
+      const uhRes = await sbFetch(`/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&select=*&order=created_at.desc&limit=100${semF}`);
       if (uhRes.ok) {
         const uhData = await uhRes.json();
-        unitHapja = Array.isArray(uhData) ? uhData.length : 0;
+        if (Array.isArray(uhData)) {
+          const filteredPending = uhData.filter(h => {
+            const nddCode = h.data?.ndd_staff_code || h.created_by;
+            return unitStaffCodes.includes(nddCode);
+          });
+          unitHapja = filteredPending.length;
+        } else {
+          unitHapja = 0;
+        }
       } else {
         console.error('Failed to fetch pending hapjas');
       }
@@ -437,23 +453,31 @@ async function loadDashboard(force = false) {
     const unitListEl = document.getElementById('dashUnitList');
     unitListEl.innerHTML = '';
 
-    // ── HAPJA (filter by unit scope + semester) ──
+    // ── HAPJA (filter by unit NDD scope + semester in-memory) ──
     const canApprove = hasPermission('approve_hapja');
-    let hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&select=*&order=created_at.desc&limit=20${semF}`;
-    if (canApprove && unitStaffCodes.length > 0 && scope !== 'system') {
-      const codeFilter2 = unitStaffCodes.map(c => `"${c}"`).join(',');
-      hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=in.(${codeFilter2})&select=*&order=created_at.desc&limit=20${semF}`;
-    } else if (!canApprove && myCode) {
-      hapjaQuery = `/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&created_by=eq.${myCode}&select=*&order=created_at.desc&limit=20${semF}`;
-    }
-    const hRes = await sbFetch(hapjaQuery);
+    const hRes = await sbFetch(`/rest/v1/check_hapja?status=in.(pending,revision,revision_submitted)&select=*&order=created_at.desc&limit=100${semF}`);
     if (hRes.ok) {
-      const hapjas = await hRes.json();
+      let hapjas = await hRes.json();
       if (!Array.isArray(hapjas)) throw new Error('Data error: hapjas is not an array');
-    document.getElementById('dashHapjaTitle').textContent = '📋 Check Hapja đang xử lý';
-    const hList = document.getElementById('dashHapjaList');
-    if (hapjas.length === 0) {
-      hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu đang xử lý</div>';
+      
+      // Filter in-memory based on NDD staff code instead of created_by (creator)
+      if (canApprove && unitStaffCodes.length > 0 && scope !== 'system') {
+        hapjas = hapjas.filter(h => {
+          const nddCode = h.data?.ndd_staff_code || h.created_by;
+          return unitStaffCodes.includes(nddCode);
+        });
+      } else if (!canApprove && myCode) {
+        hapjas = hapjas.filter(h => {
+          const nddCode = h.data?.ndd_staff_code || h.created_by;
+          return nddCode === myCode || h.created_by === myCode;
+        });
+      }
+      hapjas = hapjas.slice(0, 20); // Limit to 20 for display
+      
+      document.getElementById('dashHapjaTitle').textContent = '📋 Check Hapja đang xử lý';
+      const hList = document.getElementById('dashHapjaList');
+      if (hapjas.length === 0) {
+        hList.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text2);font-size:13px;">Không có phiếu đang xử lý</div>';
     } else {
       hList.innerHTML = hapjas.map(h => {
         const date = shinDate(h.created_at);
