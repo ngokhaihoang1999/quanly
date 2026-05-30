@@ -220,18 +220,18 @@ function addChatMessageToDOM(msg) {
 
     if (catIcon) {
       messageContentHtml = `
-        <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start;">
+        <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%;">
           <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-          <div class="chat-message-text" style="flex: 1; padding-top: 2px; display: inline; word-break: break-word; overflow-wrap: break-word;">
-            ${messageText}
+          <div class="chat-message-text" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0;">
+            <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
             ${metaHtml}
           </div>
         </div>
       `;
     } else {
       messageContentHtml = `
-        <div class="chat-message-text" style="display: inline; word-break: break-word; overflow-wrap: break-word;">
-          ${messageText}
+        <div class="chat-message-text" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; width: 100%;">
+          <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
           ${metaHtml}
         </div>
       `;
@@ -854,18 +854,18 @@ function updateChatMessageInDOM(msg) {
 
       if (catIcon) {
         messageContentHtml = `
-          <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start;">
+          <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%;">
             <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-            <div class="chat-message-text" style="flex: 1; padding-top: 2px; display: inline; word-break: break-word; overflow-wrap: break-word;">
-              ${messageText}
+            <div class="chat-message-text" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0;">
+              <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
               ${metaHtml}
             </div>
           </div>
         `;
       } else {
         messageContentHtml = `
-          <div class="chat-message-text" style="display: inline; word-break: break-word; overflow-wrap: break-word;">
-            ${messageText}
+          <div class="chat-message-text" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; width: 100%;">
+            <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
             ${metaHtml}
           </div>
         `;
@@ -2341,18 +2341,18 @@ function addFloatingChatMessageToDOM(msg) {
 
     if (catIcon) {
       messageContentHtml = `
-        <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start;">
+        <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%;">
           <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-          <div class="chat-message-text" style="flex: 1; padding-top: 2px; display: inline; word-break: break-word; overflow-wrap: break-word;">
-            ${messageText}
+          <div class="chat-message-text" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0;">
+            <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
             ${metaHtml}
           </div>
         </div>
       `;
     } else {
       messageContentHtml = `
-        <div class="chat-message-text" style="display: inline; word-break: break-word; overflow-wrap: break-word;">
-          ${messageText}
+        <div class="chat-message-text" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; width: 100%;">
+          <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
           ${metaHtml}
         </div>
       `;
