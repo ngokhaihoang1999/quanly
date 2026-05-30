@@ -244,12 +244,14 @@ function addChatMessageToDOM(msg) {
     </div>
   `;
 
-  const onclickHtml = (isMe && !isPureMedia) ? `onclick="toggleBubbleActions(event, '${msg.id}')" style="cursor:pointer;"` : '';
+  const onclickHtml = isPureMedia ? '' : `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})" style="cursor:pointer;"`;
 
   let inlineStyle = '';
   if (isPureMedia) {
     inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
   }
+
+  const reactionsHtml = typeof renderMessageReactionsHtml === 'function' ? renderMessageReactionsHtml(msg.reactions, msg.id, isMe, false) : '';
 
   const html = `
     <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
@@ -260,6 +262,7 @@ function addChatMessageToDOM(msg) {
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
+        ${reactionsHtml}
         <div class="chat-message-seen-container" id="seen_${msg.id}"></div>
       </div>
     </div>
@@ -776,7 +779,8 @@ async function deleteChatMessage(msgId) {
 
 function updateChatMessageInDOM(msg) {
   const row = document.getElementById(`msg_${msg.id}`);
-  if (!row) return;
+  const myCode = getEffectiveStaffCode();
+  const isMe = msg.sender_code === myCode;
 
   // Update memory list
   if (window._chatMessages) {
@@ -786,104 +790,230 @@ function updateChatMessageInDOM(msg) {
     }
   }
   
-  row.setAttribute('data-raw-text', msg.message);
-  
-  const bubble = row.querySelector('.chat-message-bubble');
-  if (bubble) {
-    let timeStr = '';
-    try {
-      const d = new Date(msg.created_at);
-      timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    } catch(e) {}
+  if (row) {
+    row.setAttribute('data-raw-text', msg.message);
+    
+    const bubble = row.querySelector('.chat-message-bubble');
+    if (bubble) {
+      let timeStr = '';
+      try {
+        const d = new Date(msg.created_at);
+        timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      } catch(e) {}
 
-    const myCode = getEffectiveStaffCode();
-    const isMe = msg.sender_code === myCode;
-    const isPureMedia = isPureVisualMedia(msg.message);
+      const isPureMedia = isPureVisualMedia(msg.message);
 
-    // Determine category badge / prefix
-    let categoryPrefix = '';
-    let catIcon = '';
-    if (msg.category === 'warning') {
-      categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--warning">⚠️ Cảnh báo</span>';
-      catIcon = '⚠️';
-    } else if (msg.category === 'strategy') {
-      categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--strategy">🧭 Chiến lược</span>';
-      catIcon = '🧭';
-    } else if (msg.category === 'important') {
-      categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--important">🔔 Quan trọng</span>';
-      catIcon = '🔔';
-    }
+      // Determine category badge / prefix
+      let categoryPrefix = '';
+      let catIcon = '';
+      if (msg.category === 'warning') {
+        categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--warning">⚠️ Cảnh báo</span>';
+        catIcon = '⚠️';
+      } else if (msg.category === 'strategy') {
+        categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--strategy">🧭 Chiến lược</span>';
+        catIcon = '🧭';
+      } else if (msg.category === 'important') {
+        categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--important">🔔 Quan trọng</span>';
+        catIcon = '🔔';
+      }
 
-    // Set bubble class and inline styles to bypass WebView caching
-    bubble.className = 'chat-message-bubble';
-    if (isPureMedia) {
-      bubble.classList.add('chat-message-bubble--media-only');
-      bubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
-    } else {
-      if (isMe) bubble.classList.add('chat-message-bubble--me');
-      if (msg.category === 'warning') bubble.classList.add('chat-message-bubble--warning');
-      if (msg.category === 'strategy') bubble.classList.add('chat-message-bubble--strategy');
-      if (msg.category === 'important') bubble.classList.add('chat-message-bubble--important');
-      bubble.style.cssText = '';
-    }
+      // Set bubble class and inline styles to bypass WebView caching
+      bubble.className = 'chat-message-bubble';
+      if (isPureMedia) {
+        bubble.classList.add('chat-message-bubble--media-only');
+        bubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
+      } else {
+        if (isMe) bubble.classList.add('chat-message-bubble--me');
+        if (msg.category === 'warning') bubble.classList.add('chat-message-bubble--warning');
+        if (msg.category === 'strategy') bubble.classList.add('chat-message-bubble--strategy');
+        if (msg.category === 'important') bubble.classList.add('chat-message-bubble--important');
+        bubble.style.cssText = '';
+      }
 
-    let messageText = '';
-    let messageContentHtml = '';
+      let messageText = '';
+      let messageContentHtml = '';
 
-    if (isPureMedia) {
-      const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
-      messageText = formatChatMessageText(msg.message, displayTimeStr, isMe, msg.id, false);
-      messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
-    } else {
-      messageText = formatChatMessageText(msg.message);
-      
-      const actionsHtml = isMe ? `
-        <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-          <span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>
-          <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
-        </span>
-      ` : '';
+      if (isPureMedia) {
+        const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
+        messageText = formatChatMessageText(msg.message, displayTimeStr, isMe, msg.id, false);
+        messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
+      } else {
+        messageText = formatChatMessageText(msg.message);
+        
+        const actionsHtml = isMe ? `
+          <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
+            <span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>
+            <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
+          </span>
+        ` : '';
 
-      const metaHtml = `
-        <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
-          <span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>
-          ${actionsHtml}
-          <span class="chat-message-time-val">${timeStr}</span>
-        </span>
-      `;
+        const metaHtml = `
+          <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+            <span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>
+            ${actionsHtml}
+            <span class="chat-message-time-val">${timeStr}</span>
+          </span>
+        `;
 
-      if (catIcon) {
-        messageContentHtml = `
-          <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%;">
-            <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
-            <div class="chat-message-text" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0;">
-              <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
+        if (catIcon) {
+          messageContentHtml = `
+            <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%;">
+              <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
+              <div class="chat-message-text" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0;">
+                <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
+                ${metaHtml}
+              </div>
+            </div>
+          `;
+        } else {
+          messageContentHtml = `
+            <div class="chat-message-text" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; width: 100%;">
+              <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
               ${metaHtml}
             </div>
-          </div>
-        `;
+          `;
+        }
+      }
+
+      bubble.innerHTML = `
+        ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
+        ${messageContentHtml}
+      `;
+      
+      // update click handler
+      if (!isPureMedia) {
+        bubble.setAttribute('onclick', `handleBubbleClick(event, '${msg.id}', ${isMe})`);
+        bubble.style.cursor = 'pointer';
       } else {
-        messageContentHtml = `
-          <div class="chat-message-text" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; width: 100%;">
-            <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
-            ${metaHtml}
-          </div>
-        `;
+        bubble.removeAttribute('onclick');
+        bubble.style.cursor = 'default';
       }
     }
 
-    bubble.innerHTML = `
-      ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
-      ${messageContentHtml}
-    `;
-    
-    // update click handler to handle actions toggle if not media
-    if (isMe && !isPureMedia) {
-      bubble.setAttribute('onclick', `toggleBubbleActions(event, '${msg.id}')`);
-      bubble.style.cursor = 'pointer';
-    } else {
-      bubble.removeAttribute('onclick');
-      bubble.style.cursor = 'default';
+    // Update reactions for main chat
+    const contentContainer = row.querySelector('.chat-message-content');
+    if (contentContainer) {
+      const oldReactions = contentContainer.querySelector('.chat-message-reactions');
+      if (oldReactions) oldReactions.remove();
+      
+      const reactionsHtml = typeof renderMessageReactionsHtml === 'function' ? renderMessageReactionsHtml(msg.reactions, msg.id, isMe, false) : '';
+      if (reactionsHtml) {
+        const seenContainer = contentContainer.querySelector('.chat-message-seen-container');
+        if (seenContainer) {
+          seenContainer.insertAdjacentHTML('beforebegin', reactionsHtml);
+        } else {
+          contentContainer.insertAdjacentHTML('beforeend', reactionsHtml);
+        }
+      }
+    }
+  }
+
+  // Update floating chat message if exists in DOM
+  const flRow = document.getElementById(`fl_msg_${msg.id}`);
+  if (flRow) {
+    flRow.setAttribute('data-raw-text', msg.message);
+    const flBubble = flRow.querySelector('.chat-message-bubble');
+    if (flBubble) {
+      let timeStr = '';
+      try {
+        const d = new Date(msg.created_at);
+        timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      } catch(e) {}
+
+      const isPureMedia = isPureVisualMedia(msg.message);
+
+      // Determine category badge / prefix
+      let categoryPrefix = '';
+      let catIcon = '';
+      if (msg.category === 'warning') {
+        categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--warning">⚠️ Cảnh báo</span>';
+        catIcon = '⚠️';
+      } else if (msg.category === 'strategy') {
+        categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--strategy">🧭 Chiến lược</span>';
+        catIcon = '🧭';
+      } else if (msg.category === 'important') {
+        categoryPrefix = '<span class="chat-cat-badge chat-cat-badge--important">🔔 Quan trọng</span>';
+        catIcon = '🔔';
+      }
+
+      flBubble.className = 'chat-message-bubble';
+      if (isPureMedia) {
+        flBubble.classList.add('chat-message-bubble--media-only');
+        flBubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
+      } else {
+        if (isMe) flBubble.classList.add('chat-message-bubble--me');
+        if (msg.category === 'warning') flBubble.classList.add('chat-message-bubble--warning');
+        if (msg.category === 'strategy') flBubble.classList.add('chat-message-bubble--strategy');
+        if (msg.category === 'important') flBubble.classList.add('chat-message-bubble--important');
+        flBubble.style.cssText = '';
+      }
+
+      let messageText = '';
+      let messageContentHtml = '';
+
+      if (isPureMedia) {
+        const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
+        messageText = formatChatMessageText(msg.message, displayTimeStr, isMe, msg.id, true);
+        messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
+      } else {
+        messageText = formatChatMessageText(msg.message);
+        const actionsHtml = isMe ? `
+          <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
+            <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
+          </span>
+        ` : '';
+
+        const metaHtml = `
+          <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+            ${actionsHtml}
+            <span class="chat-message-time-val">${timeStr}</span>
+          </span>
+        `;
+
+        if (catIcon) {
+          messageContentHtml = `
+            <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%;">
+              <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
+              <div class="chat-message-text" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0;">
+                <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
+                ${metaHtml}
+              </div>
+            </div>
+          `;
+        } else {
+          messageContentHtml = `
+            <div class="chat-message-text" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; width: 100%;">
+              <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
+              ${metaHtml}
+            </div>
+          `;
+        }
+      }
+
+      flBubble.innerHTML = `
+        ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
+        ${messageContentHtml}
+      `;
+
+      if (!isPureMedia) {
+        flBubble.setAttribute('onclick', `handleBubbleClick(event, 'fl_${msg.id}', ${isMe})`);
+        flBubble.style.cursor = 'pointer';
+      } else {
+        flBubble.removeAttribute('onclick');
+        flBubble.style.cursor = 'default';
+      }
+    }
+
+    // Update reactions for floating row
+    const flContent = flRow.querySelector('.chat-message-content');
+    if (flContent) {
+      const oldFlReactions = flContent.querySelector('.chat-message-reactions');
+      if (oldFlReactions) oldFlReactions.remove();
+      
+      const flReactionsHtml = typeof renderMessageReactionsHtml === 'function' ? renderMessageReactionsHtml(msg.reactions, msg.id, isMe, true) : '';
+      if (flReactionsHtml) {
+        flContent.insertAdjacentHTML('beforeend', flReactionsHtml);
+      }
     }
   }
 }
@@ -2365,12 +2495,14 @@ function addFloatingChatMessageToDOM(msg) {
     </div>
   `;
   
-  const onclickHtml = (isMe && !isPureMedia) ? `onclick="toggleBubbleActions(event, 'fl_${msg.id}')" style="cursor:pointer;"` : '';
+  const onclickHtml = isPureMedia ? '' : `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})" style="cursor:pointer;"`;
   
   let inlineStyle = '';
   if (isPureMedia) {
     inlineStyle = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
   }
+
+  const reactionsHtml = typeof renderMessageReactionsHtml === 'function' ? renderMessageReactionsHtml(msg.reactions, msg.id, isMe, true) : '';
 
   const html = `
     <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}">
@@ -2381,6 +2513,7 @@ function addFloatingChatMessageToDOM(msg) {
           ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
+        ${reactionsHtml}
       </div>
     </div>
   `;
@@ -3604,4 +3737,168 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     initAutoResizeTextarea('cjFloatingChatInput', '32px');
   }, 100);
 }
+
+// ============ REACTION SYSTEM FOR CHAT BUBBLES ============
+
+// Unified click handler for chat bubble
+function handleBubbleClick(event, idStr, isMe) {
+  event.stopPropagation();
+  
+  // Extract clean msgId (without fl_ prefix)
+  const isFloating = idStr.startsWith('fl_');
+  const msgId = isFloating ? idStr.substring(3) : idStr;
+  
+  // Show quick reaction picker
+  showQuickReactionPicker(event, msgId, isMe, isFloating);
+  
+  // Toggle standard actions if isMe
+  if (isMe) {
+    toggleBubbleActions(event, idStr);
+  }
+}
+
+// Show premium floating quick reaction picker
+function showQuickReactionPicker(event, msgId, isMe, isFloating = false) {
+  event.stopPropagation();
+  closeAllChatPopups();
+
+  const bubble = event.currentTarget;
+  const rect = bubble.getBoundingClientRect();
+  
+  const picker = document.createElement('div');
+  picker.className = 'quick-reaction-picker';
+  
+  // Adjust top offset to position above bubble
+  const topPos = window.scrollY + rect.top - 46;
+  const leftPos = window.scrollX + rect.left + (rect.width - 240) / 2;
+  
+  picker.style.cssText = `
+    position: absolute;
+    top: ${topPos}px;
+    left: ${Math.max(10, leftPos)}px;
+    display: flex;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    z-index: 999999;
+    animation: scaleFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    user-select: none;
+  `;
+  
+  const emojis = ['👍', '❤️', '🔥', '👏', '😂', '😮', '😢', '🙏'];
+  let buttonsHtml = '';
+  
+  emojis.forEach(emoji => {
+    buttonsHtml += `
+      <span onclick="selectReaction(event, '${msgId}', '${emoji}')" style="
+        font-size: 18px;
+        cursor: pointer;
+        transition: transform 0.15s;
+        display: inline-block;
+      " onmouseover="this.style.transform='scale(1.35)'" onmouseout="this.style.transform='scale(1)'">
+        ${emoji}
+      </span>
+    `;
+  });
+  
+  picker.innerHTML = buttonsHtml;
+  document.body.appendChild(picker);
+}
+
+// Select reaction callback
+function selectReaction(event, msgId, emoji) {
+  event.stopPropagation();
+  toggleMessageReaction(msgId, emoji);
+  closeAllChatPopups();
+}
+
+// Toggle a message reaction in Supabase Rest API
+async function toggleMessageReaction(msgId, emoji) {
+  const myCode = getEffectiveStaffCode();
+  if (!myCode) return;
+
+  try {
+    // 1. Fetch current reactions
+    const res = await sbFetch(`/rest/v1/profile_chats?id=eq.${msgId}&select=reactions`);
+    const data = await res.json();
+    if (!data || !data[0]) return;
+
+    let reactions = data[0].reactions || {};
+    if (typeof reactions !== 'object' || reactions === null) {
+      reactions = {};
+    }
+
+    // 2. Toggle user reaction
+    if (!reactions[emoji]) {
+      reactions[emoji] = [];
+    }
+
+    const idx = reactions[emoji].indexOf(myCode);
+    if (idx !== -1) {
+      reactions[emoji].splice(idx, 1);
+      if (reactions[emoji].length === 0) {
+        delete reactions[emoji];
+      }
+    } else {
+      reactions[emoji].push(myCode);
+    }
+
+    // 3. Update database row
+    await sbFetch(`/rest/v1/profile_chats?id=eq.${msgId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reactions: reactions })
+    });
+  } catch (e) {
+    console.error('toggleMessageReaction error:', e);
+  }
+}
+
+// Render reaction badges below the bubble
+function renderMessageReactionsHtml(reactions, msgId, isMe, isFloating = false) {
+  if (!reactions || typeof reactions !== 'object' || reactions === null || Object.keys(reactions).length === 0) {
+    return '';
+  }
+
+  const alignStyle = isMe ? 'align-self: flex-end; margin-right: 12px; margin-left: 0;' : 'align-self: flex-start; margin-left: 12px; margin-right: 0;';
+  
+  let html = `<div class="chat-message-reactions" style="display: flex; gap: 4px; padding: 2px 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; font-size: 11px; width: fit-content; margin-top: -4px; z-index: 5; box-shadow: 0 1px 3px rgba(0,0,0,0.05); user-select: none; ${alignStyle}">`;
+  
+  let hasActiveReactions = false;
+  for (const [emoji, users] of Object.entries(reactions)) {
+    if (users && users.length > 0) {
+      hasActiveReactions = true;
+      const count = users.length;
+      const countStr = count > 1 ? `<span style="font-size: 9px; font-weight: bold; margin-left: 2px; color: var(--text2);">${count}</span>` : '';
+      
+      const myCode = getEffectiveStaffCode();
+      const didIReact = users.includes(myCode);
+      const activeStyle = didIReact ? 'background: rgba(124, 106, 247, 0.15); border-radius: 6px; padding: 1px 4px; border: 1px solid rgba(124,106,247,0.3);' : '';
+
+      html += `
+        <span onclick="event.stopPropagation(); toggleMessageReaction('${msgId}', '${emoji}')" style="cursor: pointer; display: inline-flex; align-items: center; gap: 2px; ${activeStyle}" title="${users.join(', ')}">
+          ${emoji}${countStr}
+        </span>
+      `;
+    }
+  }
+  
+  html += `</div>`;
+  return hasActiveReactions ? html : '';
+}
+
+// Close reaction picker popups
+function closeAllChatPopups() {
+  document.querySelectorAll('.quick-reaction-picker').forEach(el => el.remove());
+}
+
+// Close on clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.quick-reaction-picker')) {
+    closeAllChatPopups();
+  }
+});
 

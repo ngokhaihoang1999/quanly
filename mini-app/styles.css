@@ -2047,6 +2047,7 @@
   align-self: flex-start;
   height: auto !important;
   min-height: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 .chat-message-row--me {
@@ -2056,6 +2057,7 @@
   max-width: 85%;
   height: auto !important;
   min-height: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 .chat-message-avatar {
@@ -2068,7 +2070,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  flex: 1; /* Allow proper responsive sizing without collapsing */
+  flex: 1 1 auto !important;
   align-items: flex-start;
   height: auto !important;
   min-height: 0 !important;
@@ -2111,9 +2113,10 @@
   box-sizing: border-box;
   align-self: flex-start;
   max-width: 100% !important; /* Constrain inside row max-width (85%) */
-  min-width: 60px !important;
-  height: auto;
-  min-height: 0;
+  min-width: 80px !important; /* Premium minimum width to align text and time beautifully */
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 .chat-message-bubble--me {
@@ -2123,6 +2126,42 @@
   border-radius: 12px 4px 12px 12px;
   box-shadow: 0 3px 10px rgba(124, 106, 247, 0.15);
   align-self: flex-end;
+}
+
+/* Premium Reactions Badges */
+.chat-message-reactions {
+  display: flex;
+  gap: 4px;
+  padding: 3px 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 11px;
+  width: fit-content;
+  margin-top: -5px; /* Neg margin to overlap the bubble slightly */
+  z-index: 5;
+  box-shadow: 0 1.5px 4px rgba(0,0,0,0.06);
+  user-select: none;
+  transition: all 0.2s ease;
+}
+[data-theme="dark"] .chat-message-reactions {
+  background: #1a1a24;
+}
+.chat-message-reactions span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.chat-message-reactions span:hover {
+  transform: scale(1.18);
+}
+
+/* Floating reaction picker animation */
+@keyframes scaleFadeIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .chat-message-bubble--media-only {
