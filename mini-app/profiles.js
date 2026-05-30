@@ -398,7 +398,7 @@ async function openProfile(p, cardEl, initialTabId) {
         </div>
       ` : ''}
     </div>
-  `;`;
+  `;
 
   // Tab TV: hiện khi có TVV, bất kể phase (vì Chốt TV có thể xảy ra ở phase Chakki)
   const tabTV = document.getElementById('tabTV');
