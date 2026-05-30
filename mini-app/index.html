@@ -6,17 +6,26 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=2026053077" />
+  <link rel="stylesheet" href="styles.css?v=2026053090" />
   <link rel="stylesheet" href="desktop.css?v=2026052932" />
   <link rel="stylesheet" href="avatar.css?v=2026052734" />
   <link rel="stylesheet" href="reports.css?v=2026052734" />
   <style>
-    /* Critical WebView cache-busting height stretch fixes */
+    /* Critical WebView cache-busting layout fixes — inlined to guarantee no stale cache */
+    .chat-messages-area {
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-end !important;
+      gap: 6px !important;
+    }
+    .chat-messages-area > * {
+      flex-shrink: 0 !important;
+    }
     .chat-message-row {
       display: flex !important;
       height: auto !important;
       min-height: 0 !important;
-      flex: none !important;
+      flex: 0 0 auto !important;
       align-items: flex-start !important;
     }
     .chat-message-row--me {
@@ -24,7 +33,7 @@
       flex-direction: row-reverse !important;
       height: auto !important;
       min-height: 0 !important;
-      flex: none !important;
+      flex: 0 0 auto !important;
       align-items: flex-end !important;
     }
     .chat-message-content {
@@ -32,28 +41,21 @@
       flex-direction: column !important;
       height: auto !important;
       min-height: 0 !important;
-      flex: none !important;
+      flex: 1 1 auto !important;
     }
-    .chat-message-bubble {
-      display: block !important;
-      height: auto !important;
-      min-height: 0 !important;
-      flex: none !important;
-      max-width: 100% !important;
-      align-self: flex-start !important;
-    }
+    .chat-message-bubble,
     .chat-message-bubble--me {
-      display: block !important;
       height: auto !important;
       min-height: 0 !important;
-      flex: none !important;
+      flex: 0 0 auto !important;
       max-width: 100% !important;
-      align-self: flex-end !important;
     }
+    .chat-message-bubble { align-self: flex-start !important; }
+    .chat-message-bubble--me { align-self: flex-end !important; }
     .chat-message-reactions {
       height: auto !important;
       min-height: 0 !important;
-      flex: none !important;
+      flex: 0 0 auto !important;
     }
   </style>
 </head>
@@ -322,7 +324,7 @@
         </div>
       </div>
       <div class="form-card-body chat-container" style="display:flex; flex-direction:column; height:450px; padding: 12px 16px;">
-        <div id="profileChatMessages" class="chat-messages-area" style="flex:1; overflow-y:auto; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; background:var(--surface2); display:flex; flex-direction:column; gap:12px;">
+        <div id="profileChatMessages" class="chat-messages-area" style="flex:1; overflow-y:auto; margin-bottom:10px;">
           <!-- Chat messages render here -->
         </div>
         <div class="chat-input-area-wrapper" style="position:relative; display:flex; flex-direction:column; gap:6px; width:100%;">
@@ -1105,7 +1107,7 @@ window._lazyMarkmap = function() {
       </div>
     </div>
     
-    <div id="cjFloatingChatMessages" class="chat-messages-area" style="flex:1; overflow-y:auto; padding:8px; gap:6px; background:var(--bg);">
+    <div id="cjFloatingChatMessages" class="chat-messages-area" style="flex:1; overflow-y:auto;">
       <!-- Messages load here -->
     </div>
     
