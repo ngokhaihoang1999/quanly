@@ -107,8 +107,9 @@ function renderProfileCard(p, opts = {}) {
 
   // Data fields
   const nddStr = opts.ndd || p.ndd_staff_code || '';
-  const tvvStr = opts.tvv || '';
-  const gvbbStr = opts.gvbb || '';
+  const tvvStr = opts.tvv || p.tvv_staff_code || '';
+  const gvbbStr = opts.gvbb || p.gvbb_staff_code || '';
+  const laStr = opts.la || p.la_staff_code || '';
   const latestStr = opts.latestActivity || '';
 
   // ── Row 1: Name + year (left) — Status badge (right) ──
@@ -124,11 +125,12 @@ function renderProfileCard(p, opts = {}) {
   // ── Dropout note ──
   const dropoutNote = isInactive && p.dropout_reason ? `<div style="font-size:11px;color:${_fs==='pause'?'#9ca3af':'var(--red)'};margin-top:4px;">Lý do: ${p.dropout_reason}</div>` : '';
 
-  // ── Row 3: Roles (NDD / TVV / GVBB) ──
+  // ── Row 3: Roles (NDD / TVV / GVBB / Lá) ──
   const roleParts = [];
   if (nddStr) roleParts.push(`<span><b style="opacity:0.5;">NDD</b> ${nddStr}</span>`);
   if (tvvStr) roleParts.push(`<span><b style="opacity:0.5;">TVV</b> ${tvvStr}</span>`);
   if (gvbbStr) roleParts.push(`<span><b style="opacity:0.5;">GVBB</b> ${gvbbStr}</span>`);
+  if (laStr) roleParts.push(`<span><b style="opacity:0.5;">Lá</b> ${laStr}</span>`);
   const rolesRow = roleParts.length > 0
     ? `<div style="display:flex;gap:4px;font-size:11px;color:var(--text2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${roleParts.join('<span style="opacity:0.3;"> · </span>')}</div>`
     : '';

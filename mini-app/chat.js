@@ -83,6 +83,52 @@ async function loadProfileChat(profileId) {
   }
 }
 
+// Helper to detect if a message is purely a visual media URL (image/video) and doesn't contain other text
+function isPureVisualMedia(text) {
+  if (!text) return false;
+  const trimmed = text.trim();
+  // Check if it is a single URL (no spaces in between)
+  const urlRegex = /^https?:\/\/[^\s<]+$/i;
+  if (!urlRegex.test(trimmed)) return false;
+  
+  const url = trimmed;
+  const isTelegramFile = url.includes('/file/bot') || url.includes('/functions/v1/telegram-bot');
+  let isDocFile = false;
+  let fileName = '';
+  
+  if (url.includes('/functions/v1/telegram-bot')) {
+    try {
+      const urlObj = new URL(url.replace(/&amp;/g, '&'));
+      const nameParam = urlObj.searchParams.get('name');
+      const fileParam = urlObj.searchParams.get('file') || '';
+      fileName = nameParam ? decodeURIComponent(nameParam) : (fileParam.split('/').pop() || '');
+      if (fileParam.includes('documents/') || !/\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileName)) {
+        isDocFile = true;
+      }
+    } catch (e) {}
+  } else {
+    try {
+      const urlObj = new URL(url);
+      fileName = urlObj.pathname.split('/').pop() || '';
+    } catch (e) {}
+  }
+  
+  const isAudio = /\.(mp3|wav|m4a|ogg|aac|opus|flac)$/i.test(fileName) || 
+                  url.includes('/audio/') || 
+                  fileName.includes('voice_message') || 
+                  fileName.includes('voice_note') || 
+                  fileName.includes('audio_record') ||
+                  (url.includes('/telegram-bot') && url.includes('voice'));
+                  
+  const isVideo = (/\.(mp4|webm|ogg|mov|m4v|3gp|quicktime)$/i.test(fileName) || url.includes('/video/')) && !isAudio;
+  const isImage = (/\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || 
+                  isTelegramFile || 
+                  url.includes('imgbb.com') || 
+                  url.includes('postimg.cc')) && !isDocFile && !isVideo && !isAudio;
+                  
+  return (isImage || isVideo) && !isDocFile;
+}
+
 // Add a single chat message to DOM
 function addChatMessageToDOM(msg) {
   const msgArea = document.getElementById('profileChatMessages');
@@ -122,10 +168,14 @@ function addChatMessageToDOM(msg) {
 
   // Determine styling based on category
   let bubbleClass = 'chat-message-bubble';
-  if (isMe) bubbleClass += ' chat-message-bubble--me';
-  if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
-  if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
-  if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
+  if (isPureVisualMedia(msg.message)) {
+    bubbleClass += ' chat-message-bubble--media-only';
+  } else {
+    if (isMe) bubbleClass += ' chat-message-bubble--me';
+    if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
+    if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
+    if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
+  }
 
   const rowClass = isMe ? 'chat-message-row chat-message-row--me' : 'chat-message-row';
 
@@ -1171,8 +1221,31 @@ function showTagSuggestions(query, atIndex) {
   const suggestionsBox = document.getElementById('chatTagSuggestions');
   if (!suggestionsBox) return;
 
+  // Get assigned staff codes for this profile
+  const assignedCodes = new Set();
+  const p = allProfiles.find(x => x.id === currentProfileId);
+  if (p) {
+    if (p.ndd_staff_code) assignedCodes.add(p.ndd_staff_code.trim());
+    if (p.gvbb_staff_code) assignedCodes.add(p.gvbb_staff_code.trim());
+    if (p.tvv_staff_code) {
+      p.tvv_staff_code.split(',').forEach(c => {
+        const code = c.trim();
+        if (code) assignedCodes.add(code);
+      });
+    }
+    if (p.la_staff_code) {
+      p.la_staff_code.split(',').forEach(c => {
+        const code = c.trim();
+        if (code) assignedCodes.add(code);
+      });
+    }
+  }
+
   const q = query.toLowerCase().trim();
   const matches = allStaff.filter(s => {
+    // Only allow if this staff code is assigned to the profile
+    if (!assignedCodes.has(s.staff_code)) return false;
+
     const name = (s.full_name || '').toLowerCase();
     const nickname = (s.nickname || '').toLowerCase();
     const code = (s.staff_code || '').toLowerCase();
@@ -2010,10 +2083,14 @@ function addFloatingChatMessageToDOM(msg) {
   } catch (e) {}
   
   let bubbleClass = 'chat-message-bubble';
-  if (isMe) bubbleClass += ' chat-message-bubble--me';
-  if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
-  if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
-  if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
+  if (isPureVisualMedia(msg.message)) {
+    bubbleClass += ' chat-message-bubble--media-only';
+  } else {
+    if (isMe) bubbleClass += ' chat-message-bubble--me';
+    if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
+    if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
+    if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
+  }
   
   const rowClass = isMe ? 'chat-message-row chat-message-row--me' : 'chat-message-row';
   

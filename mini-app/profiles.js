@@ -9,7 +9,7 @@ async function loadProfiles(force = false) {
     const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(telegram_group_id,fruit_roles(staff_code,role_type))&order=created_at.desc' + semFilter);
     const rawData = await res.json();
     allProfiles = rawData.map(p => {
-      let tvv = [], gvbb = null, nddRole = null;
+      let tvv = [], gvbb = null, nddRole = null, la = [];
       // Sort fruit_groups: real Telegram groups first (has telegram_group_id > -1e12), placeholders last
       const sortedFGs = (p.fruit_groups || []).sort((a, b) => {
         const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
@@ -21,11 +21,13 @@ async function loadProfiles(force = false) {
           if (r.role_type === 'ndd' && !nddRole) nddRole = r.staff_code;
           if (r.role_type === 'tvv') tvv.push(r.staff_code);
           if (r.role_type === 'gvbb' && !gvbb) gvbb = r.staff_code;
+          if (r.role_type === 'la') la.push(r.staff_code);
         });
       });
       p.ndd_staff_code = nddRole || p.ndd_staff_code;
       p.tvv_staff_code = tvv.length ? tvv.join(', ') : '';
       p.gvbb_staff_code = gvbb || '';
+      p.la_staff_code = la.length ? la.join(', ') : '';
       return p;
     });
     renderProfiles(allProfiles);
@@ -83,7 +85,7 @@ async function openProfileById(id, evt, initialTabId) {
       if (!data || !data.length) { showToast('⚠️ Không tìm thấy hồ sơ'); return; }
       p = data[0];
       // Inject roles like loadProfiles does — prioritize real groups
-      let tvv = [], gvbb = null, nddRole = null;
+      let tvv = [], gvbb = null, nddRole = null, la = [];
       const sortedFGs = (p.fruit_groups || []).sort((a, b) => {
         const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
         const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
@@ -94,11 +96,13 @@ async function openProfileById(id, evt, initialTabId) {
           if (r.role_type === 'ndd' && !nddRole) nddRole = r.staff_code;
           if (r.role_type === 'tvv') tvv.push(r.staff_code);
           if (r.role_type === 'gvbb' && !gvbb) gvbb = r.staff_code;
+          if (r.role_type === 'la') la.push(r.staff_code);
         });
       });
       p.ndd_staff_code = nddRole || p.ndd_staff_code;
       p.tvv_staff_code = tvv.length ? tvv.join(', ') : '';
       p.gvbb_staff_code = gvbb || '';
+      p.la_staff_code = la.length ? la.join(', ') : '';
     } catch(e) { showToast('❌ Lỗi mở hồ sơ'); return; }
   }
   openProfile(p, cardEl, initialTabId);
@@ -134,7 +138,7 @@ async function openProfile(p, cardEl, initialTabId) {
   const pos2 = getCurrentPosition();
 
   // Fetch roles + latest activity cùng 1 lần (giảm từ 2 round-trips xuống 1)
-  let rolesInfo = {ndd:'', tvv:[], gvbb:''};
+  let rolesInfo = {ndd:'', tvv:[], gvbb:'', la:[]};
   let hasRealBBGroup = false;
   let realGroupId = null;
   let realGroupTitle = '';
@@ -142,7 +146,7 @@ async function openProfile(p, cardEl, initialTabId) {
   let latestInfo = '';
   try {
     const [fgRes, rRes, sRes, dkRes] = await Promise.all([
-      sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(staff_code,role_type,display_name)`),
+      sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(id,staff_code,role_type,display_name)`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=session_number,tool,created_at&order=created_at.desc&limit=1`),
       sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
@@ -164,7 +168,8 @@ async function openProfile(p, cardEl, initialTabId) {
       }
       (fg.fruit_roles||[]).forEach(r => {
         if (r.role_type==='ndd' && !rolesInfo.ndd) rolesInfo.ndd = r.staff_code;
-        if (r.role_type==='tvv') rolesInfo.tvv.push({ code: r.staff_code, displayName: r.display_name || null });
+        if (r.role_type==='tvv') rolesInfo.tvv.push({ id: r.id, code: r.staff_code, displayName: r.display_name || null });
+        if (r.role_type==='la') rolesInfo.la.push({ id: r.id, code: r.staff_code, displayName: r.display_name || null });
         if (r.role_type==='gvbb' && !rolesInfo.gvbb) {
           rolesInfo.gvbb = r.staff_code;
           rolesInfo.gvbbDisplayName = r.display_name || null;
@@ -190,18 +195,21 @@ async function openProfile(p, cardEl, initialTabId) {
   const gvbbDisplay = gvbbCode
     ? ((typeof gvbbCode === 'string' && gvbbCode.startsWith('tg:')) ? (rolesInfo.gvbbDisplayName || gvbbCode.replace('tg:','')) : getStaffLabel(gvbbCode))
     : '—';
+  const laDisplay = rolesInfo.la.length
+    ? rolesInfo.la.map(t => (t.code && typeof t.code === 'string' && t.code.startsWith('tg:')) ? (t.displayName || t.code.replace('tg:','')) : getStaffLabel(t.code || '')).join(', ') : '—';
 
   // Per-profile role of current user
   const isProfileNDD  = (p.ndd_staff_code === myCode2) || (rolesInfo.ndd === myCode2);
   const isProfileTVV  = rolesInfo.tvv.some(t => t.code === myCode2);
   const isProfileGVBB = rolesInfo.gvbb === myCode2;
+  const isProfileLa   = rolesInfo.la.some(t => t.code === myCode2);
   const hasFullEdit   = hasPermission('edit_profile') || isProfileNDD;
   const canEditTV     = hasFullEdit || isProfileTVV;
   const canEditBB     = hasFullEdit || isProfileGVBB;
   const canAccessTuDuy = true;
   // Store for use in other functions
-  window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, hasFullEdit, canEditTV, canEditBB };
-  window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay };
+  window._profileRole = { isNDD: isProfileNDD, isTVV: isProfileTVV, isGVBB: isProfileGVBB, isLa: isProfileLa, hasFullEdit, canEditTV, canEditBB };
+  window._rolesDisplay = { ndd: nddDisplay, tvv: tvvDisplay, gvbb: gvbbDisplay, la: laDisplay };
 
   // Warning: phase tu_van/BB/center but no real Telegram group
   const bbNoGroupWarning = ['tu_van','bb','center'].includes(ph) && !hasRealBBGroup
@@ -281,9 +289,10 @@ async function openProfile(p, cardEl, initialTabId) {
       <!-- Bottom: roles grid + latest -->
       <div style="border-top:1px solid var(--border);padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px;">
         <div><span style="color:var(--text3);">NDD:</span> ${nddCode ? `<b onclick="showStaffCard('${nddCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</b>` : `<b>${nddDisplay||'---'}</b>`}</div>
-        <div><span style="color:var(--text3);">TVV:</span> ${tvvCode ? (tvvCode.startsWith('tg:') ? `<b style="color:var(--text1);" title="Ngoài hệ thống">${tvvDisplay}</b>` : `<b onclick="showStaffCard('${tvvCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${tvvDisplay}</b>`) : `<b>${tvvDisplay||'---'}</b>`}${hasFullEdit ? ` <span onclick="event.stopPropagation();promptEditRole('${p.id}','tvv')" style="cursor:pointer;font-size:12px;" title="Đổi TVV">✏️</span>` : ''}</div>
         <div><span style="color:var(--text3);">GVBB:</span> ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<b style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</b>` : `<b onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</b>`) : `<b>${gvbbDisplay||'---'}</b>`}${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? ` <span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer;font-size:12px;" title="Đổi GVBB">✏️</span>` : ''}</div>
-        ${latestInfo ? `<div style="color:var(--accent);font-size:11px;">⏱ ${latestInfo}</div>` : '<div></div>'}
+        <div style="grid-column: span 2; display:flex; align-items:center; flex-wrap:wrap; margin-top:2px;"><span style="color:var(--text3); margin-right:4px;">TVV:</span> ${renderRoleBadges(p.id, 'tvv', rolesInfo.tvv, hasFullEdit)}</div>
+        <div style="grid-column: span 2; display:flex; align-items:center; flex-wrap:wrap; margin-top:2px;"><span style="color:var(--text3); margin-right:4px;">Lá:</span> ${renderRoleBadges(p.id, 'la', rolesInfo.la, hasFullEdit)}</div>
+        ${latestInfo ? `<div style="grid-column: span 2; color:var(--accent);font-size:11px;margin-top:4px;">⏱ ${latestInfo}</div>` : ''}
       </div>
       </div>
     </div>`;
@@ -1063,6 +1072,130 @@ async function promptEditRole(profileId, roleType) {
       overlay.remove();
       showToast(`✅ Đã đổi ${label}`);
       // Clear GET cache to prevent stale data on refresh
+      if (typeof _getCache !== 'undefined') _getCache.clear();
+      await _refreshCurrentProfile();
+    } catch(e) { showToast('❌ Lỗi'); console.error(e); }
+  };
+}
+
+// ── Render Premium Dynamic Multi-Role Badges ──
+function renderRoleBadges(profileId, roleType, rolesList, hasFullEdit) {
+  const addLabel = roleType === 'tvv' ? 'Thêm TVV' : 'Thêm Lá';
+  if (!rolesList || rolesList.length === 0) {
+    return `<span style="color:var(--text3); font-style:italic;">Chưa phân vai</span> ${hasFullEdit ? `<span onclick="event.stopPropagation();promptAddRole('${profileId}','${roleType}')" style="cursor:pointer;font-size:11px;color:var(--accent);font-weight:700;margin-left:6px;" title="${addLabel}">➕ Thêm</span>` : ''}`;
+  }
+  
+  const badgesHtml = rolesList.map(r => {
+    const isTemp = r.code && typeof r.code === 'string' && r.code.startsWith('tg:');
+    const displayName = isTemp ? (r.displayName || r.code.replace('tg:','')) : getStaffLabel(r.code || '');
+    const titleText = isTemp ? 'Ngoài hệ thống (Tạm)' : 'Xem hồ sơ TĐ';
+    const clickAction = isTemp ? '' : `onclick="event.stopPropagation();showStaffCard('${r.code}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted;"`;
+    
+    return `
+      <span class="role-pill" style="display:inline-flex; align-items:center; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:2px 8px; font-size:11px; margin-right:4px; margin-bottom:4px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <span ${clickAction} title="${titleText}" style="font-weight:600;">${displayName}</span>
+        ${hasFullEdit ? `<span onclick="event.stopPropagation();deleteRoleById('${r.id}')" style="cursor:pointer;margin-left:6px;color:var(--red);font-weight:bold;font-size:11px; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'" title="Xoá vai trò này">✕</span>` : ''}
+      </span>
+    `;
+  }).join('');
+  
+  const addBtnHtml = hasFullEdit ? `<span onclick="event.stopPropagation();promptAddRole('${profileId}','${roleType}')" style="cursor:pointer;font-size:11px;color:var(--accent);font-weight:700;margin-left:4px;display:inline-flex;align-items:center;gap:2px;" title="${addLabel}">➕ Thêm</span>` : '';
+  
+  return `<div style="display:inline-flex; flex-wrap:wrap; align-items:center;">${badgesHtml}${addBtnHtml}</div>`;
+}
+
+// ── Delete Role Record directly by ID ──
+async function deleteRoleById(roleId) {
+  const ok = typeof showConfirmAsync === 'function'
+    ? await showConfirmAsync('❓ Bạn có chắc chắn muốn xoá vai trò này khỏi hồ sơ?')
+    : confirm('❓ Bạn có chắc chắn muốn xoá vai trò này khỏi hồ sơ?');
+  if (!ok) return;
+  
+  try {
+    const res = await sbFetch(`/rest/v1/fruit_roles?id=eq.${roleId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      showToast('❌ Lỗi xoá vai trò');
+      return;
+    }
+    showToast('✅ Đã xoá vai trò');
+    if (typeof _getCache !== 'undefined') _getCache.clear();
+    await _refreshCurrentProfile();
+  } catch(e) {
+    console.error(e);
+    showToast('❌ Lỗi xoá vai trò');
+  }
+}
+
+// ── Interactive Modal to Add new TVV or Lá ──
+async function promptAddRole(profileId, roleType) {
+  const label = roleType === 'tvv' ? 'TVV' : 'Lá (Người hỗ trợ)';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `<div style="background:var(--surface,#fff);border-radius:16px;padding:24px;min-width:300px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text1,#333);">➕ Thêm ${label}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Nhập mã TĐ hoặc tên ${roleType === 'tvv' ? 'TVV' : 'Lá'} mới:</div>
+    <input type="text" id="_addRoleInput" data-list="staffSuggest" placeholder="Mã TĐ hoặc tên..."
+      style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface2,#f5f5f5);color:var(--text1,#333);font-size:14px;"/>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+      <button id="_addRoleCancel" style="padding:8px 16px;border-radius:8px;background:var(--surface2,#eee);border:1px solid var(--border,#ddd);color:var(--text2,#666);font-size:13px;cursor:pointer;">Hủy</button>
+      <button id="_addRoleSave" style="padding:8px 16px;border-radius:8px;background:var(--accent,#3b82f6);border:none;color:white;font-size:13px;font-weight:600;cursor:pointer;">Thêm</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  
+  // Focus the input
+  setTimeout(() => {
+    const inp = document.getElementById('_addRoleInput');
+    if (inp) inp.focus();
+  }, 100);
+
+  overlay.querySelector('#_addRoleCancel').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#_addRoleSave').onclick = async () => {
+    const raw = document.getElementById('_addRoleInput').value.trim();
+    if (!raw) { showToast('⚠️ Nhập tên hoặc mã TĐ'); return; }
+    try {
+      const parsedCode = getStaffCodeFromInput('_addRoleInput');
+      const registered = isStaffRegistered(parsedCode);
+      const staffCode = registered ? parsedCode : `tg:${raw}`;
+      const displayName = registered ? null : raw;
+      if (!registered) {
+        const ok = typeof showConfirmAsync === 'function'
+          ? await showConfirmAsync(`⚠️ "${raw}" chưa đăng ký trong hệ thống.\n\nVẫn tiếp tục?`)
+          : confirm(`⚠️ "${raw}" chưa đăng ký.\n\nVẫn tiếp tục?`);
+        if (!ok) return;
+      }
+      // Find or create fruit_group
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id`);
+      const fgs = await fgRes.json();
+      let fgId = fgs[0]?.id;
+      if (!fgId) {
+        const newFgRes = await sbFetch('/rest/v1/fruit_groups', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({
+          telegram_group_id: null, profile_id: profileId, level: 'tu_van'
+        })});
+        fgId = (await newFgRes.json())[0]?.id;
+      }
+      if (!fgId) { showToast('❌ Lỗi tạo group'); return; }
+      
+      // Check if duplicate role already exists
+      const checkRes = await sbFetch(`/rest/v1/fruit_roles?fruit_group_id=eq.${fgId}&role_type=eq.${roleType}&staff_code=eq.${staffCode}`);
+      const checks = await checkRes.json();
+      if (checks && checks.length > 0) {
+        showToast(`⚠️ Nhân sự này đã có vai trò ${roleType === 'tvv' ? 'TVV' : 'Lá'}`);
+        return;
+      }
+
+      // Insert new role
+      const roleData = { fruit_group_id: fgId, staff_code: staffCode, role_type: roleType, assigned_by: getEffectiveStaffCode() };
+      if (displayName) roleData.display_name = displayName;
+      const insertRes = await sbFetch('/rest/v1/fruit_roles', { method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify(roleData) });
+      if (!insertRes.ok) {
+        const errText = await insertRes.text();
+        console.error('Role insert failed:', errText);
+        showToast('❌ Lỗi lưu role'); return;
+      }
+      overlay.remove();
+      showToast(`✅ Đã thêm ${roleType === 'tvv' ? 'TVV' : 'Lá'}`);
       if (typeof _getCache !== 'undefined') _getCache.clear();
       await _refreshCurrentProfile();
     } catch(e) { showToast('❌ Lỗi'); console.error(e); }
