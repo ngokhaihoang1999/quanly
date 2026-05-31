@@ -567,6 +567,7 @@ function backToList() {
   document.documentElement.classList.remove('detail-view-open');
   document.getElementById('fabBtn').style.display = (activeTab==='unit'||activeTab==='personal')?'flex':'none';
   currentProfileId = null;
+  window._lastLoadedProfileChatId = null;
 }
 function switchFormTab(el, cardId) {
   if (typeof TabIndicator !== 'undefined') TabIndicator.moveTo(el);

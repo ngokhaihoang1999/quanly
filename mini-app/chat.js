@@ -47,6 +47,18 @@ async function loadProfileChat(profileId) {
   const searchInput = document.getElementById('cjMainChatSearchInput');
   if (searchInput) searchInput.value = '';
 
+  // Smart caching check: if we are switching back to the same chat tab and it's already loaded, just mark read & scroll
+  if (window._lastLoadedProfileChatId === profileId && msgArea.children.length > 0 && !msgArea.innerHTML.includes('Đang tải')) {
+    try {
+      await markChatAsRead(profileId);
+      updateSeenIndicators();
+      msgArea.scrollTop = msgArea.scrollHeight;
+    } catch(e) {
+      console.warn('loadProfileChat cached reentry error:', e);
+    }
+    return;
+  }
+
   msgArea.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">⌛ Đang tải cuộc thảo luận...</div>';
   
   try {
@@ -90,6 +102,9 @@ async function loadProfileChat(profileId) {
 
     // Update chat tab badge
     updateChatTabBadge();
+
+    // Cache the last loaded profile ID
+    window._lastLoadedProfileChatId = profileId;
 
     // Bind tag autocomplete once
     const input = document.getElementById('profileChatInput');

@@ -259,23 +259,23 @@ async function openProfile(p, cardEl, initialTabId) {
 
   const canToggleStatus = hasFullEdit || isProfileNDD;
   const statusBtn = canToggleStatus
-    ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`
-    : `<span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;background:${statusBg};color:white;">${statusText}</span>`;
+    ? `<span onclick="event.stopPropagation();toggleFruitStatus('${p.id}','${fStatus}')" style="cursor:pointer;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${statusBg};color:white;">${statusText}</span>`
+    : `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${statusBg};color:white;">${statusText}</span>`;
   const reasonHtml = (isInactive && p.dropout_reason)
-    ? `<div style="font-size:11px;color:var(--red);padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-top:4px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
+    ? `<div style="font-size:10px;color:var(--red);padding:4px 8px;background:rgba(248,113,113,0.1);border-radius:4px;margin-top:4px;"><b>Lý do:</b> ${p.dropout_reason}</div>` : '';
 
   // KT toggle: NDD, GVBB hoặc full edit
   const isKT = p.is_kt_opened === true;
   const showKT = ['bb', 'center', 'completed'].includes(ph);
   const canToggleKT = (hasFullEdit || isProfileGVBB) && !isInactive;
   const ktHtml = showKT
-    ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
+    ? `<span ${canToggleKT ? `onclick="event.stopPropagation();toggleKTStatus('${p.id}', ${!isKT})"` : ''} style="${canToggleKT?'':'opacity:0.6;'}cursor:${canToggleKT?'pointer':'default'};font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${isKT ? 'var(--green)' : '#f59e0b'};color:white;">${isKT ? '📖 Đã mở KT' : '📕 Chưa mở KT'}</span>`
     : '';
 
   // ĐK Center tag: show when milestone dky_center exists AND phase BB/center/completed
   const showDKCenter = window._hasDKCenter && ['bb', 'center', 'completed'].includes(ph);
   const dkCenterHtml = showDKCenter
-    ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:#22c55e;color:white;">📋 ĐK Center</span>`
+    ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:#22c55e;color:white;">📋 ĐK Center</span>`
     : '';
 
   // Avatar: animated style system
@@ -284,31 +284,31 @@ async function openProfile(p, cardEl, initialTabId) {
   const avatarLetter = getNameInitial(p.full_name);
   const avatarHtml = typeof renderAnimatedAvatar === 'function'
     ? renderAnimatedAvatar(avatarLetter, avatarRaw, 'md')
-    : `<div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#ec4899);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:white;">${avatarLetter}</div>`;
+    : `<div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ec4899);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;">${avatarLetter}</div>`;
   const avatarClick = canEditColor ? `onclick="openAvatarStylePicker('${p.id}','${encodeURIComponent(avatarRaw)}')"` : '';
 
   // Khoá/Mở Khai Giảng - Tag Semester
   const semName = p.semester_id ? ((typeof allSemesters !== 'undefined' && allSemesters && typeof allSemesters.find === 'function') ? (allSemesters.find(s => s.id === p.semester_id)?.name || 'Kỳ ẩn') : 'Kỳ ẩn') : 'Chưa có kỳ (Kỳ cũ)';
   const canEditSem = hasPermission('edit_profile') || hasPermission('manage_semester') || isProfileNDD;
-  const semTag = `<span ${canEditSem ? `onclick="event.stopPropagation();promptChangeSemester('${p.id}', '${p.semester_id||''}')" style="cursor:pointer;"` : 'style="opacity:0.8;"'} class="semester-badge" title="Nhấn để Đổi Khai Giảng cho Trái này">📅 ${semName}</span>`;
+  const semTag = `<span ${canEditSem ? `onclick="event.stopPropagation();promptChangeSemester('${p.id}', '${p.semester_id||''}')" style="cursor:pointer;"` : 'style="opacity:0.8;"'} class="semester-badge" style="font-size:10px; padding:2px 8px; border-radius:10px;" title="Nhấn để Đổi Khai Giảng cho Trái này">📅 ${semName}</span>`;
 
   // ONE unified card with premium layout
   // TVV progressive visibility rows
   let tvvTimelineRowsHtml = `
     <!-- TVV Row 1 -->
     <div onclick="promptEditTVVSession('${p.id}', 1, '${tvv1Code||''}')" 
-         style="cursor:pointer; padding:10px 14px; border-radius:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:12px;
+         style="cursor:pointer; padding:6px 10px; border-radius:8px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:8px;
                 ${tvv1Code ? 'background:rgba(124,106,247,0.04); border:1px solid rgba(124,106,247,0.25);' : 'background:transparent; border:1px dashed var(--border); opacity:0.85;'}"
          onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv1Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
-      <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
-        <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 1</span>
-        <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv1Display}">
+      <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+        <span style="font-size:9.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:2px 6px; border-radius:4px; flex-shrink:0;">Lần 1</span>
+        <div style="font-size:12px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv1Display}">
           ${tvv1Display}
         </div>
-        ${tvv1 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv1.tool || 'Enneagram'}</span>` : ''}
+        ${tvv1 ? `<span style="font-size:8.5px; color:var(--text3); background:var(--surface2); padding:1px 4px; border-radius:3px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv1.tool || 'Enneagram'}</span>` : ''}
       </div>
       <div style="display:flex; align-items:center; flex-shrink:0;">
-        ${tvv1Code ? '<span style="color:var(--accent); font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:10px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
+        ${tvv1Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:8px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:9px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:8px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
       </div>
     </div>
   `;
@@ -317,18 +317,18 @@ async function openProfile(p, cardEl, initialTabId) {
     tvvTimelineRowsHtml += `
       <!-- TVV Row 2 -->
       <div onclick="promptEditTVVSession('${p.id}', 2, '${tvv2Code||''}')" 
-           style="cursor:pointer; padding:10px 14px; border-radius:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:12px;
+           style="cursor:pointer; padding:6px 10px; border-radius:8px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:8px;
                   ${tvv2Code ? 'background:rgba(124,106,247,0.04); border:1px solid rgba(124,106,247,0.25);' : 'background:transparent; border:1px dashed var(--border); opacity:0.85;'}"
            onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv2Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
-        <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
-          <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 2</span>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv2Display}">
+        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+          <span style="font-size:9.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:2px 6px; border-radius:4px; flex-shrink:0;">Lần 2</span>
+          <div style="font-size:12px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv2Display}">
             ${tvv2Display}
           </div>
-          ${tvv2 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv2.tool || 'Enneagram'}</span>` : ''}
+          ${tvv2 ? `<span style="font-size:8.5px; color:var(--text3); background:var(--surface2); padding:1px 4px; border-radius:3px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv2.tool || 'Enneagram'}</span>` : ''}
         </div>
         <div style="display:flex; align-items:center; flex-shrink:0;">
-          ${tvv2Code ? '<span style="color:var(--accent); font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:10px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
+          ${tvv2Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:8px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:9px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:8px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
         </div>
       </div>
     `;
@@ -338,100 +338,100 @@ async function openProfile(p, cardEl, initialTabId) {
     tvvTimelineRowsHtml += `
       <!-- TVV Row 3 -->
       <div onclick="promptEditTVVSession('${p.id}', 3, '${tvv3Code||''}')" 
-           style="cursor:pointer; padding:10px 14px; border-radius:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:12px;
+           style="cursor:pointer; padding:6px 10px; border-radius:8px; transition:all 0.2s; display:flex; align-items:center; justify-content:space-between; gap:8px;
                   ${tvv3Code ? 'background:rgba(124,106,247,0.04); border:1px solid rgba(124,106,247,0.25);' : 'background:transparent; border:1px dashed var(--border); opacity:0.85;'}"
            onmouseover="this.style.transform='translateY(-0.5px)'; this.style.borderColor='var(--accent)'" onmouseout="this.style.transform='none'; this.style.borderColor='${tvv3Code ? 'rgba(124,106,247,0.25)' : 'var(--border)'}'">
-        <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
-          <span style="font-size:10.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:3px 8px; border-radius:6px; flex-shrink:0;">Lần 3</span>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv3Display}">
+        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+          <span style="font-size:9.5px; color:var(--text3); font-weight:800; text-transform:uppercase; background:var(--surface2); padding:2px 6px; border-radius:4px; flex-shrink:0;">Lần 3</span>
+          <div style="font-size:12px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4; flex:1;" title="${tvv3Display}">
             ${tvv3Display}
           </div>
-          ${tvv3 ? `<span style="font-size:9.5px; color:var(--text3); background:var(--surface2); padding:2px 6px; border-radius:4px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv3.tool || 'Enneagram'}</span>` : ''}
+          ${tvv3 ? `<span style="font-size:8.5px; color:var(--text3); background:var(--surface2); padding:1px 4px; border-radius:3px; font-weight:600; opacity:0.85; flex-shrink:0; max-width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">🛠️ ${tvv3.tool || 'Enneagram'}</span>` : ''}
         </div>
         <div style="display:flex; align-items:center; flex-shrink:0;">
-          ${tvv3Code ? '<span style="color:var(--accent); font-size:10px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:10px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:9px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
+          ${tvv3Code ? '<span style="color:var(--accent); font-size:9px; font-weight:800; display:flex; align-items:center; gap:4px;">🟢 <span style="font-size:8px; font-weight:600; text-transform:uppercase; color:var(--accent);">Đã có</span></span>' : '<span style="color:var(--text3); font-size:9px; display:flex; align-items:center; gap:4px;">⚪ <span style="font-size:8px; font-weight:600; text-transform:uppercase; color:var(--text3);">Chưa có</span></span>'}
         </div>
       </div>
     `;
   }
 
   document.getElementById('profileSummaryCard').innerHTML = `
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:16px; position:relative; overflow:hidden;">
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; box-shadow:0 4px 20px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:10px; position:relative; overflow:hidden;">
       <!-- Premium card gradient background reflection -->
       <div style="position:absolute; top:-50px; right:-50px; width:150px; height:150px; background:radial-gradient(circle, rgba(124,106,247,0.1) 0%, transparent 70%); pointer-events:none;"></div>
       
       <!-- Top section: avatar + name + status badges -->
-      <div class="profile-summary-header" style="display:flex; align-items:center; gap:16px; position:relative; width:100%;">
+      <div class="profile-summary-header" style="display:flex; align-items:center; gap:12px; position:relative; width:100%;">
         <div style="cursor:${canEditColor?'pointer':'default'}; flex-shrink:0;" ${avatarClick}>
           ${avatarHtml}
         </div>
-        <div class="profile-summary-header-info" style="flex:1; min-width:0; padding-right:88px;">
-          <div style="font-size:20px; font-weight:800; margin-bottom:6px; color:var(--text1); word-break:break-word; line-height:1.2; letter-spacing:-0.3px;">${p.full_name}</div>
+        <div class="profile-summary-header-info" style="flex:1; min-width:0; padding-right:76px !important;">
+          <div style="font-size:16px; font-weight:700; margin-bottom:3px; color:var(--text1); word-break:break-word; line-height:1.2; letter-spacing:-0.3px;">${p.full_name}</div>
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             ${statusBtn}
-            <span style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:12px; background:${PHASE_COLORS[ph]}; color:white; box-shadow:0 2px 6px rgba(0,0,0,0.08);">${PHASE_LABELS[ph]||ph}</span>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:${PHASE_COLORS[ph]}; color:white; box-shadow:0 2px 6px rgba(0,0,0,0.08);">${PHASE_LABELS[ph]||ph}</span>
             ${ktHtml}
             ${dkCenterHtml}
             ${semTag}
-            ${p.birth_year ? `<span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; background:var(--surface2); color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; background:var(--surface2); color:var(--text2);">${p.gender}</span>` : '')}
+            ${p.birth_year ? `<span style="font-size:10px; font-weight:600; padding:2px 6px; border-radius:6px; background:var(--surface2); color:var(--text2);">${p.birth_year}${p.gender ? ' · '+p.gender : ''}</span>` : (p.gender ? `<span style="font-size:10px; font-weight:600; padding:2px 6px; border-radius:6px; background:var(--surface2); color:var(--text2);">${p.gender}</span>` : '')}
           </div>
           ${reasonHtml}
           ${bbNoGroupWarning}
         </div>
-        <div class="profile-summary-actions" style="position:absolute; top:0; right:0; display:flex; gap:8px; margin:0;">
+        <div class="profile-summary-actions" style="position:absolute; top:0; right:0; display:flex; gap:6px; margin:0;">
           <button data-share-id="${p.id}" data-share-name="${(p.full_name||'').replace(/"/g,'&quot;')}" onclick="shareProfile(this.dataset.shareId, this.dataset.shareName)" title="Chia sẻ hồ sơ" style="
-            width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+            width:30px; height:30px; border-radius:50%; border:1px solid var(--border);
             background:var(--accent); color:white; cursor:pointer;
             display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0; box-shadow:0 3px 10px rgba(124, 106, 247, 0.2);
             " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
           <button id="profileRefreshBtn" onclick="refreshProfileInPlace()" title="Đồng bộ dữ liệu mới nhất" style="
-            width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
-            background:var(--surface2); color:var(--text2); font-size:16px; cursor:pointer;
+            width:30px; height:30px; border-radius:50%; border:1px solid var(--border);
+            background:var(--surface2); color:var(--text2); font-size:13px; cursor:pointer;
             display:flex; align-items:center; justify-content:center; transition:all 0.2s; padding:0;
             " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">🔄</button>
         </div>
       </div>
 
       <!-- Middle: GVBB & NDD elegantly grouped with Left-Border accent highlights -->
-      <div class="profile-summary-grid" style="display:flex; flex-wrap:wrap; gap:16px; border-top:1px solid var(--border); padding-top:14px;">
+      <div class="profile-summary-grid" style="display:flex; flex-wrap:wrap; gap:10px; border-top:1px solid var(--border); padding-top:10px;">
         <!-- NDD Section -->
-        <div class="profile-summary-col" style="border-left:3px solid var(--green); padding-left:12px; flex:1 0 180px; min-width:180px;">
-          <div style="margin-bottom:6px;">
-            <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(34,197,94,0.12); color:#22c55e; padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(34,197,94,0.2);">NDD</span>
+        <div class="profile-summary-col" style="border-left:3px solid var(--green); padding-left:8px; flex:1 0 180px; min-width:180px;">
+          <div style="margin-bottom:4px;">
+            <span style="font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(34,197,94,0.12); color:#22c55e; padding:1px 6px; border-radius:4px; display:inline-block; border:1px solid rgba(34,197,94,0.2);">NDD</span>
           </div>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
+          <div style="font-size:12px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
             ${nddCode ? `<span onclick="showStaffCard('${nddCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${nddDisplay}</span>` : `<span style="color:var(--text3);">${nddDisplay||'Chưa có'}</span>`}
           </div>
         </div>
 
         <!-- GVBB Section -->
-        <div class="profile-summary-col" style="border-left:3px solid var(--accent); padding-left:12px; position:relative; flex:1 0 180px; min-width:180px;">
-          <div style="margin-bottom:6px; display:flex; align-items:center; gap:8px;">
-            <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(99,102,241,0.12); color:var(--accent); padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(99,102,241,0.2);">GVBB</span>
-            ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:10px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
+        <div class="profile-summary-col" style="border-left:3px solid var(--accent); padding-left:8px; position:relative; flex:1 0 180px; min-width:180px;">
+          <div style="margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            <span style="font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(99,102,241,0.12); color:var(--accent); padding:1px 6px; border-radius:4px; display:inline-block; border:1px solid rgba(99,102,241,0.2);">GVBB</span>
+            ${hasFullEdit && ['tu_van','bb','center','completed'].includes(ph) ? `<span onclick="event.stopPropagation();promptEditRole('${p.id}','gvbb')" style="cursor:pointer; font-size:9px; opacity:0.8; transition:all 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" title="Đổi GVBB">✏️</span>` : ''}
           </div>
-          <div style="font-size:13px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
+          <div style="font-size:12px; font-weight:700; color:var(--text1); white-space:normal; word-break:break-word; line-height:1.4;">
             ${gvbbCode ? (gvbbCode.startsWith('tg:') ? `<span style="color:var(--text1);" title="Ngoài hệ thống">${gvbbDisplay}</span>` : `<span onclick="showStaffCard('${gvbbCode}')" style="cursor:pointer; color:var(--accent); text-decoration:underline dotted;" title="Xem hồ sơ TĐ">${gvbbDisplay}</span>`) : `<span style="color:var(--text3);">${gvbbDisplay||'Chưa có'}</span>`}
           </div>
         </div>
       </div>
 
       <!-- Bottom: TVV timeline vertical stack -->
-      <div style="border-top:1px solid var(--border); padding-top:14px; display:flex; flex-direction:column; gap:8px;">
-        <div style="margin-bottom:4px;">
-          <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(168,85,247,0.12); color:#a855f7; padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(168,85,247,0.2);">TVV</span>
+      <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; flex-direction:column; gap:6px;">
+        <div style="margin-bottom:2px;">
+          <span style="font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(168,85,247,0.12); color:#a855f7; padding:1px 6px; border-radius:4px; display:inline-block; border:1px solid rgba(168,85,247,0.2);">TVV</span>
         </div>
-        <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
           ${tvvTimelineRowsHtml}
         </div>
       </div>
 
       <!-- Bottom: Lá (Support) section -->
-      <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:6px;">
-        <div style="margin-bottom:4px;">
-          <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(20,184,166,0.12); color:#14b8a6; padding:3px 8px; border-radius:6px; display:inline-block; border:1px solid rgba(20,184,166,0.2);">Lá</span>
+      <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; flex-direction:column; gap:4px;">
+        <div style="margin-bottom:2px;">
+          <span style="font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; background:rgba(20,184,166,0.12); color:#14b8a6; padding:1px 6px; border-radius:4px; display:inline-block; border:1px solid rgba(20,184,166,0.2);">Lá</span>
         </div>
         <div>
           ${renderRoleBadges(p.id, 'la', rolesInfo.la, hasFullEdit)}
@@ -440,7 +440,7 @@ async function openProfile(p, cardEl, initialTabId) {
 
       <!-- Latest Activity Footer -->
       ${latestInfo ? `
-        <div style="border-top:1px solid var(--border); padding-top:10px; display:flex; align-items:flex-start; gap:8px; font-size:11px; color:var(--accent); font-weight:600; flex-wrap:wrap;">
+        <div style="border-top:1px solid var(--border); padding-top:8px; display:flex; align-items:flex-start; gap:8px; font-size:10px; color:var(--accent); font-weight:600; flex-wrap:wrap;">
           <span style="white-space:nowrap;">⏱️ Hoạt động gần nhất:</span>
           <span style="flex:1; min-width:120px; white-space:normal; word-break:break-word; line-height:1.4;">${latestInfo}</span>
         </div>
