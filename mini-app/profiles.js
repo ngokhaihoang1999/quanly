@@ -313,7 +313,7 @@ async function openProfile(p, cardEl, initialTabId) {
     </div>
   `;
 
-  if (tvv1Code || tvv2Code) {
+  if (tvv2) {
     tvvTimelineRowsHtml += `
       <!-- TVV Row 2 -->
       <div onclick="promptEditTVVSession('${p.id}', 2, '${tvv2Code||''}')" 
@@ -334,7 +334,7 @@ async function openProfile(p, cardEl, initialTabId) {
     `;
   }
 
-  if ((tvv1Code && tvv2Code) || tvv3Code) {
+  if (tvv3) {
     tvvTimelineRowsHtml += `
       <!-- TVV Row 3 -->
       <div onclick="promptEditTVVSession('${p.id}', 3, '${tvv3Code||''}')" 
@@ -1355,6 +1355,11 @@ async function promptAddRole(profileId, roleType) {
 
 // ── Inline TVV Editor for Timeline Sessions ──
 async function promptEditTVVSession(profileId, sessionNumber, currentTvvCode) {
+  if (!currentTvvCode || !currentTvvCode.trim()) {
+    showToast(`⚠️ Cần Chốt TV lần ${sessionNumber} trong tab Giai đoạn trước!`);
+    return;
+  }
+
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
   
@@ -1420,17 +1425,9 @@ async function promptEditTVVSession(profileId, sessionNumber, currentTvvCode) {
           body: JSON.stringify({ tvv_staff_code: staffCode })
         });
       } else {
-        // INSERT
-        await sbFetch('/rest/v1/consultation_sessions', {
-          method: 'POST',
-          body: JSON.stringify({
-            profile_id: profileId,
-            session_number: sessionNumber,
-            tool: 'Enneagram',
-            tvv_staff_code: staffCode,
-            created_by: getEffectiveStaffCode()
-          })
-        });
+        showToast(`⚠️ Cần Chốt TV lần ${sessionNumber} trong tab Giai đoạn trước!`);
+        overlay.remove();
+        return;
       }
       
       // Sync permissions trigger
