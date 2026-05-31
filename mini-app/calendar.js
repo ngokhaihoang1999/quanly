@@ -296,14 +296,16 @@ function renderCalendarGrid() {
     if (isSelected) cls += ' cal-selected';
     
     const parts = [];
-    // TV sessions
-    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv').length;
+    // Helper: check if event is a BC reminder (old events may still have chot_tv/hoc_bb type)
+    const _isBCReminder = e => e.event_type === 'reminder' || (e.title && e.title.includes('Viết BC'));
+    // TV sessions (exclude BC reminders with old type)
+    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv' && !_isBCReminder(e)).length;
     if (tvCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#8b5cf6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tvCount} ca TV</span>`);
-    // BB sessions
-    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb').length;
+    // BB sessions (exclude BC reminders with old type)
+    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb' && !_isBCReminder(e)).length;
     if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
-    // Reminders (nhắc viết BC TV/BB — separate event_type)
-    const reminderCount = dayEvents.filter(e => e.event_type === 'reminder').length;
+    // Reminders (new type 'reminder' + old events with 'Viết BC' in title)
+    const reminderCount = dayEvents.filter(e => _isBCReminder(e)).length;
     if (reminderCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#f59e0b;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${reminderCount} nhắc nhở</span>`);
     // Custom events
     const customEvents = dayEvents.filter(e => e.event_type === 'custom');
@@ -349,22 +351,28 @@ function renderCalendarDayEvents(date) {
   // Events section
   if (dayEvents.length > 0) {
     html += dayEvents.map(ev => {
-      const color = CAL_COLORS[ev.event_type] || '#6b7280';
+      // Detect BC reminders (old events with chot_tv/hoc_bb type but 'Viết BC' title)
+      const isBCReminder = ev.event_type === 'reminder' || (ev.title && ev.title.includes('Viết BC'));
+      const effectiveColor = isBCReminder ? CAL_COLORS.reminder : (CAL_COLORS[ev.event_type] || '#6b7280');
+      const effectiveLabel = isBCReminder ? CAL_LABELS.reminder : (CAL_LABELS[ev.event_type] || ev.event_type);
       const time = ev.event_time ? ev.event_time.substring(0, 5) : '';
-      const typeLabel = CAL_LABELS[ev.event_type] || ev.event_type;
       const profile = ev.profile_id ? allProfiles.find(p => p.id === ev.profile_id) : null;
       const completedCls = ev.is_completed ? 'style="opacity:0.5;text-decoration:line-through;"' : '';
       
-      let metaHtml = `<span class="cal-event-type" style="color:${color}">${typeLabel}</span>`;
+      let metaHtml = `<span class="cal-event-type" style="color:${effectiveColor}">${effectiveLabel}</span>`;
       if (time) metaHtml += `<span>\u23f0 ${time}</span>`;
-      if (profile && ev.event_type === 'chot_tv') {
+      if (profile && (ev.event_type === 'chot_tv' || ev.event_type === 'reminder') && !isBCReminder) {
           const ndd = typeof getStaffLabel === 'function' ? getStaffLabel(profile.ndd_staff_code) : (profile.ndd_staff_code || '?');
           const tvv = typeof getStaffLabel === 'function' ? getStaffLabel(profile.tvv_staff_code) : (profile.tvv_staff_code || '?');
           metaHtml += `<span>NDD: ${ndd}</span><span>TVV: ${tvv}</span>`;
-      } else if (profile && ev.event_type === 'hoc_bb') {
+      } else if (profile && ev.event_type === 'hoc_bb' && !isBCReminder) {
           const ndd = typeof getStaffLabel === 'function' ? getStaffLabel(profile.ndd_staff_code) : (profile.ndd_staff_code || '?');
           const gvbb = typeof getStaffLabel === 'function' ? getStaffLabel(profile.gvbb_staff_code) : (profile.gvbb_staff_code || '?');
           metaHtml += `<span>NDD: ${ndd}</span><span>GVBB: ${gvbb}</span>`;
+      } else if (profile && isBCReminder) {
+          const ndd = typeof getStaffLabel === 'function' ? getStaffLabel(profile.ndd_staff_code) : (profile.ndd_staff_code || '?');
+          const tvv = typeof getStaffLabel === 'function' ? getStaffLabel(profile.tvv_staff_code) : (profile.tvv_staff_code || '?');
+          metaHtml += `<span>NDD: ${ndd}</span><span>TVV: ${tvv}</span>`;
       } else if (profile) {
           metaHtml += `<span>\ud83d\udc64 ${profile.full_name}</span>`;
       }
@@ -413,7 +421,7 @@ function renderCalendarDayEvents(date) {
       const actionCol = actionBtns ? `<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;margin-left:4px;">${actionBtns}</div>` : '';
 
       return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
-        <div class="cal-event-bar" style="background:${color}"></div>
+        <div class="cal-event-bar" style="background:${effectiveColor}"></div>
         <div class="cal-event-body" style="flex:1;min-width:0;">
           <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:4px;">${ev.title}</div>
           <div class="cal-event-meta" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--text3);align-items:center;">
