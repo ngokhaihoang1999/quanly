@@ -2119,7 +2119,7 @@
   word-break: normal !important;
   overflow-wrap: break-word !important;
   word-wrap: break-word !important;
-  white-space: pre-wrap;
+  white-space: normal;
   transition: all 0.2s;
   box-sizing: border-box;
   align-self: flex-start;
