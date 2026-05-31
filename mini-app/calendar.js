@@ -8,14 +8,16 @@ const CAL_COLORS = {
   hoc_bb:        '#22c55e',   // green
   lap_group_tv_bb: '#f59e0b', // amber
   custom:        '#3b82f6',   // blue
-  note:          '#f97316'    // orange — linked notes
+  note:          '#f97316',   // orange — linked notes
+  reminder:      '#f59e0b'    // amber — nhắc viết BC
 };
 const CAL_LABELS = {
   chot_tv:       'Lịch TV',
   hoc_bb:        'Học BB',
   lap_group_tv_bb: 'Lập Group TV-BB',
   custom:        'Cá nhân',
-  note:          'Ghi chú'
+  note:          'Ghi chú',
+  reminder:      'Nhắc nhở'
 };
 
 // Notes linked to calendar dates (keyed by YYYY-MM-DD)
@@ -295,13 +297,13 @@ function renderCalendarGrid() {
     
     const parts = [];
     // TV sessions
-    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv' && !e.title.includes('Viết BC')).length;
+    const tvCount = dayEvents.filter(e => e.event_type === 'chot_tv').length;
     if (tvCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#8b5cf6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tvCount} ca TV</span>`);
     // BB sessions
-    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb' && !e.title.includes('Viết BC')).length;
+    const bbCount = dayEvents.filter(e => e.event_type === 'hoc_bb').length;
     if (bbCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#22c55e;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${bbCount} ca BB</span>`);
-    // Reminders
-    const reminderCount = dayEvents.filter(e => (e.event_type === 'chot_tv' || e.event_type === 'hoc_bb') && e.title.includes('Viết BC')).length;
+    // Reminders (nhắc viết BC TV/BB — separate event_type)
+    const reminderCount = dayEvents.filter(e => e.event_type === 'reminder').length;
     if (reminderCount > 0) parts.push(`<span style="display:block;font-size:9px;font-weight:600;color:#f59e0b;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${reminderCount} nhắc nhở</span>`);
     // Custom events
     const customEvents = dayEvents.filter(e => e.event_type === 'custom');
@@ -466,6 +468,9 @@ function renderCalendarDayEvents(date) {
 function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle, existingAlarm) {
   const evDt = eventTime ? new Date(`${eventDate}T${eventTime}:00`) : new Date(`${eventDate}T23:59:59`);
   
+  // Detect if this is a reminder event (BC TV/BB) — alarm should be AFTER event, not before
+  const isReminder = eventTitle.includes('Viết BC');
+  
   let defaultDate, defaultTime;
   if (existingAlarm) {
     // Pre-fill with existing alarm
@@ -473,13 +478,15 @@ function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle, existingAl
     defaultDate = `${rAt.getFullYear()}-${String(rAt.getMonth()+1).padStart(2,'0')}-${String(rAt.getDate()).padStart(2,'0')}`;
     defaultTime = `${String(rAt.getHours()).padStart(2,'0')}:${String(rAt.getMinutes()).padStart(2,'0')}`;
   } else {
-    // Default: 30 min before event
-    const defaultRemind = new Date(evDt.getTime() - 30 * 60000);
+    // Default: 30 min before event (or event time itself for reminders)
+    const offset = isReminder ? 0 : -30 * 60000;
+    const defaultRemind = new Date(evDt.getTime() + offset);
     defaultDate = `${defaultRemind.getFullYear()}-${String(defaultRemind.getMonth()+1).padStart(2,'0')}-${String(defaultRemind.getDate()).padStart(2,'0')}`;
     defaultTime = `${String(defaultRemind.getHours()).padStart(2,'0')}:${String(defaultRemind.getMinutes()).padStart(2,'0')}`;
   }
 
   const modalTitle = existingAlarm ? `🔔 Sửa Alarm — ${eventTitle}` : `🔔 Đặt Alarm — ${eventTitle}`;
+  const presetLabel = isReminder ? 'sau' : 'trước';
   document.getElementById('recordModalTitle').textContent = modalTitle;
   document.getElementById('recordModalBody').innerHTML = `
     <div style="text-align:center;font-size:32px;margin-bottom:8px;">🔔</div>
@@ -492,25 +499,33 @@ function openSetAlarmModal(eventId, eventDate, eventTime, eventTitle, existingAl
       <div class="field-group"><label>⏰ Giờ nhắc</label><input type="time" id="alarm_time" value="${defaultTime}" /></div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-      <button class="chip" onclick="setAlarmPreset(15,'${eventDate}','${eventTime}')">15p trước</button>
-      <button class="chip" onclick="setAlarmPreset(30,'${eventDate}','${eventTime}')">30p trước</button>
-      <button class="chip" onclick="setAlarmPreset(60,'${eventDate}','${eventTime}')">1h trước</button>
-      <button class="chip" onclick="setAlarmPreset(1440,'${eventDate}','${eventTime}')">1 ngày trước</button>
+      <button class="chip" onclick="setAlarmPreset(15)">15p ${presetLabel}</button>
+      <button class="chip" onclick="setAlarmPreset(30)">30p ${presetLabel}</button>
+      <button class="chip" onclick="setAlarmPreset(60)">1h ${presetLabel}</button>
+      <button class="chip" onclick="setAlarmPreset(1440)">1 ngày ${presetLabel}</button>
     </div>
-    <div id="alarm_warn" style="font-size:11px;color:var(--red);margin-top:6px;display:none;">⚠️ Phải trước thời điểm sự kiện</div>
+    <div id="alarm_warn" style="font-size:11px;color:var(--red);margin-top:6px;display:none;"></div>
     ${existingAlarm ? `<button type="button" onclick="removeEventAlarm('${eventId}')" style="width:100%;margin-top:8px;padding:8px;border:1px solid rgba(248,113,113,0.4);background:none;color:var(--red);border-radius:8px;font-size:12px;cursor:pointer;">🗑 Xoá alarm</button>` : ''}
     <input type="hidden" id="alarm_event_id" value="${eventId}" />
     <input type="hidden" id="alarm_event_date" value="${eventDate}" />
     <input type="hidden" id="alarm_event_time" value="${eventTime}" />
+    <input type="hidden" id="alarm_is_reminder" value="${isReminder ? '1' : '0'}" />
   `;
   const saveBtn = document.querySelector('#addRecordModal .save-btn');
   if (saveBtn) { saveBtn.textContent = existingAlarm ? '💾 Lưu Alarm' : '🔔 Đặt Alarm'; saveBtn.onclick = saveEventAlarm; saveBtn.style.display = ''; }
   document.getElementById('addRecordModal').classList.add('open');
 }
 
-function setAlarmPreset(minutes, eventDate, eventTime) {
+function setAlarmPreset(minutes) {
+  // Read event date/time from hidden inputs (reliable source of truth)
+  const eventDate = document.getElementById('alarm_event_date')?.value;
+  const eventTime = document.getElementById('alarm_event_time')?.value;
+  const isReminder = document.getElementById('alarm_is_reminder')?.value === '1';
+  if (!eventDate) return;
   const evDt = eventTime ? new Date(`${eventDate}T${eventTime}:00`) : new Date(`${eventDate}T23:59:59`);
-  const r = new Date(evDt.getTime() - minutes * 60000);
+  // Reminder events: alarm AFTER event; normal events: alarm BEFORE event
+  const offset = isReminder ? (minutes * 60000) : (-minutes * 60000);
+  const r = new Date(evDt.getTime() + offset);
   document.getElementById('alarm_date').value = `${r.getFullYear()}-${String(r.getMonth()+1).padStart(2,'0')}-${String(r.getDate()).padStart(2,'0')}`;
   document.getElementById('alarm_time').value = `${String(r.getHours()).padStart(2,'0')}:${String(r.getMinutes()).padStart(2,'0')}`;
 }
@@ -526,10 +541,20 @@ async function saveEventAlarm() {
 
   const reminderAt = new Date(`${ad}T${at}:00`);
   const eventDt = evTime ? new Date(`${evDate}T${evTime}:00`) : new Date(`${evDate}T23:59:59`);
+  const isReminder = document.getElementById('alarm_is_reminder')?.value === '1';
   
-  if (reminderAt >= eventDt) {
+  // Reminder events (BC TV/BB): alarm should be AFTER event time
+  // Normal events: alarm should be BEFORE event time
+  if (!isReminder && reminderAt >= eventDt) {
+    document.getElementById('alarm_warn').textContent = '⚠️ Giờ nhắc phải trước sự kiện';
     document.getElementById('alarm_warn').style.display = '';
     showToast('⚠️ Giờ nhắc phải trước sự kiện');
+    return;
+  }
+  if (isReminder && reminderAt <= eventDt) {
+    document.getElementById('alarm_warn').textContent = '⚠️ Giờ nhắc nhở BC phải sau thời gian sự kiện';
+    document.getElementById('alarm_warn').style.display = '';
+    showToast('⚠️ Giờ nhắc nhở BC phải sau thời gian sự kiện');
     return;
   }
 
@@ -1056,9 +1081,10 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
   try {
     // Delete old events with similar pattern for this session (idempotent update)
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${oldTitlePattern}`, { method: 'DELETE' });
-    // Also delete old report reminders
+    // Also delete old report reminders (both old type 'chot_tv' and new type 'reminder')
     const reportTitle = encodeURIComponent(`*Viết BC TV lần ${sessionNum}*`);
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.chot_tv&title=like.${reportTitle}`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.reminder&title=like.${reportTitle}`, { method: 'DELETE' });
 
     // ONLY create calendar events if a date was actually scheduled
     if (!scheduledAt) return;
@@ -1079,7 +1105,7 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
     const roles = await _getProfileRoleCodes(profileId);
     const eventDt = new Date(`${dateStr}T${timeStr}:00`);
     const preAlarmAt = new Date(eventDt.getTime() - 60 * 60000).toISOString(); // 1h before
-    const postAlarmAt = new Date(eventDt.getTime() + 60 * 60000).toISOString(); // 1h after
+    const postAlarmAt = new Date(eventDt.getTime() + 120 * 60000).toISOString(); // 2h after (nhắc viết BC)
 
     // Determine alarmON recipients (NDD + TVV)
     const alarmOnCodes = new Set([roles.ndd, roles.tvv].filter(Boolean));
@@ -1089,8 +1115,8 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
     // Report reminder title
     const reportReminderTitle = `📝 Viết BC TV lần ${sessionNum} — ${pName}`;
 
-    // Post date for report reminder
-    const postDt = new Date(eventDt.getTime() + 60 * 60000);
+    // Post date for report reminder (+2h after TV session)
+    const postDt = new Date(eventDt.getTime() + 120 * 60000);
     const postDateStr = `${postDt.getFullYear()}-${String(postDt.getMonth()+1).padStart(2,'0')}-${String(postDt.getDate()).padStart(2,'0')}`;
     const postTimeStr = `${String(postDt.getHours()).padStart(2,'0')}:${String(postDt.getMinutes()).padStart(2,'0')}`;
 
@@ -1107,10 +1133,10 @@ async function createCalEventFromChotTV(profileId, sessionNum, scheduledAt, tool
         is_auto: true, is_system: true, created_by: myCode,
         unique_key: `chot_tv_${sessionNum}_${profileId}_${code}`
       });
-      // Post-event: Nhắc viết BC (only for alarm-ON people)
+      // Post-event: Nhắc viết BC (only for NDD + TVV — alarm-ON people)
       if (hasAlarm) {
         rows.push({
-          staff_code: code, profile_id: profileId, event_type: 'chot_tv',
+          staff_code: code, profile_id: profileId, event_type: 'reminder',
           title: reportReminderTitle, event_date: postDateStr, event_time: postTimeStr,
           reminder_at: postAlarmAt,
           reminder_channels: ['app', 'chat'],
@@ -1150,15 +1176,16 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
     const eventTitle = `Học BB buổi ${nextNum} — ${pName}`;
     // Delete old matching upcoming BB event to avoid dupes if they edit the report
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=eq.${encodeURIComponent(eventTitle)}`, { method: 'DELETE' });
-    // Also delete old report reminders
+    // Also delete old report reminders (both old type 'hoc_bb' and new type 'reminder')
     const reportTitle = encodeURIComponent(`*Viết BC BB buổi ${nextNum}*`);
     await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.hoc_bb&title=like.${reportTitle}`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/calendar_events?profile_id=eq.${profileId}&event_type=eq.reminder&title=like.${reportTitle}`, { method: 'DELETE' });
 
     // Get role codes — NDD + GVBB get alarm ON, others alarm OFF
     const roles = await _getProfileRoleCodes(profileId);
     const eventDt = new Date(`${dateStr}T${timeStr}:00`);
     const preAlarmAt = new Date(eventDt.getTime() - 60 * 60000).toISOString(); // 1h before
-    const postAlarmAt = new Date(eventDt.getTime() + 60 * 60000).toISOString(); // 1h after
+    const postAlarmAt = new Date(eventDt.getTime() + 120 * 60000).toISOString(); // 2h after (nhắc viết BC)
 
     // Determine alarmON recipients (NDD + GVBB for BB events)
     const alarmOnCodes = new Set([roles.ndd, roles.gvbb].filter(Boolean));
@@ -1168,8 +1195,8 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
     // Report reminder title
     const reportReminderTitle = `📝 Viết BC BB buổi ${nextNum} — ${pName}`;
 
-    // Post date for report reminder
-    const postDt = new Date(eventDt.getTime() + 60 * 60000);
+    // Post date for report reminder (+2h after BB session)
+    const postDt = new Date(eventDt.getTime() + 120 * 60000);
     const postDateStr = `${postDt.getFullYear()}-${String(postDt.getMonth()+1).padStart(2,'0')}-${String(postDt.getDate()).padStart(2,'0')}`;
     const postTimeStr = `${String(postDt.getHours()).padStart(2,'0')}:${String(postDt.getMinutes()).padStart(2,'0')}`;
 
@@ -1186,10 +1213,10 @@ async function createCalEventFromBBReport(profileId, nextNum, buoiTiepStr) {
         is_auto: true, is_system: true, created_by: myCode,
         unique_key: `hoc_bb_${nextNum}_${profileId}_${code}`
       });
-      // Post-event: Nhắc viết BC (only for alarm-ON people)
+      // Post-event: Nhắc viết BC (only for NDD + GVBB — alarm-ON people)
       if (hasAlarm) {
         rows.push({
-          staff_code: code, profile_id: profileId, event_type: 'hoc_bb',
+          staff_code: code, profile_id: profileId, event_type: 'reminder',
           title: reportReminderTitle, event_date: postDateStr, event_time: postTimeStr,
           reminder_at: postAlarmAt,
           reminder_channels: ['app', 'chat'],
