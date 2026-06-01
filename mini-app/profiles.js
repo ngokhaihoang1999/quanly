@@ -624,7 +624,13 @@ async function loadInfoSheet(profileId) {
       du_dinh: d.t2_du_dinh, nguoi_quan_trong: d.t2_nguoi_quan_trong,
       quan_diem: d.t2_quan_diem, sdt: d.t2_sdt,
       chuyen_cu: d.t2_chuyen_cu, nguoi_than: d.t2_nguoi_than, luu_y: d.t2_luu_y,
-      khong_gian_song: d.t2_khong_gian_song, quan_he_ndd: d.t2_quan_he_ndd
+      khong_gian_song: d.t2_khong_gian_song, quan_he_ndd: d.t2_quan_he_ndd,
+      sk_concept_thuoc_linh: d.sk_concept_thuoc_linh,
+      sk_tin_than_linh: d.sk_tin_than_linh,
+      sk_ly_do_center: d.sk_ly_do_center,
+      sk_chien_luoc_concept: d.sk_chien_luoc_concept,
+      sk_moi_nguy_hiem: d.sk_moi_nguy_hiem,
+      sk_so_lan_bb: d.sk_so_lan_bb
     };
     Object.entries(d).forEach(([key, val]) => { if (typeof val === 'string') { const el=document.getElementById(key); if(el) el.value=val; } });
     if (d.t2_ton_giao) setChipValues('chips_ton_giao', d.t2_ton_giao);
@@ -690,7 +696,13 @@ async function saveInfoSheet() {
       quan_diem: data.t2_quan_diem, sdt: data.t2_sdt,
       chuyen_cu: data.t2_chuyen_cu, nguoi_than: data.t2_nguoi_than, luu_y: data.t2_luu_y,
       khong_gian_song: data.t2_khong_gian_song, quan_he_ndd: data.t2_quan_he_ndd,
-      que_quan: data.t2_que_quan
+      que_quan: data.t2_que_quan,
+      sk_concept_thuoc_linh: existingData.sk_concept_thuoc_linh,
+      sk_tin_than_linh: existingData.sk_tin_than_linh,
+      sk_ly_do_center: existingData.sk_ly_do_center,
+      sk_chien_luoc_concept: existingData.sk_chien_luoc_concept,
+      sk_moi_nguy_hiem: existingData.sk_moi_nguy_hiem,
+      sk_so_lan_bb: existingData.sk_so_lan_bb
     };
     // Also invalidate AI mindmap cache so "Hỗ trợ BB" re-generates with new data
     if (typeof _mmCache !== 'undefined' && currentProfileId) delete _mmCache[currentProfileId];

@@ -1,12 +1,12 @@
 /**
- * AI Proxy Edge Function with Smart Hybrid Routing & Fallback
- * Features:
- * - 100% Free Groq pipeline (Llama 3.2 Vision OCR + Qwen 2.5 Coder 32B)
- * - Automatic Fallback to OpenAI (GPT-4o-mini Paid) if Groq fails or rate limits are hit
+ * AI Proxy Edge Function with Smart Routing & Fallback
+ * Primary: DeepSeek-V3 (deepseek-chat) for text tasks
+ * Vision/OCR: OpenAI GPT-4o-mini (multimodal)
+ * Fallback: OpenAI GPT-4o-mini for any text failures
  */
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || '';
-const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') || '';
+const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY') || '';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log("[AI Proxy] Received request. OPENAI_API_KEY exists:", !!OPENAI_API_KEY, "| GROQ_API_KEY exists:", !!GROQ_API_KEY);
+    console.log("[AI Proxy] Received request. OPENAI_API_KEY exists:", !!OPENAI_API_KEY, "| DEEPSEEK_API_KEY exists:", !!DEEPSEEK_API_KEY);
     const body = await req.json();
     const { messages, model, temperature, max_tokens } = body;
 
@@ -41,163 +41,151 @@ Deno.serve(async (req) => {
 
     // Identify if there is a base64 image in the request
     let hasImage = false;
-    let imageBase64 = "";
     for (const msg of messages) {
       if (Array.isArray(msg.content)) {
         for (const part of msg.content) {
           if (part.type === 'image_url' && part.image_url?.url) {
             hasImage = true;
-            imageBase64 = part.image_url.url;
           }
         }
       }
     }
 
-    // Check if the image size is too large for Groq's 4MB payload limit
-    const isImageTooLargeForGroq = hasImage && (imageBase64.length > 3.5 * 1024 * 1024);
-
-    let ocrText = "";
-    let ocrSuccessful = false;
-
-    // STEP 1: If there is an image, Groq key is present, and image is within Groq's payload limit
-    if (hasImage && GROQ_API_KEY && !isImageTooLargeForGroq) {
-      try {
-        console.log("[AI Proxy] Performing free OCR via Groq Llama 3.2 Vision...");
-        const ocrRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'llama-3.2-11b-vision-preview',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Bạn là trợ lý OCR chuyên nghiệp. Trích xuất chính xác toàn bộ nội dung chữ (tiếng Việt/tiếng Anh) xuất hiện trong hình ảnh bài tập/tài liệu này. Giữ nguyên định dạng câu hỏi và câu trả lời. TUYỆT ĐỐI không giải thích hay bình luận thêm, chỉ trả về nội dung chữ được trích xuất.'
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: imageBase64
-                    }
-                  }
-                ]
-              }
-            ],
-            temperature: 0.1,
-            max_tokens: 1024,
-          }),
-        });
-
-        if (ocrRes.ok) {
-          const ocrData = await ocrRes.json();
-          ocrText = ocrData.choices?.[0]?.message?.content || "";
-          if (ocrText.trim()) {
-            ocrSuccessful = true;
-            console.log("[AI Proxy] OCR Success! Extracted text length:", ocrText.length);
-          }
-        } else {
-          const ocrErrText = await ocrRes.text();
-          console.warn("[AI Proxy] Groq OCR failed with status:", ocrRes.status, "Body:", ocrErrText);
-        }
-      } catch (err) {
-        console.error("[AI Proxy] Groq OCR exception:", err);
-      }
-    }
-
-    // STEP 2: Try to call Qwen 2.5 Coder 32B on Groq for text reasoning (either native text, or image-to-text OCR result)
-    // We only route to Groq if:
-    // - There is no image OR OCR was successful
-    // - GROQ_API_KEY is available
-    if (GROQ_API_KEY && (!hasImage || ocrSuccessful) && !isImageTooLargeForGroq) {
-      try {
-        let processedMessages = messages;
-        if (ocrSuccessful && ocrText) {
-          // Replace image content with extracted text
-          processedMessages = messages.map((msg: any) => {
-            if (Array.isArray(msg.content)) {
-              let textPart = "";
-              for (const part of msg.content) {
-                if (part.type === 'text') {
-                  textPart += part.text + "\n";
-                }
-              }
-              const combinedText = `${textPart}\n[Nội dung chữ trích xuất từ ảnh bài tập bằng OCR:\n${ocrText}\n]`;
-              return { ...msg, content: combinedText };
-            }
-            return msg;
-          });
-        }
-
-        console.log("[AI Proxy] Calling Groq Qwen 3 32B...");
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'qwen/qwen3-32b',
-            messages: processedMessages,
-            temperature: Math.min(Math.max(temperature || 0.3, 0), 1),
-            max_tokens: Math.min(max_tokens || 1000, 2000),
-          }),
-        });
-
-        if (groqRes.ok) {
-          const data = await groqRes.json();
-          console.log("[AI Proxy] Groq Qwen call success!");
-          return new Response(JSON.stringify(data), {
-            status: 200,
-            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-          });
-        }
-
-        const groqErrText = await groqRes.text();
-        console.warn("[AI Proxy] Groq Qwen failed with status:", groqRes.status, "Body:", groqErrText, "Falling back to OpenAI...");
-      } catch (err) {
-        console.error("[AI Proxy] Groq Qwen exception, falling back to OpenAI:", err);
-      }
-    }
-
-    // STEP 3: Fallback / Native Vision pipeline via OpenAI GPT-4o-mini
-    console.log("[AI Proxy] Routing request to OpenAI GPT-4o-mini (Paid)...");
     const safeMaxTokens = Math.min(max_tokens || 1000, 2000);
     const safeTemp = Math.min(Math.max(temperature || 0.3, 0), 1);
 
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages,
-        temperature: safeTemp,
-        max_tokens: safeMaxTokens,
-      }),
-    });
+    // CASE 1: Request contains an image (OCR / Homework BTVN)
+    // DeepSeek-V3 is text-only, so we route multimodal queries directly to OpenAI GPT-4o-mini
+    if (hasImage) {
+      console.log("[AI Proxy] Image detected. Routing directly to OpenAI GPT-4o-mini (Multimodal)...");
+      if (!OPENAI_API_KEY) {
+        return new Response(JSON.stringify({ error: 'OpenAI API key missing on server' }), {
+          status: 500,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        });
+      }
 
-    const data = await openaiRes.json();
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages,
+          temperature: safeTemp,
+          max_tokens: safeMaxTokens,
+        }),
+      });
 
-    if (!openaiRes.ok) {
-      return new Response(JSON.stringify({ error: data.error?.message || 'OpenAI error' }), {
-        status: openaiRes.status,
+      const data = await openaiRes.json();
+      if (!openaiRes.ok) {
+        console.error("[AI Proxy] OpenAI image request failed:", data.error?.message);
+        return new Response(JSON.stringify({ error: data.error?.message || 'OpenAI error' }), {
+          status: openaiRes.status,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Add actual model used for Admin transparency
+      data.model = 'gpt-4o-mini';
+      return new Response(JSON.stringify(data), {
+        status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    });
+    // CASE 2: Text-only request (Mindmap, Chat Lacie, AI Parse Text)
+    // Primary: DeepSeek-V3
+    let responseData = null;
+    let deepseekSuccess = false;
+
+    if (DEEPSEEK_API_KEY) {
+      try {
+        console.log("[AI Proxy] Routing to DeepSeek-V3 (deepseek-chat)...");
+        const deepseekRes = await fetch('https://api.deepseek.com/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages,
+            temperature: safeTemp,
+            max_tokens: safeMaxTokens,
+          }),
+        });
+
+        if (deepseekRes.ok) {
+          responseData = await deepseekRes.json();
+          deepseekSuccess = true;
+          console.log("[AI Proxy] DeepSeek-V3 response success!");
+        } else {
+          const errText = await deepseekRes.text();
+          console.warn("[AI Proxy] DeepSeek-V3 failed with status:", deepseekRes.status, "Body:", errText);
+        }
+      } catch (err) {
+        console.error("[AI Proxy] DeepSeek-V3 fetch exception:", err);
+      }
+    } else {
+      console.log("[AI Proxy] DEEPSEEK_API_KEY is not configured. Skipping...");
+    }
+
+    // Fallback: OpenAI GPT-4o-mini (Paid) if DeepSeek fails or is not configured
+    if (!deepseekSuccess) {
+      console.log("[AI Proxy] Falling back to OpenAI GPT-4o-mini...");
+      if (!OPENAI_API_KEY) {
+        return new Response(JSON.stringify({ error: 'OpenAI API key missing on server' }), {
+          status: 500,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages,
+          temperature: safeTemp,
+          max_tokens: safeMaxTokens,
+        }),
+      });
+
+      const data = await openaiRes.json();
+      if (!openaiRes.ok) {
+        console.error("[AI Proxy] OpenAI fallback failed:", data.error?.message);
+        return new Response(JSON.stringify({ error: data.error?.message || 'OpenAI error' }), {
+          status: openaiRes.status,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        });
+      }
+
+      data.model = 'gpt-4o-mini';
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Return DeepSeek-V3 successful response
+    if (responseData) {
+      responseData.model = 'deepseek-chat';
+      return new Response(JSON.stringify(responseData), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+
+    throw new Error('No AI response was generated');
 
   } catch (e) {
+    console.error("[AI Proxy] Edge Function Exception:", e);
     return new Response(JSON.stringify({ error: e.message || 'Server error' }), {
       status: 500,
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

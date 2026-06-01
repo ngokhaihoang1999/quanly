@@ -97,7 +97,7 @@ function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t
 // AI PROXY — calls Supabase Edge Function (key is server-side)
 // ═══════════════════════════════════════════════════
 async function callAIProxy(messages, opts = {}) {
-  const model = opts.model || 'gpt-4.1-mini';
+  const model = opts.model || 'deepseek-chat';
   const temperature = opts.temperature || 0.3;
   const max_tokens = opts.max_tokens || 1000;
   
@@ -227,12 +227,146 @@ async function renderCollectMM(container, p) {
     '</div>';
 }
 
+function getSmartCompressedContext(tvs, bbs, nts) {
+  var CHAR_BUDGET = 8000;
+  var context = '';
+
+  var cleanText = function(str) {
+    if (!str) return '';
+    return stripBase64FromHtml(str)
+      .replace(/<\/?[^>]+(>|$)/g, "") // remove HTML tag if any
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  var tvLines = [];
+  tvs.forEach(function(r, idx) {
+    var c = r.content || {};
+    var lan = c.lan_thu || (idx + 1);
+    var dt = r.created_at ? shinDate(r.created_at) : '';
+    var parts = [];
+    if (c.ten_cong_cu) parts.push("Công cụ: " + c.ten_cong_cu);
+    if (c.diem_hai) parts.push("Điểm hái: " + c.diem_hai);
+    if (c.van_de) parts.push("Vấn đề: " + c.van_de);
+    if (c.de_xuat) parts.push("Đề xuất: " + c.de_xuat);
+
+    if (parts.length > 0) {
+      tvLines.push({
+        idx: idx,
+        isMilestone: idx === 0 || idx === tvs.length - 1,
+        text: '• TV Lần ' + lan + (dt ? ' (' + dt + ')' : '') + ': ' + parts.join(' | ')
+      });
+    }
+  });
+
+  var bbLines = [];
+  bbs.forEach(function(r, idx) {
+    var c = r.content || {};
+    var buoi = c.buoi_thu || (idx + 1);
+    var dt = r.created_at ? shinDate(r.created_at) : '';
+    var parts = [];
+    var isMilestone = idx === 0 || idx === bbs.length - 1;
+
+    if (isMilestone) {
+      if (c.noi_dung) parts.push("Nội dung: " + c.noi_dung);
+      if (c.phan_ung) parts.push("Phản ứng: " + c.phan_ung);
+      if (c.khai_thac) parts.push("Khai thác: " + c.khai_thac);
+      if (c.de_xuat_cs) parts.push("Đề xuất CS: " + c.de_xuat_cs);
+    } else {
+      if (c.phan_ung) parts.push("Phản ứng: " + c.phan_ung);
+      if (c.khai_thac) parts.push("Khai thác: " + c.khai_thac);
+    }
+
+    if (parts.length > 0) {
+      bbLines.push({
+        idx: idx,
+        isMilestone: isMilestone,
+        text: '• BB Buổi ' + buoi + (dt ? ' (' + dt + ')' : '') + ': ' + parts.join(' | ')
+      });
+    }
+  });
+
+  var noteLines = [];
+  nts.forEach(function(r, idx) {
+    var c = r.content || {};
+    var dt = r.created_at ? shinDate(r.created_at) : '';
+    var body = cleanText(c.body || c.content || '');
+    var title = cleanText(c.title || '');
+
+    if (title || body) {
+      var isMilestone = idx === nts.length - 1;
+      var text = '• Note' + (dt ? ' (' + dt + ')' : '') + ': ' + (title ? '[' + title + '] ' : '') + body;
+      noteLines.push({
+        idx: idx,
+        isMilestone: isMilestone,
+        text: text
+      });
+    }
+  });
+
+  var selectedTV = [];
+  var selectedBB = [];
+  var selectedNotes = [];
+
+  tvLines.forEach(function(line) { if (line.isMilestone) selectedTV.push(line); });
+  bbLines.forEach(function(line) { if (line.isMilestone) selectedBB.push(line); });
+  noteLines.forEach(function(line) { if (line.isMilestone) selectedNotes.push(line); });
+
+  var getCombinedLength = function() {
+    var len = 0;
+    selectedTV.forEach(function(l){ len += l.text.length; });
+    selectedBB.forEach(function(l){ len += l.text.length; });
+    selectedNotes.forEach(function(l){ len += l.text.length; });
+    return len;
+  };
+
+  for (var i = tvLines.length - 1; i >= 0; i--) {
+    if (getCombinedLength() > CHAR_BUDGET) break;
+    var tvLine = tvLines[i];
+    if (!tvLine.isMilestone) {
+      selectedTV.push(tvLine);
+    }
+  }
+
+  for (var j = bbLines.length - 1; j >= 0; j--) {
+    if (getCombinedLength() > CHAR_BUDGET) break;
+    var bbLine = bbLines[j];
+    if (!bbLine.isMilestone) {
+      selectedBB.push(bbLine);
+    }
+  }
+
+  for (var k = noteLines.length - 1; k >= 0; k--) {
+    if (getCombinedLength() > CHAR_BUDGET) break;
+    var noteLine = noteLines[k];
+    if (!noteLine.isMilestone) {
+      selectedNotes.push(noteLine);
+    }
+  }
+
+  selectedTV.sort(function(a, b){ return a.idx - b.idx; });
+  selectedBB.sort(function(a, b){ return a.idx - b.idx; });
+  selectedNotes.sort(function(a, b){ return a.idx - b.idx; });
+
+  if (selectedTV.length > 0) {
+    context += 'LỊCH SỬ TƯ VẤN (TV):\n' + selectedTV.map(function(l){ return l.text; }).join('\n') + '\n\n';
+  }
+  if (selectedBB.length > 0) {
+    context += 'LỊCH SỬ HỌC TẬP (BB):\n' + selectedBB.map(function(l){ return l.text; }).join('\n') + '\n\n';
+  }
+  if (selectedNotes.length > 0) {
+    context += 'GHI CHÚ QUAN TRỌNG & CẬP NHẬT:\n' + selectedNotes.map(function(l){ return l.text; }).join('\n') + '\n\n';
+  }
+
+  return context;
+}
+
 async function runAIAnalysis() {
   if (window.isGuestMode) { if (typeof showToast === 'function') showToast('🔒 Chế độ xem — không thể phân tích'); return; }
   var container = document.getElementById('mindmapContainer');
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!container || !p) return;
-  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udc7c AI \u0111ang ph\u00e2n t\u00edch...<br><small style="color:var(--text3);">10-20 gi\u00e2y</small></div>';
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">👼 AI đang phân tích...<br><small style="color:var(--text3);">10-20 giây</small></div>';
   container.style.height = 'auto';
   try {
     var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
@@ -241,7 +375,7 @@ async function runAIAnalysis() {
     var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
     var d = window._currentInfoSheet || {};
     if (!tvs.length && !bbs.length && !nts.length && !Object.keys(d).length) {
-      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">\ud83d\udccb Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u</div>';
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">📋 Chưa có dữ liệu</div>';
       return;
     }
     var nddName = window._rolesDisplay?.ndd || 'chưa rõ';
@@ -258,12 +392,26 @@ async function runAIAnalysis() {
       'completed': 'Hoàn thành'
     }[p.phase] || p.phase || 'Chakki';
 
-    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+friendlyPhase+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do: '+p.dropout_reason : '')+'\nNg\u01b0\u1eddi ph\u1ee5 tr\u00e1ch: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
+    var context = 'Hồ sơ: '+(p.full_name||'N/A')+'\nGiai đoạn: '+friendlyPhase+'\nTình trạng Kinh Thánh: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+'\nTrạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? '\nLý do: '+p.dropout_reason : '')+'\nNgười phụ trách: \n'+'NDD: '+nddName+'\nTVV: '+tvvName+'\nGVBB: '+gvbbName+'\n\n';
+    
     if (Object.keys(d).length) {
-      context += 'PHIEU THONG TIN:\n';
+      context += 'PHIẾU THÔNG TIN:\n';
       ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){ if(d[k]) context += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n'; });
       context += '\n';
+
+      // Tích hợp dữ liệu Thẻ học viên Sinka quan trọng
+      if (d.sk_concept_thuoc_linh || d.sk_moi_nguy_hiem || d.sk_ly_do_center || d.sk_tin_than_linh) {
+        context += 'THẺ HỌC VIÊN CENTER (SINKA):\n';
+        if (d.sk_concept_thuoc_linh) context += 'Concept thuộc linh: ' + d.sk_concept_thuoc_linh + '\n';
+        if (d.sk_tin_than_linh) context += 'Thần tính: ' + d.sk_tin_than_linh + '\n';
+        if (d.sk_ly_do_center) context += 'Lý do tuyển Center (Điểm hái): ' + d.sk_ly_do_center + '\n';
+        if (d.sk_chien_luoc_concept) context += 'Chiến lược concept đối phó: ' + d.sk_chien_luoc_concept + '\n';
+        if (d.sk_moi_nguy_hiem) context += 'Mối nguy hiểm/Rủi ro bảo an lớn nhất: ' + d.sk_moi_nguy_hiem + '\n';
+        if (d.sk_so_lan_bb) context += 'Số buổi học BB thực tế: ' + d.sk_so_lan_bb + '\n';
+        context += '\n';
+      }
     }
+    
     // Strategy data (cl_* keys from form_hanh_chinh)
     if (typeof _strategyData !== 'undefined' && Object.keys(_strategyData).length) {
       context += 'CHIEN LUOC TIEP CAN (NDD tu viet):\n';
@@ -271,14 +419,9 @@ async function runAIAnalysis() {
       Object.keys(_strategyData).forEach(function(k) { if (_strategyData[k]?.trim()) context += (clLabels[k]||k)+': '+_strategyData[k]+'\n'; });
       context += '\n';
     }
-    tvs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; context+='--- TV LAN '+(c.lan_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    bbs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; context+='--- BB BUOI '+(c.buoi_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    nts.forEach(function(r){ 
-      var c=r.content||{}; 
-      var dt=r.created_at?shinDate(r.created_at):''; 
-      var noteBody = stripBase64FromHtml(c.body || c.content || '');
-      if (c.title||noteBody) context+='--- GHI CHU'+(dt?' ('+dt+')':'')+': '+(c.title||'')+' ---\n'+noteBody+'\n\n'; 
-    });
+
+    // Sử dụng nén ngữ cảnh thông minh có chọn lọc
+    context += getSmartCompressedContext(tvs, bbs, nts);
 
     var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\n' +
       '=== NHIỆM VỤ: TẠO MINDMAP ===\n' +
@@ -321,7 +464,7 @@ async function runAIAnalysis() {
 
     var data = await callAIProxy(
       [{role:'system',content:sysPrompt},{role:'user',content:context}],
-      { model: 'gpt-4.1-mini', temperature: 0.3, max_tokens: 1000 }
+      { model: 'deepseek-chat', temperature: 0.3, max_tokens: 1000 }
     );
     var md = (data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '').trim();
     if (!md || md.charAt(0) !== '#') throw new Error('AI response invalid');
@@ -464,13 +607,25 @@ async function buildChatCtx() {
     'completed': 'Hoàn thành'
   }[p.phase] || p.phase || 'Chakki';
 
-  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+friendlyPhase+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do: '+p.dropout_reason : '')+' | Ngư\u1eddi ph\u1ee5 tr\u00e1ch: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
+  var ctx = 'Hồ sơ: '+(p.full_name||'N/A')+' | Giai đoạn: '+friendlyPhase+' | Tình trạng KT: '+(p.is_kt_opened ? 'Đã mở KT' : 'Chưa mở KT')+' | Trạng thái: '+(p.fruit_status==='dropout' ? 'Đã nghỉ học (Drop-out)' : p.fruit_status==='pause' ? 'Tạm dừng (Pause)' : 'Đang học (Alive)')+(p.dropout_reason ? ' | Lý do: '+p.dropout_reason : '')+' | Người phụ trách: NDD:'+nddName+' TVV:'+tvvName+' GVBB:'+gvbbName+'\n\n';
   if (Object.keys(d).length) {
-    ctx += 'PHI\u1ebeU TT:\n';
+    ctx += 'PHIẾU TT:\n';
     ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){
       if (d[k]) ctx += k+': '+(Array.isArray(d[k])?d[k].join(', '):d[k])+'\n';
     });
     ctx += '\n';
+
+    // Tích hợp dữ liệu Thẻ học viên Sinka quan trọng vào Chat context
+    if (d.sk_concept_thuoc_linh || d.sk_moi_nguy_hiem || d.sk_ly_do_center || d.sk_tin_than_linh) {
+      ctx += 'THẺ HỌC VIÊN CENTER (SINKA):\n';
+      if (d.sk_concept_thuoc_linh) ctx += 'Concept thuộc linh: ' + d.sk_concept_thuoc_linh + '\n';
+      if (d.sk_tin_than_linh) ctx += 'Thần tính: ' + d.sk_tin_than_linh + '\n';
+      if (d.sk_ly_do_center) ctx += 'Lý do tuyển Center (Điểm hái): ' + d.sk_ly_do_center + '\n';
+      if (d.sk_chien_luoc_concept) ctx += 'Chiến lược concept đối phó: ' + d.sk_chien_luoc_concept + '\n';
+      if (d.sk_moi_nguy_hiem) ctx += 'Mối nguy hiểm/Rủi ro bảo an lớn nhất: ' + d.sk_moi_nguy_hiem + '\n';
+      if (d.sk_so_lan_bb) ctx += 'Số buổi học BB thực tế: ' + d.sk_so_lan_bb + '\n';
+      ctx += '\n';
+    }
   }
   // Strategy data (cl_* keys)
   if (typeof _strategyData !== 'undefined' && Object.keys(_strategyData).length) {
@@ -479,14 +634,10 @@ async function buildChatCtx() {
     Object.keys(_strategyData).forEach(function(k) { if (_strategyData[k]?.trim()) ctx += (clL[k]||k)+': '+_strategyData[k]+'\n'; });
     ctx += '\n';
   }
-  tvs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; ctx+='--- TV '+(c.lan_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])ctx+=k+': '+c[k]+'\n';}); ctx+='\n'; });
-  bbs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; ctx+='--- BB '+(c.buoi_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])ctx+=k+': '+c[k]+'\n';}); ctx+='\n'; });
-  nts.forEach(function(r){ 
-    var c=r.content||{}; 
-    var dt=r.created_at?shinDate(r.created_at):''; 
-    var noteBody = stripBase64FromHtml(c.body || c.content || '');
-    if (c.title||noteBody) ctx+='--- Note'+(dt?' ('+dt+')':'')+': '+(c.title||'')+' ---\n'+noteBody+'\n\n'; 
-  });
+
+  // Sử dụng nén ngữ cảnh thông minh có chọn lọc cho Chat
+  ctx += getSmartCompressedContext(tvs, bbs, nts);
+
   _aiChatContext = ctx;
   return ctx;
 }
@@ -508,9 +659,9 @@ async function sendAIChat() {
     var msgs = [
       { role: 'system', content: LACIE_SYSTEM_PROMPT + '\n\nHO SO TRAI QUA HIEN TAI:\n' + context }
     ].concat(_aiChatHistory.slice(-8));
-    var data = await callAIProxy(msgs, { model: 'gpt-4.1-mini', temperature: 0.4, max_tokens: 400 });
+    var data = await callAIProxy(msgs, { model: 'deepseek-chat', temperature: 0.4, max_tokens: 400 });
     var el = document.getElementById('aiTyping'); if(el) el.remove();
-    var answer = (data.choices && data.choices[0] ? data.choices[0].message.content : 'Kh\u00f4ng c\u00f3 ph\u1ea3n h\u1ed3i');
+    var answer = (data.choices && data.choices[0] ? data.choices[0].message.content : 'Không có phản hồi');
     var u = data.usage || {};
     trackCost((u.prompt_tokens||0)/1e6*0.40 + (u.completion_tokens||0)/1e6*1.60);
     _aiChatHistory.push({ role: 'assistant', content: answer });
