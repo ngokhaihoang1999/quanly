@@ -315,9 +315,16 @@ async function executeAIParse(formType) {
       { role: 'user', content: msgContent }
     ], { temperature: 0.1, max_tokens: 800 });
 
-    var raw = (data.choices && data.choices[0] && data.choices[0].message)
-      ? data.choices[0].message.content.trim()
-      : '';
+    if (!data) {
+      throw new Error("Không nhận được phản hồi từ AI nhập nhanh.");
+    }
+    if (data.error) {
+      throw new Error("AI nhập nhanh trả về lỗi: " + (typeof data.error === 'object' ? data.error.message || JSON.stringify(data.error) : data.error));
+    }
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Phản hồi AI nhập nhanh không đúng định dạng chuẩn. Chi tiết: " + JSON.stringify(data));
+    }
+    var raw = data.choices[0].message.content ? data.choices[0].message.content.trim() : '';
 
     // Track cost
     var u = data.usage || {};
