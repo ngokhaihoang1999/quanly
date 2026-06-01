@@ -5,6 +5,12 @@
 var _mmCurrentType = 'info';
 var _mmCache = {};
 
+function stripBase64FromHtml(html) {
+  if (!html) return '';
+  return html.replace(/src="data:image\/[^;]+;base64,[^"]+"/g, 'src="[image]"')
+             .replace(/data:image\/[^;]+;base64,[^'")\s]+/g, '[image]');
+}
+
 function switchMindmap(type, btn) {
   _mmCurrentType = type;
   document.querySelectorAll('#mindmapTab .chip').forEach(function(c){c.classList.remove('active');});
@@ -267,7 +273,12 @@ async function runAIAnalysis() {
     }
     tvs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; context+='--- TV LAN '+(c.lan_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
     bbs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; context+='--- BB BUOI '+(c.buoi_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])context+=k+': '+c[k]+'\n';}); context+='\n'; });
-    nts.forEach(function(r){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; if(c.title||c.body) context+='--- GHI CHU'+(dt?' ('+dt+')':'')+': '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
+    nts.forEach(function(r){ 
+      var c=r.content||{}; 
+      var dt=r.created_at?shinDate(r.created_at):''; 
+      var noteBody = stripBase64FromHtml(c.body || c.content || '');
+      if (c.title||noteBody) context+='--- GHI CHU'+(dt?' ('+dt+')':'')+': '+(c.title||'')+' ---\n'+noteBody+'\n\n'; 
+    });
 
     var sysPrompt = LACIE_SYSTEM_PROMPT + '\n\n' +
       '=== NHIỆM VỤ: TẠO MINDMAP ===\n' +
@@ -470,7 +481,12 @@ async function buildChatCtx() {
   }
   tvs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; ctx+='--- TV '+(c.lan_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['ten_cong_cu','van_de','phan_hoi','diem_hai','de_xuat'].forEach(function(k){if(c[k])ctx+=k+': '+c[k]+'\n';}); ctx+='\n'; });
   bbs.forEach(function(r,i){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; ctx+='--- BB '+(c.buoi_thu||(i+1))+(dt?' ('+dt+')':'')+' ---\n'; ['noi_dung','khai_thac','phan_ung','tuong_tac','de_xuat_cs'].forEach(function(k){if(c[k])ctx+=k+': '+c[k]+'\n';}); ctx+='\n'; });
-  nts.forEach(function(r){ var c=r.content||{}; var dt=r.created_at?shinDate(r.created_at):''; if(c.title||c.body) ctx+='--- Note'+(dt?' ('+dt+')':'')+': '+(c.title||'')+' ---\n'+(c.body||'')+'\n\n'; });
+  nts.forEach(function(r){ 
+    var c=r.content||{}; 
+    var dt=r.created_at?shinDate(r.created_at):''; 
+    var noteBody = stripBase64FromHtml(c.body || c.content || '');
+    if (c.title||noteBody) ctx+='--- Note'+(dt?' ('+dt+')':'')+': '+(c.title||'')+' ---\n'+noteBody+'\n\n'; 
+  });
   _aiChatContext = ctx;
   return ctx;
 }
