@@ -740,18 +740,10 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
 
     var raw = (data.choices && data.choices[0] && data.choices[0].message) ? data.choices[0].message.content.trim() : '';
     
-    // Robust extraction: strip <think> blocks and find JSON boundaries
+    // Multi-stage Robust JSON Parser
     var json;
     try {
-      var cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-      var start = cleaned.indexOf('{');
-      var end = cleaned.lastIndexOf('}');
-      if (start !== -1 && end !== -1 && end > start) {
-        cleaned = cleaned.substring(start, end + 1);
-      } else {
-        cleaned = cleaned.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
-      }
-      json = JSON.parse(cleaned);
+      json = robustJSONParse(raw);
     } catch (parseErr) {
       console.error('Raw AI response parsing failed. Raw text:', raw);
       throw new Error('Định dạng phản hồi AI không đúng JSON. Hãy thử lại!');
