@@ -746,7 +746,8 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
       json = robustJSONParse(raw);
     } catch (parseErr) {
       console.error('Raw AI response parsing failed. Raw text:', raw);
-      throw new Error('Định dạng phản hồi AI không đúng JSON. Hãy thử lại!');
+      var snippet = raw ? raw.substring(0, 150) + '...' : 'chuỗi rỗng';
+      throw new Error('Định dạng phản hồi AI không đúng JSON. Nội dung AI: "' + snippet + '". Chi tiết: ' + parseErr.message);
     }
 
     btn.disabled = false;
