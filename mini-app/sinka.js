@@ -111,11 +111,21 @@ async function loadSinka(profileId) {
     const rows = await res.json();
     const d = rows?.[0]?.data || {};
     // Apply saved sk_* fields — these override auto-fill
+    // Reset danh sách tự nhập khi load profile mới
+    window._sinkaUserEditedFields = {};
+
     SINKA_FIELDS.forEach(id => {
       const savedVal = d[id];
       if (savedVal !== undefined && savedVal !== null && savedVal !== '') {
         const el = document.getElementById(id);
-        if (el) el.value = savedVal;
+        if (el) {
+          // Nếu giá trị đã lưu khác biệt với giá trị auto-fill ban đầu thì đánh dấu là tự nhập thủ công
+          if (el.value !== savedVal && el.value !== '') {
+            window._sinkaUserEditedFields[id] = true;
+            el.style.borderLeft = '3px solid var(--accent, #7c6af7)';
+          }
+          el.value = savedVal;
+        }
       }
     });
   } catch(e) { console.warn('loadSinka DB error:', e); }
@@ -578,4 +588,295 @@ async function exportSinkaWord() {
   a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 5000);
   showToast('📄 Đã xuất: ' + fileName);
+}
+
+// ── Lắng nghe sự kiện chỉnh sửa thủ công của người dùng trên toàn bộ form Sinka ──
+document.addEventListener('DOMContentLoaded', function() {
+  window._sinkaUserEditedFields = window._sinkaUserEditedFields || {};
+
+  SINKA_FIELDS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      var eventType = el.tagName === 'SELECT' ? 'change' : 'input';
+      el.addEventListener(eventType, function() {
+        if (window._sinkaLoaded && currentProfileId) {
+          window._sinkaUserEditedFields[id] = true;
+          el.style.borderLeft = '3px solid var(--accent, #7c6af7)';
+        }
+      });
+    }
+  });
+});
+
+// ── AI SCAN SINKA TAB — So sánh, cập nhật bảo vệ thông tin tự nhập ──
+async function runAIScanSinka() {
+  if (window.isGuestMode) { showToast('🔒 Chế độ xem — không thể quét AI'); return; }
+  if (!currentProfileId) { showToast('⚠️ Vui lòng chọn học viên'); return; }
+
+  const btn = document.getElementById('aiScanSinkaBtn');
+  if (!btn) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '⌛ AI đang quét đối chiếu...';
+
+  try {
+    var p = allProfiles.find(function(x){return x.id===currentProfileId;});
+    if (!p) throw new Error('Không tìm thấy hồ sơ học viên');
+
+    // 1. Tải toàn bộ lịch sử thô từ DB
+    var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
+    var r2 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc');
+    var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content,created_at&order=created_at.asc');
+    var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
+
+    // 2. Gom ngữ cảnh nén thông minh động
+    var historyContext = '';
+    if (typeof getSmartCompressedContext === 'function') {
+      historyContext = getSmartCompressedContext(tvs, bbs, nts);
+    }
+
+    var d = window._currentInfoSheet || {};
+    var nddName = window._rolesDisplay?.ndd || 'chưa rõ';
+    var tvvName = window._rolesDisplay?.tvv || 'chưa rõ';
+    var gvbbName = window._rolesDisplay?.gvbb || 'chưa rõ';
+
+    var friendlyPhase = {
+      'new': 'Chakki',
+      'chakki': 'Chakki',
+      'tu_van_hinh': 'TV Hình',
+      'tu_van': 'Tư vấn',
+      'bb': 'BB (Học tập)',
+      'center': 'Center',
+      'completed': 'Hoàn thành'
+    }[p.phase] || p.phase || 'Chakki';
+
+    var infoContext = 'Hồ sơ học viên: ' + (p.full_name || 'N/A') + '\nGiai đoạn: ' + friendlyPhase + '\nNgười phụ trách: NDD: ' + nddName + ', TVV: ' + tvvName + ', GVBB: ' + gvbbName + '\n\n';
+    if (Object.keys(d).length) {
+      infoContext += 'PHIẾU THÔNG TIN CÁ NHÂN:\n';
+      ['gioi_tinh','nam_sinh','nghe_nghiep','tinh_cach','so_thich','ton_giao','quan_diem','luu_y','hon_nhan','nguoi_quan_trong','du_dinh','chuyen_cu','concept','khong_gian_song','quan_he_ndd','hinh_thuc','khung_ranh','thoi_gian_lam_viec','dia_chi'].forEach(function(k){
+        if (d[k]) infoContext += k + ': ' + (Array.isArray(d[k]) ? d[k].join(', ') : d[k]) + '\n';
+      });
+      infoContext += '\n';
+    }
+
+    // 3. Gom dữ liệu Thẻ học viên Sinka hiện tại trên form
+    var currentSinka = {};
+    SINKA_FIELDS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        currentSinka[id] = el.value || '';
+      }
+    });
+
+    var userEditedList = [];
+    Object.keys(window._sinkaUserEditedFields || {}).forEach(function(k) {
+      if (window._sinkaUserEditedFields[k]) {
+        userEditedList.push(k);
+      }
+    });
+
+    var sysPrompt = `Bạn là trợ lý AI cao cấp chuyên nghiệp của hệ thống quản lý học tập.
+Nhiệm vụ của bạn là so sánh, đối chiếu dòng lịch sử học tập của học sinh (các buổi tư vấn, biên bản học tập, ghi chú) và phiếu thông tin cơ bản với DỮ LIỆU HIỆN CÓ trong THẺ HỌC VIÊN SINKA.
+Hãy phát hiện ra các trường Thẻ học viên cần được điền mới, cập nhật, hoặc bổ sung thông tin từ các cập nhật mới nhất trong lịch sử.
+
+CÁC TRƯỜNG THẺ HỌC VIÊN SINKA HIỆN CÓ TRÊN FORM:
+${JSON.stringify(currentSinka, null, 2)}
+
+DANH SÁCH CÁC TRƯỜNG DO NGƯỜI DÙNG TỰ TAY NHẬP THỦ CÔNG (Cần cẩn thận khi thay đổi):
+${JSON.stringify(userEditedList, null, 2)}
+
+QUY TẮC CẬP NHẬT QUAN TRỌNG:
+1. Quy tắc bổ sung thông minh (Smart Appending): Nếu thông tin mới phát hiện có tính chất bổ sung cho thông tin cũ (ví dụ: sở thích cũ là 'xem phim', thông tin mới phát hiện là 'thích đi phượt'), bạn hãy GHÉP CHÚNG LẠI, ngăn cách bằng dấu phẩy: 'Xem phim, đi phượt'. Tuyệt đối không xóa bỏ các thông tin cũ có ích.
+2. Quy tắc tôn trọng dữ liệu tự nhập: Nếu người dùng đã tự nhập thông tin, chỉ đề xuất chỉnh sửa nếu phát hiện thông tin mới trong báo cáo xung đột hoặc cập nhật thêm chi tiết quan trọng. Giải thích rõ vì sao nên cập nhật.
+3. Chỉ đề xuất các trường thực sự cần cập nhật và có dữ liệu kiểm chứng rõ ràng từ báo cáo (TV, BB, Notes). Không được tự bịa đặt thông tin.
+
+DANH SÁCH MÃ ID VÀ LABEL CỦA CÁC TRƯỜNG SINKA:
+- sk_ten_gt_tuoi: Tên/Giới tính/Tuổi
+- sk_so_thich_sdt: Sở thích/Sở trường/Số liên lạc
+- sk_dia_chi: Địa chỉ nhà (Địa chỉ đang sống)
+- sk_noi_lam_viec: Nơi làm việc (Công việc, Vị trí)
+- sk_lich_trinh: Lịch trình rảnh
+- sk_hon_nhan: Tình trạng hôn nhân
+- sk_thanh_vien_gd: Các thành viên trong gia đình
+- sk_qua_trinh_truong_thanh: Quá trình trưởng thành, hoàn cảnh gia đình
+- sk_enneagram_mbti: Khuynh hướng tính cách (Enneagram, MBTI)
+- sk_mua_tam_long: Những yếu tố có thể mua được tấm lòng
+- sk_quan_tam_thuoc_the: Mối quan tâm và lo lắng thuộc thể
+- sk_quan_tam_thuoc_linh: Mối quan tâm và lo lắng thuộc linh
+- sk_ton_giao: Tôn giáo học sinh
+- sk_giao_phai: Giáo phái/tên nhà thờ/thời gian theo đạo/chức trách
+- sk_ly_do_theo_dao: Lý do bắt đầu theo đạo
+- sk_tin_than_linh: Có tin vào sự tồn tại của thần linh hay không?
+- sk_nhan_thuc_tin_nguong: Nhận thức về tín ngưỡng, Cơ đốc giáo, tôn giáo
+- sk_muc_do_quan_tam_kt: Mức độ quan tâm đến Kinh Thánh
+- sk_so_lan_bb: Số lần BB (Tên bài học gần nhất)
+- sk_ly_do_center: Lý do mong muốn học center (Điểm hái trái)
+- sk_8_9_thang: Đề cập quá trình học kéo dài 8~9 tháng
+- sk_thu_gio_hoc: Thứ và thời gian sẽ học
+- sk_bao_an_ai_biet: Bảo an — ai đã biết
+- sk_chien_luoc_concept: Chiến lược concept với người xung quanh
+- sk_moi_nguy_hiem: Mối nguy hiểm lớn nhất (Bảo an)
+
+QUY ĐỊNH ĐẦU RA (OUTPUT FORMAT):
+Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có văn bản giải thích. Cấu trúc JSON bắt buộc phải như sau:
+{
+  "fields": [
+    {
+      "id": "mã_trường_sk_xxx",
+      "label": "Tên nhãn tiếng Việt",
+      "old_value": "giá trị cũ hiện tại trên form",
+      "new_value": "giá trị mới sau khi cập nhật/bổ sung",
+      "reason": "Giải thích lý do cập nhật ngắn gọn dựa trên báo cáo (ví dụ: phát hiện trong BB buổi 5 học sinh chia sẻ...)"
+    }
+  ]
+}`;
+
+    var userPrompt = `DỮ LIỆU NGỮ CẢNH HỒ SƠ HỌC SINH:\n${infoContext}\n${historyContext}`;
+
+    var data = await callAIProxy([
+      { role: 'system', content: sysPrompt },
+      { role: 'user', content: userPrompt }
+    ], { model: 'deepseek-v4-pro', temperature: 0.1, max_tokens: 1500 });
+
+    var raw = (data.choices && data.choices[0] && data.choices[0].message) ? data.choices[0].message.content.trim() : '';
+    var cleaned = raw.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+    var json = JSON.parse(cleaned);
+
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI Scan Thẻ Học Viên';
+
+    if (json.fields && Array.isArray(json.fields) && json.fields.length > 0) {
+      showSinkaDiffPopup(json.fields);
+    } else {
+      showToast('🍀 AI Scan: Không phát hiện thêm thông tin mới cần cập nhật!');
+    }
+  } catch (err) {
+    console.error('AI Scan Sinka failed:', err);
+    showToast('❌ Lỗi AI Scan: ' + (err.message || 'Không xác định'));
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI Scan Thẻ Học Viên';
+  }
+}
+
+function showSinkaDiffPopup(proposedFields) {
+  const old = document.getElementById('sinkaDiffModal');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.id = 'sinkaDiffModal';
+  overlay.style.zIndex = '9999';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  var tableRowsHtml = '';
+  proposedFields.forEach(function(f) {
+    var isUserEdited = window._sinkaUserEditedFields && window._sinkaUserEditedFields[f.id];
+    var badgeHtml = isUserEdited 
+      ? '<span style="background:var(--accent-orange, #f97316);color:white;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-left:5px;">✍️ Tự nhập</span>'
+      : '';
+    
+    // Mặc định tích chọn cho các trường hệ thống điền, bỏ chọn cho các trường người dùng tự nhập thủ công
+    var checkedAttribute = isUserEdited ? '' : 'checked';
+    
+    tableRowsHtml += `
+      <tr style="border-bottom:1px solid var(--bg3, #e5e7eb);">
+        <td style="padding:10px;font-size:12px;font-weight:700;color:var(--text1, #1f2937);max-width:150px;">
+          ${f.label} ${badgeHtml}
+        </td>
+        <td style="padding:10px;font-size:11px;color:var(--text3, #6b7280);max-width:180px;white-space:pre-wrap;">
+          ${f.old_value || '<i>(Trống)</i>'}
+        </td>
+        <td style="padding:10px;font-size:12px;color:var(--green, #22c55e);font-weight:700;max-width:180px;white-space:pre-wrap;background:rgba(34,197,94,0.05);">
+          ${f.new_value || '—'}
+        </td>
+        <td style="padding:10px;font-size:11px;color:var(--text2, #4b5563);max-width:200px;">
+          ${f.reason || ''}
+        </td>
+        <td style="padding:10px;text-align:center;">
+          <input type="checkbox" class="sinka-diff-checkbox" data-id="${f.id}" data-newval="${f.new_value.replace(/"/g, '&quot;')}" ${checkedAttribute} style="transform:scale(1.2);cursor:pointer;" />
+        </td>
+      </tr>
+    `;
+  });
+
+  overlay.innerHTML = `
+    <div class="modal" style="width:90%;max-width:850px;max-height:85vh;display:flex;flex-direction:column;padding:20px;background:var(--bg, #ffffff);border-radius:var(--radius, 12px);box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+      <div class="modal-title" style="font-size:16px;font-weight:700;color:var(--text1, #1f2937);margin-bottom:8px;display:flex;align-items:center;gap:6px;">✨ AI Scan: Đề xuất cập nhật Thẻ Học Viên</div>
+      <div style="font-size:11px;color:var(--text3, #6b7280);margin-bottom:15px;line-height:1.4;">
+        AI đã đối chiếu lịch sử để phát hiện các thông tin mới. Trường có nhãn <span style="color:#f97316;font-weight:700;">✍️ Tự nhập</span> mặc định sẽ không được chọn ghi đè để bảo vệ dữ liệu thủ công của bạn.
+      </div>
+      
+      <div style="flex:1;overflow-y:auto;border:1px solid var(--bg3, #e5e7eb);border-radius:6px;margin-bottom:15px;">
+        <table style="width:100%;border-collapse:collapse;text-align:left;">
+          <thead>
+            <tr style="background:var(--bg2, #f3f4f6);border-bottom:2px solid var(--bg3, #e5e7eb);">
+              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Hạng mục</th>
+              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Giá trị cũ</th>
+              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Đề xuất mới</th>
+              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Căn cứ / Lý do</th>
+              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);text-align:center;">Duyệt</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
+        <button id="sinkaSelectAllBtn" style="background:none;border:1px solid var(--bg3, #e5e7eb);color:var(--text2, #4b5563);padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">Chọn tất cả</button>
+        <button onclick="document.getElementById('sinkaDiffModal').remove()" style="background:none;border:none;color:var(--text3, #6b7280);padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;">Hủy bỏ</button>
+        <button id="sinkaApplyDiffBtn" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:8px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.2);">✅ Áp dụng đã chọn</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Sự kiện nút "Chọn tất cả"
+  var allSelected = false;
+  document.getElementById('sinkaSelectAllBtn').onclick = function() {
+    allSelected = !allSelected;
+    document.querySelectorAll('.sinka-diff-checkbox').forEach(function(cb) {
+      cb.checked = allSelected;
+    });
+    this.textContent = allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+  };
+
+  // Sự kiện nút "Áp dụng đã chọn"
+  document.getElementById('sinkaApplyDiffBtn').onclick = function() {
+    var applyCount = 0;
+    document.querySelectorAll('.sinka-diff-checkbox:checked').forEach(function(cb) {
+      var id = cb.getAttribute('data-id');
+      var newVal = cb.getAttribute('data-newval');
+      
+      var el = document.getElementById(id);
+      if (el) {
+        el.value = newVal;
+        applyCount++;
+        
+        // Kích hoạt hiệu ứng highlight outline xanh lá
+        el.style.outline = '2px solid var(--green, #22c55e)';
+        el.style.outlineOffset = '-1px';
+        el.style.transition = 'outline 0.3s';
+        
+        // Đánh dấu trường này là tự nhập thủ công (vì người dùng đã chủ động duyệt/nhập nó)
+        if (window._sinkaUserEditedFields) {
+          window._sinkaUserEditedFields[id] = true;
+          el.style.borderLeft = '3px solid var(--accent, #7c6af7)';
+        }
+
+        setTimeout(function() {
+          el.style.outline = '';
+          el.style.outlineOffset = '';
+        }, 5000);
+      }
+    });
+
+    overlay.remove();
+    if (applyCount > 0) {
+      showToast(`✨ Đã cập nhật thành công ${applyCount} trường — hãy lưu Thẻ Học Viên!`);
+      if (typeof haptic === 'function') haptic('success');
+    }
+  };
 }
