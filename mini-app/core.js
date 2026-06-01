@@ -529,9 +529,12 @@ async function sbFetch(path, opts={}) {
     return (await _inflight.get(path)).clone();
   }
 
-  const timeoutMs = isWrite ? 60000 : 20000;
+  let timeoutMs = isWrite ? 60000 : 20000;
+  if (path.includes('/functions/v1/')) {
+    timeoutMs = 150000; // 150 seconds for AI and Edge functions
+  }
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  const tid = setTimeout(() => controller.abort(new Error("Request timeout after " + (timeoutMs/1000) + "s")), timeoutMs);
 
   const promise = (async () => {
     try {
