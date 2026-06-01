@@ -319,6 +319,7 @@ async function runAIAnalysis() {
     _mmCache[p.id] = md;
     renderMarkmap(container, md);
     saveAIMindmap(p.id, md);
+    if (typeof showToast === 'function') showToast('👼 Phân tích bằng [' + (data.model || 'AI') + '] thành công!');
   } catch(e) {
     console.error('AI Mindmap error:', e);
     container.style.height = 'auto';
@@ -493,6 +494,7 @@ async function sendAIChat() {
     _aiChatHistory.push({ role: 'assistant', content: answer });
     renderChatBubbles(msgBox);
     saveChatToDB();
+    if (typeof showToast === 'function') showToast('💬 Trả lời từ [' + (data.model || 'AI') + ']');
   } catch(e) {
     var el2 = document.getElementById('aiTyping'); if(el2) el2.remove();
     _aiChatHistory.pop();

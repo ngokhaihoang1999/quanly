@@ -325,11 +325,12 @@ async function executeAIParse(formType) {
       filledCount = fillHapjaForm(json);
     }
 
+    const activeModel = data.model || 'AI';
     if (filledCount > 0) {
-      showToast('✨ AI đã điền ' + filledCount + ' field — hãy kiểm tra trước khi lưu!');
+      showToast(`✨ [${activeModel}] đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`);
       haptic('success');
     } else {
-      showToast('⚠️ AI không tìm được thông tin phù hợp trong text');
+      showToast(`⚠️ [${activeModel}] không tìm được thông tin phù hợp trong text`);
     }
 
   } catch(e) {
