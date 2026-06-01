@@ -550,6 +550,7 @@ function _initBoardNotes(container) {
 
   allBoardNotes.forEach(el => {
     const noteId = el.dataset.noteId;
+    const isFloating = el.classList.contains('board-note-floating');
 
     // Bind media handlers inside the transparent overlay canvas layer, NOT the text content layer!
     const mediaCanvas = el.querySelector('.board-note-media-canvas');
