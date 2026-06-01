@@ -323,12 +323,20 @@ async function executeAIParse(formType) {
     var u = data.usage || {};
     trackCost((u.prompt_tokens || 0) / 1e6 * 0.40 + (u.completion_tokens || 0) / 1e6 * 1.60);
 
-    // Parse JSON — strip markdown wrappers if GPT adds them
-    var cleaned = raw.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+    // Robust extraction: strip <think> blocks and find JSON boundaries
     var json;
     try {
+      var cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      var start = cleaned.indexOf('{');
+      var end = cleaned.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        cleaned = cleaned.substring(start, end + 1);
+      } else {
+        cleaned = cleaned.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+      }
       json = JSON.parse(cleaned);
     } catch(parseErr) {
+      console.error('Raw AI response parsing failed. Raw text:', raw);
       throw new Error('AI trả format lỗi. Hãy thử lại hoặc chỉnh sửa text cho rõ hơn.');
     }
 

@@ -739,8 +739,23 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
     ], { model: 'deepseek-v4-pro', temperature: 0.1, max_tokens: 1500 });
 
     var raw = (data.choices && data.choices[0] && data.choices[0].message) ? data.choices[0].message.content.trim() : '';
-    var cleaned = raw.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
-    var json = JSON.parse(cleaned);
+    
+    // Robust extraction: strip <think> blocks and find JSON boundaries
+    var json;
+    try {
+      var cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      var start = cleaned.indexOf('{');
+      var end = cleaned.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        cleaned = cleaned.substring(start, end + 1);
+      } else {
+        cleaned = cleaned.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+      }
+      json = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error('Raw AI response parsing failed. Raw text:', raw);
+      throw new Error('Định dạng phản hồi AI không đúng JSON. Hãy thử lại!');
+    }
 
     btn.disabled = false;
     btn.innerHTML = '✨ AI Scan Thẻ Học Viên';
