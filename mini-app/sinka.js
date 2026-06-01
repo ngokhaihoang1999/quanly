@@ -736,7 +736,7 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
     var data = await callAIProxy([
       { role: 'system', content: sysPrompt },
       { role: 'user', content: userPrompt }
-    ], { model: 'deepseek-v4-pro', temperature: 0.1, max_tokens: 1500 });
+    ], { model: 'deepseek-v4-pro', temperature: 0.1, max_tokens: 3500 });
 
     var raw = (data.choices && data.choices[0] && data.choices[0].message) ? data.choices[0].message.content.trim() : '';
     

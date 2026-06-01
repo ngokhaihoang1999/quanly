@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const safeMaxTokens = Math.min(max_tokens || 1000, 2000);
+    const safeMaxTokens = Math.min(max_tokens || 1000, 4096);
     const safeTemp = Math.min(Math.max(temperature || 0.3, 0), 1);
 
     // CASE 1: Request contains an image (OCR / Homework BTVN)
