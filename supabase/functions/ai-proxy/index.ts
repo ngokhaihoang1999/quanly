@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'qwen-32b',
+            model: 'qwen/qwen3-32b',
             messages: processedMessages,
             temperature: Math.min(Math.max(temperature || 0.3, 0), 1),
             max_tokens: Math.min(max_tokens || 1000, 2000),
