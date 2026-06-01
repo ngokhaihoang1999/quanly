@@ -52,11 +52,14 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check if the image size is too large for Groq's 4MB payload limit
+    const isImageTooLargeForGroq = hasImage && (imageBase64.length > 3.5 * 1024 * 1024);
+
     let ocrText = "";
     let ocrSuccessful = false;
 
-    // STEP 1: If there is an image and Groq key is present, perform free OCR using Llama 3.2 Vision
-    if (hasImage && GROQ_API_KEY) {
+    // STEP 1: If there is an image, Groq key is present, and image is within Groq's payload limit
+    if (hasImage && GROQ_API_KEY && !isImageTooLargeForGroq) {
       try {
         console.log("[AI Proxy] Performing free OCR via Groq Llama 3.2 Vision...");
         const ocrRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -108,7 +111,7 @@ Deno.serve(async (req) => {
     // We only route to Groq if:
     // - There is no image OR OCR was successful
     // - GROQ_API_KEY is available
-    if (GROQ_API_KEY && (!hasImage || ocrSuccessful)) {
+    if (GROQ_API_KEY && (!hasImage || ocrSuccessful) && !isImageTooLargeForGroq) {
       try {
         let processedMessages = messages;
         if (ocrSuccessful && ocrText) {

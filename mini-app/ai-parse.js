@@ -225,6 +225,38 @@ async function _validateAIParseRules(formType) {
   return true; // All rules pass
 }
 
+function _compressNoteImage(file, maxW, maxH, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW || h > maxH) {
+          if (w > h) {
+            h = Math.round((h * maxW) / w);
+            w = maxW;
+          } else {
+            w = Math.round((w * maxH) / h);
+            h = maxH;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = function() { reject(new Error('Lỗi load hình ảnh')); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() { reject(new Error('Lỗi đọc hình ảnh')); };
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Execute AI Parse ────────────────────────────────────────────────────────
 
 async function executeAIParse(formType) {
@@ -238,11 +270,16 @@ async function executeAIParse(formType) {
   var base64Image = null;
   
   if (imageInput && imageInput.files && imageInput.files[0]) {
-    base64Image = await new Promise((resolve) => {
-      var reader = new FileReader();
-      reader.onload = function(e) { resolve(e.target.result); };
-      reader.readAsDataURL(imageInput.files[0]);
-    });
+    try {
+      base64Image = await _compressNoteImage(imageInput.files[0], 1024, 1024, 0.7);
+    } catch(err) {
+      console.warn('Image compress failed, using raw reader:', err);
+      base64Image = await new Promise((resolve) => {
+        var reader = new FileReader();
+        reader.onload = function(e) { resolve(e.target.result); };
+        reader.readAsDataURL(imageInput.files[0]);
+      });
+    }
   }
 
   if (!text && !base64Image) { showToast('⚠️ Cần dán text hoặc chọn ảnh'); return; }
