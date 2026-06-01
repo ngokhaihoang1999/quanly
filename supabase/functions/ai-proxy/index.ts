@@ -101,9 +101,12 @@ Deno.serve(async (req) => {
     let responseData = null;
     let deepseekSuccess = false;
 
+    // Determine target DeepSeek model (default to deepseek-v4-pro if not specified)
+    const targetModel = (model === 'deepseek-v4-flash' || model === 'deepseek-v4-pro') ? model : 'deepseek-v4-pro';
+
     if (DEEPSEEK_API_KEY) {
       try {
-        console.log("[AI Proxy] Routing to DeepSeek-V4 Pro (deepseek-v4-pro)...");
+        console.log(`[AI Proxy] Routing to DeepSeek model: ${targetModel}...`);
         const deepseekRes = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
           headers: {
@@ -111,7 +114,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'deepseek-v4-pro',
+            model: targetModel,
             messages,
             temperature: safeTemp,
             max_tokens: safeMaxTokens,
@@ -121,13 +124,13 @@ Deno.serve(async (req) => {
         if (deepseekRes.ok) {
           responseData = await deepseekRes.json();
           deepseekSuccess = true;
-          console.log("[AI Proxy] DeepSeek-V4 Pro response success!");
+          console.log(`[AI Proxy] DeepSeek model ${targetModel} response success!`);
         } else {
           const errText = await deepseekRes.text();
-          console.warn("[AI Proxy] DeepSeek-V4 Pro failed with status:", deepseekRes.status, "Body:", errText);
+          console.warn(`[AI Proxy] DeepSeek model ${targetModel} failed with status:`, deepseekRes.status, "Body:", errText);
         }
       } catch (err) {
-        console.error("[AI Proxy] DeepSeek-V4 Pro fetch exception:", err);
+        console.error(`[AI Proxy] DeepSeek model ${targetModel} fetch exception:`, err);
       }
     } else {
       console.log("[AI Proxy] DEEPSEEK_API_KEY is not configured. Skipping...");
@@ -175,7 +178,7 @@ Deno.serve(async (req) => {
 
     // Return DeepSeek successful response
     if (responseData) {
-      responseData.model = 'deepseek-v4-pro';
+      responseData.model = targetModel;
       return new Response(JSON.stringify(responseData), {
         status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

@@ -97,7 +97,7 @@ function short(t, n) { if(!t) return ''; t=t.replace(/\n/g,' ').trim(); return t
 // AI PROXY — calls Supabase Edge Function (key is server-side)
 // ═══════════════════════════════════════════════════
 async function callAIProxy(messages, opts = {}) {
-  const model = opts.model || 'deepseek-v4-pro';
+  const model = opts.model || 'deepseek-v4-flash';
   const temperature = opts.temperature || 0.3;
   const max_tokens = opts.max_tokens || 1000;
   
@@ -659,7 +659,7 @@ async function sendAIChat() {
     var msgs = [
       { role: 'system', content: LACIE_SYSTEM_PROMPT + '\n\nHO SO TRAI QUA HIEN TAI:\n' + context }
     ].concat(_aiChatHistory.slice(-8));
-    var data = await callAIProxy(msgs, { model: 'deepseek-v4-pro', temperature: 0.4, max_tokens: 400 });
+    var data = await callAIProxy(msgs, { model: 'deepseek-v4-flash', temperature: 0.4, max_tokens: 400 });
     var el = document.getElementById('aiTyping'); if(el) el.remove();
     var answer = (data.choices && data.choices[0] ? data.choices[0].message.content : 'Không có phản hồi');
     var u = data.usage || {};
