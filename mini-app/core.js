@@ -112,6 +112,22 @@ function renderProfileCard(p, opts = {}) {
   const laStr = opts.la || p.la_staff_code || '';
   const latestStr = opts.latestActivity || '';
 
+  // Clean and resolve role strings
+  const cleanRoleStr = (val) => {
+    if (!val) return '';
+    if (typeof val !== 'string') return val;
+    if (val.startsWith('tg:')) {
+      return val.replace('tg:', '');
+    }
+    if (typeof allStaff !== 'undefined' && Array.isArray(allStaff)) {
+      const s = allStaff.find(x => x.staff_code === val);
+      if (s) {
+        return s.nickname || s.full_name || val;
+      }
+    }
+    return val;
+  };
+
   // ── Row 1: Name + year (left) — Status badge (right) ──
   const row1 = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
     <div style="font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.full_name}${yearTag}${unreadBadge}${mentionBadge}</div>
@@ -127,10 +143,10 @@ function renderProfileCard(p, opts = {}) {
 
   // ── Row 3: Roles (NDD / TVV / GVBB / Lá) ──
   const roleParts = [];
-  if (nddStr) roleParts.push(`<span><b style="opacity:0.5;">NDD</b> ${nddStr}</span>`);
-  if (tvvStr) roleParts.push(`<span><b style="opacity:0.5;">TVV</b> ${tvvStr}</span>`);
-  if (gvbbStr) roleParts.push(`<span><b style="opacity:0.5;">GVBB</b> ${gvbbStr}</span>`);
-  if (laStr) roleParts.push(`<span><b style="opacity:0.5;">Lá</b> ${laStr}</span>`);
+  if (nddStr) roleParts.push(`<span><b style="opacity:0.5;">NDD</b> ${cleanRoleStr(nddStr)}</span>`);
+  if (tvvStr) roleParts.push(`<span><b style="opacity:0.5;">TVV</b> ${cleanRoleStr(tvvStr)}</span>`);
+  if (gvbbStr) roleParts.push(`<span><b style="opacity:0.5;">GVBB</b> ${cleanRoleStr(gvbbStr)}</span>`);
+  if (laStr) roleParts.push(`<span><b style="opacity:0.5;">Lá</b> ${cleanRoleStr(laStr)}</span>`);
   const rolesRow = roleParts.length > 0
     ? `<div style="display:flex;gap:4px;font-size:11px;color:var(--text2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${roleParts.join('<span style="opacity:0.3;"> · </span>')}</div>`
     : '';
