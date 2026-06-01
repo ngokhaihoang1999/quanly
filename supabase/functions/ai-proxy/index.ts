@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log("[AI Proxy] Calling Groq Qwen 2.5 Coder 32B...");
+        console.log("[AI Proxy] Calling Groq Qwen 3 32B...");
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'qwen-2.5-coder-32b',
+            model: 'qwen-32b',
             messages: processedMessages,
             temperature: Math.min(Math.max(temperature || 0.3, 0), 1),
             max_tokens: Math.min(max_tokens || 1000, 2000),
