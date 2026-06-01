@@ -326,11 +326,18 @@ async function executeAIParse(formType) {
     }
 
     const activeModel = data.model || 'AI';
+    const isAdmin = (typeof getCurrentPosition === 'function' && getCurrentPosition() === 'admin');
     if (filledCount > 0) {
-      showToast(`✨ [${activeModel}] đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`);
+      const msg = isAdmin 
+        ? `✨ [${activeModel}] đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`
+        : `✨ AI đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`;
+      showToast(msg);
       haptic('success');
     } else {
-      showToast(`⚠️ [${activeModel}] không tìm được thông tin phù hợp trong text`);
+      const msg = isAdmin
+        ? `⚠️ [${activeModel}] không tìm được thông tin phù hợp trong text`
+        : `⚠️ AI không tìm được thông tin phù hợp trong text`;
+      showToast(msg);
     }
 
   } catch(e) {
