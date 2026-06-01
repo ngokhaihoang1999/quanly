@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
 
     if (DEEPSEEK_API_KEY) {
       try {
-        console.log("[AI Proxy] Routing to DeepSeek-V3 (deepseek-chat)...");
+        console.log("[AI Proxy] Routing to DeepSeek-V4 Pro (deepseek-v4-pro)...");
         const deepseekRes = await fetch('https://api.deepseek.com/chat/completions', {
           method: 'POST',
           headers: {
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'deepseek-chat',
+            model: 'deepseek-v4-pro',
             messages,
             temperature: safeTemp,
             max_tokens: safeMaxTokens,
@@ -121,13 +121,13 @@ Deno.serve(async (req) => {
         if (deepseekRes.ok) {
           responseData = await deepseekRes.json();
           deepseekSuccess = true;
-          console.log("[AI Proxy] DeepSeek-V3 response success!");
+          console.log("[AI Proxy] DeepSeek-V4 Pro response success!");
         } else {
           const errText = await deepseekRes.text();
-          console.warn("[AI Proxy] DeepSeek-V3 failed with status:", deepseekRes.status, "Body:", errText);
+          console.warn("[AI Proxy] DeepSeek-V4 Pro failed with status:", deepseekRes.status, "Body:", errText);
         }
       } catch (err) {
-        console.error("[AI Proxy] DeepSeek-V3 fetch exception:", err);
+        console.error("[AI Proxy] DeepSeek-V4 Pro fetch exception:", err);
       }
     } else {
       console.log("[AI Proxy] DEEPSEEK_API_KEY is not configured. Skipping...");
@@ -173,9 +173,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Return DeepSeek-V3 successful response
+    // Return DeepSeek successful response
     if (responseData) {
-      responseData.model = 'deepseek-chat';
+      responseData.model = 'deepseek-v4-pro';
       return new Response(JSON.stringify(responseData), {
         status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
