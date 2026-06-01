@@ -28,6 +28,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log("[AI Proxy] Received request. OPENAI_API_KEY exists:", !!OPENAI_API_KEY, "| GROQ_API_KEY exists:", !!GROQ_API_KEY);
     const body = await req.json();
     const { messages, model, temperature, max_tokens } = body;
 
@@ -100,7 +101,8 @@ Deno.serve(async (req) => {
             console.log("[AI Proxy] OCR Success! Extracted text length:", ocrText.length);
           }
         } else {
-          console.warn("[AI Proxy] Groq OCR failed with status:", ocrRes.status);
+          const ocrErrText = await ocrRes.text();
+          console.warn("[AI Proxy] Groq OCR failed with status:", ocrRes.status, "Body:", ocrErrText);
         }
       } catch (err) {
         console.error("[AI Proxy] Groq OCR exception:", err);
@@ -155,7 +157,8 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.warn("[AI Proxy] Groq Qwen failed with status:", groqRes.status, "Falling back to OpenAI...");
+        const groqErrText = await groqRes.text();
+        console.warn("[AI Proxy] Groq Qwen failed with status:", groqRes.status, "Body:", groqErrText, "Falling back to OpenAI...");
       } catch (err) {
         console.error("[AI Proxy] Groq Qwen exception, falling back to OpenAI:", err);
       }
