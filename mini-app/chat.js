@@ -285,8 +285,12 @@ function addChatMessageToDOM(msg) {
   let messageText = '';
   let messageContentHtml = '';
 
+  const isEdited = msg.updated_at && (new Date(msg.updated_at) - new Date(msg.created_at) > 2000);
+  const editedHtml = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>` : '';
+  const mediaTimeWithEdited = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}` : timeStr;
+
   if (p.isPureMedia) {
-    messageText = formatChatMessageText(p.chatText, timeStr, isMe, msg.id, false);
+    messageText = formatChatMessageText(p.chatText, mediaTimeWithEdited, isMe, msg.id, false);
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
   } else {
     messageText = formatChatMessageText(p.chatText);
@@ -300,6 +304,7 @@ function addChatMessageToDOM(msg) {
 
     const metaHtml = `
       <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+        ${editedHtml}
         ${actionsHtml}
         <span class="chat-message-time-val">${timeStr}</span>
       </span>
@@ -399,6 +404,7 @@ function showTempMediaPreview(url, fileName) {
 
 function clearTempMediaPreview() {
   window._tempUploadMediaUrl = null;
+  window._tempUploadMediaMetadata = null;
   const container = document.getElementById('chatTempMediaPreview');
   if (container) container.style.display = 'none';
 }
@@ -416,6 +422,7 @@ async function sendProfileChatMessage() {
 
   const text = input.value.trim();
   const mediaUrl = window._tempUploadMediaUrl;
+  const mediaMetadata = window._tempUploadMediaMetadata || null;
   const category = catSelect ? catSelect.value : 'general';
   
   if (!text && !mediaUrl) return;
@@ -445,7 +452,8 @@ async function sendProfileChatMessage() {
         profile_id: currentProfileId,
         sender_code: sender,
         message: finalMessageText,
-        category: category
+        category: category,
+        media_metadata: mediaMetadata
       })
     });
     
@@ -924,8 +932,11 @@ function updateChatMessageInDOM(msg) {
       let messageText = '';
       let messageContentHtml = '';
 
+      const isEdited = msg.updated_at && (new Date(msg.updated_at) - new Date(msg.created_at) > 2000);
+      const editedHtml = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>` : '';
+      const displayTimeStr = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}` : timeStr;
+
       if (p.isPureMedia) {
-        const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
         messageText = formatChatMessageText(p.chatText, displayTimeStr, isMe, msg.id, false);
         messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
       } else {
@@ -940,7 +951,7 @@ function updateChatMessageInDOM(msg) {
 
         const metaHtml = `
           <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
-            <span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>
+            ${editedHtml}
             ${actionsHtml}
             <span class="chat-message-time-val">${timeStr}</span>
           </span>
@@ -1040,8 +1051,11 @@ function updateChatMessageInDOM(msg) {
       let messageText = '';
       let messageContentHtml = '';
 
+      const isEdited = msg.updated_at && (new Date(msg.updated_at) - new Date(msg.created_at) > 2000);
+      const editedHtml = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>` : '';
+      const displayTimeStr = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}` : timeStr;
+
       if (p.isPureMedia) {
-        const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
         messageText = formatChatMessageText(p.chatText, displayTimeStr, isMe, msg.id, true);
         messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
       } else {
@@ -1054,6 +1068,7 @@ function updateChatMessageInDOM(msg) {
 
         const metaHtml = `
           <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+            ${editedHtml}
             ${actionsHtml}
             <span class="chat-message-time-val">${timeStr}</span>
           </span>
@@ -1520,6 +1535,19 @@ async function uploadChatImage(input) {
     if (data && data.url) {
       // Stage the URL in our temp preview box
       showTempMediaPreview(data.url, file.name);
+      
+      const fileType = file.type || '';
+      let mediaType = 'document';
+      if (fileType.startsWith('image/')) mediaType = 'photo';
+      else if (fileType.startsWith('video/')) mediaType = 'video';
+      else if (fileType.startsWith('audio/')) mediaType = 'voice';
+      
+      window._tempUploadMediaMetadata = {
+        type: mediaType,
+        file_path: data.file_path,
+        name: file.name
+      };
+      
       showToast('✅ Tệp đã sẵn sàng, nhập nội dung và bấm gửi');
     } else {
       throw new Error('No URL returned from proxy server');
@@ -1537,7 +1565,7 @@ async function uploadChatImage(input) {
 }
 
 // Save the secure proxy URL as message text to the profile chat database
-async function sendProxyImageMessage(imageUrl) {
+async function sendProxyImageMessage(imageUrl, mediaMetadata = null) {
   const sender = getEffectiveStaffCode();
   const catSelect = document.getElementById('chat_category');
   const category = catSelect ? catSelect.value : 'general';
@@ -1550,7 +1578,8 @@ async function sendProxyImageMessage(imageUrl) {
         profile_id: currentProfileId,
         sender_code: sender,
         message: imageUrl,
-        category: category
+        category: category,
+        media_metadata: mediaMetadata
       })
     });
     
@@ -2534,8 +2563,12 @@ function addFloatingChatMessageToDOM(msg) {
   let messageText = '';
   let messageContentHtml = '';
 
+  const isEdited = msg.updated_at && (new Date(msg.updated_at) - new Date(msg.created_at) > 2000);
+  const editedHtml = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.6; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>` : '';
+  const mediaTimeWithEdited = isEdited ? `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}` : timeStr;
+
   if (p.isPureMedia) {
-    messageText = formatChatMessageText(p.chatText, timeStr, isMe, msg.id, true);
+    messageText = formatChatMessageText(p.chatText, mediaTimeWithEdited, isMe, msg.id, true);
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
   } else {
     messageText = formatChatMessageText(p.chatText);
@@ -2547,6 +2580,7 @@ function addFloatingChatMessageToDOM(msg) {
 
     const metaHtml = `
       <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+        ${editedHtml}
         ${actionsHtml}
         <span class="chat-message-time-val">${timeStr}</span>
       </span>
@@ -3146,8 +3180,16 @@ async function stopAndSendVoiceRecording() {
       } else {
         finalUrl += `?dur=${recordingSecs}`;
       }
+      
+      const mediaMetadata = {
+        type: 'voice',
+        file_path: data.file_path,
+        name: fileName,
+        duration: recordingSecs
+      };
+      
       // Send the secure bot proxy url directly as message content
-      await sendProxyImageMessage(finalUrl);
+      await sendProxyImageMessage(finalUrl, mediaMetadata);
       showToast('✅ Đã gửi tin nhắn thoại');
     } else {
       throw new Error('No URL returned from bot server');
