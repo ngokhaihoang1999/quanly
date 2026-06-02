@@ -472,6 +472,19 @@ async function loadStaffInfo() {
     const data = await res.json();
     if (data.length > 0) {
       myStaff = data[0];
+      
+      // Auto-update missing or changed telegram_username in DB for self-healing tag mapping
+      const tgUsername = tg?.initDataUnsafe?.user?.username;
+      if (tgUsername && myStaff.telegram_username !== tgUsername) {
+        sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ telegram_username: tgUsername })
+        }).then(() => {
+          myStaff.telegram_username = tgUsername;
+          console.log('[Auto-update] Updated telegram_username in DB:', tgUsername);
+        }).catch(err => console.warn('[Auto-update] Failed to update telegram_username:', err));
+      }
+
       let badgeText = `${myStaff.staff_code} · ${getPositionName(myStaff.position)}`;
       if (myStaff.specialist_position) badgeText += ` + ${getPositionName(myStaff.specialist_position)}`;
       const badgeEl = document.getElementById('staffBadge');

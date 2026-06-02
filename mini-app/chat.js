@@ -1268,7 +1268,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
   let messageText = escHtml(text);
   
   // 1. Format mentions
-  messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention">@$1</span>');
+  messageText = messageText.replace(/@(\d{6}-[A-Z]+)/g, '<span class="chat-mention" onclick="event.stopPropagation(); showStaffCard(\'$1\')" style="cursor:pointer;">@$1</span>');
 
   // 2. Format links and check if they are images, videos, audios, or documents
   const urlRegex = /(https?:\/\/[^\s<]+)/gi;
