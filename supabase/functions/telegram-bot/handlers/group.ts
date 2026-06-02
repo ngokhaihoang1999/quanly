@@ -3,6 +3,28 @@ import { ROLE_LABELS } from "../config.ts";
 import { canLinkProfile, canAssignRole, canChangeLevel } from "../permissions.ts";
 import { sendText, sendKeyboard, editMessageReplyMarkup, getChatAdmins, getBotId, exportChatInviteLink } from "../telegram.ts";
 
+// Helper to map Telegram tags back to App JD codes
+async function mapTelegramTagsToApp(text: string): Promise<string> {
+  if (!text) return text;
+  const matches = text.match(/@[a-zA-Z0-9_]+/g);
+  if (!matches) return text;
+
+  let mappedText = text;
+  for (const match of matches) {
+    const username = match.substring(1);
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('staff_code')
+      .ilike('telegram_username', username)
+      .single();
+
+    if (staff) {
+      mappedText = mappedText.replace(match, `@${staff.staff_code}`);
+    }
+  }
+  return mappedText;
+}
+
 // ============ FORM TEMPLATE HELPERS (used by callbacks.ts) ============
 
 const TV_FORM_TITLE = 'FORM BÁO CÁO TƯ VẤN';
@@ -113,9 +135,10 @@ function parseTVForm(text: string): Record<string, string> | null {
 // ============ GROUP CHAT HANDLER ============
 
 export async function handleGroupChat(update: any) {
-  const msg = update.message;
+  const msg = update.message || update.edited_message;
   if (!msg) return;
 
+  const isEdited = !!update.edited_message;
   const chatId = msg.chat.id;
   const chatTitle = msg.chat.title || '';
   const telegramId = msg.from.id;
@@ -140,6 +163,10 @@ export async function handleGroupChat(update: any) {
     }
 
     let chatMsgText = text || msg.caption || '';
+    
+    // Map tags in message text
+    chatMsgText = await mapTelegramTagsToApp(chatMsgText);
+
     let mediaMetadata: any = null;
 
     // Resolve media paths if present using getFile
@@ -163,6 +190,12 @@ export async function handleGroupChat(update: any) {
         fileId = msg.document.file_id;
         mediaType = 'document';
         docName = msg.document.file_name || '';
+      } else if (msg.sticker) {
+        fileId = msg.sticker.file_id;
+        mediaType = 'sticker';
+      } else if (msg.animation) {
+        fileId = msg.animation.file_id;
+        mediaType = 'gif';
       }
 
       if (fileId && mediaType) {
@@ -187,6 +220,8 @@ export async function handleGroupChat(update: any) {
                 else if (mediaType === 'video') chatMsgText = '[🎥 Video]';
                 else if (mediaType === 'voice') chatMsgText = '[🎙️ Voice Note]';
                 else if (mediaType === 'document') chatMsgText = `[📄 Tài liệu] ${docName}`;
+                else if (mediaType === 'sticker') chatMsgText = '[✨ Sticker]';
+                else if (mediaType === 'gif') chatMsgText = '[🎬 GIF]';
               }
             }
           }
@@ -197,20 +232,32 @@ export async function handleGroupChat(update: any) {
     }
 
     try {
-      const { error } = await supabase.from('profile_chats').insert({
-        profile_id: fg.profile_id,
-        sender_code: senderCode,
-        message: chatMsgText,
-        source: 'telegram',
-        tg_message_id: msg.message_id,
-        tg_sender_name: tgSenderName,
-        media_metadata: mediaMetadata
-      });
-      if (error && error.code !== '23505') {
-        console.error("Error syncing message from Telegram:", error);
+      if (isEdited) {
+        const { error } = await supabase.from('profile_chats')
+          .update({
+            message: chatMsgText,
+            media_metadata: mediaMetadata
+          })
+          .eq('tg_message_id', msg.message_id);
+        if (error) {
+          console.error("Error updating message from Telegram:", error);
+        }
+      } else {
+        const { error } = await supabase.from('profile_chats').insert({
+          profile_id: fg.profile_id,
+          sender_code: senderCode,
+          message: chatMsgText,
+          source: 'telegram',
+          tg_message_id: msg.message_id,
+          tg_sender_name: tgSenderName,
+          media_metadata: mediaMetadata
+        });
+        if (error && error.code !== '23505') {
+          console.error("Error syncing message from Telegram:", error);
+        }
       }
     } catch (insertErr) {
-      console.error("Error in profile_chats insert logic:", insertErr);
+      console.error("Error in profile_chats insert/update logic:", insertErr);
     }
   }
 
@@ -411,8 +458,8 @@ export async function handleGroupChat(update: any) {
     return;
   }
 
-  // /start — Menu lệnh cho group
-  if (text === '/start' || text.startsWith('/start@')) {
+  // /start or /menu — Menu lệnh cho group
+  if (text === '/start' || text.startsWith('/start@') || text === '/menu' || text.startsWith('/menu@')) {
     const { data: existingFg } = await supabase.from('fruit_groups')
       .select('id, profile_id').eq('telegram_group_id', chatId).single();
     if (!existingFg) {
@@ -434,7 +481,7 @@ export async function handleGroupChat(update: any) {
     }
 
     // Build dynamic menu
-    const miniAppBase = 'https://ngokhaihoang1999.github.io/quanly/mini-app/index.html?v=202606012345';
+    const miniAppBase = 'https://ngokhaihoang1999.github.io/quanly/mini-app/index.html?v=202606021700';
     let linkedProfileId: string | null = existingFg?.profile_id || null;
     // If new group was just created, profile_id won't be set yet anyway
     const keyboard: any[] = [];

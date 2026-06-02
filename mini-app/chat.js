@@ -210,7 +210,7 @@ function preprocessChatMessage(msg) {
     }
   }
 
-  const isPureMedia = isPureVisualMedia(chatText);
+  const isPureMedia = isPureVisualMedia(chatText) || (msg.media_metadata && msg.media_metadata.type === 'sticker');
   const isMediaLink = chatText.includes('/file/bot') || chatText.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(chatText) || chatText.includes('imgbb.com') || chatText.includes('postimg.cc');
 
   return {
@@ -1327,7 +1327,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
         }
         const toggleId = isFloating ? `fl_${msgId}` : msgId;
         overlayHtml = `
-          <div class="chat-message-media-time-overlay" onclick="event.stopPropagation(); ${isMe ? `toggleBubbleActions(event, '${toggleId}')` : ''}">
+          <div style="position: absolute; bottom: 0; right: 0; color: var(--text3); font-size: 9px; padding: 2px 4px; user-select: none; display: inline-flex; align-items: center; gap: 6px; z-index: 10;" onclick="event.stopPropagation(); ${isMe ? `toggleBubbleActions(event, '${toggleId}')` : ''}">
             ${actionsHtml}
             <span>${mediaTimeStr}</span>
           </div>
@@ -1366,7 +1366,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       }
 
       return `
-        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 120px; position: relative;" onclick="event.stopPropagation();">
+        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 120px; position: relative; padding-bottom: 14px;" onclick="event.stopPropagation();">
           <img src="${displayUrl}" style="width: 100%; height: auto; max-height: 120px; object-fit: contain; display: block;" onerror="this.onerror=null; this.src='https://placehold.co/120x120?text=Sticker';" />
           ${deleteBtnHtml}
           ${overlayHtml}

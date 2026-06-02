@@ -21,6 +21,74 @@ import { handleGroupChat } from "./handlers/group.ts";
 import { handleCallback } from "./handlers/callbacks.ts";
 import { handlePrivateChat } from "./handlers/private.ts";
 
+// Helper to merge Telegram reactions into Supabase reactions JSONB
+function mergeReactions(existingReactions: any, staffCode: string, newTelegramReactions: any[]) {
+  const reactions = typeof existingReactions === 'object' && existingReactions !== null 
+    ? { ...existingReactions } 
+    : {};
+
+  // 1. Get the list of new emojis for this user from Telegram
+  const newEmojis = new Set<string>();
+  for (const r of newTelegramReactions) {
+    if (r.type === 'emoji' && r.emoji) {
+      newEmojis.add(r.emoji);
+    }
+  }
+
+  // 2. Remove staffCode from any emoji in the existing reactions that is NOT in the new list
+  for (const emoji of Object.keys(reactions)) {
+    if (!newEmojis.has(emoji)) {
+      if (Array.isArray(reactions[emoji])) {
+        reactions[emoji] = reactions[emoji].filter((code: string) => code !== staffCode);
+        if (reactions[emoji].length === 0) {
+          delete reactions[emoji];
+        }
+      }
+    }
+  }
+
+  // 3. Add staffCode to the emojis in the new list
+  for (const emoji of newEmojis) {
+    if (!reactions[emoji]) {
+      reactions[emoji] = [];
+    } else if (!Array.isArray(reactions[emoji])) {
+      reactions[emoji] = [];
+    }
+    if (!reactions[emoji].includes(staffCode)) {
+      reactions[emoji].push(staffCode);
+    }
+  }
+
+  return reactions;
+}
+
+// Helper function to map app tags to Telegram mentions
+async function mapAppTagsToTelegram(text: string): Promise<string> {
+  if (!text) return text;
+  const matches = text.match(/@\d{6}-[A-Z]+/g);
+  if (!matches) return text;
+
+  let mappedText = text;
+  for (const match of matches) {
+    const staffCode = match.substring(1);
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('telegram_id, telegram_username, nickname, full_name')
+      .eq('staff_code', staffCode)
+      .single();
+
+    if (staff) {
+      if (staff.telegram_username) {
+        mappedText = mappedText.replace(match, `@${staff.telegram_username}`);
+      } else if (staff.telegram_id) {
+        const dispName = staff.nickname || staff.full_name || staffCode;
+        mappedText = mappedText.replace(match, `<a href="tg://user?id=${staff.telegram_id}">@${dispName}</a>`);
+      }
+    }
+  }
+  return mappedText;
+}
+
 // ============ MAIN REQUEST HANDLER ============
 
 
@@ -168,12 +236,14 @@ Deno.serve(async (req) => {
     const payload = await req.json();
 
     // ── Handle App to Telegram message sync (from DB Trigger) ──
-    if (payload.type === 'app_message' && payload.record) {
+    const allowedTypes = ['app_message', 'app_message_inserted', 'app_message_updated', 'app_message_deleted', 'app_message_reaction'];
+    if (allowedTypes.includes(payload.type) && payload.record) {
       const record = payload.record;
       const profileId = record.profile_id;
       const messageText = record.message;
       const senderCode = record.sender_code;
       const recordId = record.id;
+      const tgMsgId = record.tg_message_id;
 
       // Find the linked Telegram group ID
       const { data: fg } = await supabase
@@ -194,7 +264,6 @@ Deno.serve(async (req) => {
           senderName = staff.nickname || staff.full_name;
         }
 
-        // Helper function to escape HTML special characters
         const escapeHTML = (str: string) => {
           return (str || '')
             .replace(/&/g, '&amp;')
@@ -203,32 +272,194 @@ Deno.serve(async (req) => {
         };
 
         const escapedSender = escapeHTML(senderName);
-        const escapedMessage = escapeHTML(messageText);
-        const textToSend = `💬 [App] <b>${escapedSender}</b>:\n${escapedMessage}`;
 
-        const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: fg.telegram_group_id,
-            text: textToSend,
-            parse_mode: 'HTML'
-          })
-        });
-
-        if (tgRes.ok) {
-          const tgData = await tgRes.json();
-          const tgMsgId = tgData.result?.message_id;
+        if (payload.type === 'app_message_deleted') {
           if (tgMsgId) {
-            // Update tg_message_id back in DB
-            await supabase
-              .from('profile_chats')
-              .update({ tg_message_id: tgMsgId })
-              .eq('id', recordId);
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: fg.telegram_group_id,
+                message_id: tgMsgId
+              })
+            }).catch(err => console.error("Telegram deleteMessage failed:", err));
           }
-        } else {
-          const errText = await tgRes.text();
-          console.error("Failed to send message to Telegram group:", errText);
+        } else if (payload.type === 'app_message_updated') {
+          if (tgMsgId) {
+            // Map tags to Telegram usernames
+            const mappedText = await mapAppTagsToTelegram(messageText);
+            const hasMedia = record.media_metadata && record.media_metadata.file_path;
+            
+            if (hasMedia) {
+              // Parse caption (exclude the URL at the beginning)
+              let captionText = '';
+              if (mappedText) {
+                if (mappedText.startsWith('http')) {
+                  const lines = mappedText.split('\n');
+                  captionText = lines.slice(1).join('\n');
+                } else {
+                  captionText = mappedText;
+                }
+              }
+              const captionToSend = `<b>${escapedSender}</b>:${captionText ? ' ' + escapeHTML(captionText) : ''}`;
+              
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageCaption`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: fg.telegram_group_id,
+                  message_id: tgMsgId,
+                  caption: captionToSend,
+                  parse_mode: 'HTML'
+                })
+              }).catch(err => console.error("Telegram editMessageCaption failed:", err));
+            } else {
+              const escapedMessage = escapeHTML(mappedText);
+              const textToSend = `<b>${escapedSender}</b>: ${escapedMessage}`;
+              
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: fg.telegram_group_id,
+                  message_id: tgMsgId,
+                  text: textToSend,
+                  parse_mode: 'HTML'
+                })
+              }).catch(err => console.error("Telegram editMessageText failed:", err));
+            }
+          }
+        } else if (payload.type === 'app_message_reaction') {
+          if (tgMsgId) {
+            const oldReactions = payload.old_record?.reactions || {};
+            const newReactions = record.reactions || {};
+
+            const getAppEmojis = (reactionsObj: any) => {
+              const emojis: string[] = [];
+              for (const [emoji, users] of Object.entries(reactionsObj)) {
+                if (Array.isArray(users)) {
+                  const hasAppUser = users.some((code: string) => !code.startsWith('tg:'));
+                  if (hasAppUser) {
+                    emojis.push(emoji);
+                  }
+                }
+              }
+              return emojis.sort();
+            };
+
+            const oldAppEmojis = getAppEmojis(oldReactions);
+            const newAppEmojis = getAppEmojis(newReactions);
+
+            const isSame = oldAppEmojis.length === newAppEmojis.length && 
+                           oldAppEmojis.every((val, index) => val === newAppEmojis[index]);
+
+            if (isSame) {
+              console.log("[Reaction Sync] App reactions did not change. Skipping Telegram update.");
+            } else {
+              const reactionTypes = newAppEmojis.map(emoji => ({
+                type: 'emoji',
+                emoji: emoji
+              }));
+
+              const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setMessageReaction`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: fg.telegram_group_id,
+                  message_id: tgMsgId,
+                  reaction: reactionTypes
+                })
+              });
+              if (!res.ok) {
+                const errText = await res.text();
+                console.error("[Reaction Sync] Failed to set reaction on Telegram:", errText);
+              } else {
+                console.log(`[Reaction Sync] Successfully set reactions ${JSON.stringify(newAppEmojis)} on Telegram message ${tgMsgId}`);
+              }
+            }
+          }
+        } else if (payload.type === 'app_message' || payload.type === 'app_message_inserted') {
+          // INSERT (or fallback 'app_message' which is insert)
+          const mappedText = await mapAppTagsToTelegram(messageText);
+          const hasMedia = record.media_metadata && record.media_metadata.file_path;
+          
+          let tgRes;
+          
+          if (hasMedia) {
+            const media = record.media_metadata;
+            const filePath = media.file_path;
+            const name = media.name || 'file';
+            const type = media.type || 'photo';
+            
+            const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}&name=${encodeURIComponent(name)}`;
+            
+            let captionText = '';
+            if (mappedText) {
+              if (mappedText.startsWith('http')) {
+                const lines = mappedText.split('\n');
+                captionText = lines.slice(1).join('\n');
+              } else {
+                captionText = mappedText;
+              }
+            }
+            
+            const captionToSend = `<b>${escapedSender}</b>:${captionText ? ' ' + escapeHTML(captionText) : ''}`;
+            
+            let telegramApiMethod = 'sendDocument';
+            let telegramField = 'document';
+            
+            if (type === 'photo') {
+              telegramApiMethod = 'sendPhoto';
+              telegramField = 'photo';
+            } else if (type === 'video') {
+              telegramApiMethod = 'sendVideo';
+              telegramField = 'video';
+            } else if (type === 'voice') {
+              telegramApiMethod = 'sendVoice';
+              telegramField = 'voice';
+            } else if (type === 'audio') {
+              telegramApiMethod = 'sendAudio';
+              telegramField = 'audio';
+            }
+
+            tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${telegramApiMethod}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: fg.telegram_group_id,
+                [telegramField]: proxyUrl,
+                caption: captionToSend,
+                parse_mode: 'HTML'
+              })
+            });
+          } else {
+            const escapedMessage = escapeHTML(mappedText);
+            const textToSend = `<b>${escapedSender}</b>: ${escapedMessage}`;
+
+            tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: fg.telegram_group_id,
+                text: textToSend,
+                parse_mode: 'HTML'
+              })
+            });
+          }
+
+          if (tgRes && tgRes.ok) {
+            const tgData = await tgRes.json();
+            const tgMsgId = tgData.result?.message_id;
+            if (tgMsgId) {
+              await supabase
+                .from('profile_chats')
+                .update({ tg_message_id: tgMsgId })
+                .eq('id', recordId);
+            }
+          } else if (tgRes) {
+            const errText = await tgRes.text();
+            console.error("Failed to send message/media to Telegram group:", errText);
+          }
         }
       }
 
@@ -243,8 +474,58 @@ Deno.serve(async (req) => {
 
     const update = payload;
 
+    // ── Telegram Reaction Webhook Handler ──
+    if (update.message_reaction) {
+      const mr = update.message_reaction;
+      const tgMsgId = mr.message_id;
+      const user = mr.user;
+      
+      if (tgMsgId) {
+        const { data: msgRow } = await supabase
+          .from('profile_chats')
+          .select('id, reactions')
+          .eq('tg_message_id', tgMsgId)
+          .single();
+          
+        if (msgRow) {
+          let staffCode = '';
+          if (user) {
+            const { data: staff } = await supabase
+              .from('staff')
+              .select('staff_code')
+              .eq('telegram_id', user.id)
+              .single();
+            if (staff) {
+              staffCode = staff.staff_code;
+            } else {
+              staffCode = `tg:${user.id}`;
+            }
+          } else {
+            staffCode = 'tg:unknown';
+          }
+          
+          const currentReactions = msgRow.reactions || {};
+          const newReactionsList = mr.new_reaction || [];
+          const updatedReactions = mergeReactions(currentReactions, staffCode, newReactionsList);
+          
+          const { error: updateErr } = await supabase
+            .from('profile_chats')
+            .update({ reactions: updatedReactions })
+            .eq('id', msgRow.id);
+            
+          if (updateErr) {
+            console.error("[Reaction Sync] Error updating reactions in DB:", updateErr);
+          } else {
+            console.log(`[Reaction Sync] Successfully synced reactions from Telegram for message ${tgMsgId}`);
+          }
+        }
+      }
+      return new Response("OK");
+    }
+
     // Detect chat type
     const chatType = update.message?.chat?.type
+      || update.edited_message?.chat?.type
       || update.callback_query?.message?.chat?.type
       || update.my_chat_member?.chat?.type
       || 'private';
@@ -265,20 +546,28 @@ Deno.serve(async (req) => {
     }
 
     // ── Group message → delegate to group handler ──
-    if (isGroup && update.message) {
+    if (isGroup && (update.message || update.edited_message)) {
       await handleGroupChat(update);
       return new Response("OK");
     }
 
-    const msg = update.message || update.callback_query?.message;
+    const msg = update.message || update.edited_message || update.callback_query?.message;
     if (!msg) return new Response("OK");
 
     const chatId = msg.chat.id;
-    const telegramId = update.message ? update.message.from.id : update.callback_query.from.id;
-    const text = update.message?.text || null;
+    const telegramId = update.message ? update.message.from.id : (update.edited_message ? update.edited_message.from.id : update.callback_query.from.id);
+    const text = update.message?.text || update.edited_message?.text || null;
 
     // ── Identify staff ──
     const staffData = await getStaffByTelegramId(telegramId);
+    
+    // In background, ensure telegram_username is correct
+    if (staffData && update.message?.from?.username && staffData.telegram_username !== update.message.from.username) {
+      supabase.from('staff')
+        .update({ telegram_username: update.message.from.username })
+        .eq('staff_code', staffData.staff_code)
+        .then(() => {});
+    }
 
     // ── Unregistered user ──
     if (!staffData) {
@@ -307,7 +596,8 @@ Deno.serve(async (req) => {
           }
           return new Response("OK");
         }
-        await supabase.from('staff').update({ telegram_id: telegramId }).eq('staff_code', code);
+        const tgUsername = update.message?.from?.username || null;
+        await supabase.from('staff').update({ telegram_id: telegramId, telegram_username: tgUsername }).eq('staff_code', code);
         // Auto-resolve any tg:{telegramId} GVBB roles → replace with real staff_code
         const tempCode = `tg:${telegramId}`;
         await supabase.from('fruit_roles')
