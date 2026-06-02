@@ -625,10 +625,10 @@ async function runAIScanSinka() {
     var p = allProfiles.find(function(x){return x.id===currentProfileId;});
     if (!p) throw new Error('Không tìm thấy hồ sơ học viên');
 
-    // 1. Tải toàn bộ lịch sử thô từ DB
-    var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
-    var r2 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc');
-    var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content,created_at&order=created_at.asc');
+    // 1. Tải toàn bộ lịch sử thô từ DB (bao gồm id để tạo shortcut nguồn)
+    var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=id,content,created_at&order=created_at.asc');
+    var r2 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=id,content,created_at&order=created_at.asc');
+    var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=id,content,created_at&order=created_at.asc');
     var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
 
     // 2. Gom ngữ cảnh nén thông minh động
@@ -636,6 +636,24 @@ async function runAIScanSinka() {
     if (typeof getSmartCompressedContext === 'function') {
       historyContext = getSmartCompressedContext(tvs, bbs, nts);
     }
+
+    // 2b. Xây bảng tra nguồn (source index) cho AI biết record_id
+    var sourceIndex = '';
+    tvs.forEach(function(r, i) {
+      var c = r.content || {};
+      var lan = c.lan_thu || (i + 1);
+      sourceIndex += 'TV Lần ' + lan + ' → record_id: ' + r.id + ' | record_type: tu_van\n';
+    });
+    bbs.forEach(function(r, i) {
+      var c = r.content || {};
+      var buoi = c.buoi_thu || (i + 1);
+      sourceIndex += 'BB Buổi ' + buoi + ' → record_id: ' + r.id + ' | record_type: bien_ban\n';
+    });
+    nts.forEach(function(r, i) {
+      var c = r.content || {};
+      var title = c.title || 'Note ' + (i + 1);
+      sourceIndex += title + ' → record_id: ' + r.id + ' | record_type: note\n';
+    });
 
     var d = window._currentInfoSheet || {};
     var nddName = window._rolesDisplay?.ndd || 'chưa rõ';
@@ -687,10 +705,14 @@ ${JSON.stringify(currentSinka, null, 2)}
 DANH SÁCH CÁC TRƯỜNG DO NGƯỜI DÙNG TỰ TAY NHẬP THỦ CÔNG (Cần cẩn thận khi thay đổi):
 ${JSON.stringify(userEditedList, null, 2)}
 
+BẢNG TRA NGUỒN (SOURCE INDEX) — dùng để trả về source chính xác:
+${sourceIndex}
+
 QUY TẮC CẬP NHẬT QUAN TRỌNG:
-1. Quy tắc bổ sung thông minh (Smart Appending): Nếu thông tin mới phát hiện có tính chất bổ sung cho thông tin cũ (ví dụ: sở thích cũ là 'xem phim', thông tin mới phát hiện là 'thích đi phượt'), bạn hãy GHÉP CHÚNG LẠI, ngăn cách bằng dấu phẩy: 'Xem phim, đi phượt'. Tuyệt đối không xóa bỏ các thông tin cũ có ích.
-2. Quy tắc tôn trọng dữ liệu tự nhập: Nếu người dùng đã tự nhập thông tin, chỉ đề xuất chỉnh sửa nếu phát hiện thông tin mới trong báo cáo xung đột hoặc cập nhật thêm chi tiết quan trọng. Giải thích rõ vì sao nên cập nhật.
-3. Chỉ đề xuất các trường thực sự cần cập nhật và có dữ liệu kiểm chứng rõ ràng từ báo cáo (TV, BB, Notes). Không được tự bịa đặt thông tin.
+1. Quy tắc TÓM TẮT ngắn gọn: Giá trị new_value PHẢI NGẮN GỌN, súc tích, đúng trọng tâm. TUYỆT ĐỐI KHÔNG copy nguyên văn câu dài từ báo cáo. Hãy chắt lọc thông tin cốt lõi thành cụm từ hoặc câu ngắn. Ví dụ: thay vì "Học sinh chia sẻ rằng bạn ấy rất thích xem phim hành động và thường xuyên đi phượt vào cuối tuần" → viết "Thích phim hành động, đi phượt cuối tuần".
+2. Quy tắc bổ sung thông minh (Smart Appending): Nếu thông tin mới bổ sung cho cũ, GHÉP LẠI ngắn gọn bằng dấu phẩy. Không xóa thông tin cũ có ích.
+3. Quy tắc tôn trọng dữ liệu tự nhập: Chỉ đề xuất sửa trường tự nhập nếu có thông tin mới xung đột hoặc bổ sung quan trọng. Giải thích rõ.
+4. Chỉ đề xuất trường có dữ liệu kiểm chứng rõ ràng từ báo cáo (TV, BB, Notes). Không bịa đặt.
 
 DANH SÁCH MÃ ID VÀ LABEL CỦA CÁC TRƯỜNG SINKA:
 - sk_ten_gt_tuoi: Tên/Giới tính/Tuổi
@@ -727,11 +749,17 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
       "id": "mã_trường_sk_xxx",
       "label": "Tên nhãn tiếng Việt",
       "old_value": "giá trị cũ hiện tại trên form",
-      "new_value": "giá trị mới sau khi cập nhật/bổ sung",
-      "reason": "Giải thích lý do cập nhật ngắn gọn dựa trên báo cáo (ví dụ: phát hiện trong BB buổi 5 học sinh chia sẻ...)"
+      "new_value": "giá trị mới ngắn gọn, súc tích (KHÔNG copy nguyên văn)",
+      "reason": "Lý do ngắn gọn",
+      "sources": [
+        { "label": "TV Lần 3", "record_type": "tu_van", "record_id": "uuid-xxx" },
+        { "label": "BB Buổi 5", "record_type": "bien_ban", "record_id": "uuid-xxx" }
+      ]
     }
   ]
-}`;
+}
+
+LƯU Ý VỀ sources: Mỗi field PHẢI có mảng sources chứa danh sách các tài liệu nguồn đã dùng làm căn cứ. Dùng record_id và record_type từ BẢNG TRA NGUỒN ở trên. Nếu nguồn từ phiếu thông tin cá nhân (không phải record), dùng record_type: "info" và record_id: "info".`;
 
     var userPrompt = `DỮ LIỆU NGỮ CẢNH HỒ SƠ HỌC SINH:\n${infoContext}\n${historyContext}`;
 
@@ -850,6 +878,29 @@ function restoreSinkaDraft() {
   }
 }
 
+// Helper: Open source record from AI Scan popup
+function _openSourceRecord(recordId, recordType) {
+  if (!recordId || recordId === 'info') {
+    // Source is from the info sheet, switch to info tab
+    var infoTab = document.querySelector('[data-tab="personal"]') || document.querySelector('[onclick*="thongTinTab"]');
+    if (infoTab) infoTab.click();
+    showToast('📄 Đang mở Phiếu thông tin cá nhân');
+    return;
+  }
+  // Close the diff modal first
+  var modal = document.getElementById('sinkaDiffModal');
+  if (modal) modal.remove();
+  // Map record_type 
+  var typeMap = { 'tu_van': 'tu_van', 'bien_ban': 'bien_ban', 'note': 'note' };
+  var type = typeMap[recordType] || recordType;
+  if (typeof openRecord === 'function') {
+    openRecord(recordId, type);
+    if (typeof haptic === 'function') haptic('light');
+  } else {
+    showToast('⚠️ Không thể mở tài liệu');
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // DIFF POPUP — Card-based responsive layout
 // ═══════════════════════════════════════════════════
@@ -872,6 +923,18 @@ function showSinkaDiffPopup(proposedFields) {
       : '';
     var checkedAttribute = isUserEdited ? '' : 'checked';
     var safeNewVal = (f.new_value || '').replace(/"/g, '&quot;');
+
+    // Build source shortcut chips
+    var sourcesHtml = '';
+    if (f.sources && Array.isArray(f.sources) && f.sources.length > 0) {
+      var chips = f.sources.map(function(s) {
+        if (s.record_type === 'info') {
+          return '<span class="sd-source-chip sd-source-info" title="Phiếu thông tin cá nhân">📄 ' + (s.label || 'Phiếu TT') + '</span>';
+        }
+        return '<button class="sd-source-chip sd-source-link" onclick="_openSourceRecord(\'' + s.record_id + '\',\'' + s.record_type + '\')" title="Mở tài liệu nguồn">📎 ' + (s.label || s.record_type) + '</button>';
+      }).join('');
+      sourcesHtml = '<div class="sd-sources"><span class="sd-sources-label">Nguồn:</span> ' + chips + '</div>';
+    }
     
     cardsHtml += `
       <div class="sd-card" data-idx="${idx}">
@@ -898,6 +961,7 @@ function showSinkaDiffPopup(proposedFields) {
             </div>
           </div>
           ${f.reason ? '<div class="sd-reason"><span class="sd-reason-icon">💡</span> ' + f.reason + '</div>' : ''}
+          ${sourcesHtml}
         </div>
       </div>
     `;
@@ -1064,6 +1128,30 @@ function showSinkaDiffPopup(proposedFields) {
         border-radius: 6px; border-left: 3px solid var(--accent, #7c6af7);
       }
       .sd-reason-icon { font-size: 12px; }
+
+      /* Source shortcut chips */
+      .sd-sources {
+        margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+      }
+      .sd-sources-label {
+        font-size: 10px; color: var(--text3, #9ca3af); font-weight: 600;
+      }
+      .sd-source-chip {
+        display: inline-flex; align-items: center; gap: 2px;
+        font-size: 10px; padding: 2px 8px; border-radius: 10px;
+        font-weight: 600; white-space: nowrap; transition: all 0.15s;
+      }
+      .sd-source-info {
+        background: rgba(124,106,247,0.06); color: var(--text3, #6b7280); border: none;
+      }
+      .sd-source-link {
+        background: rgba(59,130,246,0.08); color: #3b82f6;
+        border: 1px solid rgba(59,130,246,0.2); cursor: pointer;
+      }
+      .sd-source-link:hover {
+        background: rgba(59,130,246,0.15); border-color: #3b82f6;
+        transform: translateY(-1px); box-shadow: 0 2px 6px rgba(59,130,246,0.15);
+      }
 
       /* Desktop 2-column grid when enough space */
       @media (min-width: 600px) {
