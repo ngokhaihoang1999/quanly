@@ -199,9 +199,10 @@ function preprocessChatMessage(msg) {
   if (msg.media_metadata && msg.media_metadata.file_path) {
     const fileParam = msg.media_metadata.file_path;
     const nameParam = msg.media_metadata.name || (fileParam.split('/').pop() || 'file');
-    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}&name=${encodeURIComponent(nameParam)}`;
+    const typeParam = msg.media_metadata.type || '';
+    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}&name=${encodeURIComponent(nameParam)}&type=${typeParam}`;
     
-    const isFallbackLabel = ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]'].includes(msg.message) || (msg.message && msg.message.startsWith('[📄 Tài liệu]'));
+    const isFallbackLabel = ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]', '[✨ Sticker]', '[🎬 GIF]'].includes(msg.message) || (msg.message && msg.message.startsWith('[📄 Tài liệu]'));
     if (isFallbackLabel) {
       chatText = mediaUrl;
     } else {
@@ -1259,11 +1260,14 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
     let fileName = 'Tệp tin đính kèm';
     let fileParam = '';
     
+    let mediaTypeParam = '';
+    
     if (url.includes('/functions/v1/telegram-bot')) {
       try {
         const urlObj = new URL(url.replace(/&amp;/g, '&'));
         const nameParam = urlObj.searchParams.get('name');
         fileParam = urlObj.searchParams.get('file') || '';
+        mediaTypeParam = urlObj.searchParams.get('type') || '';
         
         if (nameParam) {
           fileName = decodeURIComponent(nameParam);
@@ -1309,6 +1313,128 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
                     url.includes('imgbb.com') || 
                     url.includes('postimg.cc')) && !isDocFile && !isVideo && !isAudio;
     
+    if (mediaTypeParam === 'sticker') {
+      let overlayHtml = '';
+      if (mediaTimeStr) {
+        let actionsHtml = '';
+        if (isMe && msgId) {
+          const actId = isFloating ? `actions_fl_${msgId}` : `actions_${msgId}`;
+          actionsHtml = `
+            <span class="chat-bubble-actions" id="${actId}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
+              <span onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="cursor:pointer; color:#ff6b6b; font-weight:700; text-decoration:underline;">🗑️ Xoá</span>
+            </span>
+          `;
+        }
+        const toggleId = isFloating ? `fl_${msgId}` : msgId;
+        overlayHtml = `
+          <div class="chat-message-media-time-overlay" onclick="event.stopPropagation(); ${isMe ? `toggleBubbleActions(event, '${toggleId}')` : ''}">
+            ${actionsHtml}
+            <span>${mediaTimeStr}</span>
+          </div>
+        `;
+      }
+      
+      let deleteBtnHtml = '';
+      if (isMe && msgId) {
+        deleteBtnHtml = `
+          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ff6b6b;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            padding: 0;
+            margin: 0;
+          " onmouseover="this.style.background='rgba(239, 68, 68, 0.9)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(0, 0, 0, 0.6)'; this.style.color='#ff6b6b';">
+            🗑️
+          </button>
+        `;
+      }
+
+      return `
+        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 120px; position: relative;" onclick="event.stopPropagation();">
+          <img src="${displayUrl}" style="width: 100%; height: auto; max-height: 120px; object-fit: contain; display: block;" onerror="this.onerror=null; this.src='https://placehold.co/120x120?text=Sticker';" />
+          ${deleteBtnHtml}
+          ${overlayHtml}
+        </div>
+      `;
+    }
+
+    if (mediaTypeParam === 'gif') {
+      let overlayHtml = '';
+      if (mediaTimeStr) {
+        let actionsHtml = '';
+        if (isMe && msgId) {
+          const actId = isFloating ? `actions_fl_${msgId}` : `actions_${msgId}`;
+          actionsHtml = `
+            <span class="chat-bubble-actions" id="${actId}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
+              <span onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="cursor:pointer; color:#ff6b6b; font-weight:700; text-decoration:underline;">🗑️ Xoá</span>
+            </span>
+          `;
+        }
+        const toggleId = isFloating ? `fl_${msgId}` : msgId;
+        overlayHtml = `
+          <div class="chat-message-media-time-overlay" onclick="event.stopPropagation(); ${isMe ? `toggleBubbleActions(event, '${toggleId}')` : ''}">
+            ${actionsHtml}
+            <span>${mediaTimeStr}</span>
+          </div>
+        `;
+      }
+      
+      let deleteBtnHtml = '';
+      if (isMe && msgId) {
+        deleteBtnHtml = `
+          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ff6b6b;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            padding: 0;
+            margin: 0;
+          " onmouseover="this.style.background='rgba(239, 68, 68, 0.9)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(0, 0, 0, 0.6)'; this.style.color='#ff6b6b';">
+            🗑️
+          </button>
+        `;
+      }
+
+      return `
+        <div class="chat-gif-wrap" style="margin-top: 4px; border-radius: 12px; overflow: hidden; max-width: 240px; position: relative; border: 1px solid var(--border);" onclick="event.stopPropagation();">
+          <video src="${displayUrl}" autoplay loop muted playsinline style="width: 100%; max-height: 200px; display: block; border-radius: 12px;"></video>
+          ${deleteBtnHtml}
+          ${overlayHtml}
+        </div>
+      `;
+    }
+
     if (isImage) {
       let overlayHtml = '';
       if (mediaTimeStr) {
