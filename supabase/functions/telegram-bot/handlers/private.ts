@@ -13,7 +13,7 @@ export async function handlePrivateChat(update: any, staffData: any) {
   const pos = staffData.position || 'td';
 
   if (text === '/start') {
-    const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html?v=202606021700`;
+    const miniAppUrl = `https://ngokhaihoang1999.github.io/quanly/mini-app/index.html?v=202606021720`;
     const posLabel = POSITION_LABELS[pos] || pos;
 
     // Build keyboard based on position

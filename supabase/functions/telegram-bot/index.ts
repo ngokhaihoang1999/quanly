@@ -286,22 +286,22 @@ Deno.serve(async (req) => {
           }
         } else if (payload.type === 'app_message_updated') {
           if (tgMsgId) {
-            // Map tags to Telegram usernames
-            const mappedText = await mapAppTagsToTelegram(messageText);
             const hasMedia = record.media_metadata && record.media_metadata.file_path;
             
             if (hasMedia) {
               // Parse caption (exclude the URL at the beginning)
               let captionText = '';
-              if (mappedText) {
-                if (mappedText.startsWith('http')) {
-                  const lines = mappedText.split('\n');
+              if (messageText) {
+                if (messageText.startsWith('http')) {
+                  const lines = messageText.split('\n');
                   captionText = lines.slice(1).join('\n');
                 } else {
-                  captionText = mappedText;
+                  captionText = messageText;
                 }
               }
-              const captionToSend = `<b>${escapedSender}</b>:${captionText ? ' ' + escapeHTML(captionText) : ''}`;
+              const escapedCaption = escapeHTML(captionText);
+              const mappedCaption = await mapAppTagsToTelegram(escapedCaption);
+              const captionToSend = `<b>${escapedSender}</b>:${mappedCaption ? ' ' + mappedCaption : ''}`;
               
               await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageCaption`, {
                 method: 'POST',
@@ -314,8 +314,9 @@ Deno.serve(async (req) => {
                 })
               }).catch(err => console.error("Telegram editMessageCaption failed:", err));
             } else {
-              const escapedMessage = escapeHTML(mappedText);
-              const textToSend = `<b>${escapedSender}</b>: ${escapedMessage}`;
+              const escapedMessage = escapeHTML(messageText);
+              const mappedMessage = await mapAppTagsToTelegram(escapedMessage);
+              const textToSend = `<b>${escapedSender}</b>: ${mappedMessage}`;
               
               await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
                 method: 'POST',
@@ -380,7 +381,6 @@ Deno.serve(async (req) => {
           }
         } else if (payload.type === 'app_message' || payload.type === 'app_message_inserted') {
           // INSERT (or fallback 'app_message' which is insert)
-          const mappedText = await mapAppTagsToTelegram(messageText);
           const hasMedia = record.media_metadata && record.media_metadata.file_path;
           
           let tgRes;
@@ -394,16 +394,18 @@ Deno.serve(async (req) => {
             const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}&name=${encodeURIComponent(name)}`;
             
             let captionText = '';
-            if (mappedText) {
-              if (mappedText.startsWith('http')) {
-                const lines = mappedText.split('\n');
+            if (messageText) {
+              if (messageText.startsWith('http')) {
+                const lines = messageText.split('\n');
                 captionText = lines.slice(1).join('\n');
               } else {
-                captionText = mappedText;
+                captionText = messageText;
               }
             }
             
-            const captionToSend = `<b>${escapedSender}</b>:${captionText ? ' ' + escapeHTML(captionText) : ''}`;
+            const escapedCaption = escapeHTML(captionText);
+            const mappedCaption = await mapAppTagsToTelegram(escapedCaption);
+            const captionToSend = `<b>${escapedSender}</b>:${mappedCaption ? ' ' + mappedCaption : ''}`;
             
             let telegramApiMethod = 'sendDocument';
             let telegramField = 'document';
@@ -433,8 +435,9 @@ Deno.serve(async (req) => {
               })
             });
           } else {
-            const escapedMessage = escapeHTML(mappedText);
-            const textToSend = `<b>${escapedSender}</b>: ${escapedMessage}`;
+            const escapedMessage = escapeHTML(messageText);
+            const mappedMessage = await mapAppTagsToTelegram(escapedMessage);
+            const textToSend = `<b>${escapedSender}</b>: ${mappedMessage}`;
 
             tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: 'POST',

@@ -481,7 +481,7 @@ export async function handleGroupChat(update: any) {
     }
 
     // Build dynamic menu
-    const miniAppBase = 'https://ngokhaihoang1999.github.io/quanly/mini-app/index.html?v=202606021700';
+    const miniAppBase = 'https://ngokhaihoang1999.github.io/quanly/mini-app/index.html?v=202606021720';
     let linkedProfileId: string | null = existingFg?.profile_id || null;
     // If new group was just created, profile_id won't be set yet anyway
     const keyboard: any[] = [];

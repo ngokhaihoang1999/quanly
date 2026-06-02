@@ -270,8 +270,11 @@ function addChatMessageToDOM(msg) {
   let bubbleClass = 'chat-message-bubble';
   if (p.isPureMedia) {
     bubbleClass += ' chat-message-bubble--media-only';
-  } else {
-    if (isMe) bubbleClass += ' chat-message-bubble--me';
+  }
+  if (isMe) {
+    bubbleClass += ' chat-message-bubble--me';
+  }
+  if (!p.isPureMedia) {
     if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
     if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
     if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
@@ -347,7 +350,7 @@ function addChatMessageToDOM(msg) {
     </div>
   `;
 
-  const onclickBubble = p.isPureMedia ? '' : `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})"`;
+  const onclickBubble = `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})"`;
 
   let bubbleInline = 'cursor:pointer; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   if (p.isPureMedia) {
@@ -503,6 +506,8 @@ async function parseMentionsAndNotify(message, profileId) {
   }
 
   if (mentions.length > 0) {
+    // Disabled as requested: Chat is synced bidirectionally with Telegram, so we don't send additional private notify messages.
+    /*
     const p = allProfiles.find(x => x.id === profileId);
     const pName = p?.full_name || 'Học viên';
     const sender = getEffectiveStaffCode();
@@ -515,6 +520,7 @@ async function parseMentionsAndNotify(message, profileId) {
       `Trái: ${pName} · Từ ${sender}: ${message}`, 
       profileId
     );
+    */
   }
 }
 
@@ -927,17 +933,18 @@ function updateChatMessageInDOM(msg) {
         catIcon = '🔔';
       }
 
-      // Set bubble class and inline styles to bypass WebView caching
       bubble.className = 'chat-message-bubble';
       if (p.isPureMedia) {
         bubble.classList.add('chat-message-bubble--media-only');
         bubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
       } else {
-        if (isMe) bubble.classList.add('chat-message-bubble--me');
+        bubble.style.cssText = '';
+      }
+      if (isMe) bubble.classList.add('chat-message-bubble--me');
+      if (!p.isPureMedia) {
         if (msg.category === 'warning') bubble.classList.add('chat-message-bubble--warning');
         if (msg.category === 'strategy') bubble.classList.add('chat-message-bubble--strategy');
         if (msg.category === 'important') bubble.classList.add('chat-message-bubble--important');
-        bubble.style.cssText = '';
       }
 
       let messageText = '';
@@ -1052,11 +1059,13 @@ function updateChatMessageInDOM(msg) {
         flBubble.classList.add('chat-message-bubble--media-only');
         flBubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
       } else {
-        if (isMe) flBubble.classList.add('chat-message-bubble--me');
+        flBubble.style.cssText = '';
+      }
+      if (isMe) flBubble.classList.add('chat-message-bubble--me');
+      if (!p.isPureMedia) {
         if (msg.category === 'warning') flBubble.classList.add('chat-message-bubble--warning');
         if (msg.category === 'strategy') flBubble.classList.add('chat-message-bubble--strategy');
         if (msg.category === 'important') flBubble.classList.add('chat-message-bubble--important');
-        flBubble.style.cssText = '';
       }
 
       let messageText = '';
@@ -1352,7 +1361,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       let deleteBtnHtml = '';
       if (isMe && msgId) {
         deleteBtnHtml = `
-          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+          <button class="chat-media-delete-btn" type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
             position: absolute;
             top: 4px;
             right: 4px;
@@ -1381,7 +1390,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       }
 
       return `
-        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 100px; position: relative; padding-bottom: 14px;" onclick="event.stopPropagation();">
+        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 100px; position: relative; padding-bottom: 14px;">
           <img src="${displayUrl}" style="width: 100%; height: auto; max-height: 100px; object-fit: contain; display: block;" onerror="this.onerror=null; this.src='https://placehold.co/100x100?text=Sticker';" />
           ${deleteBtnHtml}
           ${overlayHtml}
@@ -1413,7 +1422,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       let deleteBtnHtml = '';
       if (isMe && msgId) {
         deleteBtnHtml = `
-          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+          <button class="chat-media-delete-btn" type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
             position: absolute;
             top: 8px;
             right: 8px;
@@ -1475,7 +1484,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       let deleteBtnHtml = '';
       if (isMe && msgId) {
         deleteBtnHtml = `
-          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+          <button class="chat-media-delete-btn" type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
             position: absolute;
             top: 8px;
             right: 8px;
@@ -1535,7 +1544,7 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       let deleteBtnHtml = '';
       if (isMe && msgId) {
         deleteBtnHtml = `
-          <button type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
+          <button class="chat-media-delete-btn" type="button" onclick="event.stopPropagation(); deleteChatMessage('${msgId}')" style="
             position: absolute;
             top: 8px;
             right: 8px;
@@ -1821,6 +1830,11 @@ function showTagSuggestions(query, atIndex) {
 
   // Get assigned staff codes for this profile
   const assignedCodes = new Set();
+  
+  // Allow self-tagging by including current user in assignedCodes
+  const myCode = typeof getEffectiveStaffCode === 'function' ? getEffectiveStaffCode() : null;
+  if (myCode) assignedCodes.add(myCode.trim());
+
   const p = allProfiles.find(x => x.id === currentProfileId);
   if (p) {
     if (p.ndd_staff_code) assignedCodes.add(p.ndd_staff_code.trim());
@@ -2678,8 +2692,11 @@ function addFloatingChatMessageToDOM(msg) {
   let bubbleClass = 'chat-message-bubble';
   if (p.isPureMedia) {
     bubbleClass += ' chat-message-bubble--media-only';
-  } else {
-    if (isMe) bubbleClass += ' chat-message-bubble--me';
+  }
+  if (isMe) {
+    bubbleClass += ' chat-message-bubble--me';
+  }
+  if (!p.isPureMedia) {
     if (msg.category === 'warning') bubbleClass += ' chat-message-bubble--warning';
     if (msg.category === 'strategy') bubbleClass += ' chat-message-bubble--strategy';
     if (msg.category === 'important') bubbleClass += ' chat-message-bubble--important';
@@ -2753,7 +2770,7 @@ function addFloatingChatMessageToDOM(msg) {
     </div>
   `;
   
-  const onclickBubble = p.isPureMedia ? '' : `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})"`;
+  const onclickBubble = `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})"`;
   
   let bubbleInline = 'cursor:pointer; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   if (p.isPureMedia) {

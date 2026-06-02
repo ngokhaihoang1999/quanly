@@ -2240,6 +2240,24 @@
   border-radius: 12px !important;
 }
 
+/* Premium media delete button (hidden by default, shown on hover) */
+.chat-media-delete-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+  transform: scale(0.85);
+}
+.chat-sticker-wrap:hover .chat-media-delete-btn,
+.chat-gif-wrap:hover .chat-media-delete-btn,
+.chat-image-wrap:hover .chat-media-delete-btn,
+.chat-video-wrap:hover .chat-media-delete-btn,
+.chat-message-bubble--media-only:hover .chat-media-delete-btn,
+.chat-message-bubble:hover .chat-media-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
 .chat-message-text {
   display: inline;
 }
@@ -2458,9 +2476,14 @@
   font-size: 12px;
 }
 .chat-message-bubble--me .chat-mention {
-  color: #fff;
-  background: rgba(255,255,255,0.2);
-  border-color: rgba(255,255,255,0.3);
+  color: #3b7a30;
+  background: rgba(59, 122, 48, 0.10);
+  border-color: rgba(59, 122, 48, 0.25);
+}
+[data-theme="dark"] .chat-message-bubble--me .chat-mention {
+  color: #a7f3d0;
+  background: rgba(167, 243, 208, 0.15);
+  border-color: rgba(167, 243, 208, 0.3);
 }
 
 .chat-emoji-picker-panel {
