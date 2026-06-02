@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
             messages,
             temperature: safeTemp,
             max_tokens: safeMaxTokens,
+            thinking: { type: 'disabled' },
           }),
         });
 

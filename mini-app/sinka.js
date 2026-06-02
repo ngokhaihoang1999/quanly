@@ -747,7 +747,24 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       throw new Error("Phản hồi AI không đúng định dạng chuẩn. Chi tiết: " + JSON.stringify(data));
     }
-    var raw = data.choices[0].message.content ? data.choices[0].message.content.trim() : '';
+    var raw = '';
+    var msg = data.choices[0].message;
+    // Primary: content field (normal mode / thinking disabled)
+    if (msg.content && msg.content.trim()) {
+      raw = msg.content.trim();
+    }
+    // Fallback: reasoning_content (DeepSeek V4 thinking mode puts response here)
+    else if (msg.reasoning_content && msg.reasoning_content.trim()) {
+      raw = msg.reasoning_content.trim();
+      console.log('[AI Scan] Using reasoning_content as fallback');
+    }
+
+    if (!raw) {
+      console.error('[AI Scan] Empty response from AI. Full data:', JSON.stringify(data));
+      throw new Error('AI trả về nội dung rỗng. Model: ' + (data.model || 'unknown') + '. Vui lòng thử lại.');
+    }
+
+    console.log('[AI Scan] Raw AI response (first 200 chars):', raw.substring(0, 200));
     
     // Multi-stage Robust JSON Parser
     var json;
@@ -755,7 +772,7 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
       json = robustJSONParse(raw);
     } catch (parseErr) {
       console.error('Raw AI response parsing failed. Raw text:', raw);
-      var snippet = raw ? raw.substring(0, 150) + '...' : 'chuỗi rỗng';
+      var snippet = raw.substring(0, 200) + '...';
       throw new Error('Định dạng phản hồi AI không đúng JSON. Nội dung AI: "' + snippet + '". Chi tiết: ' + parseErr.message);
     }
 
