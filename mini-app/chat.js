@@ -71,7 +71,7 @@ async function loadProfileChat(profileId) {
 
     // 3. Fetch messages and read states in parallel
     const [messagesRes, readsRes] = await Promise.all([
-      sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`, {
+      sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.desc&limit=100`, {
         headers: { 'Cache-Control': 'no-cache' }
       }),
       sbFetch(`/rest/v1/profile_chat_reads?profile_id=eq.${profileId}&select=*`, {
@@ -80,6 +80,7 @@ async function loadProfileChat(profileId) {
     ]);
 
     const messages = await messagesRes.json();
+    messages.reverse(); // Đảo ngược danh sách để hiển thị từ cũ đến mới (trên xuống dưới)
     window._chatReads = await readsRes.json();
     window._chatMessages = messages;
     
@@ -2464,11 +2465,12 @@ async function loadFloatingChatMessages(profileId) {
   try {
     await markChatAsRead(profileId);
     
-    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.asc`, {
+    const res = await sbFetch(`/rest/v1/profile_chats?profile_id=eq.${profileId}&select=*&order=created_at.desc&limit=100`, {
       headers: { 'Cache-Control': 'no-cache' }
     });
     
     const messages = await res.json();
+    messages.reverse(); // Đảo ngược để hiển thị từ cũ đến mới (trên xuống dưới)
     msgArea.innerHTML = '';
     
     if (!messages || messages.length === 0) {
