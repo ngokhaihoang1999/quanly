@@ -133,9 +133,58 @@ async function loadSinka(profileId) {
   _sinkaLoaded = true;
   // Check for any cached AI Scan draft for this profile
   _updateDraftButton(profileId);
-  if (typeof adjustAllTextareaHeights === 'function') {
-    setTimeout(adjustAllTextareaHeights, 50);
-  }
+  // Auto-resize all text fields after data load
+  setTimeout(_autoResizeSinkaFields, 80);
+}
+
+// ── Auto-resize all Sinka text fields ──
+function _autoResizeSinkaFields() {
+  var container = document.getElementById('sinkaContent');
+  if (!container) return;
+
+  // 1. Convert <input type="text"> → <textarea> for auto-resize capability
+  var inputs = container.querySelectorAll('input[type="text"]');
+  inputs.forEach(function(inp) {
+    var ta = document.createElement('textarea');
+    ta.id = inp.id;
+    ta.value = inp.value;
+    ta.placeholder = inp.placeholder || '';
+    ta.className = inp.className;
+    ta.readOnly = inp.readOnly;
+    ta.disabled = inp.disabled;
+    // Copy border-left styling (user-edited indicator)
+    if (inp.style.borderLeft) ta.style.borderLeft = inp.style.borderLeft;
+    ta.style.resize = 'none';
+    ta.style.overflow = 'hidden';
+    ta.style.minHeight = '38px';
+    ta.style.boxSizing = 'border-box';
+    ta.rows = 1;
+    inp.parentNode.replaceChild(ta, inp);
+  });
+
+  // 2. Auto-resize all textareas in sinka
+  var allTas = container.querySelectorAll('textarea');
+  allTas.forEach(function(ta) {
+    ta.style.resize = 'none';
+    ta.style.overflow = 'hidden';
+    ta.style.boxSizing = 'border-box';
+    if (!ta.style.minHeight) ta.style.minHeight = '38px';
+
+    // Apply auto-resize
+    _sinkaAutoSize(ta);
+
+    // Bind input event if not already bound
+    if (!ta._sinkaResizeBound) {
+      ta._sinkaResizeBound = true;
+      ta.addEventListener('input', function() { _sinkaAutoSize(this); });
+    }
+  });
+}
+
+function _sinkaAutoSize(ta) {
+  ta.style.height = 'auto';
+  var sh = ta.scrollHeight;
+  ta.style.height = Math.max(sh, 38) + 'px';
 }
 
 // ── Auto-fill logic ──
@@ -1229,6 +1278,8 @@ function showSinkaDiffPopup(proposedFields) {
       if (el) {
         el.value = newVal;
         applyCount++;
+        // Auto-resize textarea to fit new content
+        if (el.tagName === 'TEXTAREA') _sinkaAutoSize(el);
         
         el.style.outline = '2px solid var(--green, #22c55e)';
         el.style.outlineOffset = '-1px';
