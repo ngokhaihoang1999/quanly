@@ -144,3 +144,131 @@ function robustJSONParse(raw) {
   }
 }
 
+// ════════════════════════════════════════════════════════
+// DIRTY FORM GUARD — detect unsaved changes & warn user
+// ════════════════════════════════════════════════════════
+var DirtyFormGuard = (function() {
+  var _snapshots = {};  // { containerId: { fieldId: value } }
+  var _pendingAction = null;  // deferred navigation callback
+
+  // Take snapshot of all input/textarea/select values in a container
+  function snapshot(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var snap = {};
+    container.querySelectorAll('input, textarea, select').forEach(function(el) {
+      if (el.id) snap[el.id] = el.value || '';
+    });
+    _snapshots[containerId] = snap;
+  }
+
+  // Check if any fields changed from snapshot
+  function isDirty(containerId) {
+    var snap = _snapshots[containerId];
+    if (!snap) return false;
+    var container = document.getElementById(containerId);
+    if (!container) return false;
+    var fields = container.querySelectorAll('input, textarea, select');
+    for (var i = 0; i < fields.length; i++) {
+      var el = fields[i];
+      if (el.id && snap.hasOwnProperty(el.id)) {
+        if ((el.value || '') !== snap[el.id]) return true;
+      }
+    }
+    return false;
+  }
+
+  // Clear snapshot (after save or discard)
+  function clear(containerId) {
+    delete _snapshots[containerId];
+  }
+
+  // Map container to its save function and display name
+  var _formConfig = {
+    'sinkaContent': { saveFn: 'saveSinka', label: 'Thẻ Học Viên' },
+    'thongTinTab':  { saveFn: 'saveInfoSheet', label: 'Phiếu Thông Tin' }
+  };
+
+  // Check all tracked forms for dirty state, show popup if dirty
+  // onProceed: callback to execute after user decides (save/discard)
+  function guard(onProceed) {
+    var dirtyId = null;
+    for (var cid in _snapshots) {
+      if (isDirty(cid)) { dirtyId = cid; break; }
+    }
+    if (!dirtyId) {
+      // No dirty forms, proceed immediately
+      if (onProceed) onProceed();
+      return false;
+    }
+
+    _pendingAction = onProceed;
+    _showGuardModal(dirtyId);
+    return true; // blocked, waiting for user choice
+  }
+
+  function _showGuardModal(dirtyContainerId) {
+    var old = document.getElementById('dirtyFormGuardModal');
+    if (old) old.remove();
+
+    var config = _formConfig[dirtyContainerId] || { label: 'Form', saveFn: null };
+    
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay open';
+    overlay.id = 'dirtyFormGuardModal';
+    overlay.style.zIndex = '10000';
+
+    overlay.innerHTML = `
+      <div style="width:88%;max-width:380px;background:var(--bg, #fff);border-radius:16px;padding:24px 20px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;animation:sdSlideUp 0.25s ease;">
+        <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text1, #1f2937);margin-bottom:6px;">Chưa lưu thay đổi</div>
+        <div style="font-size:12px;color:var(--text3, #6b7280);margin-bottom:20px;line-height:1.5;">
+          Bạn có thay đổi chưa lưu trong <strong>${config.label}</strong>.<br/>Bạn muốn làm gì?
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button id="dfg-save" style="width:100%;padding:10px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:white;background:linear-gradient(135deg,var(--accent, #7c6af7),var(--accent2, #a78bfa));box-shadow:0 3px 10px rgba(124,106,247,0.2);">
+            💾 Lưu và tiếp tục
+          </button>
+          <button id="dfg-edit" style="width:100%;padding:10px;border:1px solid var(--border, #e5e7eb);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text1, #374151);background:var(--surface, #f9fafb);">
+            ✏️ Chỉnh sửa tiếp
+          </button>
+          <button id="dfg-discard" style="width:100%;padding:10px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text3, #9ca3af);background:none;">
+            Huỷ thay đổi
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Save & proceed
+    document.getElementById('dfg-save').onclick = async function() {
+      overlay.remove();
+      if (config.saveFn && typeof window[config.saveFn] === 'function') {
+        await window[config.saveFn]();
+      }
+      snapshot(dirtyContainerId); // re-snapshot after save
+      if (_pendingAction) { _pendingAction(); _pendingAction = null; }
+    };
+
+    // Continue editing (close popup, stay)
+    document.getElementById('dfg-edit').onclick = function() {
+      overlay.remove();
+      _pendingAction = null;
+    };
+
+    // Discard & proceed
+    document.getElementById('dfg-discard').onclick = function() {
+      overlay.remove();
+      snapshot(dirtyContainerId); // overwrite snapshot to current (discard)
+      if (_pendingAction) { _pendingAction(); _pendingAction = null; }
+    };
+  }
+
+  return {
+    snapshot: snapshot,
+    isDirty: isDirty,
+    clear: clear,
+    guard: guard
+  };
+})();

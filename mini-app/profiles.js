@@ -105,6 +105,14 @@ async function openProfileById(id, evt, initialTabId) {
       p.la_staff_code = la.length ? la.join(', ') : '';
     } catch(e) { showToast('❌ Lỗi mở hồ sơ'); return; }
   }
+  // Guard: check unsaved changes before switching profile
+  if (typeof DirtyFormGuard !== 'undefined' && currentProfileId && currentProfileId !== id) {
+    var blocked = DirtyFormGuard.guard(function() {
+      var pp = allProfiles.find(function(x){ return x.id === id; }) || p;
+      openProfile(pp, cardEl, initialTabId);
+    });
+    if (blocked) return;
+  }
   openProfile(p, cardEl, initialTabId);
 }
 async function openProfile(p, cardEl, initialTabId) {
@@ -663,6 +671,10 @@ async function loadInfoSheet(profileId) {
     if (typeof adjustAllTextareaHeights === 'function') {
       setTimeout(adjustAllTextareaHeights, 50);
     }
+    // Snapshot for unsaved changes detection
+    setTimeout(function() {
+      if (typeof DirtyFormGuard !== 'undefined') DirtyFormGuard.snapshot('thongTinTab');
+    }, 100);
   } catch(e) { console.warn('loadInfoSheet:', e); }
 }
 async function saveInfoSheet() {
@@ -735,7 +747,8 @@ async function saveInfoSheet() {
       filterProfiles();
     }
 
-    showToast('✅ Đã lưu Phữu Thông tin!');
+    showToast('✅ Đã lưu Phiếu Thông tin!');
+    if (typeof DirtyFormGuard !== 'undefined') DirtyFormGuard.snapshot('thongTinTab');
     // Auto-sync form changes to Google Sheets
     if (typeof syncToGoogleSheet === 'function') syncToGoogleSheet(currentProfileId);
   } catch { showToast('❌ Lỗi khi lưu'); }

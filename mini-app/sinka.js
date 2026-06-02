@@ -134,7 +134,11 @@ async function loadSinka(profileId) {
   // Check for any cached AI Scan draft for this profile
   _updateDraftButton(profileId);
   // Auto-resize all text fields after data load
-  setTimeout(_autoResizeSinkaFields, 80);
+  setTimeout(function() {
+    _autoResizeSinkaFields();
+    // Take snapshot for unsaved changes detection
+    if (typeof DirtyFormGuard !== 'undefined') DirtyFormGuard.snapshot('sinkaContent');
+  }, 80);
 }
 
 // ── Auto-resize all Sinka text fields ──
@@ -351,6 +355,7 @@ async function saveSinka() {
       body: JSON.stringify({ profile_id: currentProfileId, data: merged })
     });
     showToast('✅ Đã lưu Thẻ học viên!');
+    if (typeof DirtyFormGuard !== 'undefined') DirtyFormGuard.snapshot('sinkaContent');
   } catch(e) {
     console.error('saveSinka error:', e);
     showToast('❌ Lỗi khi lưu Thẻ học viên');

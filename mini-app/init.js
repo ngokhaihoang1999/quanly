@@ -570,6 +570,17 @@ function backToList() {
   window._lastLoadedProfileChatId = null;
 }
 function switchFormTab(el, cardId) {
+  // Check for unsaved changes before switching
+  if (typeof DirtyFormGuard !== 'undefined') {
+    var blocked = DirtyFormGuard.guard(function() {
+      _doSwitchFormTab(el, cardId);
+    });
+    if (blocked) return; // popup shown, wait for user choice
+  }
+  _doSwitchFormTab(el, cardId);
+}
+
+function _doSwitchFormTab(el, cardId) {
   if (typeof TabIndicator !== 'undefined') TabIndicator.moveTo(el);
   const dir = typeof navDirectionForFormTab === 'function' ? navDirectionForFormTab(cardId) : 1;
   
