@@ -915,6 +915,7 @@ function showSinkaDiffPopup(proposedFields) {
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
   // Build card-based items
+  // Build card-based items (accordion style - all expanded by default)
   var cardsHtml = '';
   proposedFields.forEach(function(f, idx) {
     var isUserEdited = window._sinkaUserEditedFields && window._sinkaUserEditedFields[f.id];
@@ -931,21 +932,22 @@ function showSinkaDiffPopup(proposedFields) {
         if (s.record_type === 'info') {
           return '<span class="sd-source-chip sd-source-info" title="Phiếu thông tin cá nhân">📄 ' + (s.label || 'Phiếu TT') + '</span>';
         }
-        return '<button class="sd-source-chip sd-source-link" onclick="_openSourceRecord(\'' + s.record_id + '\',\'' + s.record_type + '\')" title="Mở tài liệu nguồn">📎 ' + (s.label || s.record_type) + '</button>';
+        return '<button class="sd-source-chip sd-source-link" onclick="event.stopPropagation();_openSourceRecord(\'' + s.record_id + '\',\'' + s.record_type + '\')" title="Mở tài liệu nguồn">📎 ' + (s.label || s.record_type) + '</button>';
       }).join('');
       sourcesHtml = '<div class="sd-sources"><span class="sd-sources-label">Nguồn:</span> ' + chips + '</div>';
     }
     
     cardsHtml += `
-      <div class="sd-card" data-idx="${idx}">
-        <div class="sd-card-header">
+      <div class="sd-card sd-expanded" data-idx="${idx}">
+        <div class="sd-card-header" onclick="this.parentElement.classList.toggle('sd-expanded')">
           <div class="sd-card-title">
-            <label class="sd-check-label">
+            <label class="sd-check-label" onclick="event.stopPropagation()">
               <input type="checkbox" class="sinka-diff-checkbox" data-id="${f.id}" data-newval="${safeNewVal}" ${checkedAttribute} />
               <span class="sd-check-custom"></span>
             </label>
             <span class="sd-field-name">${f.label}</span>
             ${badgeHtml}
+            <span class="sd-chevron">▾</span>
           </div>
         </div>
         <div class="sd-card-body">
@@ -985,6 +987,7 @@ function showSinkaDiffPopup(proposedFields) {
         </div>
         <div class="sd-header-actions">
           <button id="sinkaSelectAllBtn" class="sd-btn sd-btn-outline">Chọn tất cả</button>
+          <button id="sinkaCollapseAllBtn" class="sd-btn sd-btn-outline" onclick="var cards=document.querySelectorAll('.sd-card');var allExpanded=document.querySelectorAll('.sd-card.sd-expanded').length===cards.length;cards.forEach(function(c){allExpanded?c.classList.remove('sd-expanded'):c.classList.add('sd-expanded')});this.textContent=allExpanded?'Mở tất cả':'Thu gọn'">Thu gọn</button>
           <span class="sd-counter" id="sdCheckedCounter">${checkedCount}/${proposedFields.length} đã chọn</span>
           <div style="flex:1;"></div>
           <button onclick="document.getElementById('sinkaDiffModal').remove()" class="sd-btn sd-btn-ghost">Hủy</button>
@@ -1060,20 +1063,32 @@ function showSinkaDiffPopup(proposedFields) {
       }
       .sd-card {
         background: var(--surface, #fafafa); border: 1px solid var(--border, #e5e7eb);
-        border-radius: 10px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s;
+        border-radius: 10px; transition: border-color 0.2s, box-shadow 0.2s;
       }
-      .sd-card:has(.sinka-diff-checkbox:checked) {
-        border-color: var(--accent, #7c6af7); box-shadow: 0 0 0 1px rgba(124,106,247,0.15);
+      .sd-card.sd-expanded {
+        border-color: var(--accent, #7c6af7); box-shadow: 0 0 0 1px rgba(124,106,247,0.1);
       }
       .sd-card-header {
         padding: 10px 12px; background: var(--surface2, #f3f4f6);
+        border-radius: 10px; cursor: pointer; user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .sd-card.sd-expanded .sd-card-header {
+        border-radius: 10px 10px 0 0;
         border-bottom: 1px solid var(--border, #e5e7eb);
       }
+      .sd-card-header:active { opacity: 0.8; }
       .sd-card-title {
         display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
         color: var(--text1, #1f2937);
       }
       .sd-field-name { flex: 1; min-width: 0; }
+      .sd-chevron {
+        font-size: 12px; color: var(--text3, #9ca3af); transition: transform 0.2s;
+        flex-shrink: 0;
+      }
+      .sd-card.sd-expanded .sd-chevron { transform: rotate(0deg); }
+      .sd-card:not(.sd-expanded) .sd-chevron { transform: rotate(-90deg); }
       .sd-badge-user, .sd-badge-user-inline {
         background: #f97316; color: white; padding: 1px 6px; border-radius: 4px;
         font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
@@ -1098,8 +1113,13 @@ function showSinkaDiffPopup(proposedFields) {
         content: '✓'; color: white; font-size: 11px; font-weight: 700;
       }
 
-      /* Card Body */
-      .sd-card-body { padding: 10px 12px; }
+      /* Card Body — accordion toggle */
+      .sd-card-body {
+        display: none; padding: 10px 12px;
+      }
+      .sd-card.sd-expanded .sd-card-body {
+        display: block;
+      }
       .sd-row {
         display: flex; align-items: flex-start; gap: 8px;
       }
