@@ -196,13 +196,23 @@ function preprocessChatMessage(msg) {
 
   let chatText = msg.message || '';
   let mediaUrl = '';
+  const isSticker = (msg.media_metadata && msg.media_metadata.type === 'sticker') || 
+                    (msg.media_metadata && msg.media_metadata.file_path && msg.media_metadata.file_path.includes('stickers/')) ||
+                    (msg.message && msg.message.trim() === '[✨ Sticker]');
+
   if (msg.media_metadata && msg.media_metadata.file_path) {
     const fileParam = msg.media_metadata.file_path;
     const nameParam = msg.media_metadata.name || (fileParam.split('/').pop() || 'file');
-    const typeParam = msg.media_metadata.type || '';
+    let typeParam = msg.media_metadata.type || '';
+    if (isSticker) {
+      typeParam = 'sticker';
+      msg.media_metadata.type = 'sticker'; // Ensure it is set in-memory
+    }
     mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}&name=${encodeURIComponent(nameParam)}&type=${typeParam}`;
     
-    const isFallbackLabel = ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]', '[✨ Sticker]', '[🎬 GIF]'].includes(msg.message) || (msg.message && msg.message.startsWith('[📄 Tài liệu]'));
+    const isFallbackLabel = isSticker || 
+                            ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]', '[✨ Sticker]', '[🎬 GIF]'].includes(msg.message?.trim()) || 
+                            (msg.message && msg.message.trim().startsWith('[📄 Tài liệu]'));
     if (isFallbackLabel) {
       chatText = mediaUrl;
     } else {
@@ -210,7 +220,7 @@ function preprocessChatMessage(msg) {
     }
   }
 
-  const isPureMedia = isPureVisualMedia(chatText) || (msg.media_metadata && msg.media_metadata.type === 'sticker');
+  const isPureMedia = isPureVisualMedia(chatText) || isSticker || (msg.media_metadata && msg.media_metadata.type === 'sticker');
   const isMediaLink = chatText.includes('/file/bot') || chatText.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(chatText) || chatText.includes('imgbb.com') || chatText.includes('postimg.cc');
 
   return {
@@ -1313,6 +1323,11 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
                     url.includes('imgbb.com') || 
                     url.includes('postimg.cc')) && !isDocFile && !isVideo && !isAudio;
     
+    // Auto-detect sticker type if URL contains stickers/ or type parameter is sticker
+    if (!mediaTypeParam && (url.includes('stickers/') || fileParam.includes('stickers/'))) {
+      mediaTypeParam = 'sticker';
+    }
+
     if (mediaTypeParam === 'sticker') {
       let overlayHtml = '';
       if (mediaTimeStr) {
@@ -1366,8 +1381,8 @@ function formatChatMessageText(text, mediaTimeStr = '', isMe = false, msgId = ''
       }
 
       return `
-        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 120px; position: relative; padding-bottom: 14px;" onclick="event.stopPropagation();">
-          <img src="${displayUrl}" style="width: 100%; height: auto; max-height: 120px; object-fit: contain; display: block;" onerror="this.onerror=null; this.src='https://placehold.co/120x120?text=Sticker';" />
+        <div class="chat-sticker-wrap" style="margin-top: 4px; max-width: 100px; position: relative; padding-bottom: 14px;" onclick="event.stopPropagation();">
+          <img src="${displayUrl}" style="width: 100%; height: auto; max-height: 100px; object-fit: contain; display: block;" onerror="this.onerror=null; this.src='https://placehold.co/100x100?text=Sticker';" />
           ${deleteBtnHtml}
           ${overlayHtml}
         </div>
