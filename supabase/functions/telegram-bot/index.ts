@@ -165,7 +165,83 @@ Deno.serve(async (req) => {
       }
     }
 
-    const update = await req.json();
+    const payload = await req.json();
+
+    // ── Handle App to Telegram message sync (from DB Trigger) ──
+    if (payload.type === 'app_message' && payload.record) {
+      const record = payload.record;
+      const profileId = record.profile_id;
+      const messageText = record.message;
+      const senderCode = record.sender_code;
+      const recordId = record.id;
+
+      // Find the linked Telegram group ID
+      const { data: fg } = await supabase
+        .from('fruit_groups')
+        .select('telegram_group_id')
+        .eq('profile_id', profileId)
+        .single();
+
+      if (fg?.telegram_group_id) {
+        // Resolve sender display name
+        let senderName = senderCode;
+        const { data: staff } = await supabase
+          .from('staff')
+          .select('nickname, full_name')
+          .eq('staff_code', senderCode)
+          .single();
+        if (staff) {
+          senderName = staff.nickname || staff.full_name;
+        }
+
+        // Helper function to escape HTML special characters
+        const escapeHTML = (str: string) => {
+          return (str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        };
+
+        const escapedSender = escapeHTML(senderName);
+        const escapedMessage = escapeHTML(messageText);
+        const textToSend = `💬 [App] <b>${escapedSender}</b>:\n${escapedMessage}`;
+
+        const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: fg.telegram_group_id,
+            text: textToSend,
+            parse_mode: 'HTML'
+          })
+        });
+
+        if (tgRes.ok) {
+          const tgData = await tgRes.json();
+          const tgMsgId = tgData.result?.message_id;
+          if (tgMsgId) {
+            // Update tg_message_id back in DB
+            await supabase
+              .from('profile_chats')
+              .update({ tg_message_id: tgMsgId })
+              .eq('id', recordId);
+          }
+        } else {
+          const errText = await tgRes.text();
+          console.error("Failed to send message to Telegram group:", errText);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        }
+      });
+    }
+
+    const update = payload;
 
     // Detect chat type
     const chatType = update.message?.chat?.type

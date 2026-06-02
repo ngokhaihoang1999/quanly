@@ -121,6 +121,99 @@ export async function handleGroupChat(update: any) {
   const telegramId = msg.from.id;
   const text = msg.text || '';
 
+  // Fetch linked group profile
+  const { data: fg } = await supabase.from('fruit_groups')
+    .select('id, profile_id, invite_link, profiles(full_name)')
+    .eq('telegram_group_id', chatId).single();
+
+  // ── Sync group messages from human members to profile_chats ──
+  if (fg?.profile_id && !msg.from.is_bot && !text.startsWith('/')) {
+    let senderCode = '';
+    let tgSenderName: string | null = null;
+    const { data: staff } = await supabase.from('staff').select('staff_code').eq('telegram_id', telegramId).single();
+    if (staff) {
+      senderCode = staff.staff_code;
+    } else {
+      senderCode = `tg:${telegramId}`;
+      const fullName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(' ');
+      tgSenderName = fullName + (msg.from.username ? ` (@${msg.from.username})` : '');
+    }
+
+    let chatMsgText = text || msg.caption || '';
+    let mediaMetadata: any = null;
+
+    // Resolve media paths if present using getFile
+    const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    if (BOT_TOKEN) {
+      let fileId = '';
+      let mediaType = '';
+      let docName = '';
+
+      if (msg.photo && msg.photo.length > 0) {
+        // Largest photo size
+        fileId = msg.photo[msg.photo.length - 1].file_id;
+        mediaType = 'photo';
+      } else if (msg.video) {
+        fileId = msg.video.file_id;
+        mediaType = 'video';
+      } else if (msg.voice) {
+        fileId = msg.voice.file_id;
+        mediaType = 'voice';
+      } else if (msg.document) {
+        fileId = msg.document.file_id;
+        mediaType = 'document';
+        docName = msg.document.file_name || '';
+      }
+
+      if (fileId && mediaType) {
+        try {
+          const getFileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+          if (getFileRes.ok) {
+            const getFileData = await getFileRes.json();
+            const filePath = getFileData.result?.file_path;
+            if (filePath) {
+              mediaMetadata = {
+                type: mediaType,
+                file_path: filePath,
+                caption: msg.caption || ''
+              };
+              if (mediaType === 'document' && docName) {
+                mediaMetadata.name = docName;
+              }
+
+              // Text fallback if empty
+              if (!chatMsgText) {
+                if (mediaType === 'photo') chatMsgText = '[📷 Ảnh]';
+                else if (mediaType === 'video') chatMsgText = '[🎥 Video]';
+                else if (mediaType === 'voice') chatMsgText = '[🎙️ Voice Note]';
+                else if (mediaType === 'document') chatMsgText = `[📄 Tài liệu] ${docName}`;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error fetching media path from Telegram:", e);
+        }
+      }
+    }
+
+    try {
+      const { error } = await supabase.from('profile_chats').insert({
+        profile_id: fg.profile_id,
+        sender_code: senderCode,
+        message: chatMsgText,
+        source: 'telegram',
+        tg_message_id: msg.message_id,
+        tg_sender_name: tgSenderName,
+        media_metadata: mediaMetadata
+      });
+      if (error && error.code !== '23505') {
+        console.error("Error syncing message from Telegram:", error);
+      }
+    } catch (insertErr) {
+      console.error("Error in profile_chats insert logic:", insertErr);
+    }
+  }
+
   // ── Reply to form template → parse and create record ──
   if (msg.reply_to_message && text) {
     const originalText = msg.reply_to_message.text || '';
@@ -128,9 +221,6 @@ export async function handleGroupChat(update: any) {
     const isBB = originalText.includes(BB_FORM_TITLE);
 
     if (isTV || isBB) {
-      const { data: fg } = await supabase.from('fruit_groups')
-        .select('profile_id, profiles(full_name)')
-        .eq('telegram_group_id', chatId).single();
       if (!fg?.profile_id) {
         await sendText(chatId, `❌ Group chưa gắn hồ sơ. Không thể tạo báo cáo.`);
         return;

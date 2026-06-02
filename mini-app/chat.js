@@ -168,6 +168,63 @@ function isPureVisualMedia(text) {
   return (isImage || isVideo) && !isDocFile;
 }
 
+// Preprocess chat message for Telegram username badges and media metadata links
+function preprocessChatMessage(msg) {
+  const isTelegramUser = msg.sender_code && msg.sender_code.startsWith('tg:');
+  let displayName = msg.sender_code || '';
+  let avatarColor = '';
+  let clickHandler = '';
+  let senderCodeHtml = '';
+
+  if (isTelegramUser) {
+    displayName = msg.tg_sender_name || msg.sender_code;
+    avatarColor = 'linear-gradient(135deg, #2abeef, #0088cc)';
+    senderCodeHtml = ` <span class="telegram-badge" style="font-size:9px; background:#0088cc; color:white; padding:1px 5px; border-radius:4px; font-weight:normal; margin-left:4px; display:inline-block; vertical-align:middle; line-height:1.2;">Telegram</span>`;
+  } else {
+    const sender = typeof allStaff !== 'undefined' ? allStaff.find(s => s.staff_code === msg.sender_code) : null;
+    displayName = sender ? (sender.nickname || sender.full_name) : msg.sender_code;
+    avatarColor = sender?.staff_avatar_color || '';
+    clickHandler = `onclick="showStaffCard('${msg.sender_code}')" style="cursor:pointer;"`;
+    senderCodeHtml = ` <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span>`;
+  }
+
+  const initial = displayName ? getNameInitial(displayName) : '?';
+  const avatarHtml = typeof renderAnimatedAvatar === 'function'
+    ? renderAnimatedAvatar(initial, avatarColor, 'sm')
+    : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;">${initial}</div>`;
+
+  let chatText = msg.message || '';
+  let mediaUrl = '';
+  if (msg.media_metadata && msg.media_metadata.file_path) {
+    const fileParam = msg.media_metadata.file_path;
+    const nameParam = msg.media_metadata.name || (fileParam.split('/').pop() || 'file');
+    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}&name=${encodeURIComponent(nameParam)}`;
+    
+    const isFallbackLabel = ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]'].includes(msg.message) || (msg.message && msg.message.startsWith('[📄 Tài liệu]'));
+    if (isFallbackLabel) {
+      chatText = mediaUrl;
+    } else {
+      chatText = chatText + '\n' + mediaUrl;
+    }
+  }
+
+  const isPureMedia = isPureVisualMedia(chatText);
+  const isMediaLink = chatText.includes('/file/bot') || chatText.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(chatText) || chatText.includes('imgbb.com') || chatText.includes('postimg.cc');
+
+  return {
+    isTelegramUser,
+    displayName,
+    avatarColor,
+    clickHandler,
+    senderCodeHtml,
+    initial,
+    avatarHtml,
+    chatText,
+    isPureMedia,
+    isMediaLink
+  };
+}
+
 // Add a single chat message to DOM
 function addChatMessageToDOM(msg) {
   const msgArea = document.getElementById('profileChatMessages');
@@ -187,17 +244,9 @@ function addChatMessageToDOM(msg) {
   const myCode = getEffectiveStaffCode();
   const isMe = msg.sender_code === myCode;
   
-  // Find sender profile details
-  const sender = allStaff.find(s => s.staff_code === msg.sender_code);
-  const displayName = sender ? (sender.nickname || sender.full_name) : msg.sender_code;
-  const initial = displayName ? getNameInitial(displayName) : '?';
-  const avatarColor = sender?.staff_avatar_color || '';
+  // Preprocess message details
+  const p = preprocessChatMessage(msg);
   
-  // Render animated avatar using global function
-  const avatarHtml = typeof renderAnimatedAvatar === 'function'
-    ? renderAnimatedAvatar(initial, avatarColor, 'sm')
-    : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;">${initial}</div>`;
-
   // Format message time
   let timeStr = '';
   try {
@@ -206,9 +255,8 @@ function addChatMessageToDOM(msg) {
   } catch(e) {}
 
   // Determine styling based on category
-  const isPureMedia = isPureVisualMedia(msg.message);
   let bubbleClass = 'chat-message-bubble';
-  if (isPureMedia) {
+  if (p.isPureMedia) {
     bubbleClass += ' chat-message-bubble--media-only';
   } else {
     if (isMe) bubbleClass += ' chat-message-bubble--me';
@@ -236,16 +284,15 @@ function addChatMessageToDOM(msg) {
   let messageText = '';
   let messageContentHtml = '';
 
-  if (isPureMedia) {
-    messageText = formatChatMessageText(msg.message, timeStr, isMe, msg.id, false);
+  if (p.isPureMedia) {
+    messageText = formatChatMessageText(p.chatText, timeStr, isMe, msg.id, false);
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
   } else {
-    messageText = formatChatMessageText(msg.message);
-    const isMediaLink = msg.message.includes('/file/bot') || msg.message.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(msg.message) || msg.message.includes('imgbb.com') || msg.message.includes('postimg.cc');
+    messageText = formatChatMessageText(p.chatText);
 
     const actionsHtml = isMe ? `
       <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-        ${!isMediaLink ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
+        ${!p.isMediaLink ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
         <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
       </span>
     ` : '';
@@ -278,15 +325,15 @@ function addChatMessageToDOM(msg) {
   }
 
   const avatarHtmlBlock = isMe ? '' : `
-    <div class="chat-message-avatar" onclick="showStaffCard('${msg.sender_code}')" style="cursor:pointer;" title="${displayName}">
-      ${avatarHtml}
+    <div class="chat-message-avatar" ${p.clickHandler} title="${p.displayName}">
+      ${p.avatarHtml}
     </div>
   `;
 
-  const onclickBubble = isPureMedia ? '' : `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})"`;
+  const onclickBubble = p.isPureMedia ? '' : `onclick="handleBubbleClick(event, '${msg.id}', ${isMe})"`;
 
   let bubbleInline = 'cursor:pointer; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
-  if (isPureMedia) {
+  if (p.isPureMedia) {
     bubbleInline = 'display:block; border-radius:12px; border:none; background:transparent; padding:0; margin:0; box-shadow:none; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   }
 
@@ -296,10 +343,10 @@ function addChatMessageToDOM(msg) {
   const contentInline = 'height:auto !important; min-height:0 !important; flex:1 1 auto !important;';
 
   const html = `
-    <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(msg.message)}" style="${rowInline}">
+    <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(p.chatText)}" style="${rowInline}">
       ${avatarHtmlBlock}
       <div class="chat-message-content" style="${contentInline}">
-        ${!isMe ? `<div class="chat-message-sender" onclick="showStaffCard('${msg.sender_code}')" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
+        ${!isMe ? `<div class="chat-message-sender" ${p.clickHandler} style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${p.displayName}${p.senderCodeHtml}</div>` : ''}
         <div class="${bubbleClass}" ${onclickBubble} style="${bubbleInline}">
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
@@ -824,6 +871,9 @@ function updateChatMessageInDOM(msg) {
   const myCode = getEffectiveStaffCode();
   const isMe = msg.sender_code === myCode;
 
+  // Preprocess message details
+  const p = preprocessChatMessage(msg);
+
   // Update memory list
   if (window._chatMessages) {
     const idx = window._chatMessages.findIndex(m => m.id === msg.id);
@@ -833,7 +883,7 @@ function updateChatMessageInDOM(msg) {
   }
   
   if (row) {
-    row.setAttribute('data-raw-text', msg.message);
+    row.setAttribute('data-raw-text', p.chatText);
     
     const bubble = row.querySelector('.chat-message-bubble');
     if (bubble) {
@@ -842,8 +892,6 @@ function updateChatMessageInDOM(msg) {
         const d = new Date(msg.created_at);
         timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       } catch(e) {}
-
-      const isPureMedia = isPureVisualMedia(msg.message);
 
       // Determine category badge / prefix
       let categoryPrefix = '';
@@ -861,7 +909,7 @@ function updateChatMessageInDOM(msg) {
 
       // Set bubble class and inline styles to bypass WebView caching
       bubble.className = 'chat-message-bubble';
-      if (isPureMedia) {
+      if (p.isPureMedia) {
         bubble.classList.add('chat-message-bubble--media-only');
         bubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
       } else {
@@ -875,12 +923,12 @@ function updateChatMessageInDOM(msg) {
       let messageText = '';
       let messageContentHtml = '';
 
-      if (isPureMedia) {
+      if (p.isPureMedia) {
         const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
-        messageText = formatChatMessageText(msg.message, displayTimeStr, isMe, msg.id, false);
+        messageText = formatChatMessageText(p.chatText, displayTimeStr, isMe, msg.id, false);
         messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
       } else {
-        messageText = formatChatMessageText(msg.message);
+        messageText = formatChatMessageText(p.chatText);
         
         const actionsHtml = isMe ? `
           <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
@@ -923,7 +971,7 @@ function updateChatMessageInDOM(msg) {
       `;
       
       // update click handler
-      if (!isPureMedia) {
+      if (!p.isPureMedia) {
         bubble.setAttribute('onclick', `handleBubbleClick(event, '${msg.id}', ${isMe})`);
         bubble.style.cursor = 'pointer';
       } else {
@@ -953,7 +1001,7 @@ function updateChatMessageInDOM(msg) {
   // Update floating chat message if exists in DOM
   const flRow = document.getElementById(`fl_msg_${msg.id}`);
   if (flRow) {
-    flRow.setAttribute('data-raw-text', msg.message);
+    flRow.setAttribute('data-raw-text', p.chatText);
     const flBubble = flRow.querySelector('.chat-message-bubble');
     if (flBubble) {
       let timeStr = '';
@@ -961,8 +1009,6 @@ function updateChatMessageInDOM(msg) {
         const d = new Date(msg.created_at);
         timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       } catch(e) {}
-
-      const isPureMedia = isPureVisualMedia(msg.message);
 
       // Determine category badge / prefix
       let categoryPrefix = '';
@@ -979,7 +1025,7 @@ function updateChatMessageInDOM(msg) {
       }
 
       flBubble.className = 'chat-message-bubble';
-      if (isPureMedia) {
+      if (p.isPureMedia) {
         flBubble.classList.add('chat-message-bubble--media-only');
         flBubble.style.cssText = 'display: block; border-radius: 12px; border: none; background: transparent; padding: 0; margin: 0; box-shadow: none;';
       } else {
@@ -993,12 +1039,12 @@ function updateChatMessageInDOM(msg) {
       let messageText = '';
       let messageContentHtml = '';
 
-      if (isPureMedia) {
+      if (p.isPureMedia) {
         const displayTimeStr = `<span class="chat-message-edited-tag" style="opacity:0.7; margin-right:4px; font-size:8.5px; font-style:italic;">(đã sửa)</span>${timeStr}`;
-        messageText = formatChatMessageText(msg.message, displayTimeStr, isMe, msg.id, true);
+        messageText = formatChatMessageText(p.chatText, displayTimeStr, isMe, msg.id, true);
         messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
       } else {
-        messageText = formatChatMessageText(msg.message);
+        messageText = formatChatMessageText(p.chatText);
         const actionsHtml = isMe ? `
           <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
             <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
@@ -1037,7 +1083,7 @@ function updateChatMessageInDOM(msg) {
         ${messageContentHtml}
       `;
 
-      if (!isPureMedia) {
+      if (!p.isPureMedia) {
         flBubble.setAttribute('onclick', `handleBubbleClick(event, 'fl_${msg.id}', ${isMe})`);
         flBubble.style.cursor = 'pointer';
       } else {
@@ -2448,14 +2494,8 @@ function addFloatingChatMessageToDOM(msg) {
   const myCode = getEffectiveStaffCode();
   const isMe = msg.sender_code === myCode;
   
-  const sender = allStaff.find(s => s.staff_code === msg.sender_code);
-  const displayName = sender ? (sender.nickname || sender.full_name) : msg.sender_code;
-  const initial = displayName ? getNameInitial(displayName) : '?';
-  const avatarColor = sender?.staff_avatar_color || '';
-  
-  const avatarHtml = typeof renderAnimatedAvatar === 'function'
-    ? renderAnimatedAvatar(initial, avatarColor, 'sm')
-    : `<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;">${initial}</div>`;
+  // Preprocess message details
+  const p = preprocessChatMessage(msg);
     
   let timeStr = '';
   try {
@@ -2463,9 +2503,8 @@ function addFloatingChatMessageToDOM(msg) {
     timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   } catch (e) {}
   
-  const isPureMedia = isPureVisualMedia(msg.message);
   let bubbleClass = 'chat-message-bubble';
-  if (isPureMedia) {
+  if (p.isPureMedia) {
     bubbleClass += ' chat-message-bubble--media-only';
   } else {
     if (isMe) bubbleClass += ' chat-message-bubble--me';
@@ -2493,14 +2532,14 @@ function addFloatingChatMessageToDOM(msg) {
   let messageText = '';
   let messageContentHtml = '';
 
-  if (isPureMedia) {
-    messageText = formatChatMessageText(msg.message, timeStr, isMe, msg.id, true);
+  if (p.isPureMedia) {
+    messageText = formatChatMessageText(p.chatText, timeStr, isMe, msg.id, true);
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
   } else {
-    messageText = formatChatMessageText(msg.message);
+    messageText = formatChatMessageText(p.chatText);
     const actionsHtml = isMe ? `
       <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-        <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
+        <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;">🗑️ Xoá</span>
       </span>
     ` : '';
 
@@ -2532,15 +2571,15 @@ function addFloatingChatMessageToDOM(msg) {
   }
   
   const avatarHtmlBlock = isMe ? '' : `
-    <div class="chat-message-avatar" title="${displayName}">
-      ${avatarHtml}
+    <div class="chat-message-avatar" title="${p.displayName}">
+      ${p.avatarHtml}
     </div>
   `;
   
-  const onclickBubble = isPureMedia ? '' : `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})"`;
+  const onclickBubble = p.isPureMedia ? '' : `onclick="handleBubbleClick(event, 'fl_${msg.id}', ${isMe})"`;
   
   let bubbleInline = 'cursor:pointer; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
-  if (isPureMedia) {
+  if (p.isPureMedia) {
     bubbleInline = 'display:block; border-radius:12px; border:none; background:transparent; padding:0; margin:0; box-shadow:none; height:auto !important; min-height:0 !important; flex:0 0 auto !important;';
   }
 
@@ -2550,10 +2589,10 @@ function addFloatingChatMessageToDOM(msg) {
   const contentInline = 'height:auto !important; min-height:0 !important; flex:1 1 auto !important;';
 
   const html = `
-    <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(msg.message)}" style="${rowInline}">
+    <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(p.chatText)}" style="${rowInline}">
       ${avatarHtmlBlock}
       <div class="chat-message-content" style="${contentInline}">
-        ${!isMe ? `<div class="chat-message-sender" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${displayName} <span style="font-size:9px;color:var(--text3);font-weight:normal;">(${msg.sender_code})</span></div>` : ''}
+        ${!isMe ? `<div class="chat-message-sender" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${p.displayName}${p.senderCodeHtml}</div>` : ''}
         <div class="${bubbleClass}" ${onclickBubble} style="${bubbleInline}">
           ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
