@@ -131,6 +131,8 @@ async function loadSinka(profileId) {
   } catch(e) { console.warn('loadSinka DB error:', e); }
 
   _sinkaLoaded = true;
+  // Check for any cached AI Scan draft for this profile
+  _updateDraftButton(profileId);
   if (typeof adjustAllTextareaHeights === 'function') {
     setTimeout(adjustAllTextareaHeights, 50);
   }
@@ -780,6 +782,8 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
     btn.innerHTML = '✨ AI Scan Thẻ Học Viên';
 
     if (json.fields && Array.isArray(json.fields) && json.fields.length > 0) {
+      // Save draft to sessionStorage
+      _saveSinkaDraft(currentProfileId, json.fields);
       showSinkaDiffPopup(json.fields);
     } else {
       showToast('🍀 AI Scan: Không phát hiện thêm thông tin mới cần cập nhật!');
@@ -792,6 +796,63 @@ Chỉ trả về JSON thuần túy, KHÔNG bọc trong \`\`\`json, KHÔNG có v�
   }
 }
 
+// ═══════════════════════════════════════════════════
+// DRAFT CACHING — save/restore AI Scan results
+// ═══════════════════════════════════════════════════
+function _getSinkaDraftKey(profileId) {
+  return 'sinka_draft_' + (profileId || 'unknown');
+}
+
+function _saveSinkaDraft(profileId, fields) {
+  try {
+    sessionStorage.setItem(_getSinkaDraftKey(profileId), JSON.stringify({
+      fields: fields,
+      savedAt: Date.now()
+    }));
+    _updateDraftButton(profileId);
+  } catch(e) { console.warn('[Sinka Draft] Save failed:', e); }
+}
+
+function _loadSinkaDraft(profileId) {
+  try {
+    var raw = sessionStorage.getItem(_getSinkaDraftKey(profileId));
+    if (!raw) return null;
+    var data = JSON.parse(raw);
+    // Draft expires after 30 minutes
+    if (Date.now() - data.savedAt > 30 * 60 * 1000) {
+      sessionStorage.removeItem(_getSinkaDraftKey(profileId));
+      return null;
+    }
+    return data;
+  } catch(e) { return null; }
+}
+
+function _clearSinkaDraft(profileId) {
+  sessionStorage.removeItem(_getSinkaDraftKey(profileId));
+  _updateDraftButton(profileId);
+}
+
+function _updateDraftButton(profileId) {
+  var btn = document.getElementById('aiScanDraftBtn');
+  var draft = _loadSinkaDraft(profileId);
+  if (btn) {
+    btn.style.display = draft ? 'inline-flex' : 'none';
+  }
+}
+
+function restoreSinkaDraft() {
+  var draft = _loadSinkaDraft(currentProfileId);
+  if (draft && draft.fields) {
+    showSinkaDiffPopup(draft.fields);
+    showToast('📋 Đã mở bản nháp AI Scan lần trước');
+  } else {
+    showToast('Không có bản nháp nào');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// DIFF POPUP — Card-based responsive layout
+// ═══════════════════════════════════════════════════
 function showSinkaDiffPopup(proposedFields) {
   const old = document.getElementById('sinkaDiffModal');
   if (old) old.remove();
@@ -802,72 +863,243 @@ function showSinkaDiffPopup(proposedFields) {
   overlay.style.zIndex = '9999';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
-  var tableRowsHtml = '';
-  proposedFields.forEach(function(f) {
+  // Build card-based items
+  var cardsHtml = '';
+  proposedFields.forEach(function(f, idx) {
     var isUserEdited = window._sinkaUserEditedFields && window._sinkaUserEditedFields[f.id];
     var badgeHtml = isUserEdited 
-      ? '<span style="background:var(--accent-orange, #f97316);color:white;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-left:5px;">✍️ Tự nhập</span>'
+      ? '<span class="sd-badge-user">✍️ Tự nhập</span>'
       : '';
-    
-    // Mặc định tích chọn cho các trường hệ thống điền, bỏ chọn cho các trường người dùng tự nhập thủ công
     var checkedAttribute = isUserEdited ? '' : 'checked';
+    var safeNewVal = (f.new_value || '').replace(/"/g, '&quot;');
     
-    tableRowsHtml += `
-      <tr style="border-bottom:1px solid var(--bg3, #e5e7eb);">
-        <td style="padding:10px;font-size:12px;font-weight:700;color:var(--text1, #1f2937);max-width:150px;">
-          ${f.label} ${badgeHtml}
-        </td>
-        <td style="padding:10px;font-size:11px;color:var(--text3, #6b7280);max-width:180px;white-space:pre-wrap;">
-          ${f.old_value || '<i>(Trống)</i>'}
-        </td>
-        <td style="padding:10px;font-size:12px;color:var(--green, #22c55e);font-weight:700;max-width:180px;white-space:pre-wrap;background:rgba(34,197,94,0.05);">
-          ${f.new_value || '—'}
-        </td>
-        <td style="padding:10px;font-size:11px;color:var(--text2, #4b5563);max-width:200px;">
-          ${f.reason || ''}
-        </td>
-        <td style="padding:10px;text-align:center;">
-          <input type="checkbox" class="sinka-diff-checkbox" data-id="${f.id}" data-newval="${f.new_value.replace(/"/g, '&quot;')}" ${checkedAttribute} style="transform:scale(1.2);cursor:pointer;" />
-        </td>
-      </tr>
+    cardsHtml += `
+      <div class="sd-card" data-idx="${idx}">
+        <div class="sd-card-header">
+          <div class="sd-card-title">
+            <label class="sd-check-label">
+              <input type="checkbox" class="sinka-diff-checkbox" data-id="${f.id}" data-newval="${safeNewVal}" ${checkedAttribute} />
+              <span class="sd-check-custom"></span>
+            </label>
+            <span class="sd-field-name">${f.label}</span>
+            ${badgeHtml}
+          </div>
+        </div>
+        <div class="sd-card-body">
+          <div class="sd-row">
+            <div class="sd-col sd-col-old">
+              <div class="sd-col-label">Giá trị cũ</div>
+              <div class="sd-col-value">${f.old_value || '<i class="sd-empty">(Trống)</i>'}</div>
+            </div>
+            <div class="sd-col sd-col-arrow">→</div>
+            <div class="sd-col sd-col-new">
+              <div class="sd-col-label">Đề xuất mới</div>
+              <div class="sd-col-value">${f.new_value || '—'}</div>
+            </div>
+          </div>
+          ${f.reason ? '<div class="sd-reason"><span class="sd-reason-icon">💡</span> ' + f.reason + '</div>' : ''}
+        </div>
+      </div>
     `;
   });
 
+  var checkedCount = proposedFields.filter(function(f) {
+    return !(window._sinkaUserEditedFields && window._sinkaUserEditedFields[f.id]);
+  }).length;
+
   overlay.innerHTML = `
-    <div class="modal" style="width:90%;max-width:850px;max-height:85vh;display:flex;flex-direction:column;padding:20px;background:var(--bg, #ffffff);border-radius:var(--radius, 12px);box-shadow:0 10px 25px rgba(0,0,0,0.15);">
-      <div class="modal-title" style="font-size:16px;font-weight:700;color:var(--text1, #1f2937);margin-bottom:8px;display:flex;align-items:center;gap:6px;">✨ AI Scan: Đề xuất cập nhật Thẻ Học Viên</div>
-      <div style="font-size:11px;color:var(--text3, #6b7280);margin-bottom:15px;line-height:1.4;">
-        AI đã đối chiếu lịch sử để phát hiện các thông tin mới. Trường có nhãn <span style="color:#f97316;font-weight:700;">✍️ Tự nhập</span> mặc định sẽ không được chọn ghi đè để bảo vệ dữ liệu thủ công của bạn.
-      </div>
-      
-      <div style="flex:1;overflow-y:auto;border:1px solid var(--bg3, #e5e7eb);border-radius:6px;margin-bottom:15px;">
-        <table style="width:100%;border-collapse:collapse;text-align:left;">
-          <thead>
-            <tr style="background:var(--bg2, #f3f4f6);border-bottom:2px solid var(--bg3, #e5e7eb);">
-              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Hạng mục</th>
-              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Giá trị cũ</th>
-              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Đề xuất mới</th>
-              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);">Căn cứ / Lý do</th>
-              <th style="padding:10px;font-size:12px;font-weight:700;color:var(--text2, #4b5563);text-align:center;">Duyệt</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRowsHtml}
-          </tbody>
-        </table>
+    <div class="sd-modal">
+      <!-- Sticky Header -->
+      <div class="sd-sticky-header">
+        <div class="sd-header-top">
+          <div class="sd-header-title">✨ AI Scan: Đề xuất cập nhật</div>
+          <button class="sd-close-btn" onclick="document.getElementById('sinkaDiffModal').remove()" title="Đóng">✕</button>
+        </div>
+        <div class="sd-header-meta">
+          AI phát hiện <strong>${proposedFields.length}</strong> trường cần cập nhật.
+          Trường <span class="sd-badge-user-inline">✍️ Tự nhập</span> mặc định không chọn ghi đè.
+        </div>
+        <div class="sd-header-actions">
+          <button id="sinkaSelectAllBtn" class="sd-btn sd-btn-outline">Chọn tất cả</button>
+          <span class="sd-counter" id="sdCheckedCounter">${checkedCount}/${proposedFields.length} đã chọn</span>
+          <div style="flex:1;"></div>
+          <button onclick="document.getElementById('sinkaDiffModal').remove()" class="sd-btn sd-btn-ghost">Hủy</button>
+          <button id="sinkaApplyDiffBtn" class="sd-btn sd-btn-primary">✅ Áp dụng</button>
+        </div>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
-        <button id="sinkaSelectAllBtn" style="background:none;border:1px solid var(--bg3, #e5e7eb);color:var(--text2, #4b5563);padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600;">Chọn tất cả</button>
-        <button onclick="document.getElementById('sinkaDiffModal').remove()" style="background:none;border:none;color:var(--text3, #6b7280);padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;">Hủy bỏ</button>
-        <button id="sinkaApplyDiffBtn" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;padding:8px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(124,106,247,0.2);">✅ Áp dụng đã chọn</button>
+      <!-- Scrollable Card List -->
+      <div class="sd-card-list">
+        ${cardsHtml}
       </div>
     </div>
+
+    <style>
+      .sd-modal {
+        width: 94%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column;
+        background: var(--bg, #fff); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        overflow: hidden; animation: sdSlideUp 0.3s ease;
+      }
+      @keyframes sdSlideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .sd-sticky-header {
+        position: sticky; top: 0; z-index: 10;
+        background: var(--bg, #fff); padding: 16px 18px 12px;
+        border-bottom: 1px solid var(--border, #e5e7eb);
+        flex-shrink: 0;
+      }
+      .sd-header-top {
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+      }
+      .sd-header-title {
+        font-size: 15px; font-weight: 700; color: var(--text1, #1f2937);
+      }
+      .sd-close-btn {
+        width: 28px; height: 28px; border-radius: 50%; border: none;
+        background: var(--surface2, #f3f4f6); color: var(--text3, #9ca3af);
+        font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s;
+      }
+      .sd-close-btn:hover { background: var(--border, #e5e7eb); color: var(--text1, #374151); }
+      .sd-header-meta {
+        font-size: 11px; color: var(--text3, #6b7280); line-height: 1.4; margin-bottom: 10px;
+      }
+      .sd-header-actions {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      }
+      .sd-counter {
+        font-size: 11px; color: var(--accent, #7c6af7); font-weight: 600;
+        background: rgba(124,106,247,0.08); padding: 3px 8px; border-radius: 10px;
+      }
+      .sd-btn {
+        padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+        cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap;
+      }
+      .sd-btn-outline {
+        background: none; border: 1px solid var(--border, #e5e7eb); color: var(--text2, #4b5563);
+      }
+      .sd-btn-outline:hover { background: var(--surface2, #f3f4f6); }
+      .sd-btn-ghost { background: none; color: var(--text3, #9ca3af); }
+      .sd-btn-ghost:hover { color: var(--text1, #374151); }
+      .sd-btn-primary {
+        background: linear-gradient(135deg, var(--accent, #7c6af7), var(--accent2, #a78bfa));
+        color: white; box-shadow: 0 3px 10px rgba(124,106,247,0.2);
+      }
+      .sd-btn-primary:hover { box-shadow: 0 4px 14px rgba(124,106,247,0.35); transform: translateY(-1px); }
+
+      /* Card List */
+      .sd-card-list {
+        flex: 1; overflow-y: auto; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .sd-card {
+        background: var(--surface, #fafafa); border: 1px solid var(--border, #e5e7eb);
+        border-radius: 10px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .sd-card:has(.sinka-diff-checkbox:checked) {
+        border-color: var(--accent, #7c6af7); box-shadow: 0 0 0 1px rgba(124,106,247,0.15);
+      }
+      .sd-card-header {
+        padding: 10px 12px; background: var(--surface2, #f3f4f6);
+        border-bottom: 1px solid var(--border, #e5e7eb);
+      }
+      .sd-card-title {
+        display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
+        color: var(--text1, #1f2937);
+      }
+      .sd-field-name { flex: 1; min-width: 0; }
+      .sd-badge-user, .sd-badge-user-inline {
+        background: #f97316; color: white; padding: 1px 6px; border-radius: 4px;
+        font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+      }
+      .sd-badge-user-inline { font-size: 9px; padding: 1px 5px; vertical-align: middle; }
+
+      /* Custom Checkbox */
+      .sd-check-label {
+        position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0;
+      }
+      .sd-check-label input { position: absolute; opacity: 0; width: 0; height: 0; }
+      .sd-check-custom {
+        width: 18px; height: 18px; border-radius: 5px;
+        border: 2px solid var(--border, #d1d5db); background: var(--bg, #fff);
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s; flex-shrink: 0;
+      }
+      .sd-check-label input:checked + .sd-check-custom {
+        background: var(--accent, #7c6af7); border-color: var(--accent, #7c6af7);
+      }
+      .sd-check-label input:checked + .sd-check-custom::after {
+        content: '✓'; color: white; font-size: 11px; font-weight: 700;
+      }
+
+      /* Card Body */
+      .sd-card-body { padding: 10px 12px; }
+      .sd-row {
+        display: flex; align-items: flex-start; gap: 8px;
+      }
+      .sd-col { flex: 1; min-width: 0; }
+      .sd-col-arrow {
+        flex: 0 0 20px; text-align: center; color: var(--accent, #7c6af7);
+        font-weight: 700; font-size: 14px; padding-top: 16px;
+      }
+      .sd-col-label {
+        font-size: 10px; font-weight: 600; color: var(--text3, #9ca3af);
+        text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 3px;
+      }
+      .sd-col-value {
+        font-size: 12px; color: var(--text2, #4b5563); line-height: 1.4;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      .sd-col-old .sd-col-value { color: var(--text3, #9ca3af); }
+      .sd-col-new .sd-col-value {
+        color: var(--green, #22c55e); font-weight: 600;
+        background: rgba(34,197,94,0.06); padding: 4px 6px; border-radius: 4px;
+      }
+      .sd-empty { color: var(--text3, #ccc); font-style: italic; }
+      .sd-reason {
+        margin-top: 8px; font-size: 11px; color: var(--text3, #6b7280);
+        line-height: 1.4; padding: 6px 8px; background: rgba(124,106,247,0.04);
+        border-radius: 6px; border-left: 3px solid var(--accent, #7c6af7);
+      }
+      .sd-reason-icon { font-size: 12px; }
+
+      /* Desktop 2-column grid when enough space */
+      @media (min-width: 600px) {
+        .sd-modal { max-width: 780px; }
+        .sd-card-body .sd-row { gap: 12px; }
+      }
+
+      /* Mobile adjustments */
+      @media (max-width: 480px) {
+        .sd-modal { width: 100%; max-height: 95vh; border-radius: 16px 16px 0 0; align-self: flex-end; }
+        .sd-sticky-header { padding: 14px 14px 10px; }
+        .sd-header-title { font-size: 14px; }
+        .sd-card-list { padding: 10px 10px 20px; }
+        .sd-row { flex-direction: column; gap: 6px; }
+        .sd-col-arrow { display: none; }
+        .sd-col-new .sd-col-label::before { content: '→ '; }
+        .sd-header-actions { gap: 6px; }
+        .sd-btn { padding: 6px 10px; font-size: 11px; }
+      }
+    </style>
   `;
 
   document.body.appendChild(overlay);
 
-  // Sự kiện nút "Chọn tất cả"
+  // Update counter on checkbox change
+  function updateCounter() {
+    var total = document.querySelectorAll('.sinka-diff-checkbox').length;
+    var checked = document.querySelectorAll('.sinka-diff-checkbox:checked').length;
+    var counter = document.getElementById('sdCheckedCounter');
+    if (counter) counter.textContent = checked + '/' + total + ' đã chọn';
+  }
+  overlay.addEventListener('change', function(e) {
+    if (e.target.classList.contains('sinka-diff-checkbox')) updateCounter();
+  });
+
+  // Select All toggle
   var allSelected = false;
   document.getElementById('sinkaSelectAllBtn').onclick = function() {
     allSelected = !allSelected;
@@ -875,9 +1107,10 @@ function showSinkaDiffPopup(proposedFields) {
       cb.checked = allSelected;
     });
     this.textContent = allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+    updateCounter();
   };
 
-  // Sự kiện nút "Áp dụng đã chọn"
+  // Apply selected
   document.getElementById('sinkaApplyDiffBtn').onclick = function() {
     var applyCount = 0;
     document.querySelectorAll('.sinka-diff-checkbox:checked').forEach(function(cb) {
@@ -889,12 +1122,10 @@ function showSinkaDiffPopup(proposedFields) {
         el.value = newVal;
         applyCount++;
         
-        // Kích hoạt hiệu ứng highlight outline xanh lá
         el.style.outline = '2px solid var(--green, #22c55e)';
         el.style.outlineOffset = '-1px';
         el.style.transition = 'outline 0.3s';
         
-        // Đánh dấu trường này là tự nhập thủ công (vì người dùng đã chủ động duyệt/nhập nó)
         if (window._sinkaUserEditedFields) {
           window._sinkaUserEditedFields[id] = true;
           el.style.borderLeft = '3px solid var(--accent, #7c6af7)';
@@ -908,9 +1139,12 @@ function showSinkaDiffPopup(proposedFields) {
     });
 
     overlay.remove();
+    // Clear draft after applying
+    _clearSinkaDraft(currentProfileId);
     if (applyCount > 0) {
-      showToast(`✨ Đã cập nhật thành công ${applyCount} trường — hãy lưu Thẻ Học Viên!`);
+      showToast(`✨ Đã cập nhật ${applyCount} trường — hãy lưu Thẻ Học Viên!`);
       if (typeof haptic === 'function') haptic('success');
     }
   };
 }
+
