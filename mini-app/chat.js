@@ -5,6 +5,7 @@ let _profileChatSubscription = null;
 // Global state cache for chat messages and reads
 window._chatMessages = [];
 window._chatReads = [];
+window._activeReplyTarget = null;
 
 // Common emojis for quick picking
 const CHAT_COMMON_EMOJIS = [
@@ -309,12 +310,13 @@ function addChatMessageToDOM(msg) {
   } else {
     messageText = formatChatMessageText(p.chatText);
 
-    const actionsHtml = isMe ? `
-      <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-        ${!p.isMediaLink ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
-        <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
+    const actionsHtml = `
+      <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:8px; font-size:9.5px; user-select:none; margin-right:6px;">
+        <span onclick="event.stopPropagation(); startReplyChatMessage('${msg.id}', false)" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">💬 Trả lời</span>
+        ${isMe && !p.isMediaLink ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
+        ${isMe ? `<span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>` : ''}
       </span>
-    ` : '';
+    `;
 
     const metaHtml = `
       <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
@@ -362,12 +364,37 @@ function addChatMessageToDOM(msg) {
   const rowInline = 'height:auto !important; min-height:0 !important; flex:0 0 auto !important; max-height:none !important;';
   const contentInline = 'height:auto !important; min-height:0 !important; flex:1 1 auto !important;';
 
+  // Look up reply target
+  let replyHtml = '';
+  if (msg.reply_to_id) {
+    const parentMsg = window._chatMessages && window._chatMessages.find(m => m.id === msg.reply_to_id);
+    if (parentMsg) {
+      const parentP = preprocessChatMessage(parentMsg);
+      const parentSnippet = parentP.chatText || 'Tệp đính kèm';
+      const truncatedText = parentSnippet.length > 50 ? parentSnippet.substring(0, 50) + '...' : parentSnippet;
+      replyHtml = `
+        <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+          <span class="chat-reply-bubble-sender">${parentP.displayName}</span>
+          <span class="chat-reply-bubble-text">${escHtml(truncatedText)}</span>
+        </div>
+      `;
+    } else {
+      replyHtml = `
+        <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+          <span class="chat-reply-bubble-sender">Tin nhắn</span>
+          <span class="chat-reply-bubble-text">Nhấp để xem tin nhắn phản hồi...</span>
+        </div>
+      `;
+    }
+  }
+
   const html = `
     <div class="${rowClass}" id="msg_${msg.id}" data-raw-text="${escHtml(p.chatText)}" style="${rowInline}">
       ${avatarHtmlBlock}
       <div class="chat-message-content" style="${contentInline}">
         ${!isMe ? `<div class="chat-message-sender" ${p.clickHandler} style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${p.displayName}${p.senderCodeHtml}</div>` : ''}
         <div class="${bubbleClass}" ${onclickBubble} style="${bubbleInline}">
+          ${replyHtml}
           ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
@@ -459,6 +486,7 @@ async function sendProfileChatMessage() {
   const sender = getEffectiveStaffCode();
   
   try {
+    const activeReplyId = window._activeReplyTarget?.id || null;
     const res = await sbFetch('/rest/v1/profile_chats', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
@@ -467,13 +495,15 @@ async function sendProfileChatMessage() {
         sender_code: sender,
         message: finalMessageText,
         category: category,
-        media_metadata: mediaMetadata
+        media_metadata: mediaMetadata,
+        reply_to_id: activeReplyId
       })
     });
     
     const newMsgArr = await res.json();
     if (newMsgArr && newMsgArr[0]) {
       addChatMessageToDOM(newMsgArr[0]);
+      cancelReplyChatMessage(false);
     }
     
     // Automatically update my read stamp for this profile chat
@@ -932,12 +962,13 @@ function updateChatMessageInDOM(msg) {
       } else {
         messageText = formatChatMessageText(p.chatText);
         
-        const actionsHtml = isMe ? `
-          <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-            <span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>
-            <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
+        const actionsHtml = `
+          <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:8px; font-size:9.5px; user-select:none; margin-right:6px;">
+            <span onclick="event.stopPropagation(); startReplyChatMessage('${msg.id}', false)" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">💬 Trả lời</span>
+            ${isMe ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
+            ${isMe ? `<span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>` : ''}
           </span>
-        ` : '';
+        `;
 
         const metaHtml = `
           <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
@@ -967,7 +998,31 @@ function updateChatMessageInDOM(msg) {
         }
       }
 
+      let replyHtml = '';
+      if (msg.reply_to_id) {
+        const parentMsg = window._chatMessages && window._chatMessages.find(m => m.id === msg.reply_to_id);
+        if (parentMsg) {
+          const parentP = preprocessChatMessage(parentMsg);
+          const parentSnippet = parentP.chatText || 'Tệp đính kèm';
+          const truncatedText = parentSnippet.length > 50 ? parentSnippet.substring(0, 50) + '...' : parentSnippet;
+          replyHtml = `
+            <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+              <span class="chat-reply-bubble-sender">${parentP.displayName}</span>
+              <span class="chat-reply-bubble-text">${escHtml(truncatedText)}</span>
+            </div>
+          `;
+        } else {
+          replyHtml = `
+            <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+              <span class="chat-reply-bubble-sender">Tin nhắn</span>
+              <span class="chat-reply-bubble-text">Nhấp để xem tin nhắn phản hồi...</span>
+            </div>
+          `;
+        }
+      }
+
       bubble.innerHTML = `
+        ${replyHtml}
         ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
         ${messageContentHtml}
       `;
@@ -1052,11 +1107,12 @@ function updateChatMessageInDOM(msg) {
         messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
       } else {
         messageText = formatChatMessageText(p.chatText);
-        const actionsHtml = isMe ? `
-          <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-            <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>
+        const actionsHtml = `
+          <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:8px; font-size:9.5px; user-select:none; margin-right:6px;">
+            <span onclick="event.stopPropagation(); startReplyChatMessage('${msg.id}', true)" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">💬 Trả lời</span>
+            ${isMe ? `<span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>` : ''}
           </span>
-        ` : '';
+        `;
 
         const metaHtml = `
           <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
@@ -1086,7 +1142,31 @@ function updateChatMessageInDOM(msg) {
         }
       }
 
+      let replyHtml = '';
+      if (msg.reply_to_id) {
+        const parentMsg = window._chatMessages && window._chatMessages.find(m => m.id === msg.reply_to_id);
+        if (parentMsg) {
+          const parentP = preprocessChatMessage(parentMsg);
+          const parentSnippet = parentP.chatText || 'Tệp đính kèm';
+          const truncatedText = parentSnippet.length > 50 ? parentSnippet.substring(0, 50) + '...' : parentSnippet;
+          replyHtml = `
+            <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+              <span class="chat-reply-bubble-sender">${parentP.displayName}</span>
+              <span class="chat-reply-bubble-text">${escHtml(truncatedText)}</span>
+            </div>
+          `;
+        } else {
+          replyHtml = `
+            <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+              <span class="chat-reply-bubble-sender">Tin nhắn</span>
+              <span class="chat-reply-bubble-text">Nhấp để xem tin nhắn phản hồi...</span>
+            </div>
+          `;
+        }
+      }
+
       flBubble.innerHTML = `
+        ${replyHtml}
         ${categoryPrefix ? `<div style="margin-bottom: 5px;">${categoryPrefix}</div>` : ''}
         ${messageContentHtml}
       `;
@@ -2649,6 +2729,11 @@ function addFloatingChatMessageToDOM(msg) {
   if (!msgArea) return;
   if (document.getElementById(`fl_msg_${msg.id}`)) return;
   
+  // Add to memory list if not present
+  if (window._chatMessages && !window._chatMessages.some(m => m.id === msg.id)) {
+    window._chatMessages.push(msg);
+  }
+
   const myCode = getEffectiveStaffCode();
   const isMe = msg.sender_code === myCode;
   
@@ -2702,11 +2787,12 @@ function addFloatingChatMessageToDOM(msg) {
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
   } else {
     messageText = formatChatMessageText(p.chatText);
-    const actionsHtml = isMe ? `
-      <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:6px; font-size:9.5px; user-select:none; margin-right:6px;">
-        <span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;">🗑️ Xoá</span>
+    const actionsHtml = `
+      <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:8px; font-size:9.5px; user-select:none; margin-right:6px;">
+        <span onclick="event.stopPropagation(); startReplyChatMessage('${msg.id}', true)" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;">💬 Trả lời</span>
+        ${isMe ? `<span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;">🗑️ Xoá</span>` : ''}
       </span>
-    ` : '';
+    `;
 
     const metaHtml = `
       <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
@@ -2754,12 +2840,37 @@ function addFloatingChatMessageToDOM(msg) {
   const rowInline = 'height:auto !important; min-height:0 !important; flex:0 0 auto !important; max-height:none !important;';
   const contentInline = 'height:auto !important; min-height:0 !important; flex:1 1 auto !important;';
 
+  // Look up reply target
+  let replyHtml = '';
+  if (msg.reply_to_id) {
+    const parentMsg = window._chatMessages && window._chatMessages.find(m => m.id === msg.reply_to_id);
+    if (parentMsg) {
+      const parentP = preprocessChatMessage(parentMsg);
+      const parentSnippet = parentP.chatText || 'Tệp đính kèm';
+      const truncatedText = parentSnippet.length > 50 ? parentSnippet.substring(0, 50) + '...' : parentSnippet;
+      replyHtml = `
+        <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+          <span class="chat-reply-bubble-sender">${parentP.displayName}</span>
+          <span class="chat-reply-bubble-text">${escHtml(truncatedText)}</span>
+        </div>
+      `;
+    } else {
+      replyHtml = `
+        <div class="chat-reply-bubble-preview" onclick="event.stopPropagation(); scrollToChatMessage('${msg.reply_to_id}')">
+          <span class="chat-reply-bubble-sender">Tin nhắn</span>
+          <span class="chat-reply-bubble-text">Nhấp để xem tin nhắn phản hồi...</span>
+        </div>
+      `;
+    }
+  }
+
   const html = `
     <div class="${rowClass}" id="fl_msg_${msg.id}" data-raw-text="${escHtml(p.chatText)}" style="${rowInline}">
       ${avatarHtmlBlock}
       <div class="chat-message-content" style="${contentInline}">
         ${!isMe ? `<div class="chat-message-sender" style="color: ${getChatSenderColor(msg.sender_code)}; font-weight: 700;">${p.displayName}${p.senderCodeHtml}</div>` : ''}
         <div class="${bubbleClass}" ${onclickBubble} style="${bubbleInline}">
+          ${replyHtml}
           ${categoryPrefix ? `<div style="margin-bottom:5px;">${categoryPrefix}</div>` : ''}
           ${messageContentHtml}
         </div>
@@ -2790,6 +2901,7 @@ async function sendFloatingChatMessage() {
   input.focus();
   
   try {
+    const activeReplyId = window._activeReplyTarget?.id || null;
     const res = await sbFetch('/rest/v1/profile_chats', {
       method: 'POST',
       headers: { 'Prefer': 'return=representation' },
@@ -2797,7 +2909,8 @@ async function sendFloatingChatMessage() {
         profile_id: profileId,
         sender_code: sender,
         message: text,
-        category: category
+        category: category,
+        reply_to_id: activeReplyId
       })
     });
     
@@ -2806,6 +2919,7 @@ async function sendFloatingChatMessage() {
       if (data && data[0]) {
         addFloatingChatMessageToDOM(data[0]);
         await markChatAsRead(profileId);
+        cancelReplyChatMessage(true);
       }
     } else {
       showToast('❌ Gửi tin nhắn thất bại');
@@ -4009,10 +4123,8 @@ function handleBubbleClick(event, idStr, isMe) {
   // Show quick reaction picker
   showQuickReactionPicker(event, msgId, isMe, isFloating);
   
-  // Toggle standard actions if isMe
-  if (isMe) {
-    toggleBubbleActions(event, idStr);
-  }
+  // Toggle standard actions (Reply/Edit/Delete) for all users
+  toggleBubbleActions(event, idStr);
 }
 
 // Show premium floating quick reaction picker
@@ -4179,4 +4291,86 @@ document.addEventListener('click', (e) => {
     closeAllChatPopups();
   }
 });
+
+// MESSAGE REPLY SYSTEM HELPER FUNCTIONS
+function startReplyChatMessage(msgId, isFloating = false) {
+  const msg = window._chatMessages && window._chatMessages.find(m => m.id === msgId);
+  if (!msg) return;
+  
+  window._activeReplyTarget = msg;
+  
+  const p = preprocessChatMessage(msg);
+  const parentSnippet = p.chatText || 'Tệp đính kèm';
+  const truncatedText = parentSnippet.length > 60 ? parentSnippet.substring(0, 60) + '...' : parentSnippet;
+  const senderName = p.displayName || msg.sender_code;
+  
+  if (isFloating) {
+    const previewContainer = document.getElementById('cjFloatingChatReplyPreview');
+    const senderEl = document.getElementById('cjFloatingChatReplyPreviewSender');
+    const textEl = document.getElementById('cjFloatingChatReplyPreviewText');
+    const input = document.getElementById('cjFloatingChatInput');
+    
+    if (previewContainer && senderEl && textEl) {
+      senderEl.textContent = `Trả lời ${senderName}`;
+      textEl.textContent = truncatedText;
+      previewContainer.style.display = 'flex';
+    }
+    if (input) {
+      input.focus();
+    }
+  } else {
+    const previewContainer = document.getElementById('chatReplyPreview');
+    const senderEl = document.getElementById('chatReplyPreviewSender');
+    const textEl = document.getElementById('chatReplyPreviewText');
+    const input = document.getElementById('profileChatInput');
+    
+    if (previewContainer && senderEl && textEl) {
+      senderEl.textContent = `Trả lời ${senderName}`;
+      textEl.textContent = truncatedText;
+      previewContainer.style.display = 'flex';
+    }
+    if (input) {
+      input.focus();
+    }
+  }
+  
+  // Close any bubble action menu popups
+  document.querySelectorAll('.chat-bubble-actions').forEach(el => {
+    el.style.display = 'none';
+  });
+}
+
+function cancelReplyChatMessage(isFloating = false) {
+  window._activeReplyTarget = null;
+  if (isFloating) {
+    const previewContainer = document.getElementById('cjFloatingChatReplyPreview');
+    if (previewContainer) previewContainer.style.display = 'none';
+  } else {
+    const previewContainer = document.getElementById('chatReplyPreview');
+    if (previewContainer) previewContainer.style.display = 'none';
+  }
+}
+
+function scrollToChatMessage(targetId) {
+  let targetEl = document.getElementById(`fl_msg_${targetId}`);
+  let container = document.getElementById('cjFloatingChatMessages');
+  
+  if (!targetEl || !container || container.offsetParent === null) {
+    targetEl = document.getElementById(`msg_${targetId}`);
+    container = document.getElementById('profileChatMessages');
+  }
+  
+  if (targetEl && container) {
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const bubble = targetEl.querySelector('.chat-message-bubble');
+    if (bubble) {
+      bubble.classList.add('chat-message-highlight');
+      setTimeout(() => {
+        bubble.classList.remove('chat-message-highlight');
+      }, 1500);
+    }
+  } else {
+    showToast('Không tìm thấy tin nhắn gốc để cuộn tới!');
+  }
+}
 

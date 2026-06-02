@@ -3497,6 +3497,134 @@ body.tour-active #cjFloatingChatWindow {
   min-width: 180px !important;
 }
 
+/* ==========================================================================
+   MESSAGE REPLY SYSTEM STYLES
+   ========================================================================== */
+.chat-reply-preview-container {
+  display: none; /* flex when active */
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  padding: 8px 16px;
+  font-size: 12px;
+  animation: slideUpReply 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes slideUpReply {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.chat-reply-preview-content {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-reply-preview-sender {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.chat-reply-preview-text {
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+
+.chat-reply-preview-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.chat-reply-preview-close:hover {
+  color: var(--red);
+}
+
+/* Reply Preview inside message bubbles */
+.chat-reply-bubble-preview {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.05);
+  border-left: 3px solid var(--accent);
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  display: block;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+[data-theme="dark"] .chat-reply-bubble-preview {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-message-bubble--me .chat-reply-bubble-preview {
+  border-left-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.15);
+  color: #1f2937;
+}
+
+[data-theme="dark"] .chat-message-bubble--me .chat-reply-bubble-preview {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-reply-bubble-sender {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 2px;
+  display: block;
+}
+
+.chat-message-bubble--me .chat-reply-bubble-sender {
+  color: #2b5220; /* Darker green on light theme me-bubble */
+}
+[data-theme="dark"] .chat-message-bubble--me .chat-reply-bubble-sender {
+  color: #a7f3d0;
+}
+
+.chat-reply-bubble-text {
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.chat-message-bubble--me .chat-reply-bubble-text {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .chat-message-bubble--me .chat-reply-bubble-text {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Flash highlight animation for original message */
+.chat-message-bubble.chat-message-highlight {
+  animation: chatMessageFlash 1.5s ease-out !important;
+}
+
+@keyframes chatMessageFlash {
+  0% { filter: brightness(1.25) saturate(1.5); box-shadow: 0 0 16px var(--accent); }
+  50% { filter: brightness(1.25) saturate(1.5); box-shadow: 0 0 16px var(--accent); }
+  100% { filter: none; box-shadow: none; }
+}
+
 
 
 

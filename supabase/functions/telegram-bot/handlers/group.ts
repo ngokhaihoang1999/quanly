@@ -243,6 +243,19 @@ export async function handleGroupChat(update: any) {
           console.error("Error updating message from Telegram:", error);
         }
       } else {
+        let replyToId: string | null = null;
+        if (msg.reply_to_message) {
+          const parentTgMsgId = msg.reply_to_message.message_id;
+          const { data: parentChat } = await supabase
+            .from('profile_chats')
+            .select('id')
+            .eq('tg_message_id', parentTgMsgId)
+            .maybeSingle();
+          if (parentChat) {
+            replyToId = parentChat.id;
+          }
+        }
+
         const { error } = await supabase.from('profile_chats').insert({
           profile_id: fg.profile_id,
           sender_code: senderCode,
@@ -250,7 +263,8 @@ export async function handleGroupChat(update: any) {
           source: 'telegram',
           tg_message_id: msg.message_id,
           tg_sender_name: tgSenderName,
-          media_metadata: mediaMetadata
+          media_metadata: mediaMetadata,
+          reply_to_id: replyToId
         });
         if (error && error.code !== '23505') {
           console.error("Error syncing message from Telegram:", error);

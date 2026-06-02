@@ -385,6 +385,19 @@ Deno.serve(async (req) => {
           
           let tgRes;
           
+          // Get reply parameters if reply_to_id is set
+          let replyParameters: any = undefined;
+          if (record.reply_to_id) {
+            const { data: parentChat } = await supabase
+              .from('profile_chats')
+              .select('tg_message_id')
+              .eq('id', record.reply_to_id)
+              .maybeSingle();
+            if (parentChat && parentChat.tg_message_id) {
+              replyParameters = { message_id: parentChat.tg_message_id };
+            }
+          }
+          
           if (hasMedia) {
             const media = record.media_metadata;
             const filePath = media.file_path;
@@ -424,29 +437,39 @@ Deno.serve(async (req) => {
               telegramField = 'audio';
             }
 
+            const bodyPayload: any = {
+              chat_id: fg.telegram_group_id,
+              [telegramField]: proxyUrl,
+              caption: captionToSend,
+              parse_mode: 'HTML'
+            };
+            if (replyParameters) {
+              bodyPayload.reply_parameters = replyParameters;
+            }
+
             tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${telegramApiMethod}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: fg.telegram_group_id,
-                [telegramField]: proxyUrl,
-                caption: captionToSend,
-                parse_mode: 'HTML'
-              })
+              body: JSON.stringify(bodyPayload)
             });
           } else {
             const escapedMessage = escapeHTML(messageText);
             const mappedMessage = await mapAppTagsToTelegram(escapedMessage);
             const textToSend = `<b>${escapedSender}</b>: ${mappedMessage}`;
 
+            const bodyPayload: any = {
+              chat_id: fg.telegram_group_id,
+              text: textToSend,
+              parse_mode: 'HTML'
+            };
+            if (replyParameters) {
+              bodyPayload.reply_parameters = replyParameters;
+            }
+
             tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: fg.telegram_group_id,
-                text: textToSend,
-                parse_mode: 'HTML'
-              })
+              body: JSON.stringify(bodyPayload)
             });
           }
 
