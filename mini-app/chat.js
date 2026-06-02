@@ -493,35 +493,7 @@ async function sendProfileChatMessage() {
 
 // Parse tags `@000142-NKH` and notify mentioned users
 async function parseMentionsAndNotify(message, profileId) {
-  const mentions = [];
-  const regex = /@(\d{6}-[A-Z]+)/g;
-  let match;
-  
-  while ((match = regex.exec(message)) !== null) {
-    const code = match[1];
-    // Check if the staff code exists in the system
-    if (isStaffRegistered(code)) {
-      mentions.push(code);
-    }
-  }
-
-  if (mentions.length > 0) {
-    // Disabled as requested: Chat is synced bidirectionally with Telegram, so we don't send additional private notify messages.
-    /*
-    const p = allProfiles.find(x => x.id === profileId);
-    const pName = p?.full_name || 'Học viên';
-    const sender = getEffectiveStaffCode();
-    
-    // Notify mentioned users
-    await createNotification(
-      mentions, 
-      'chat_mention', 
-      `💬 Bạn được nhắc tới trong Thảo luận`, 
-      `Trái: ${pName} · Từ ${sender}: ${message}`, 
-      profileId
-    );
-    */
-  }
+  // Disabled: Chat is synced bidirectionally with Telegram, so we don't send additional private notify messages.
 }
 
 // Mark chat as read for user
