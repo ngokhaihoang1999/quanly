@@ -453,8 +453,24 @@ async function openProfile(p, cardEl, initialTabId) {
           <span style="flex:1; min-width:120px; white-space:normal; word-break:break-word; line-height:1.4;">${latestInfo}</span>
         </div>
       ` : ''}
+
+      <!-- Hapja view button -->
+      <div id="hapjaViewBtnContainer" style="display:none;border-top:1px solid var(--border);padding-top:8px;"></div>
     </div>
   `;
+
+  // ── Async: check if profile has approved Hapja ──
+  (async () => {
+    try {
+      const hapjaRes = await sbFetch(`/rest/v1/check_hapja?profile_id=eq.${p.id}&status=eq.approved&select=id&limit=1&order=created_at.desc`);
+      const hapjaRows = await hapjaRes.json();
+      const container = document.getElementById('hapjaViewBtnContainer');
+      if (container && hapjaRows && hapjaRows.length > 0) {
+        container.style.display = 'block';
+        container.innerHTML = `<button class="pf-hapja-btn" onclick="event.stopPropagation();openHapjaDetail('${hapjaRows[0].id}')">📋 Xem phiếu Hapja đã duyệt</button>`;
+      }
+    } catch(e) { /* silent */ }
+  })();
 
   // Tab TV: hiện khi có TVV, bất kể phase (vì Chốt TV có thể xảy ra ở phase Chakki)
   const tabTV = document.getElementById('tabTV');

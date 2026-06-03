@@ -661,6 +661,17 @@ function _renderReports(el, subUnitIdx) {
   }
 
   el.innerHTML = html;
+
+  // ── Profile Filter section (appended after reports) ──
+  if (typeof _pfRenderSection === 'function') {
+    let filterContainer = document.getElementById('pfFilterContainer');
+    if (!filterContainer) {
+      filterContainer = document.createElement('div');
+      filterContainer.id = 'pfFilterContainer';
+      el.appendChild(filterContainer);
+    }
+    _pfRenderSection(filterContainer);
+  }
 }
 
 // ── Funnel click-to-view profile list ──

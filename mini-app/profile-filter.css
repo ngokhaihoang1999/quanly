@@ -1,0 +1,445 @@
+/* ============ PROFILE FILTER MODULE ============ */
+
+/* ── Section container ── */
+.pf-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+/* ── Filter bar (scrollable chips) ── */
+.pf-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0 6px;
+  flex-wrap: nowrap;
+}
+.pf-bar::-webkit-scrollbar { display: none; }
+
+.pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-chip:active {
+  transform: scale(0.96);
+}
+.pf-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(124, 106, 247, 0.25);
+}
+.pf-chip .pf-chip-arrow {
+  font-size: 8px;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+.pf-chip.active .pf-chip-arrow {
+  opacity: 1;
+  color: white;
+}
+
+/* ── Dropdown overlay ── */
+.pf-dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.pf-dropdown-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Dropdown panel (bottom sheet on mobile) ── */
+.pf-dropdown {
+  width: 100%;
+  max-width: 480px;
+  max-height: 70vh;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+}
+.pf-dropdown-overlay.open .pf-dropdown {
+  transform: translateY(0);
+}
+
+.pf-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pf-dropdown-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text1);
+}
+.pf-dropdown-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text2);
+  padding: 4px 8px;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-dropdown-close:active {
+  background: var(--surface2);
+}
+
+/* ── Search input inside dropdown ── */
+.pf-search {
+  margin: 10px 16px 6px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  width: calc(100% - 32px);
+  box-sizing: border-box;
+  outline: none;
+}
+.pf-search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 106, 247, 0.12);
+}
+.pf-search::placeholder {
+  color: var(--text3);
+}
+
+/* ── Option list ── */
+.pf-options {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 12px 16px;
+}
+
+.pf-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-option:active {
+  background: var(--surface2);
+}
+
+.pf-option-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  font-size: 12px;
+  color: transparent;
+}
+.pf-option.selected .pf-option-check {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.pf-option-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text1);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-option-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  background: var(--surface2);
+  padding: 2px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Dropdown actions (Apply / Clear) ── */
+.pf-dropdown-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pf-btn-apply {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-btn-apply:active {
+  opacity: 0.85;
+}
+.pf-btn-clear {
+  padding: 11px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-btn-clear:active {
+  background: var(--surface2);
+}
+
+/* ── Active filter tags ── */
+.pf-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.pf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 16px;
+  background: rgba(124, 106, 247, 0.1);
+  border: 1px solid rgba(124, 106, 247, 0.25);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pf-tag-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(124, 106, 247, 0.15);
+  color: var(--accent);
+  font-size: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-tag-x:active {
+  background: var(--accent);
+  color: white;
+}
+
+/* ── Result summary bar ── */
+.pf-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pf-summary-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text1);
+}
+.pf-summary-actions {
+  display: flex;
+  gap: 6px;
+}
+.pf-export-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-export-btn:active {
+  background: var(--surface2);
+}
+
+/* ── Result list ── */
+.pf-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Loading state ── */
+.pf-loading {
+  text-align: center;
+  padding: 24px;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+/* ── Empty state ── */
+.pf-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+/* ── Toggle filter (for boolean: KT, DK Center) ── */
+.pf-toggle-group {
+  display: flex;
+  gap: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin: 8px 16px 12px;
+}
+.pf-toggle-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-toggle-btn.active {
+  background: var(--accent);
+  color: white;
+}
+.pf-toggle-btn:active {
+  opacity: 0.85;
+}
+
+/* ── Range inputs (birth year, date range) ── */
+.pf-range-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 16px 12px;
+}
+.pf-range-input {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  min-width: 0;
+}
+.pf-range-input:focus {
+  border-color: var(--accent);
+}
+.pf-range-sep {
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ── Hapja view button in profile ── */
+.pf-hapja-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pf-hapja-btn:active {
+  background: rgba(34, 197, 94, 0.18);
+  transform: scale(0.97);
+}
+
+/* ── Responsive: desktop wider dropdowns ── */
+@media (min-width: 768px) {
+  .pf-dropdown {
+    border-radius: 16px;
+    max-height: 60vh;
+    margin-bottom: 10vh;
+  }
+  .pf-bar {
+    flex-wrap: wrap;
+  }
+  .pf-results {
+    max-height: 70vh;
+  }
+}
