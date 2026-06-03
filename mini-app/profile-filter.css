@@ -1,33 +1,84 @@
-/* ============ PROFILE FILTER MODULE ============ */
+/* ============ PROFILE FILTER MODULE v2 ============ */
+/* Excel-like advanced filter UI                      */
+/* RULE: NEVER use horizontal scrollable pills/chips  */
 
-/* ── Section container ── */
-.pf-section {
+/* ── Report sub-tabs ── */
+.rpt-subtabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 14px;
+  gap: 0;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 12px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+}
+.rpt-subtab {
+  flex: 1;
+  text-align: center;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rpt-subtab:active {
+  background: var(--surface2);
+}
+.rpt-subtab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── Filter section container ── */
+.pf-section {
+  padding: 0;
   overflow: hidden;
 }
 
-/* ── Filter bar (scrollable chips) ── */
+/* ── Filter header (title + count) ── */
+.pf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.pf-header-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text1);
+  letter-spacing: 0.3px;
+}
+.pf-header-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+}
+
+/* ── Filter bar (WRAPPED chips — NO horizontal scroll) ── */
 .pf-bar {
   display: flex;
   gap: 6px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 2px 0 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--surface);
 }
-.pf-bar::-webkit-scrollbar { display: none; }
 
+/* ── Filter chip ── */
 .pf-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 6px 11px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text2);
@@ -35,8 +86,7 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
-  transition: all 0.2s;
+  transition: all 0.15s;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -48,11 +98,11 @@
   background: var(--accent);
   color: white;
   border-color: var(--accent);
-  box-shadow: 0 2px 8px rgba(124, 106, 247, 0.25);
+  box-shadow: 0 2px 8px rgba(124, 106, 247, 0.2);
 }
 .pf-chip .pf-chip-arrow {
-  font-size: 8px;
-  opacity: 0.6;
+  font-size: 7px;
+  opacity: 0.5;
   transition: transform 0.2s;
 }
 .pf-chip.active .pf-chip-arrow {
@@ -60,12 +110,12 @@
   color: white;
 }
 
-/* ── Dropdown overlay ── */
+/* ── Dropdown overlay (bottom sheet on mobile, centered on desktop) ── */
 .pf-dropdown-overlay {
   position: fixed;
   inset: 0;
   z-index: 9990;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0.4);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -78,11 +128,11 @@
   pointer-events: auto;
 }
 
-/* ── Dropdown panel (bottom sheet on mobile) ── */
+/* ── Dropdown panel ── */
 .pf-dropdown {
   width: 100%;
   max-width: 480px;
-  max-height: 70vh;
+  max-height: 75vh;
   background: var(--surface);
   border-radius: 20px 20px 0 0;
   overflow: hidden;
@@ -145,22 +195,60 @@
   color: var(--text3);
 }
 
+/* ── Select All / Blank toolbar ── */
+.pf-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pf-toolbar-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s;
+}
+.pf-toolbar-btn:active {
+  background: var(--chip-bg);
+}
+.pf-toolbar-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.pf-selected-summary {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+}
+
 /* ── Option list ── */
 .pf-options {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 4px 12px 16px;
+  padding: 4px 12px 12px;
 }
 
 .pf-option {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .pf-option:active {
@@ -168,16 +256,16 @@
 }
 
 .pf-option-check {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
   border: 2px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.15s;
-  font-size: 12px;
+  transition: all 0.12s;
+  font-size: 11px;
   color: transparent;
 }
 .pf-option.selected .pf-option-check {
@@ -199,9 +287,9 @@
 .pf-option-count {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text3);
-  background: var(--surface2);
-  padding: 2px 6px;
+  color: var(--accent);
+  background: rgba(124, 106, 247, 0.08);
+  padding: 2px 7px;
   border-radius: 6px;
   flex-shrink: 0;
 }
@@ -249,7 +337,7 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin: 6px 0 10px;
+  padding: 6px 14px 10px;
 }
 .pf-tag {
   display: inline-flex;
@@ -263,7 +351,7 @@
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -291,10 +379,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 14px;
   background: var(--surface2);
   border-radius: 10px;
-  margin-bottom: 10px;
+  margin: 0 14px 10px;
   flex-wrap: wrap;
   gap: 6px;
 }
@@ -331,14 +419,7 @@
   max-height: 60vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-/* ── Loading state ── */
-.pf-loading {
-  text-align: center;
-  padding: 24px;
-  color: var(--text3);
-  font-size: 13px;
+  padding: 0 14px 14px;
 }
 
 /* ── Empty state ── */
@@ -378,7 +459,7 @@
   opacity: 0.85;
 }
 
-/* ── Range inputs (birth year, date range) ── */
+/* ── Range inputs (birth year, date range, idle days) ── */
 .pf-range-row {
   display: flex;
   gap: 8px;
@@ -429,17 +510,17 @@
   transform: scale(0.97);
 }
 
-/* ── Responsive: desktop wider dropdowns ── */
+/* ── Responsive: desktop ── */
 @media (min-width: 768px) {
   .pf-dropdown {
     border-radius: 16px;
     max-height: 60vh;
     margin-bottom: 10vh;
   }
-  .pf-bar {
-    flex-wrap: wrap;
-  }
   .pf-results {
     max-height: 70vh;
+  }
+  .rpt-subtabs {
+    max-width: 400px;
   }
 }

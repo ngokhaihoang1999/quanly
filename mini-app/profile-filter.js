@@ -1,91 +1,106 @@
-// ============ PROFILE FILTER MODULE ============
-// Advanced Excel-like filtering for profile lists
-// Depends on: allProfiles, allStaff, structureData, allSemesters, sbFetch, renderProfileCard, _rptCache (from reports.js)
+// ============ PROFILE FILTER MODULE v2 ============
+// Excel-like filtering for profile lists
+// Depends on: allProfiles, allStaff, structureData, allSemesters, sbFetch,
+//             renderProfileCard, _rptCache (from reports.js)
 
 (function() {
   'use strict';
 
-  // ── Filter state ──
+  // ══════════════════════════════════════
+  // STATE
+  // ══════════════════════════════════════
+
   const _pfState = {
+    semesters: [],    // multi-select semester ids
+    unit: null,       // { codes: [...], label: '' }
+    ndd: [],          // staff_code[]
+    name: '',         // text search on full_name
     phase: [],        // ['chakki','bb',...]
     status: [],       // ['alive','dropout','pause']
-    ndd: [],          // ['000142-NKH',...]
     tvv: [],
     gvbb: [],
-    kt: null,         // true/false/null (all)
-    semester: null,    // semester id
-    unit: null,       // { codes: [...] }
+    tools: [],        // ['Enneagram',...]
+    concept: '',      // text search
+    kt: null,         // true/false/null
     gender: [],
     birthFrom: '',
     birthTo: '',
-    tools: [],        // ['Enneagram',...]
-    concept: '',      // text search
     tonGiao: [],
-    honNhan: [],
-    activity: null,   // 7/14/30 (days idle)
+    idleFrom: '',     // min days idle (number)
+    idleTo: '',       // max days idle (number)
     chakkiFrom: '',
     chakkiTo: '',
     dkCenter: null,   // true/false/null
   };
 
-  // ── Enriched data cache ──
-  let _pfEnriched = null;    // Map<profileId, { tools, concept, tonGiao, honNhan, ngayChakki, hasDKCenter }>
+  // Enriched data cache (lazy loaded)
+  let _pfEnriched = null; // Map<profileId, { tools, concept, tonGiao, ngayChakki, hasDKCenter }>
   let _pfLoading = false;
   let _pfResults = [];
+  let _pfInitialized = false;
 
-  // ── Load enriched data (lazy, called once) ──
+  // ══════════════════════════════════════
+  // DATA LOADING
+  // ══════════════════════════════════════
+
+  /**
+   * Get ALL profiles within scope (independent of currentSemesterId).
+   * Uses _rptCache.allScopeCodes for scope enforcement.
+   */
+  function _pfGetScopeProfiles() {
+    const scopeCodes = _rptCache?.allScopeCodes;
+    if (!scopeCodes || scopeCodes.length === 0) {
+      return (allProfiles || []).slice();
+    }
+    const codeSet = new Set(scopeCodes);
+    return (allProfiles || []).filter(p => codeSet.has(p.ndd_staff_code));
+  }
+
+  /** Load enriched data (form_hanh_chinh, TV records, DK Center) */
   async function _pfLoadEnrichedData() {
-    if (_pfEnriched) return;
-    if (_pfLoading) return;
+    if (_pfEnriched || _pfLoading) return;
     _pfLoading = true;
-
     try {
       const [hcRes, tvRes, dkRes] = await Promise.all([
         sbFetch('/rest/v1/form_hanh_chinh?select=profile_id,data'),
         sbFetch('/rest/v1/records?record_type=eq.tu_van&select=profile_id,content&order=created_at.desc'),
         sbFetch('/rest/v1/records?record_type=eq.chot_center&select=profile_id&order=created_at.desc'),
       ]);
-
       const hcData = await hcRes.json();
       const tvData = await tvRes.json();
       const dkData = await dkRes.json();
 
       _pfEnriched = new Map();
 
-      // form_hanh_chinh data
       (hcData || []).forEach(h => {
         const d = h.data || {};
         _pfEnriched.set(h.profile_id, {
           concept: d.t2_concept || '',
           tonGiao: Array.isArray(d.t2_ton_giao) ? d.t2_ton_giao : (d.t2_ton_giao ? [d.t2_ton_giao] : []),
-          honNhan: Array.isArray(d.t2_hon_nhan) ? d.t2_hon_nhan : (d.t2_hon_nhan ? [d.t2_hon_nhan] : []),
           ngayChakki: d.t2_ngay_chakki || '',
           tools: new Set(),
           hasDKCenter: false,
         });
       });
 
-      // TV records — extract unique tools per profile
       (tvData || []).forEach(r => {
         const toolName = r.content?.ten_cong_cu;
         if (!toolName) return;
         if (!_pfEnriched.has(r.profile_id)) {
-          _pfEnriched.set(r.profile_id, { concept: '', tonGiao: [], honNhan: [], ngayChakki: '', tools: new Set(), hasDKCenter: false });
+          _pfEnriched.set(r.profile_id, { concept: '', tonGiao: [], ngayChakki: '', tools: new Set(), hasDKCenter: false });
         }
         _pfEnriched.get(r.profile_id).tools.add(toolName);
       });
 
-      // DK Center records
       const dkPids = new Set();
       (dkData || []).forEach(r => dkPids.add(r.profile_id));
       dkPids.forEach(pid => {
         if (_pfEnriched.has(pid)) {
           _pfEnriched.get(pid).hasDKCenter = true;
         } else {
-          _pfEnriched.set(pid, { concept: '', tonGiao: [], honNhan: [], ngayChakki: '', tools: new Set(), hasDKCenter: true });
+          _pfEnriched.set(pid, { concept: '', tonGiao: [], ngayChakki: '', tools: new Set(), hasDKCenter: true });
         }
       });
-
     } catch (e) {
       console.error('Profile filter: enriched data load error', e);
     } finally {
@@ -93,88 +108,153 @@
     }
   }
 
-  // ── Get scope-filtered profiles ──
-  function _pfGetScopeProfiles() {
-    if (!_rptCache) {
-      // Fallback: use allProfiles directly
-      return (allProfiles || []).slice();
-    }
-    return Array.from(_rptCache.profileMap.values());
-  }
+  // ══════════════════════════════════════
+  // UNIQUE VALUES EXTRACTION
+  // ══════════════════════════════════════
 
-  // ── Get all unique values for a field ──
+  /**
+   * Get unique values for a field from scope profiles.
+   * Returns Map<value, count> + blankCount.
+   */
   function _pfGetUniqueValues(field) {
     const profiles = _pfGetScopeProfiles();
-    const vals = new Map(); // value → count
+    const vals = new Map();
+    let blankCount = 0;
 
     profiles.forEach(p => {
-      let v;
-      if (field === 'ndd') {
-        v = p.ndd_staff_code || p.ndd || '';
-      } else if (field === 'phase') {
-        v = p.phase || 'chakki';
-      } else if (field === 'status') {
-        v = p.fruit_status || 'alive';
-      } else if (field === 'gender') {
-        v = p.gender || '';
-      } else if (field === 'tvv') {
-        const codes = (p.tvv_staff_code || '').split(',').map(c => c.trim()).filter(Boolean);
-        codes.forEach(c => { vals.set(c, (vals.get(c) || 0) + 1); });
-        return;
-      } else if (field === 'gvbb') {
-        const code = p.gvbb_staff_code || '';
-        if (code) vals.set(code, (vals.get(code) || 0) + 1);
-        return;
-      } else if (field === 'tools') {
-        const en = _pfEnriched?.get(p.id);
-        if (en && en.tools) {
-          en.tools.forEach(t => { vals.set(t, (vals.get(t) || 0) + 1); });
+      let values = [];
+
+      switch (field) {
+        case 'ndd':
+          values = [p.ndd_staff_code || ''];
+          break;
+        case 'phase':
+          values = [p.phase || 'chakki'];
+          break;
+        case 'status':
+          values = [p.fruit_status || 'alive'];
+          break;
+        case 'gender':
+          values = [p.gender || ''];
+          break;
+        case 'tvv': {
+          const codes = (p.tvv_staff_code || '').split(',').map(c => c.trim()).filter(Boolean);
+          values = codes.length > 0 ? codes : [''];
+          break;
         }
-        return;
-      } else if (field === 'concept') {
-        const en = _pfEnriched?.get(p.id);
-        v = en?.concept || '';
-      } else if (field === 'tonGiao') {
-        const en = _pfEnriched?.get(p.id);
-        (en?.tonGiao || []).forEach(t => { if (t) vals.set(t, (vals.get(t) || 0) + 1); });
-        return;
-      } else if (field === 'honNhan') {
-        const en = _pfEnriched?.get(p.id);
-        (en?.honNhan || []).forEach(t => { if (t) vals.set(t, (vals.get(t) || 0) + 1); });
-        return;
+        case 'gvbb':
+          values = [p.gvbb_staff_code || ''];
+          break;
+        case 'tools': {
+          const en = _pfEnriched?.get(p.id);
+          if (en && en.tools && en.tools.size > 0) {
+            values = [...en.tools];
+          } else {
+            values = [''];
+          }
+          break;
+        }
+        case 'concept': {
+          const en = _pfEnriched?.get(p.id);
+          values = [en?.concept || ''];
+          break;
+        }
+        case 'tonGiao': {
+          const en = _pfEnriched?.get(p.id);
+          const tg = en?.tonGiao || [];
+          values = tg.length > 0 ? tg.filter(Boolean) : [''];
+          if (tg.length > 0 && tg.every(t => !t)) values = [''];
+          break;
+        }
+        case 'semester':
+          values = [p.semester_id || ''];
+          break;
+        default:
+          return;
       }
-      if (v) vals.set(v, (vals.get(v) || 0) + 1);
+
+      values.forEach(v => {
+        if (!v) {
+          blankCount++;
+        } else {
+          vals.set(v, (vals.get(v) || 0) + 1);
+        }
+      });
     });
-    return vals;
+
+    return { vals, blankCount };
   }
 
-  // ── Apply all filters (AND logic) ──
+  // ══════════════════════════════════════
+  // IDLE DAYS CALCULATION
+  // ══════════════════════════════════════
+
+  const DAY = 86400000;
+
+  /** Calculate days since last activity for a profile */
+  function _pfIdleDays(p) {
+    const now = Date.now();
+    const recs = _rptCache?.recMap?.[p.id] || [];
+    const sess = _rptCache?.sessMap?.[p.id] || [];
+    const allDates = [
+      ...recs.map(r => new Date(r.created_at).getTime()),
+      ...sess.map(s => new Date(s.created_at).getTime()),
+    ];
+    const lastActivity = allDates.length > 0
+      ? Math.max(...allDates)
+      : (p.created_at ? new Date(p.created_at).getTime() : 0);
+    return lastActivity ? Math.floor((now - lastActivity) / DAY) : 999;
+  }
+
+  // ══════════════════════════════════════
+  // FILTER ENGINE (AND logic)
+  // ══════════════════════════════════════
+
   function _pfApply() {
     const profiles = _pfGetScopeProfiles();
     const s = _pfState;
-    const now = Date.now();
-    const DAY = 86400000;
 
     _pfResults = profiles.filter(p => {
+      // Semesters (multi-select, independent from header)
+      if (s.semesters.length > 0 && !s.semesters.includes(p.semester_id || '')) return false;
+
+      // Unit
+      if (s.unit) {
+        const ndd = p.ndd_staff_code || '';
+        if (!s.unit.codes.includes(ndd)) return false;
+      }
+
+      // NDD
+      if (s.ndd.length > 0 && !s.ndd.includes(p.ndd_staff_code || '')) return false;
+
+      // Name (text search)
+      if (s.name) {
+        const fullName = (p.full_name || '').toLowerCase();
+        if (!fullName.includes(s.name.toLowerCase())) return false;
+      }
+
       // Phase
       if (s.phase.length > 0 && !s.phase.includes(p.phase || 'chakki')) return false;
 
       // Status
       if (s.status.length > 0 && !s.status.includes(p.fruit_status || 'alive')) return false;
 
-      // NDD
-      if (s.ndd.length > 0 && !s.ndd.includes(p.ndd_staff_code || p.ndd || '')) return false;
-
       // TVV
       if (s.tvv.length > 0) {
         const tvvCodes = (p.tvv_staff_code || '').split(',').map(c => c.trim()).filter(Boolean);
-        if (!s.tvv.some(c => tvvCodes.includes(c))) return false;
+        const hasBlankSelected = s.tvv.includes('__blank__');
+        const nonBlank = s.tvv.filter(c => c !== '__blank__');
+        const matchNonBlank = nonBlank.length > 0 && nonBlank.some(c => tvvCodes.includes(c));
+        const matchBlank = hasBlankSelected && tvvCodes.length === 0;
+        if (!matchNonBlank && !matchBlank) return false;
       }
 
       // GVBB
       if (s.gvbb.length > 0) {
         const gvbbCode = p.gvbb_staff_code || '';
-        if (!s.gvbb.includes(gvbbCode)) return false;
+        const hasBlankSelected = s.gvbb.includes('__blank__');
+        const nonBlank = s.gvbb.filter(c => c !== '__blank__');
+        if (!nonBlank.includes(gvbbCode) && !(hasBlankSelected && !gvbbCode)) return false;
       }
 
       // KT
@@ -183,36 +263,33 @@
         if (s.kt === false && p.is_kt_opened) return false;
       }
 
-      // Semester
-      if (s.semester && p.semester_id !== s.semester) return false;
-
-      // Unit (staff codes filter)
-      if (s.unit) {
-        const ndd = p.ndd_staff_code || p.ndd || '';
-        if (!s.unit.codes.includes(ndd)) return false;
-      }
-
       // Gender
       if (s.gender.length > 0) {
         const g = p.gender || '';
-        if (g && !s.gender.includes(g)) return false;
-        if (!g && !s.gender.includes('')) return false;
+        const hasBlankSelected = s.gender.includes('__blank__');
+        const nonBlank = s.gender.filter(c => c !== '__blank__');
+        if (!nonBlank.includes(g) && !(hasBlankSelected && !g)) return false;
       }
 
       // Birth year range
       if (s.birthFrom || s.birthTo) {
         const by = parseInt(p.birth_year) || 0;
-        if (!by) return false; // No birth year data → exclude
+        if (!by) return false;
         if (s.birthFrom && by < parseInt(s.birthFrom)) return false;
         if (s.birthTo && by > parseInt(s.birthTo)) return false;
       }
 
-      // Enriched data filters
+      // Enriched data
       const en = _pfEnriched?.get(p.id);
 
       // Tools (Công cụ TV)
       if (s.tools.length > 0) {
-        if (!en || !en.tools || !s.tools.some(t => en.tools.has(t))) return false;
+        const hasBlankSelected = s.tools.includes('__blank__');
+        const nonBlank = s.tools.filter(c => c !== '__blank__');
+        const hasTools = en && en.tools && en.tools.size > 0;
+        const matchNonBlank = nonBlank.length > 0 && hasTools && nonBlank.some(t => en.tools.has(t));
+        const matchBlank = hasBlankSelected && !hasTools;
+        if (!matchNonBlank && !matchBlank) return false;
       }
 
       // Concept
@@ -223,22 +300,19 @@
 
       // Tôn giáo
       if (s.tonGiao.length > 0) {
-        if (!en || !s.tonGiao.some(t => en.tonGiao.includes(t))) return false;
+        const hasBlankSelected = s.tonGiao.includes('__blank__');
+        const nonBlank = s.tonGiao.filter(c => c !== '__blank__');
+        const hasTG = en?.tonGiao && en.tonGiao.some(t => t);
+        const matchNonBlank = nonBlank.length > 0 && hasTG && nonBlank.some(t => en.tonGiao.includes(t));
+        const matchBlank = hasBlankSelected && !hasTG;
+        if (!matchNonBlank && !matchBlank) return false;
       }
 
-      // Hôn nhân
-      if (s.honNhan.length > 0) {
-        if (!en || !s.honNhan.some(t => en.honNhan.includes(t))) return false;
-      }
-
-      // Activity recency
-      if (s.activity) {
-        const recs = _rptCache?.recMap?.[p.id] || [];
-        const sess = _rptCache?.sessMap?.[p.id] || [];
-        const allDates = [...recs.map(r => new Date(r.created_at).getTime()), ...sess.map(ss => new Date(ss.created_at).getTime())];
-        const last = allDates.length > 0 ? Math.max(...allDates) : (p.created_at ? new Date(p.created_at).getTime() : 0);
-        const daysSince = last ? Math.floor((now - last) / DAY) : 999;
-        if (daysSince < s.activity) return false;
+      // Idle days range
+      if (s.idleFrom || s.idleTo) {
+        const idle = _pfIdleDays(p);
+        if (s.idleFrom && idle < parseInt(s.idleFrom)) return false;
+        if (s.idleTo && idle > parseInt(s.idleTo)) return false;
       }
 
       // Ngày Chakki range
@@ -260,126 +334,149 @@
     });
   }
 
-  // ── Count active filters ──
+  // ══════════════════════════════════════
+  // ACTIVE FILTER COUNT
+  // ══════════════════════════════════════
+
   function _pfActiveCount() {
     const s = _pfState;
     let c = 0;
+    if (s.semesters.length) c++;
+    if (s.unit) c++;
+    if (s.ndd.length) c++;
+    if (s.name) c++;
     if (s.phase.length) c++;
     if (s.status.length) c++;
-    if (s.ndd.length) c++;
     if (s.tvv.length) c++;
     if (s.gvbb.length) c++;
-    if (s.kt !== null) c++;
-    if (s.semester) c++;
-    if (s.unit) c++;
-    if (s.gender.length) c++;
-    if (s.birthFrom || s.birthTo) c++;
     if (s.tools.length) c++;
     if (s.concept) c++;
+    if (s.kt !== null) c++;
+    if (s.gender.length) c++;
+    if (s.birthFrom || s.birthTo) c++;
     if (s.tonGiao.length) c++;
-    if (s.honNhan.length) c++;
-    if (s.activity) c++;
+    if (s.idleFrom || s.idleTo) c++;
     if (s.chakkiFrom || s.chakkiTo) c++;
     if (s.dkCenter !== null) c++;
     return c;
   }
 
-  // ── Staff display name helper ──
+  // ══════════════════════════════════════
+  // HELPERS
+  // ══════════════════════════════════════
+
   function _pfStaffName(code) {
     if (!code) return '';
     const s = (allStaff || []).find(x => x.staff_code === code);
     return s ? (s.nickname || s.full_name || code) : code;
   }
 
+  function _pfTruncate(str, max) {
+    if (!str) return '';
+    return str.length > max ? str.slice(0, max) + '…' : str;
+  }
+
+  function _pfEsc(str) {
+    return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  }
+
   // ══════════════════════════════════════
-  // UI RENDERING
+  // FILTER DEFINITIONS (ordered)
   // ══════════════════════════════════════
 
-  // ── Main section renderer (called from reports.js) ──
+  const FILTER_DEFS = [
+    { key: 'semester',  label: '📅 Kỳ KG',       icon: '📅' },
+    { key: 'unit',      label: '🏢 Đơn vị',      icon: '🏢' },
+    { key: 'ndd',       label: '👤 NDD',          icon: '👤' },
+    { key: 'name',      label: '🔍 Tên hồ sơ',   icon: '🔍' },
+    { key: 'phase',     label: '📋 Giai đoạn',    icon: '📋' },
+    { key: 'status',    label: '🔵 Trạng thái',   icon: '🔵' },
+    { key: 'tvv',       label: '💬 TVV',           icon: '💬' },
+    { key: 'gvbb',      label: '🎓 GVBB',         icon: '🎓' },
+    { key: 'tools',     label: '🔧 Công cụ TV',   icon: '🔧' },
+    { key: 'concept',   label: '💡 Concept',       icon: '💡' },
+    { key: 'kt',        label: '📖 Mở KT',        icon: '📖' },
+    { key: 'gender',    label: '⚤ Giới tính',     icon: '⚤' },
+    { key: 'birthYear', label: '🎂 Năm sinh',     icon: '🎂' },
+    { key: 'tonGiao',   label: '🙏 Tôn giáo',     icon: '🙏' },
+    { key: 'idle',      label: '😴 Nhàn rỗi',     icon: '😴' },
+    { key: 'chakkiDate',label: '📆 Ngày CK',      icon: '📆' },
+    { key: 'dkCenter',  label: '🏛️ ĐK Center',   icon: '🏛️' },
+  ];
+
+  const PHASE_NAMES = {
+    new: 'Mới', chakki: 'Chakki', tu_van_hinh: 'TV Hình',
+    tu_van: 'Tư Vấn', bb: 'BB', center: 'Center', completed: 'Hoàn thành',
+  };
+  const STATUS_NAMES = { alive: 'Alive', dropout: 'Dropout', pause: 'Pause' };
+
+  // ══════════════════════════════════════
+  // UI: MAIN SECTION RENDERER
+  // ══════════════════════════════════════
+
   window._pfRenderSection = async function(containerEl) {
     if (!containerEl) return;
 
-    // Load enriched data in background
     await _pfLoadEnrichedData();
-
-    // Apply current filters
     _pfApply();
 
     const totalScope = _pfGetScopeProfiles().length;
-    const filtered = _pfResults.length;
     const hasFilters = _pfActiveCount() > 0;
 
-    // ── Build filter chips ──
-    const FILTER_DEFS = [
-      { key: 'phase', label: '📋 Giai đoạn', icon: '📋' },
-      { key: 'status', label: '🔵 Trạng thái', icon: '🔵' },
-      { key: 'ndd', label: '👤 NDD', icon: '👤' },
-      { key: 'unit', label: '🏢 Đơn vị', icon: '🏢' },
-      { key: 'tools', label: '🔧 CC Tư vấn', icon: '🔧' },
-      { key: 'concept', label: '💡 Concept', icon: '💡' },
-      { key: 'tvv', label: '💬 TVV', icon: '💬' },
-      { key: 'gvbb', label: '🎓 GVBB', icon: '🎓' },
-      { key: 'kt', label: '📖 Mở KT', icon: '📖' },
-      { key: 'semester', label: '📅 Kỳ KG', icon: '📅' },
-      { key: 'gender', label: '⚤ Giới tính', icon: '⚤' },
-      { key: 'birthYear', label: '🎂 Năm sinh', icon: '🎂' },
-      { key: 'activity', label: '😴 Nhàn rỗi', icon: '😴' },
-      { key: 'tonGiao', label: '🙏 Tôn giáo', icon: '🙏' },
-      { key: 'honNhan', label: '💍 Hôn nhân', icon: '💍' },
-      { key: 'chakkiDate', label: '📆 Ngày CK', icon: '📆' },
-      { key: 'dkCenter', label: '🏛️ ĐK Center', icon: '🏛️' },
-    ];
-
-    function isChipActive(key) {
+    // ── Chip active check ──
+    function isActive(key) {
       const s = _pfState;
-      if (key === 'phase') return s.phase.length > 0;
-      if (key === 'status') return s.status.length > 0;
-      if (key === 'ndd') return s.ndd.length > 0;
-      if (key === 'tvv') return s.tvv.length > 0;
-      if (key === 'gvbb') return s.gvbb.length > 0;
-      if (key === 'kt') return s.kt !== null;
-      if (key === 'semester') return !!s.semester;
-      if (key === 'unit') return !!s.unit;
-      if (key === 'gender') return s.gender.length > 0;
-      if (key === 'birthYear') return !!(s.birthFrom || s.birthTo);
-      if (key === 'tools') return s.tools.length > 0;
-      if (key === 'concept') return !!s.concept;
-      if (key === 'tonGiao') return s.tonGiao.length > 0;
-      if (key === 'honNhan') return s.honNhan.length > 0;
-      if (key === 'activity') return !!s.activity;
-      if (key === 'chakkiDate') return !!(s.chakkiFrom || s.chakkiTo);
-      if (key === 'dkCenter') return s.dkCenter !== null;
-      return false;
+      switch (key) {
+        case 'semester': return s.semesters.length > 0;
+        case 'unit': return !!s.unit;
+        case 'ndd': return s.ndd.length > 0;
+        case 'name': return !!s.name;
+        case 'phase': return s.phase.length > 0;
+        case 'status': return s.status.length > 0;
+        case 'tvv': return s.tvv.length > 0;
+        case 'gvbb': return s.gvbb.length > 0;
+        case 'tools': return s.tools.length > 0;
+        case 'concept': return !!s.concept;
+        case 'kt': return s.kt !== null;
+        case 'gender': return s.gender.length > 0;
+        case 'birthYear': return !!(s.birthFrom || s.birthTo);
+        case 'tonGiao': return s.tonGiao.length > 0;
+        case 'idle': return !!(s.idleFrom || s.idleTo);
+        case 'chakkiDate': return !!(s.chakkiFrom || s.chakkiTo);
+        case 'dkCenter': return s.dkCenter !== null;
+        default: return false;
+      }
     }
 
+    // ── Build chips ──
     const chipsHtml = FILTER_DEFS.map(f =>
-      `<div class="pf-chip ${isChipActive(f.key) ? 'active' : ''}" onclick="_pfOpenFilter('${f.key}')">${f.label} <span class="pf-chip-arrow">▼</span></div>`
+      `<div class="pf-chip ${isActive(f.key) ? 'active' : ''}" onclick="_pfOpenFilter('${f.key}')">${f.label} <span class="pf-chip-arrow">▼</span></div>`
     ).join('');
 
     // ── Build active tags ──
     let tagsHtml = '';
     const s = _pfState;
-    const PHASE_NAMES = { new: 'Mới', chakki: 'Chakki', tu_van_hinh: 'TV Hình', tu_van: 'Tư Vấn', bb: 'BB', center: 'Center', completed: 'Hoàn thành' };
-    const STATUS_NAMES = { alive: 'Alive', dropout: 'Dropout', pause: 'Pause' };
-
-    if (s.phase.length) tagsHtml += _pfTagHtml('Giai đoạn', s.phase.map(p => PHASE_NAMES[p] || p).join(', '), () => { s.phase = []; _pfRefresh(); });
-    if (s.status.length) tagsHtml += _pfTagHtml('Trạng thái', s.status.map(p => STATUS_NAMES[p] || p).join(', '), () => { s.status = []; _pfRefresh(); });
-    if (s.ndd.length) tagsHtml += _pfTagHtml('NDD', s.ndd.map(c => _pfStaffName(c)).join(', '), () => { s.ndd = []; _pfRefresh(); });
-    if (s.tvv.length) tagsHtml += _pfTagHtml('TVV', s.tvv.map(c => _pfStaffName(c)).join(', '), () => { s.tvv = []; _pfRefresh(); });
-    if (s.gvbb.length) tagsHtml += _pfTagHtml('GVBB', s.gvbb.map(c => _pfStaffName(c)).join(', '), () => { s.gvbb = []; _pfRefresh(); });
-    if (s.kt !== null) tagsHtml += _pfTagHtml('KT', s.kt ? 'Đã mở' : 'Chưa mở', () => { s.kt = null; _pfRefresh(); });
-    if (s.semester) {
-      const semName = (allSemesters || []).find(x => x.id === s.semester)?.name || s.semester;
-      tagsHtml += _pfTagHtml('Kỳ KG', semName, () => { s.semester = null; _pfRefresh(); });
+    if (s.semesters.length) {
+      const names = s.semesters.map(id => {
+        if (id === '__blank__') return '(Trống)';
+        return (allSemesters || []).find(x => x.id === id)?.name || id;
+      });
+      tagsHtml += _pfTagHtml('Kỳ KG', names.join(', '), () => { s.semesters = []; _pfRefresh(); });
     }
     if (s.unit) tagsHtml += _pfTagHtml('Đơn vị', s.unit.label || 'Đã chọn', () => { s.unit = null; _pfRefresh(); });
-    if (s.gender.length) tagsHtml += _pfTagHtml('Giới tính', s.gender.join(', '), () => { s.gender = []; _pfRefresh(); });
-    if (s.birthFrom || s.birthTo) tagsHtml += _pfTagHtml('Năm sinh', `${s.birthFrom || '?'} – ${s.birthTo || '?'}`, () => { s.birthFrom = ''; s.birthTo = ''; _pfRefresh(); });
-    if (s.tools.length) tagsHtml += _pfTagHtml('CC TV', s.tools.join(', '), () => { s.tools = []; _pfRefresh(); });
+    if (s.ndd.length) tagsHtml += _pfTagHtml('NDD', s.ndd.filter(c => c !== '__blank__').map(c => _pfStaffName(c)).join(', ') + (s.ndd.includes('__blank__') ? ', (Trống)' : ''), () => { s.ndd = []; _pfRefresh(); });
+    if (s.name) tagsHtml += _pfTagHtml('Tên', s.name, () => { s.name = ''; _pfRefresh(); });
+    if (s.phase.length) tagsHtml += _pfTagHtml('GĐ', s.phase.map(p => PHASE_NAMES[p] || p).join(', '), () => { s.phase = []; _pfRefresh(); });
+    if (s.status.length) tagsHtml += _pfTagHtml('TT', s.status.map(p => STATUS_NAMES[p] || p).join(', '), () => { s.status = []; _pfRefresh(); });
+    if (s.tvv.length) tagsHtml += _pfTagHtml('TVV', s.tvv.filter(c => c !== '__blank__').map(c => _pfStaffName(c)).join(', ') + (s.tvv.includes('__blank__') ? ', (Trống)' : ''), () => { s.tvv = []; _pfRefresh(); });
+    if (s.gvbb.length) tagsHtml += _pfTagHtml('GVBB', s.gvbb.filter(c => c !== '__blank__').map(c => _pfStaffName(c)).join(', ') + (s.gvbb.includes('__blank__') ? ', (Trống)' : ''), () => { s.gvbb = []; _pfRefresh(); });
+    if (s.tools.length) tagsHtml += _pfTagHtml('Công cụ TV', s.tools.filter(c => c !== '__blank__').join(', ') + (s.tools.includes('__blank__') ? ', (Trống)' : ''), () => { s.tools = []; _pfRefresh(); });
     if (s.concept) tagsHtml += _pfTagHtml('Concept', s.concept, () => { s.concept = ''; _pfRefresh(); });
-    if (s.tonGiao.length) tagsHtml += _pfTagHtml('Tôn giáo', s.tonGiao.join(', '), () => { s.tonGiao = []; _pfRefresh(); });
-    if (s.honNhan.length) tagsHtml += _pfTagHtml('Hôn nhân', s.honNhan.join(', '), () => { s.honNhan = []; _pfRefresh(); });
-    if (s.activity) tagsHtml += _pfTagHtml('Nhàn rỗi', `>${s.activity} ngày`, () => { s.activity = null; _pfRefresh(); });
+    if (s.kt !== null) tagsHtml += _pfTagHtml('KT', s.kt ? 'Đã mở' : 'Chưa mở', () => { s.kt = null; _pfRefresh(); });
+    if (s.gender.length) tagsHtml += _pfTagHtml('Giới tính', s.gender.filter(c => c !== '__blank__').join(', ') + (s.gender.includes('__blank__') ? ', (Trống)' : ''), () => { s.gender = []; _pfRefresh(); });
+    if (s.birthFrom || s.birthTo) tagsHtml += _pfTagHtml('Năm sinh', `${s.birthFrom || '?'} – ${s.birthTo || '?'}`, () => { s.birthFrom = ''; s.birthTo = ''; _pfRefresh(); });
+    if (s.tonGiao.length) tagsHtml += _pfTagHtml('Tôn giáo', s.tonGiao.filter(c => c !== '__blank__').join(', ') + (s.tonGiao.includes('__blank__') ? ', (Trống)' : ''), () => { s.tonGiao = []; _pfRefresh(); });
+    if (s.idleFrom || s.idleTo) tagsHtml += _pfTagHtml('Nhàn rỗi', `${s.idleFrom || '0'} – ${s.idleTo || '∞'} ngày`, () => { s.idleFrom = ''; s.idleTo = ''; _pfRefresh(); });
     if (s.chakkiFrom || s.chakkiTo) tagsHtml += _pfTagHtml('Ngày CK', `${s.chakkiFrom || '?'} – ${s.chakkiTo || '?'}`, () => { s.chakkiFrom = ''; s.chakkiTo = ''; _pfRefresh(); });
     if (s.dkCenter !== null) tagsHtml += _pfTagHtml('ĐK Center', s.dkCenter ? 'Đã ĐK' : 'Chưa ĐK', () => { s.dkCenter = null; _pfRefresh(); });
 
@@ -393,11 +490,6 @@
       } else {
         resultsHtml = showProfiles.map(p => {
           const fullP = (allProfiles || []).find(x => x.id === p.id) || p;
-          const nddC = fullP.ndd_staff_code || '';
-          const tvvC = fullP.tvv_staff_code || '';
-          const gvbbC = fullP.gvbb_staff_code || '';
-
-          // Extra badges: concept + tool
           let extras = '';
           const en = _pfEnriched?.get(p.id);
           if (en?.concept) {
@@ -406,14 +498,12 @@
           if (en?.tools?.size) {
             extras += `<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:6px;background:rgba(99,102,241,0.1);color:var(--accent);margin-left:2px;">🔧 ${_pfTruncate([...en.tools].join(', '), 20)}</span>`;
           }
-
           return renderProfileCard(fullP, {
             profileId: fullP.id,
-            ndd: nddC, tvv: tvvC, gvbb: gvbbC,
-            extraBadges: extras
+            ndd: fullP.ndd_staff_code || '', tvv: fullP.tvv_staff_code || '', gvbb: fullP.gvbb_staff_code || '',
+            extraBadges: extras,
           });
         }).join('');
-
         if (_pfResults.length > MAX_SHOW) {
           resultsHtml += `<div style="text-align:center;padding:12px;color:var(--text3);font-size:12px;font-weight:600;">... và ${_pfResults.length - MAX_SHOW} hồ sơ khác</div>`;
         }
@@ -423,7 +513,7 @@
     // ── Summary bar ──
     const summaryHtml = hasFilters ? `
       <div class="pf-summary">
-        <div class="pf-summary-text">📊 ${filtered}/${totalScope} hồ sơ</div>
+        <div class="pf-summary-text">📊 ${_pfResults.length}/${totalScope} hồ sơ</div>
         <div class="pf-summary-actions">
           <button class="pf-export-btn" onclick="_pfExportCSV()">📥 CSV</button>
           <button class="pf-export-btn" onclick="_pfCopyList()">📋 Copy</button>
@@ -434,34 +524,28 @@
     // ── Full HTML ──
     containerEl.innerHTML = `
       <div class="pf-section">
-        <div class="rpt-title" onclick="const el=document.getElementById('pfBody');el.style.display=el.style.display==='none'?'block':'none'">
-          🔍 LỌC HỒ SƠ CHI TIẾT
-          ${hasFilters ? `<span class="rpt-badge rpt-badge-green">${_pfActiveCount()} bộ lọc</span>` : ''}
-          <span style="font-size:10px;color:var(--text3);margin-left:auto;">${totalScope} hồ sơ trong scope</span>
+        <div class="pf-header">
+          <div class="pf-header-title">🔍 BỘ LỌC CHI TIẾT</div>
+          <div class="pf-header-count">${hasFilters ? `${_pfActiveCount()} bộ lọc · ` : ''}${totalScope} hồ sơ</div>
         </div>
-        <div id="pfBody">
-          <div class="pf-bar">${chipsHtml}</div>
-          ${tagsHtml ? `<div class="pf-tags" id="pfTags">${tagsHtml}</div>` : ''}
-          ${summaryHtml}
-          <div class="pf-results" id="pfResults">${resultsHtml}</div>
-        </div>
+        <div class="pf-bar">${chipsHtml}</div>
+        ${tagsHtml ? `<div class="pf-tags">${tagsHtml}</div>` : ''}
+        ${summaryHtml}
+        <div class="pf-results">${resultsHtml}</div>
       </div>`;
   };
 
-  // ── Tag HTML helper ──
+  // ── Tag HTML ──
   function _pfTagHtml(label, value, onRemove) {
     const tagId = 'pftag_' + Math.random().toString(36).slice(2, 8);
-    // Store callback
     window['_pfRm_' + tagId] = function() { onRemove(); };
-    return `<span class="pf-tag"><b>${label}:</b>&nbsp;${_pfTruncate(value, 25)}<span class="pf-tag-x" onclick="event.stopPropagation();_pfRm_${tagId}()">✕</span></span>`;
+    return `<span class="pf-tag"><b>${label}:</b>&nbsp;${_pfTruncate(value, 30)}<span class="pf-tag-x" onclick="event.stopPropagation();_pfRm_${tagId}()">✕</span></span>`;
   }
 
-  function _pfTruncate(str, max) {
-    if (!str) return '';
-    return str.length > max ? str.slice(0, max) + '…' : str;
-  }
+  // ══════════════════════════════════════
+  // REFRESH
+  // ══════════════════════════════════════
 
-  // ── Refresh after filter change ──
   function _pfRefresh() {
     _pfApply();
     const el = document.getElementById('pfFilterContainer');
@@ -470,13 +554,12 @@
   window._pfRefresh = _pfRefresh;
 
   // ══════════════════════════════════════
-  // FILTER DROPDOWNS
+  // EXCEL-LIKE DROPDOWN SYSTEM
   // ══════════════════════════════════════
 
   window._pfOpenFilter = function(key) {
     if (typeof haptic === 'function') haptic('selection');
 
-    // Remove existing overlay
     const existing = document.getElementById('pfOverlay');
     if (existing) existing.remove();
 
@@ -484,82 +567,71 @@
     overlay.id = 'pfOverlay';
     overlay.className = 'pf-dropdown-overlay';
     document.body.appendChild(overlay);
-
-    // Close on backdrop click
     overlay.addEventListener('click', function(e) {
       if (e.target === overlay) _pfCloseDropdown();
     });
 
     let content = '';
 
-    if (key === 'phase') {
-      content = _pfBuildMultiSelect('Giai đoạn', [
-        { val: 'chakki', label: '🟡 Chakki' },
-        { val: 'tu_van_hinh', label: '🖼️ TV Hình' },
-        { val: 'tu_van', label: '💬 Tư Vấn' },
-        { val: 'bb', label: '🎓 BB' },
-        { val: 'center', label: '🏛️ Center' },
-        { val: 'completed', label: '✅ Hoàn thành' },
-      ], _pfState.phase, sel => { _pfState.phase = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'status') {
-      content = _pfBuildMultiSelect('Trạng thái', [
-        { val: 'alive', label: '🟢 Alive' },
-        { val: 'dropout', label: '🔴 Dropout' },
-        { val: 'pause', label: '⏸️ Pause' },
-      ], _pfState.status, sel => { _pfState.status = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'ndd' || key === 'tvv' || key === 'gvbb') {
-      const vals = _pfGetUniqueValues(key);
-      const items = [...vals.entries()].map(([code, count]) => ({
-        val: code, label: _pfStaffName(code), count
-      })).sort((a, b) => b.count - a.count);
-      content = _pfBuildSearchSelect(key === 'ndd' ? 'NDD' : key === 'tvv' ? 'TVV' : 'GVBB', items, _pfState[key], sel => { _pfState[key] = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'tools') {
-      const vals = _pfGetUniqueValues('tools');
-      const items = [...vals.entries()].map(([t, count]) => ({
-        val: t, label: t, count
-      })).sort((a, b) => b.count - a.count);
-      content = _pfBuildSearchSelect('Công cụ Tư vấn', items, _pfState.tools, sel => { _pfState.tools = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'concept') {
-      content = _pfBuildTextSearch('Concept / Chủ đề', _pfState.concept, val => { _pfState.concept = val; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'kt') {
-      content = _pfBuildToggle('Mở Kinh Thánh', _pfState.kt, val => { _pfState.kt = val; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'dkCenter') {
-      content = _pfBuildToggle('ĐK Center', _pfState.dkCenter, val => { _pfState.dkCenter = val; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'semester') {
-      const items = (allSemesters || []).map(s => ({ val: s.id, label: s.name, count: 0 }));
-      content = _pfBuildSearchSelect('Kỳ Khai Giảng', items, _pfState.semester ? [_pfState.semester] : [], sel => { _pfState.semester = sel[0] || null; _pfCloseDropdown(); _pfRefresh(); }, true);
-    } else if (key === 'unit') {
-      content = _pfBuildUnitSelect();
-    } else if (key === 'gender') {
-      const vals = _pfGetUniqueValues('gender');
-      const items = [...vals.entries()].map(([g, count]) => ({
-        val: g, label: g || 'Không rõ', count
-      }));
-      content = _pfBuildMultiSelect('Giới tính', items.map(i => ({ val: i.val, label: i.label })), _pfState.gender, sel => { _pfState.gender = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'birthYear') {
-      content = _pfBuildRangeInput('Năm sinh', _pfState.birthFrom, _pfState.birthTo, 'number', '1970', '2010', (from, to) => { _pfState.birthFrom = from; _pfState.birthTo = to; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'activity') {
-      content = _pfBuildMultiSelect('Nhàn rỗi (ngày)', [
-        { val: '7', label: '> 7 ngày không HĐ' },
-        { val: '14', label: '> 14 ngày không HĐ' },
-        { val: '30', label: '> 30 ngày không HĐ' },
-        { val: '60', label: '> 60 ngày không HĐ' },
-      ], _pfState.activity ? [String(_pfState.activity)] : [], sel => { _pfState.activity = sel.length ? parseInt(sel[0]) : null; _pfCloseDropdown(); _pfRefresh(); }, true);
-    } else if (key === 'tonGiao') {
-      const vals = _pfGetUniqueValues('tonGiao');
-      const items = [...vals.entries()].map(([t, count]) => ({ val: t, label: t, count }));
-      content = _pfBuildMultiSelect('Tôn giáo', items.map(i => ({ val: i.val, label: i.label })), _pfState.tonGiao, sel => { _pfState.tonGiao = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'honNhan') {
-      const vals = _pfGetUniqueValues('honNhan');
-      const items = [...vals.entries()].map(([t, count]) => ({ val: t, label: t, count }));
-      content = _pfBuildMultiSelect('Hôn nhân', items.map(i => ({ val: i.val, label: i.label })), _pfState.honNhan, sel => { _pfState.honNhan = sel; _pfCloseDropdown(); _pfRefresh(); });
-    } else if (key === 'chakkiDate') {
-      content = _pfBuildRangeInput('Ngày Chakki', _pfState.chakkiFrom, _pfState.chakkiTo, 'date', '', '', (from, to) => { _pfState.chakkiFrom = from; _pfState.chakkiTo = to; _pfCloseDropdown(); _pfRefresh(); });
+    // ── Routing to specific filter builders ──
+    switch (key) {
+      case 'semester':
+        content = _pfBuildExcelSelect('Kỳ Khai Giảng', 'semester', _pfState.semesters);
+        break;
+      case 'ndd':
+        content = _pfBuildExcelSelect('NDD (Người Dìu Dắt)', 'ndd', _pfState.ndd);
+        break;
+      case 'name':
+        content = _pfBuildTextSearch('Tên hồ sơ', _pfState.name, val => { _pfState.name = val; _pfCloseDropdown(); _pfRefresh(); });
+        break;
+      case 'phase':
+        content = _pfBuildExcelSelect('Giai đoạn', 'phase', _pfState.phase);
+        break;
+      case 'status':
+        content = _pfBuildExcelSelect('Trạng thái', 'status', _pfState.status);
+        break;
+      case 'tvv':
+        content = _pfBuildExcelSelect('TVV (Tư Vấn Viên)', 'tvv', _pfState.tvv);
+        break;
+      case 'gvbb':
+        content = _pfBuildExcelSelect('GVBB (Giảng Viên BB)', 'gvbb', _pfState.gvbb);
+        break;
+      case 'tools':
+        content = _pfBuildExcelSelect('Công cụ Tư vấn', 'tools', _pfState.tools);
+        break;
+      case 'concept':
+        content = _pfBuildTextSearch('Concept / Chủ đề', _pfState.concept, val => { _pfState.concept = val; _pfCloseDropdown(); _pfRefresh(); }, true);
+        break;
+      case 'kt':
+        content = _pfBuildToggle('Mở Kinh Thánh', _pfState.kt, val => { _pfState.kt = val; _pfCloseDropdown(); _pfRefresh(); });
+        break;
+      case 'gender':
+        content = _pfBuildExcelSelect('Giới tính', 'gender', _pfState.gender);
+        break;
+      case 'birthYear':
+        content = _pfBuildRangeInput('Năm sinh', _pfState.birthFrom, _pfState.birthTo, 'number', '1950', '2010',
+          (f, t) => { _pfState.birthFrom = f; _pfState.birthTo = t; _pfCloseDropdown(); _pfRefresh(); });
+        break;
+      case 'tonGiao':
+        content = _pfBuildExcelSelect('Tôn giáo', 'tonGiao', _pfState.tonGiao);
+        break;
+      case 'idle':
+        content = _pfBuildRangeInput('Nhàn rỗi (số ngày)', _pfState.idleFrom, _pfState.idleTo, 'number', '0', '999',
+          (f, t) => { _pfState.idleFrom = f; _pfState.idleTo = t; _pfCloseDropdown(); _pfRefresh(); });
+        break;
+      case 'chakkiDate':
+        content = _pfBuildRangeInput('Ngày Chakki', _pfState.chakkiFrom, _pfState.chakkiTo, 'date', '', '',
+          (f, t) => { _pfState.chakkiFrom = f; _pfState.chakkiTo = t; _pfCloseDropdown(); _pfRefresh(); });
+        break;
+      case 'dkCenter':
+        content = _pfBuildToggle('ĐK Center', _pfState.dkCenter, val => { _pfState.dkCenter = val; _pfCloseDropdown(); _pfRefresh(); });
+        break;
+      case 'unit':
+        content = _pfBuildUnitSelect();
+        break;
     }
 
     overlay.innerHTML = `<div class="pf-dropdown">${content}</div>`;
-
-    // Animate open
     requestAnimationFrame(() => overlay.classList.add('open'));
   };
 
@@ -571,18 +643,116 @@
   }
   window._pfCloseDropdown = _pfCloseDropdown;
 
-  // ── Multi-select builder ──
-  function _pfBuildMultiSelect(title, items, selected, onApply, singleSelect) {
-    const selSet = new Set(selected);
-    const cbId = '_pfms_' + Math.random().toString(36).slice(2, 6);
+  // ══════════════════════════════════════
+  // EXCEL-LIKE MULTI-SELECT (unified)
+  // ══════════════════════════════════════
+  //
+  // Features:
+  // - Search box (always)
+  // - "Chọn tất cả" button
+  // - "(Trống)" option for blank values
+  // - Search → check → clear search → check more
+  // - Selected count summary
+  //
 
-    // Store state
-    window[cbId] = { selected: new Set(selSet), onApply, singleSelect };
+  function _pfBuildExcelSelect(title, field, currentSelected) {
+    const cbId = '_pfxl_' + Math.random().toString(36).slice(2, 6);
 
-    const optionsHtml = items.map(item =>
-      `<div class="pf-option ${selSet.has(item.val) ? 'selected' : ''}" onclick="_pfToggleOption(this,'${cbId}','${item.val.replace(/'/g, "\\'")}'${singleSelect ? ',true' : ''})">
+    // Get items based on field type
+    let items = [];
+    let blankCount = 0;
+
+    if (field === 'phase') {
+      const phases = ['chakki', 'tu_van_hinh', 'tu_van', 'bb', 'center', 'completed'];
+      const { vals } = _pfGetUniqueValues('phase');
+      items = phases.map(v => ({ val: v, label: PHASE_NAMES[v] || v, count: vals.get(v) || 0 })).filter(i => i.count > 0);
+    } else if (field === 'status') {
+      const statuses = ['alive', 'dropout', 'pause'];
+      const { vals } = _pfGetUniqueValues('status');
+      items = statuses.map(v => ({ val: v, label: STATUS_NAMES[v] || v, count: vals.get(v) || 0 })).filter(i => i.count > 0);
+    } else if (field === 'semester') {
+      const profiles = _pfGetScopeProfiles();
+      const semCounts = new Map();
+      let noSemCount = 0;
+      profiles.forEach(p => {
+        if (p.semester_id) {
+          semCounts.set(p.semester_id, (semCounts.get(p.semester_id) || 0) + 1);
+        } else {
+          noSemCount++;
+        }
+      });
+      items = (allSemesters || []).map(s => ({
+        val: s.id, label: s.name || s.id, count: semCounts.get(s.id) || 0,
+      })).filter(i => i.count > 0);
+      blankCount = noSemCount;
+    } else if (field === 'ndd' || field === 'tvv' || field === 'gvbb') {
+      const { vals, blankCount: bc } = _pfGetUniqueValues(field);
+      blankCount = bc;
+      items = [...vals.entries()].map(([code, count]) => ({
+        val: code, label: _pfStaffName(code), count,
+      })).sort((a, b) => b.count - a.count);
+    } else if (field === 'tools') {
+      const { vals, blankCount: bc } = _pfGetUniqueValues('tools');
+      blankCount = bc;
+      items = [...vals.entries()].map(([t, count]) => ({ val: t, label: t, count })).sort((a, b) => b.count - a.count);
+    } else if (field === 'gender') {
+      const { vals, blankCount: bc } = _pfGetUniqueValues('gender');
+      blankCount = bc;
+      items = [...vals.entries()].map(([g, count]) => ({ val: g, label: g, count }));
+    } else if (field === 'tonGiao') {
+      const { vals, blankCount: bc } = _pfGetUniqueValues('tonGiao');
+      blankCount = bc;
+      items = [...vals.entries()].map(([t, count]) => ({ val: t, label: t, count })).sort((a, b) => b.count - a.count);
+    }
+
+    const selSet = new Set(currentSelected);
+
+    // Store state for interaction
+    window[cbId] = {
+      items,
+      blankCount,
+      selected: new Set(selSet),
+      field,
+      apply: function() {
+        const sel = [...this.selected];
+        // Route to correct state field
+        switch (this.field) {
+          case 'semester': _pfState.semesters = sel; break;
+          case 'ndd': _pfState.ndd = sel; break;
+          case 'phase': _pfState.phase = sel; break;
+          case 'status': _pfState.status = sel; break;
+          case 'tvv': _pfState.tvv = sel; break;
+          case 'gvbb': _pfState.gvbb = sel; break;
+          case 'tools': _pfState.tools = sel; break;
+          case 'gender': _pfState.gender = sel; break;
+          case 'tonGiao': _pfState.tonGiao = sel; break;
+        }
+        _pfCloseDropdown();
+        _pfRefresh();
+      },
+    };
+
+    // Check if all items (+ blank if applicable) are selected
+    const totalItems = items.length + (blankCount > 0 ? 1 : 0);
+    const allSelected = selSet.size === totalItems && items.every(i => selSet.has(i.val)) && (blankCount === 0 || selSet.has('__blank__'));
+
+    // Build options HTML
+    let optionsHtml = '';
+
+    // Blank option
+    if (blankCount > 0) {
+      optionsHtml += `<div class="pf-option ${selSet.has('__blank__') ? 'selected' : ''}" data-val="__blank__" onclick="_pfXlToggle(this,'${cbId}','__blank__')">
+        <div class="pf-option-check">✓</div>
+        <div class="pf-option-label" style="font-style:italic;color:var(--text3);">(Trống)</div>
+        <div class="pf-option-count">${blankCount}</div>
+      </div>`;
+    }
+
+    optionsHtml += items.map(item =>
+      `<div class="pf-option ${selSet.has(item.val) ? 'selected' : ''}" data-val="${_pfEsc(item.val)}" data-search="${_pfEsc(item.label.toLowerCase())}" onclick="_pfXlToggle(this,'${cbId}','${_pfEsc(item.val)}')">
         <div class="pf-option-check">✓</div>
         <div class="pf-option-label">${item.label}</div>
+        ${item.count ? `<div class="pf-option-count">${item.count}</div>` : ''}
       </div>`
     ).join('');
 
@@ -591,23 +761,24 @@
         <div class="pf-dropdown-title">${title}</div>
         <button class="pf-dropdown-close" onclick="_pfCloseDropdown()">✕</button>
       </div>
-      <div class="pf-options">${optionsHtml || '<div class="pf-empty">Không có dữ liệu</div>'}</div>
+      <input class="pf-search" type="text" placeholder="🔍 Tìm kiếm..." oninput="_pfXlSearch(this,'${cbId}')" />
+      <div class="pf-toolbar">
+        <button class="pf-toolbar-btn ${allSelected ? 'active' : ''}" id="${cbId}_selAll" onclick="_pfXlSelectAll('${cbId}')">☑ Chọn tất cả</button>
+        <button class="pf-toolbar-btn" onclick="_pfXlClear('${cbId}')">☐ Bỏ chọn</button>
+        <div class="pf-selected-summary" id="${cbId}_summary">${selSet.size > 0 ? `Đã chọn: ${selSet.size}` : ''}</div>
+      </div>
+      <div class="pf-options" id="${cbId}_opts">${optionsHtml || '<div class="pf-empty">Không có dữ liệu</div>'}</div>
       <div class="pf-dropdown-actions">
-        <button class="pf-btn-clear" onclick="_pfMsClear('${cbId}')">Bỏ chọn</button>
-        <button class="pf-btn-apply" onclick="_pfMsApply('${cbId}')">Áp dụng</button>
+        <button class="pf-btn-clear" onclick="_pfXlClear('${cbId}')">Bỏ chọn</button>
+        <button class="pf-btn-apply" onclick="_pfXlApply('${cbId}')">Áp dụng</button>
       </div>`;
   }
 
-  window._pfToggleOption = function(el, cbId, val, singleSelect) {
+  // Toggle single option
+  window._pfXlToggle = function(el, cbId, val) {
     if (typeof haptic === 'function') haptic('selection');
     const state = window[cbId];
     if (!state) return;
-
-    if (singleSelect) {
-      // Single select: clear others
-      state.selected.clear();
-      el.closest('.pf-options').querySelectorAll('.pf-option').forEach(o => o.classList.remove('selected'));
-    }
 
     if (state.selected.has(val)) {
       state.selected.delete(val);
@@ -616,73 +787,137 @@
       state.selected.add(val);
       el.classList.add('selected');
     }
+    _pfXlUpdateSummary(cbId);
   };
 
-  window._pfMsClear = function(cbId) {
-    const state = window[cbId];
-    if (!state) return;
-    state.selected.clear();
-    document.querySelectorAll('#pfOverlay .pf-option').forEach(o => o.classList.remove('selected'));
-  };
-
-  window._pfMsApply = function(cbId) {
-    const state = window[cbId];
-    if (!state) return;
-    state.onApply([...state.selected]);
-  };
-
-  // ── Search select builder (with search input) ──
-  function _pfBuildSearchSelect(title, items, selected, onApply, singleSelect) {
-    const cbId = '_pfss_' + Math.random().toString(36).slice(2, 6);
-    const selSet = new Set(selected);
-    window[cbId] = { items, selected: new Set(selSet), onApply, singleSelect };
-
-    const optionsHtml = items.slice(0, 50).map(item =>
-      `<div class="pf-option ${selSet.has(item.val) ? 'selected' : ''}" data-val="${item.val.replace(/"/g, '&quot;')}" onclick="_pfToggleSearchOption(this,'${cbId}','${item.val.replace(/'/g, "\\'")}'${singleSelect ? ',true' : ''})">
-        <div class="pf-option-check">✓</div>
-        <div class="pf-option-label">${item.label}</div>
-        ${item.count ? `<div class="pf-option-count">${item.count}</div>` : ''}
-      </div>`
-    ).join('');
-
-    return `
-      <div class="pf-dropdown-header">
-        <div class="pf-dropdown-title">${title}</div>
-        <button class="pf-dropdown-close" onclick="_pfCloseDropdown()">✕</button>
-      </div>
-      <input class="pf-search" type="text" placeholder="🔍 Tìm kiếm..." oninput="_pfFilterSearchOptions(this,'${cbId}')" />
-      <div class="pf-options" id="${cbId}_opts">${optionsHtml || '<div class="pf-empty">Không có dữ liệu</div>'}</div>
-      <div class="pf-dropdown-actions">
-        <button class="pf-btn-clear" onclick="_pfMsClear('${cbId}')">Bỏ chọn</button>
-        <button class="pf-btn-apply" onclick="_pfMsApply('${cbId}')">Áp dụng</button>
-      </div>`;
-  }
-
-  window._pfToggleSearchOption = function(el, cbId, val, singleSelect) {
-    window._pfToggleOption(el, cbId, val, singleSelect);
-  };
-
-  window._pfFilterSearchOptions = function(input, cbId) {
+  // Search within options
+  window._pfXlSearch = function(input, cbId) {
     const state = window[cbId];
     if (!state) return;
     const term = (input.value || '').toLowerCase().trim();
     const container = document.getElementById(cbId + '_opts');
     if (!container) return;
 
-    const filtered = state.items.filter(i =>
-      !term || i.label.toLowerCase().includes(term) || i.val.toLowerCase().includes(term)
-    ).slice(0, 50);
-
-    container.innerHTML = filtered.map(item =>
-      `<div class="pf-option ${state.selected.has(item.val) ? 'selected' : ''}" data-val="${item.val.replace(/"/g, '&quot;')}" onclick="_pfToggleSearchOption(this,'${cbId}','${item.val.replace(/'/g, "\\'")}'${state.singleSelect ? ',true' : ''})">
-        <div class="pf-option-check">✓</div>
-        <div class="pf-option-label">${item.label}</div>
-        ${item.count ? `<div class="pf-option-count">${item.count}</div>` : ''}
-      </div>`
-    ).join('') || '<div class="pf-empty">Không tìm thấy</div>';
+    const options = container.querySelectorAll('.pf-option');
+    options.forEach(opt => {
+      const val = opt.getAttribute('data-val') || '';
+      const search = opt.getAttribute('data-search') || '';
+      if (val === '__blank__') {
+        opt.style.display = term && !'(trống)'.includes(term) ? 'none' : '';
+      } else {
+        opt.style.display = !term || search.includes(term) || val.toLowerCase().includes(term) ? '' : 'none';
+      }
+    });
   };
 
-  // ── Toggle builder (Yes/No/All) ──
+  // Select all visible
+  window._pfXlSelectAll = function(cbId) {
+    const state = window[cbId];
+    if (!state) return;
+    const container = document.getElementById(cbId + '_opts');
+    if (!container) return;
+
+    const visibleOpts = container.querySelectorAll('.pf-option:not([style*="display: none"])');
+    const allVisible = [...visibleOpts].map(o => o.getAttribute('data-val'));
+    const allSelected = allVisible.every(v => state.selected.has(v));
+
+    if (allSelected) {
+      // Deselect all visible
+      allVisible.forEach(v => state.selected.delete(v));
+      visibleOpts.forEach(o => o.classList.remove('selected'));
+    } else {
+      // Select all visible
+      allVisible.forEach(v => state.selected.add(v));
+      visibleOpts.forEach(o => o.classList.add('selected'));
+    }
+    _pfXlUpdateSummary(cbId);
+  };
+
+  // Clear all
+  window._pfXlClear = function(cbId) {
+    const state = window[cbId];
+    if (!state) return;
+    state.selected.clear();
+    const container = document.getElementById(cbId + '_opts');
+    if (container) container.querySelectorAll('.pf-option').forEach(o => o.classList.remove('selected'));
+    _pfXlUpdateSummary(cbId);
+  };
+
+  // Apply
+  window._pfXlApply = function(cbId) {
+    const state = window[cbId];
+    if (state && state.apply) state.apply();
+  };
+
+  // Update summary count
+  function _pfXlUpdateSummary(cbId) {
+    const state = window[cbId];
+    if (!state) return;
+    const el = document.getElementById(cbId + '_summary');
+    if (el) el.textContent = state.selected.size > 0 ? `Đã chọn: ${state.selected.size}` : '';
+
+    // Update "Select All" button state
+    const btn = document.getElementById(cbId + '_selAll');
+    if (btn) {
+      const totalItems = state.items.length + (state.blankCount > 0 ? 1 : 0);
+      btn.classList.toggle('active', state.selected.size === totalItems);
+    }
+  }
+
+  // ══════════════════════════════════════
+  // TEXT SEARCH FILTER (name, concept)
+  // ══════════════════════════════════════
+
+  function _pfBuildTextSearch(title, currentVal, onApply, showSuggestions) {
+    const cbId = '_pfts_' + Math.random().toString(36).slice(2, 6);
+    window[cbId] = { onApply };
+
+    let suggestHtml = '';
+    if (showSuggestions) {
+      const { vals } = _pfGetUniqueValues('concept');
+      const suggestions = [...vals.entries()].filter(([v]) => v).sort((a, b) => b[1] - a[1]).slice(0, 30);
+      suggestHtml = suggestions.map(([v, count]) =>
+        `<div class="pf-option" onclick="document.getElementById('${cbId}_input').value='${_pfEsc(v)}';_pfApplyText('${cbId}')">
+          <div class="pf-option-label">${v}</div>
+          <div class="pf-option-count">${count}</div>
+        </div>`
+      ).join('');
+    }
+
+    return `
+      <div class="pf-dropdown-header">
+        <div class="pf-dropdown-title">${title}</div>
+        <button class="pf-dropdown-close" onclick="_pfCloseDropdown()">✕</button>
+      </div>
+      <input class="pf-search" type="text" id="${cbId}_input" value="${currentVal || ''}" placeholder="🔍 Nhập để tìm..." ${showSuggestions ? `oninput="_pfTextSearchFilter(this,'${cbId}')"` : ''} />
+      ${suggestHtml ? `<div class="pf-options" id="${cbId}_opts">${suggestHtml}</div>` : ''}
+      <div class="pf-dropdown-actions">
+        <button class="pf-btn-clear" onclick="document.getElementById('${cbId}_input').value=''">Xoá</button>
+        <button class="pf-btn-apply" onclick="_pfApplyText('${cbId}')">Áp dụng</button>
+      </div>`;
+  }
+
+  window._pfApplyText = function(cbId) {
+    const state = window[cbId];
+    if (!state) return;
+    const val = document.getElementById(cbId + '_input')?.value?.trim() || '';
+    state.onApply(val);
+  };
+
+  window._pfTextSearchFilter = function(input, cbId) {
+    const term = (input.value || '').toLowerCase().trim();
+    const container = document.getElementById(cbId + '_opts');
+    if (!container) return;
+    container.querySelectorAll('.pf-option').forEach(opt => {
+      const label = opt.querySelector('.pf-option-label')?.textContent?.toLowerCase() || '';
+      opt.style.display = !term || label.includes(term) ? '' : 'none';
+    });
+  };
+
+  // ══════════════════════════════════════
+  // TOGGLE FILTER (boolean: KT, ĐK Center)
+  // ══════════════════════════════════════
+
   function _pfBuildToggle(title, currentVal, onApply) {
     const cbId = '_pftg_' + Math.random().toString(36).slice(2, 6);
     window[cbId] = { onApply };
@@ -705,7 +940,10 @@
     if (state) state.onApply(val);
   };
 
-  // ── Range input builder ──
+  // ══════════════════════════════════════
+  // RANGE INPUT (birth year, idle days, dates)
+  // ══════════════════════════════════════
+
   function _pfBuildRangeInput(title, fromVal, toVal, type, min, max, onApply) {
     const cbId = '_pfri_' + Math.random().toString(36).slice(2, 6);
     window[cbId] = { onApply };
@@ -734,58 +972,28 @@
     state.onApply(from, to);
   };
 
-  // ── Text search builder ──
-  function _pfBuildTextSearch(title, currentVal, onApply) {
-    const cbId = '_pfts_' + Math.random().toString(36).slice(2, 6);
-    window[cbId] = { onApply };
+  // ══════════════════════════════════════
+  // UNIT SELECT (Đơn vị — hierarchical)
+  // ══════════════════════════════════════
 
-    // Get unique concept values for suggestions
-    const vals = _pfGetUniqueValues('concept');
-    const suggestions = [...vals.entries()]
-      .filter(([v]) => v)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20);
-
-    const suggestHtml = suggestions.map(([v, count]) =>
-      `<div class="pf-option" onclick="document.getElementById('${cbId}_input').value='${v.replace(/'/g, "\\'")}';_pfApplyText('${cbId}')">
-        <div class="pf-option-label">${v}</div>
-        <div class="pf-option-count">${count}</div>
-      </div>`
-    ).join('');
-
-    return `
-      <div class="pf-dropdown-header">
-        <div class="pf-dropdown-title">${title}</div>
-        <button class="pf-dropdown-close" onclick="_pfCloseDropdown()">✕</button>
-      </div>
-      <input class="pf-search" type="text" id="${cbId}_input" value="${currentVal || ''}" placeholder="🔍 Nhập concept hoặc chọn..." />
-      <div class="pf-options">${suggestHtml || '<div class="pf-empty">Không có concept nào</div>'}</div>
-      <div class="pf-dropdown-actions">
-        <button class="pf-btn-clear" onclick="document.getElementById('${cbId}_input').value=''">Xoá</button>
-        <button class="pf-btn-apply" onclick="_pfApplyText('${cbId}')">Áp dụng</button>
-      </div>`;
-  }
-
-  window._pfApplyText = function(cbId) {
-    const state = window[cbId];
-    if (!state) return;
-    const val = document.getElementById(cbId + '_input')?.value?.trim() || '';
-    state.onApply(val);
-  };
-
-  // ── Unit (Đơn vị) select builder ──
   function _pfBuildUnitSelect() {
     const units = _rptCache?.scopeUnits || [];
-    const cbId = '_pfunit_' + Math.random().toString(36).slice(2, 6);
-    window[cbId] = {};
+
+    // Count profiles per unit (not staff codes)
+    const profiles = _pfGetScopeProfiles();
+    function countProfilesForUnit(u) {
+      const codeSet = new Set(u.codes);
+      return profiles.filter(p => codeSet.has(p.ndd_staff_code)).length;
+    }
 
     const optionsHtml = units.map((u, i) => {
       const icon = u.type === 'area' ? '🏢' : u.type === 'group' ? '👥' : '🏠';
-      const indent = u.label.startsWith('  ') ? 'padding-left:20px;' : '';
+      const indent = u.type === 'group' ? 'padding-left:16px;' : u.type === 'team' ? 'padding-left:32px;' : '';
       const label = u.label.replace(/^[\s└]+/, '').trim();
+      const profileCount = countProfilesForUnit(u);
       return `<div class="pf-option" style="${indent}" onclick="_pfApplyUnit(${i})">
         <div class="pf-option-label">${icon} ${label}</div>
-        <div class="pf-option-count">${u.codes.length}</div>
+        <div class="pf-option-count">${profileCount} hồ sơ</div>
       </div>`;
     }).join('');
 
@@ -822,24 +1030,22 @@
   window._pfExportCSV = function() {
     if (!_pfResults.length) { showToast('⚠️ Không có dữ liệu để xuất'); return; }
 
-    const headers = ['Họ tên', 'Giai đoạn', 'Trạng thái', 'NDD', 'TVV', 'GVBB', 'Mở KT', 'Năm sinh', 'Giới tính', 'CC Tư vấn', 'Concept', 'SĐT', 'Ngày Chakki', 'Đơn vị'];
-    const PHASE_NAMES = { new: 'Mới', chakki: 'Chakki', tu_van_hinh: 'TV Hình', tu_van: 'Tư Vấn', bb: 'BB', center: 'Center', completed: 'Hoàn thành' };
+    const headers = ['Họ tên', 'Giai đoạn', 'Trạng thái', 'NDD', 'TVV', 'GVBB', 'Mở KT', 'Năm sinh', 'Giới tính', 'Công cụ TV', 'Concept', 'SĐT', 'Ngày Chakki', 'Đơn vị', 'Kỳ KG', 'Nhàn rỗi (ngày)'];
 
     const rows = _pfResults.map(p => {
       const fullP = (allProfiles || []).find(x => x.id === p.id) || p;
-      const nddC = fullP.ndd_staff_code || '';
-      const tvvC = fullP.tvv_staff_code || '';
-      const gvbbC = fullP.gvbb_staff_code || '';
       const en = _pfEnriched?.get(p.id);
-      const unit = typeof getStaffUnit === 'function' ? getStaffUnit(nddC) : '';
+      const unit = typeof getStaffUnit === 'function' ? getStaffUnit(fullP.ndd_staff_code || '') : '';
+      const sem = (allSemesters || []).find(s => s.id === fullP.semester_id);
+      const idle = _pfIdleDays(fullP);
 
       return [
         fullP.full_name || '',
         PHASE_NAMES[fullP.phase] || fullP.phase || '',
         fullP.fruit_status || 'alive',
-        _pfStaffName(nddC),
-        _pfStaffName(tvvC),
-        _pfStaffName(gvbbC),
+        _pfStaffName(fullP.ndd_staff_code || ''),
+        _pfStaffName(fullP.tvv_staff_code || ''),
+        _pfStaffName(fullP.gvbb_staff_code || ''),
         fullP.is_kt_opened ? 'Đã mở' : 'Chưa',
         fullP.birth_year || '',
         fullP.gender || '',
@@ -847,14 +1053,14 @@
         en?.concept || '',
         fullP.phone_number || '',
         en?.ngayChakki || '',
-        unit
+        unit,
+        sem?.name || '',
+        idle,
       ];
     });
 
-    // BOM for UTF-8 Excel compat
     const BOM = '\uFEFF';
     const csvContent = BOM + [headers, ...rows].map(r => r.map(v => `"${(v + '').replace(/"/g, '""')}"`).join(',')).join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -868,20 +1074,14 @@
   window._pfCopyList = function() {
     if (!_pfResults.length) { showToast('⚠️ Không có dữ liệu'); return; }
 
-    const PHASE_NAMES = { new: 'Mới', chakki: 'CK', tu_van_hinh: 'TVH', tu_van: 'TV', bb: 'BB', center: 'CTR', completed: '✅' };
     let text = `📋 Danh sách hồ sơ (${_pfResults.length}):\n\n`;
-
     _pfResults.forEach((p, i) => {
       const fullP = (allProfiles || []).find(x => x.id === p.id) || p;
-      const nddC = fullP.ndd_staff_code || '';
       const en = _pfEnriched?.get(p.id);
-      const phase = PHASE_NAMES[fullP.phase] || fullP.phase || 'CK';
+      const phase = (PHASE_NAMES[fullP.phase] || fullP.phase || 'CK').substring(0, 3);
       const tool = en?.tools?.size ? [...en.tools].join(', ') : '';
-      const concept = en?.concept || '';
-
-      text += `${i + 1}. ${fullP.full_name} [${phase}] NDD: ${_pfStaffName(nddC)}`;
+      text += `${i + 1}. ${fullP.full_name} [${phase}] NDD: ${_pfStaffName(fullP.ndd_staff_code || '')}`;
       if (tool) text += ` · CC: ${tool}`;
-      if (concept) text += ` · Concept: ${concept}`;
       text += '\n';
     });
 
@@ -894,10 +1094,11 @@
 
   window._pfClearAll = function() {
     Object.assign(_pfState, {
-      phase: [], status: [], ndd: [], tvv: [], gvbb: [],
-      kt: null, semester: null, unit: null, gender: [],
-      birthFrom: '', birthTo: '', tools: [], concept: '',
-      tonGiao: [], honNhan: [], activity: null,
+      semesters: [], unit: null, ndd: [], name: '',
+      phase: [], status: [], tvv: [], gvbb: [],
+      tools: [], concept: '', kt: null, gender: [],
+      birthFrom: '', birthTo: '', tonGiao: [],
+      idleFrom: '', idleTo: '',
       chakkiFrom: '', chakkiTo: '', dkCenter: null,
     });
     _pfRefresh();
@@ -908,7 +1109,6 @@
   // HAPJA VIEW FROM PROFILE
   // ══════════════════════════════════════
 
-  // Fetch and open approved Hapja for a profile
   window.viewApprovedHapja = async function(profileId) {
     if (!profileId) return;
     try {

@@ -4,6 +4,7 @@
 
 // Cache fetched data so sub-unit dropdown can re-render without re-fetch
 let _rptCache = null;
+let _rptFilterLoaded = false;
 
 async function loadReports(force = false) {
   const el = document.getElementById('reportContent');
@@ -15,6 +16,7 @@ async function loadReports(force = false) {
   }
 
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">⏳ Đang phân tích dữ liệu...</div>';
+  if (force) _rptFilterLoaded = false;
 
   try {
     const pos = getCurrentPosition();
@@ -661,17 +663,6 @@ function _renderReports(el, subUnitIdx) {
   }
 
   el.innerHTML = html;
-
-  // ── Profile Filter section (appended after reports) ──
-  if (typeof _pfRenderSection === 'function') {
-    let filterContainer = document.getElementById('pfFilterContainer');
-    if (!filterContainer) {
-      filterContainer = document.createElement('div');
-      filterContainer.id = 'pfFilterContainer';
-      el.appendChild(filterContainer);
-    }
-    _pfRenderSection(filterContainer);
-  }
 }
 
 // ── Funnel click-to-view profile list ──
@@ -714,4 +705,38 @@ function _showFunnelList(phaseIdx, type) {
   const saveBtn = document.querySelector('#addRecordModal .save-btn');
   if (saveBtn) saveBtn.style.display = 'none';
   document.getElementById('addRecordModal').classList.add('open');
+}
+
+// ══════════════════════════════════════
+// SUB-TAB SWITCHING (Thống kê / Bộ lọc)
+// ══════════════════════════════════════
+
+function switchReportSubtab(tab) {
+  if (typeof haptic === 'function') haptic('selection');
+
+  const statsEl = document.getElementById('rptSubStats');
+  const filterEl = document.getElementById('rptSubFilter');
+  const tabs = document.querySelectorAll('#rptSubtabs .rpt-subtab');
+  if (!statsEl || !filterEl) return;
+
+  tabs.forEach(t => t.classList.remove('active'));
+
+  if (tab === 'filter') {
+    statsEl.style.display = 'none';
+    filterEl.style.display = 'block';
+    tabs[1]?.classList.add('active');
+
+    // Load filter section if first time
+    if (!_rptFilterLoaded && typeof _pfRenderSection === 'function') {
+      const container = document.getElementById('pfFilterContainer');
+      if (container) {
+        _pfRenderSection(container);
+        _rptFilterLoaded = true;
+      }
+    }
+  } else {
+    statsEl.style.display = 'block';
+    filterEl.style.display = 'none';
+    tabs[0]?.classList.add('active');
+  }
 }
