@@ -16,7 +16,10 @@ async function loadReports(force = false) {
   }
 
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:13px;">⏳ Đang phân tích dữ liệu...</div>';
-  if (force) _rptFilterLoaded = false;
+  if (force) {
+    _rptFilterLoaded = false;
+    if (typeof _pfResetCache === 'function') _pfResetCache();
+  }
 
   try {
     const pos = getCurrentPosition();

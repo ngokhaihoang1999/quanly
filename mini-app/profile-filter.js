@@ -14,13 +14,13 @@
     semesters: [],    // multi-select semester ids
     unit: null,       // { codes: [...], label: '' }
     ndd: [],          // staff_code[]
-    name: '',         // text search on full_name
+    name: [],         // multi-select full names
     phase: [],        // ['chakki','bb',...]
     status: [],       // ['alive','dropout','pause']
     tvv: [],
     gvbb: [],
     tools: [],        // ['Enneagram',...]
-    concept: '',      // text search
+    concept: [],      // multi-select concepts
     kt: null,         // true/false/null
     gender: [],
     birthFrom: '',
@@ -35,6 +35,7 @@
 
   // Enriched data cache (lazy loaded)
   let _pfEnriched = null; // Map<profileId, { tools, concept, tonGiao, ngayChakki, hasDKCenter }>
+  let _pfAllProfiles = null; // Cache of ALL profiles across all semesters
   let _pfLoading = false;
   let _pfResults = [];
   let _pfInitialized = false;
@@ -49,12 +50,51 @@
    */
   function _pfGetScopeProfiles() {
     const scopeCodes = _rptCache?.allScopeCodes;
+    const sourceProfiles = _pfAllProfiles || [];
     if (!scopeCodes || scopeCodes.length === 0) {
-      return (allProfiles || []).slice();
+      return sourceProfiles.slice();
     }
     const codeSet = new Set(scopeCodes);
-    return (allProfiles || []).filter(p => codeSet.has(p.ndd_staff_code));
+    return sourceProfiles.filter(p => codeSet.has(p.ndd_staff_code));
   }
+
+  /** Fetch and parse all profiles across all semesters */
+  async function _pfLoadAllProfiles() {
+    if (_pfAllProfiles) return;
+    try {
+      const res = await sbFetch('/rest/v1/profiles?select=*,fruit_groups(telegram_group_id,fruit_roles(staff_code,role_type))&order=created_at.desc');
+      const rawData = await res.json();
+      _pfAllProfiles = rawData.map(p => {
+        let tvv = [], gvbb = null, nddRole = null, la = [];
+        const sortedFGs = (p.fruit_groups || []).sort((a, b) => {
+          const aReal = a.telegram_group_id && a.telegram_group_id > -1000000000000 ? 1 : 0;
+          const bReal = b.telegram_group_id && b.telegram_group_id > -1000000000000 ? 1 : 0;
+          return bReal - aReal;
+        });
+        sortedFGs.forEach(fg => {
+          (fg.fruit_roles || []).forEach(r => {
+            if (r.role_type === 'ndd' && !nddRole) nddRole = r.staff_code;
+            if (r.role_type === 'tvv') tvv.push(r.staff_code);
+            if (r.role_type === 'gvbb' && !gvbb) gvbb = r.staff_code;
+            if (r.role_type === 'la') la.push(r.staff_code);
+          });
+        });
+        p.ndd_staff_code = nddRole || p.ndd_staff_code;
+        p.tvv_staff_code = tvv.length ? tvv.join(', ') : '';
+        p.gvbb_staff_code = gvbb || '';
+        p.la_staff_code = la.length ? la.join(', ') : '';
+        return p;
+      });
+    } catch (e) {
+      console.error('Profile filter: load all profiles error', e);
+      _pfAllProfiles = [];
+    }
+  }
+
+  window._pfResetCache = function() {
+    _pfAllProfiles = null;
+    _pfEnriched = null;
+  };
 
   /** Load enriched data (form_hanh_chinh, TV records, DK Center) */
   async function _pfLoadEnrichedData() {
@@ -125,6 +165,9 @@
       let values = [];
 
       switch (field) {
+        case 'name':
+          values = [p.full_name || ''];
+          break;
         case 'ndd':
           values = [p.ndd_staff_code || ''];
           break;
@@ -227,10 +270,12 @@
       // NDD
       if (s.ndd.length > 0 && !s.ndd.includes(p.ndd_staff_code || '')) return false;
 
-      // Name (text search)
-      if (s.name) {
-        const fullName = (p.full_name || '').toLowerCase();
-        if (!fullName.includes(s.name.toLowerCase())) return false;
+      // Name (multi-select Excel-like)
+      if (s.name.length > 0) {
+        const n = p.full_name || '';
+        const hasBlankSelected = s.name.includes('__blank__');
+        const nonBlank = s.name.filter(c => c !== '__blank__');
+        if (!nonBlank.includes(n) && !(hasBlankSelected && !n)) return false;
       }
 
       // Phase
@@ -292,10 +337,12 @@
         if (!matchNonBlank && !matchBlank) return false;
       }
 
-      // Concept
-      if (s.concept) {
-        const concept = (en?.concept || '').toLowerCase();
-        if (!concept.includes(s.concept.toLowerCase())) return false;
+      // Concept (multi-select Excel-like)
+      if (s.concept.length > 0) {
+        const c = en?.concept || '';
+        const hasBlankSelected = s.concept.includes('__blank__');
+        const nonBlank = s.concept.filter(x => x !== '__blank__');
+        if (!nonBlank.includes(c) && !(hasBlankSelected && !c)) return false;
       }
 
       // Tôn giáo
@@ -344,13 +391,13 @@
     if (s.semesters.length) c++;
     if (s.unit) c++;
     if (s.ndd.length) c++;
-    if (s.name) c++;
+    if (s.name.length) c++;
     if (s.phase.length) c++;
     if (s.status.length) c++;
     if (s.tvv.length) c++;
     if (s.gvbb.length) c++;
     if (s.tools.length) c++;
-    if (s.concept) c++;
+    if (s.concept.length) c++;
     if (s.kt !== null) c++;
     if (s.gender.length) c++;
     if (s.birthFrom || s.birthTo) c++;
@@ -417,7 +464,10 @@
   window._pfRenderSection = async function(containerEl) {
     if (!containerEl) return;
 
-    await _pfLoadEnrichedData();
+    await Promise.all([
+      _pfLoadAllProfiles(),
+      _pfLoadEnrichedData()
+    ]);
     _pfApply();
 
     const totalScope = _pfGetScopeProfiles().length;
@@ -430,13 +480,13 @@
         case 'semester': return s.semesters.length > 0;
         case 'unit': return !!s.unit;
         case 'ndd': return s.ndd.length > 0;
-        case 'name': return !!s.name;
+        case 'name': return s.name.length > 0;
         case 'phase': return s.phase.length > 0;
         case 'status': return s.status.length > 0;
         case 'tvv': return s.tvv.length > 0;
         case 'gvbb': return s.gvbb.length > 0;
         case 'tools': return s.tools.length > 0;
-        case 'concept': return !!s.concept;
+        case 'concept': return s.concept.length > 0;
         case 'kt': return s.kt !== null;
         case 'gender': return s.gender.length > 0;
         case 'birthYear': return !!(s.birthFrom || s.birthTo);
@@ -465,13 +515,13 @@
     }
     if (s.unit) tagsHtml += _pfTagHtml('Đơn vị', s.unit.label || 'Đã chọn', () => { s.unit = null; _pfRefresh(); });
     if (s.ndd.length) tagsHtml += _pfTagHtml('NDD', s.ndd.filter(c => c !== '__blank__').map(c => _pfStaffName(c)).join(', ') + (s.ndd.includes('__blank__') ? ', (Trống)' : ''), () => { s.ndd = []; _pfRefresh(); });
-    if (s.name) tagsHtml += _pfTagHtml('Tên', s.name, () => { s.name = ''; _pfRefresh(); });
+    if (s.name.length) tagsHtml += _pfTagHtml('Tên', s.name.filter(c => c !== '__blank__').join(', ') + (s.name.includes('__blank__') ? ', (Trống)' : ''), () => { s.name = []; _pfRefresh(); });
     if (s.phase.length) tagsHtml += _pfTagHtml('GĐ', s.phase.map(p => PHASE_NAMES[p] || p).join(', '), () => { s.phase = []; _pfRefresh(); });
     if (s.status.length) tagsHtml += _pfTagHtml('TT', s.status.map(p => STATUS_NAMES[p] || p).join(', '), () => { s.status = []; _pfRefresh(); });
     if (s.tvv.length) tagsHtml += _pfTagHtml('TVV', s.tvv.filter(c => c !== '__blank__').map(c => _pfStaffName(c)).join(', ') + (s.tvv.includes('__blank__') ? ', (Trống)' : ''), () => { s.tvv = []; _pfRefresh(); });
     if (s.gvbb.length) tagsHtml += _pfTagHtml('GVBB', s.gvbb.filter(c => c !== '__blank__').map(c => _pfStaffName(c)).join(', ') + (s.gvbb.includes('__blank__') ? ', (Trống)' : ''), () => { s.gvbb = []; _pfRefresh(); });
     if (s.tools.length) tagsHtml += _pfTagHtml('Công cụ TV', s.tools.filter(c => c !== '__blank__').join(', ') + (s.tools.includes('__blank__') ? ', (Trống)' : ''), () => { s.tools = []; _pfRefresh(); });
-    if (s.concept) tagsHtml += _pfTagHtml('Concept', s.concept, () => { s.concept = ''; _pfRefresh(); });
+    if (s.concept.length) tagsHtml += _pfTagHtml('Concept', s.concept.filter(c => c !== '__blank__').join(', ') + (s.concept.includes('__blank__') ? ', (Trống)' : ''), () => { s.concept = []; _pfRefresh(); });
     if (s.kt !== null) tagsHtml += _pfTagHtml('KT', s.kt ? 'Đã mở' : 'Chưa mở', () => { s.kt = null; _pfRefresh(); });
     if (s.gender.length) tagsHtml += _pfTagHtml('Giới tính', s.gender.filter(c => c !== '__blank__').join(', ') + (s.gender.includes('__blank__') ? ', (Trống)' : ''), () => { s.gender = []; _pfRefresh(); });
     if (s.birthFrom || s.birthTo) tagsHtml += _pfTagHtml('Năm sinh', `${s.birthFrom || '?'} – ${s.birthTo || '?'}`, () => { s.birthFrom = ''; s.birthTo = ''; _pfRefresh(); });
@@ -489,7 +539,7 @@
         resultsHtml = '<div class="pf-empty">🔍 Không tìm thấy hồ sơ nào phù hợp</div>';
       } else {
         resultsHtml = showProfiles.map(p => {
-          const fullP = (allProfiles || []).find(x => x.id === p.id) || p;
+          const fullP = (_pfAllProfiles || []).find(x => x.id === p.id) || p;
           let extras = '';
           const en = _pfEnriched?.get(p.id);
           if (en?.concept) {
@@ -582,7 +632,7 @@
         content = _pfBuildExcelSelect('NDD (Người Dìu Dắt)', 'ndd', _pfState.ndd);
         break;
       case 'name':
-        content = _pfBuildTextSearch('Tên hồ sơ', _pfState.name, val => { _pfState.name = val; _pfCloseDropdown(); _pfRefresh(); });
+        content = _pfBuildExcelSelect('Tên hồ sơ', 'name', _pfState.name);
         break;
       case 'phase':
         content = _pfBuildExcelSelect('Giai đoạn', 'phase', _pfState.phase);
@@ -600,7 +650,7 @@
         content = _pfBuildExcelSelect('Công cụ Tư vấn', 'tools', _pfState.tools);
         break;
       case 'concept':
-        content = _pfBuildTextSearch('Concept / Chủ đề', _pfState.concept, val => { _pfState.concept = val; _pfCloseDropdown(); _pfRefresh(); }, true);
+        content = _pfBuildExcelSelect('Concept / Chủ đề', 'concept', _pfState.concept);
         break;
       case 'kt':
         content = _pfBuildToggle('Mở Kinh Thánh', _pfState.kt, val => { _pfState.kt = val; _pfCloseDropdown(); _pfRefresh(); });
@@ -691,6 +741,14 @@
       items = [...vals.entries()].map(([code, count]) => ({
         val: code, label: _pfStaffName(code), count,
       })).sort((a, b) => b.count - a.count);
+    } else if (field === 'name') {
+      const { vals, blankCount: bc } = _pfGetUniqueValues('name');
+      blankCount = bc;
+      items = [...vals.entries()].map(([n, count]) => ({ val: n, label: n, count })).sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+    } else if (field === 'concept') {
+      const { vals, blankCount: bc } = _pfGetUniqueValues('concept');
+      blankCount = bc;
+      items = [...vals.entries()].map(([c, count]) => ({ val: c, label: c, count })).sort((a, b) => a.label.localeCompare(b.label, 'vi'));
     } else if (field === 'tools') {
       const { vals, blankCount: bc } = _pfGetUniqueValues('tools');
       blankCount = bc;
@@ -719,11 +777,13 @@
         switch (this.field) {
           case 'semester': _pfState.semesters = sel; break;
           case 'ndd': _pfState.ndd = sel; break;
+          case 'name': _pfState.name = sel; break;
           case 'phase': _pfState.phase = sel; break;
           case 'status': _pfState.status = sel; break;
           case 'tvv': _pfState.tvv = sel; break;
           case 'gvbb': _pfState.gvbb = sel; break;
           case 'tools': _pfState.tools = sel; break;
+          case 'concept': _pfState.concept = sel; break;
           case 'gender': _pfState.gender = sel; break;
           case 'tonGiao': _pfState.tonGiao = sel; break;
         }
@@ -864,55 +924,7 @@
     }
   }
 
-  // ══════════════════════════════════════
-  // TEXT SEARCH FILTER (name, concept)
-  // ══════════════════════════════════════
 
-  function _pfBuildTextSearch(title, currentVal, onApply, showSuggestions) {
-    const cbId = '_pfts_' + Math.random().toString(36).slice(2, 6);
-    window[cbId] = { onApply };
-
-    let suggestHtml = '';
-    if (showSuggestions) {
-      const { vals } = _pfGetUniqueValues('concept');
-      const suggestions = [...vals.entries()].filter(([v]) => v).sort((a, b) => b[1] - a[1]).slice(0, 30);
-      suggestHtml = suggestions.map(([v, count]) =>
-        `<div class="pf-option" onclick="document.getElementById('${cbId}_input').value='${_pfEsc(v)}';_pfApplyText('${cbId}')">
-          <div class="pf-option-label">${v}</div>
-          <div class="pf-option-count">${count}</div>
-        </div>`
-      ).join('');
-    }
-
-    return `
-      <div class="pf-dropdown-header">
-        <div class="pf-dropdown-title">${title}</div>
-        <button class="pf-dropdown-close" onclick="_pfCloseDropdown()">✕</button>
-      </div>
-      <input class="pf-search" type="text" id="${cbId}_input" value="${currentVal || ''}" placeholder="🔍 Nhập để tìm..." ${showSuggestions ? `oninput="_pfTextSearchFilter(this,'${cbId}')"` : ''} />
-      ${suggestHtml ? `<div class="pf-options" id="${cbId}_opts">${suggestHtml}</div>` : ''}
-      <div class="pf-dropdown-actions">
-        <button class="pf-btn-clear" onclick="document.getElementById('${cbId}_input').value=''">Xoá</button>
-        <button class="pf-btn-apply" onclick="_pfApplyText('${cbId}')">Áp dụng</button>
-      </div>`;
-  }
-
-  window._pfApplyText = function(cbId) {
-    const state = window[cbId];
-    if (!state) return;
-    const val = document.getElementById(cbId + '_input')?.value?.trim() || '';
-    state.onApply(val);
-  };
-
-  window._pfTextSearchFilter = function(input, cbId) {
-    const term = (input.value || '').toLowerCase().trim();
-    const container = document.getElementById(cbId + '_opts');
-    if (!container) return;
-    container.querySelectorAll('.pf-option').forEach(opt => {
-      const label = opt.querySelector('.pf-option-label')?.textContent?.toLowerCase() || '';
-      opt.style.display = !term || label.includes(term) ? '' : 'none';
-    });
-  };
 
   // ══════════════════════════════════════
   // TOGGLE FILTER (boolean: KT, ĐK Center)
@@ -1033,7 +1045,7 @@
     const headers = ['Họ tên', 'Giai đoạn', 'Trạng thái', 'NDD', 'TVV', 'GVBB', 'Mở KT', 'Năm sinh', 'Giới tính', 'Công cụ TV', 'Concept', 'SĐT', 'Ngày Chakki', 'Đơn vị', 'Kỳ KG', 'Nhàn rỗi (ngày)'];
 
     const rows = _pfResults.map(p => {
-      const fullP = (allProfiles || []).find(x => x.id === p.id) || p;
+      const fullP = (_pfAllProfiles || []).find(x => x.id === p.id) || p;
       const en = _pfEnriched?.get(p.id);
       const unit = typeof getStaffUnit === 'function' ? getStaffUnit(fullP.ndd_staff_code || '') : '';
       const sem = (allSemesters || []).find(s => s.id === fullP.semester_id);
@@ -1076,7 +1088,7 @@
 
     let text = `📋 Danh sách hồ sơ (${_pfResults.length}):\n\n`;
     _pfResults.forEach((p, i) => {
-      const fullP = (allProfiles || []).find(x => x.id === p.id) || p;
+      const fullP = (_pfAllProfiles || []).find(x => x.id === p.id) || p;
       const en = _pfEnriched?.get(p.id);
       const phase = (PHASE_NAMES[fullP.phase] || fullP.phase || 'CK').substring(0, 3);
       const tool = en?.tools?.size ? [...en.tools].join(', ') : '';
@@ -1094,9 +1106,9 @@
 
   window._pfClearAll = function() {
     Object.assign(_pfState, {
-      semesters: [], unit: null, ndd: [], name: '',
+      semesters: [], unit: null, ndd: [], name: [],
       phase: [], status: [], tvv: [], gvbb: [],
-      tools: [], concept: '', kt: null, gender: [],
+      tools: [], concept: [], kt: null, gender: [],
       birthFrom: '', birthTo: '', tonGiao: [],
       idleFrom: '', idleTo: '',
       chakkiFrom: '', chakkiTo: '', dkCenter: null,
