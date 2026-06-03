@@ -202,6 +202,7 @@
       // Birth year range
       if (s.birthFrom || s.birthTo) {
         const by = parseInt(p.birth_year) || 0;
+        if (!by) return false; // No birth year data → exclude
         if (s.birthFrom && by < parseInt(s.birthFrom)) return false;
         if (s.birthTo && by > parseInt(s.birthTo)) return false;
       }
