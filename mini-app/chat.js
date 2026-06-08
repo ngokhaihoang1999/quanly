@@ -201,28 +201,68 @@ function preprocessChatMessage(msg) {
                     (msg.media_metadata && msg.media_metadata.file_path && msg.media_metadata.file_path.includes('stickers/')) ||
                     (msg.message && msg.message.trim() === '[✨ Sticker]');
 
+  let hasVisualMedia = false;
+  let fileParam = '';
+  let fileIdParam = '';
+  let nameParam = '';
+  let typeParam = '';
+
   if (msg.media_metadata && msg.media_metadata.file_path) {
-    const fileParam = msg.media_metadata.file_path;
-    const nameParam = msg.media_metadata.name || (fileParam.split('/').pop() || 'file');
-    let typeParam = msg.media_metadata.type || '';
+    fileParam = msg.media_metadata.file_path;
+    nameParam = msg.media_metadata.name || (fileParam.split('/').pop() || 'file');
+    typeParam = msg.media_metadata.type || '';
     if (isSticker) {
       typeParam = 'sticker';
       msg.media_metadata.type = 'sticker'; // Ensure it is set in-memory
     }
-    const fileIdParam = msg.media_metadata.file_id ? `&file_id=${msg.media_metadata.file_id}` : '';
-    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}${fileIdParam}&name=${encodeURIComponent(nameParam)}&type=${typeParam}`;
-    
-    const isFallbackLabel = isSticker || 
-                            ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]', '[✨ Sticker]', '[🎬 GIF]'].includes(msg.message?.trim()) || 
-                            (msg.message && msg.message.trim().startsWith('[📄 Tài liệu]'));
-    if (isFallbackLabel) {
-      chatText = mediaUrl;
-    } else {
-      chatText = chatText + '\n' + mediaUrl;
+    fileIdParam = msg.media_metadata.file_id ? `&file_id=${msg.media_metadata.file_id}` : '';
+  } else if (chatText && chatText.startsWith('http')) {
+    const lines = chatText.split('\n');
+    const firstLine = lines[0].trim();
+    if (firstLine.includes('/functions/v1/telegram-bot') || firstLine.includes('/file/bot')) {
+      try {
+        const urlObj = new URL(firstLine.replace(/&amp;/g, '&'));
+        fileParam = urlObj.searchParams.get('file') || '';
+        fileIdParam = urlObj.searchParams.get('file_id') ? `&file_id=${urlObj.searchParams.get('file_id')}` : '';
+        nameParam = urlObj.searchParams.get('name') || '';
+        typeParam = urlObj.searchParams.get('type') || '';
+      } catch (e) {
+        console.warn('Fallback URL parsing in preprocess failed:', e);
+      }
     }
   }
 
-  const isPureMedia = isPureVisualMedia(chatText) || isSticker || (msg.media_metadata && msg.media_metadata.type === 'sticker');
+  if (fileParam || fileIdParam) {
+    if (!nameParam) nameParam = fileParam.split('/').pop() || 'file';
+    if (!typeParam) {
+      const isImg = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(fileParam || nameParam);
+      typeParam = isImg ? 'photo' : 'document';
+    }
+    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}${fileIdParam}&name=${encodeURIComponent(nameParam)}&type=${typeParam}`;
+    
+    let caption = msg.message || '';
+    if (caption.startsWith('http')) {
+      const lines = caption.split('\n');
+      if (lines[0].includes('/functions/v1/telegram-bot') || lines[0].includes('/file/bot')) {
+        caption = lines.slice(1).join('\n');
+      }
+    }
+
+    const isFallbackLabel = isSticker || 
+                            ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]', '[✨ Sticker]', '[🎬 GIF]'].includes(caption.trim()) || 
+                            (caption && caption.trim().startsWith('[📄 Tài liệu]')) ||
+                            caption.trim() === '';
+                            
+    if (isFallbackLabel) {
+      chatText = mediaUrl;
+    } else {
+      chatText = caption;
+    }
+
+    hasVisualMedia = ['photo', 'video', 'gif'].includes(typeParam || 'photo') && !isSticker;
+  }
+
+  const isPureMedia = isPureVisualMedia(chatText) || isSticker || (typeParam === 'sticker');
   const isMediaLink = chatText.includes('/file/bot') || chatText.includes('/functions/v1/telegram-bot') || /\.(jpeg|jpg|gif|png|webp|svg|mp3|wav|m4a|ogg|aac|opus|flac|mp4|webm|mov|m4v|3gp|quicktime)/i.test(chatText) || chatText.includes('imgbb.com') || chatText.includes('postimg.cc');
 
   return {
@@ -235,7 +275,9 @@ function preprocessChatMessage(msg) {
     avatarHtml,
     chatText,
     isPureMedia,
-    isMediaLink
+    isMediaLink,
+    hasVisualMedia,
+    mediaUrl
   };
 }
 
@@ -272,6 +314,8 @@ function addChatMessageToDOM(msg) {
   let bubbleClass = 'chat-message-bubble';
   if (p.isPureMedia) {
     bubbleClass += ' chat-message-bubble--media-only';
+  } else if (p.hasVisualMedia) {
+    bubbleClass += ' chat-message-bubble--has-visual-media';
   }
   if (isMe) {
     bubbleClass += ' chat-message-bubble--me';
@@ -308,6 +352,50 @@ function addChatMessageToDOM(msg) {
   if (p.isPureMedia) {
     messageText = formatChatMessageText(p.chatText, mediaTimeWithEdited, isMe, msg.id, false);
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
+  } else if (p.hasVisualMedia) {
+    const mediaHtml = formatChatMessageText(p.mediaUrl, '', isMe, msg.id, false);
+    messageText = formatChatMessageText(p.chatText);
+
+    const actionsHtml = `
+      <span class="chat-bubble-actions" id="actions_${msg.id}" style="display:none; gap:8px; font-size:9.5px; user-select:none; margin-right:6px;">
+        <span onclick="event.stopPropagation(); startReplyChatMessage('${msg.id}', false)" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">💬 Trả lời</span>
+        ${isMe && !p.isMediaLink ? `<span onclick="event.stopPropagation(); startEditChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">✏️ Sửa</span>` : ''}
+        ${isMe ? `<span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">🗑️ Xoá</span>` : ''}
+      </span>
+    `;
+
+    const metaHtml = `
+      <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+        ${editedHtml}
+        ${actionsHtml}
+        <span class="chat-message-time-val">${timeStr}</span>
+      </span>
+    `;
+
+    if (catIcon) {
+      messageContentHtml = `
+        <div style="display: flex; flex-direction: column; width: 100%;">
+          ${mediaHtml}
+          <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%; padding: 8px 12px 6px 12px; box-sizing: border-box;">
+            <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
+            <div class="chat-message-text" style="flex: 1; display: inline-flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0; max-width: 100%;">
+              <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
+              ${metaHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      messageContentHtml = `
+        <div style="display: flex; flex-direction: column; width: 100%;">
+          ${mediaHtml}
+          <div class="chat-message-bubble-caption-text">
+            <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
+            ${metaHtml}
+          </div>
+        </div>
+      `;
+    }
   } else {
     messageText = formatChatMessageText(p.chatText);
 
@@ -2751,6 +2839,8 @@ function addFloatingChatMessageToDOM(msg) {
   let bubbleClass = 'chat-message-bubble';
   if (p.isPureMedia) {
     bubbleClass += ' chat-message-bubble--media-only';
+  } else if (p.hasVisualMedia) {
+    bubbleClass += ' chat-message-bubble--has-visual-media';
   }
   if (isMe) {
     bubbleClass += ' chat-message-bubble--me';
@@ -2787,6 +2877,48 @@ function addFloatingChatMessageToDOM(msg) {
   if (p.isPureMedia) {
     messageText = formatChatMessageText(p.chatText, mediaTimeWithEdited, isMe, msg.id, true);
     messageContentHtml = `<div class="chat-message-text" style="display:inline-block; line-height:0; vertical-align:middle;">${messageText}</div>`;
+  } else if (p.hasVisualMedia) {
+    const mediaHtml = formatChatMessageText(p.mediaUrl, '', isMe, msg.id, true);
+    messageText = formatChatMessageText(p.chatText);
+    const actionsHtml = `
+      <span class="chat-bubble-actions" id="actions_fl_${msg.id}" style="display:none; gap:8px; font-size:9.5px; user-select:none; margin-right:6px;">
+        <span onclick="event.stopPropagation(); startReplyChatMessage('${msg.id}', true)" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;">💬 Trả lời</span>
+        ${isMe ? `<span onclick="event.stopPropagation(); deleteChatMessage('${msg.id}')" style="cursor:pointer; opacity:0.85; font-weight:700; color:inherit; text-decoration:underline;">🗑️ Xoá</span>` : ''}
+      </span>
+    `;
+
+    const metaHtml = `
+      <span class="chat-message-meta-inline" style="display: inline-flex; align-items: center; gap: 4px; font-size: 9px; margin-left: 8px; margin-top: 4px; user-select: none; line-height: 1; vertical-align: bottom; white-space: nowrap; float: none;">
+        ${editedHtml}
+        ${actionsHtml}
+        <span class="chat-message-time-val">${timeStr}</span>
+      </span>
+    `;
+
+    if (catIcon) {
+      messageContentHtml = `
+        <div style="display: flex; flex-direction: column; width: 100%;">
+          ${mediaHtml}
+          <div class="chat-message-body-with-icon" style="display: flex; gap: 8px; align-items: flex-start; width: 100%; padding: 8px 12px 6px 12px; box-sizing: border-box;">
+            <div class="chat-message-cat-icon chat-message-cat-icon--${msg.category}">${catIcon}</div>
+            <div class="chat-message-text" style="flex: 1; display: inline-flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; word-break: break-word; overflow-wrap: break-word; min-width: 0; max-width: 100%;">
+              <span style="flex: 1; min-width: 0; white-space: pre-wrap; padding-top: 2px;">${messageText}</span>
+              ${metaHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      messageContentHtml = `
+        <div style="display: flex; flex-direction: column; width: 100%;">
+          ${mediaHtml}
+          <div class="chat-message-bubble-caption-text">
+            <span style="flex: 1; min-width: 0; white-space: pre-wrap;">${messageText}</span>
+            ${metaHtml}
+          </div>
+        </div>
+      `;
+    }
   } else {
     messageText = formatChatMessageText(p.chatText);
     const actionsHtml = `
@@ -2961,6 +3093,12 @@ async function uploadFloatingChatFile(input) {
       const catSelect = document.getElementById('cjFloatingChatCategory');
       const category = catSelect ? catSelect.value : 'general';
       
+      const fileType = file.type || '';
+      let mediaType = 'document';
+      if (fileType.startsWith('image/')) mediaType = 'photo';
+      else if (fileType.startsWith('video/')) mediaType = 'video';
+      else if (fileType.startsWith('audio/')) mediaType = 'voice';
+
       const dbRes = await sbFetch('/rest/v1/profile_chats', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
@@ -2968,7 +3106,13 @@ async function uploadFloatingChatFile(input) {
           profile_id: profileId,
           sender_code: sender,
           message: data.url,
-          category: category
+          category: category,
+          media_metadata: {
+            type: mediaType,
+            file_path: data.file_path,
+            file_id: data.file_id,
+            name: file.name
+          }
         })
       });
       
@@ -3430,6 +3574,7 @@ async function stopAndSendVoiceRecording() {
       const mediaMetadata = {
         type: 'voice',
         file_path: data.file_path,
+        file_id: data.file_id,
         name: fileName,
         duration: recordingSecs
       };
@@ -3634,8 +3779,17 @@ async function stopAndSendFloatingVoiceRecording() {
       } else {
         finalUrl += `?dur=${recordingSecs}`;
       }
+
+      const mediaMetadata = {
+        type: 'voice',
+        file_path: data.file_path,
+        file_id: data.file_id,
+        name: fileName,
+        duration: recordingSecs
+      };
+
       // Send the secure bot proxy url directly as message content to floating chat
-      await sendFloatingProxyImageMessage(finalUrl);
+      await sendFloatingProxyImageMessage(finalUrl, mediaMetadata);
       showToast('✅ Đã gửi tin nhắn thoại');
     } else {
       throw new Error('No URL returned from bot server');
@@ -3649,7 +3803,7 @@ async function stopAndSendFloatingVoiceRecording() {
 }
 
 // Post a proxy file URL to floating chat
-async function sendFloatingProxyImageMessage(imageUrl) {
+async function sendFloatingProxyImageMessage(imageUrl, mediaMetadata = null) {
   const profileId = window._activeFloatingProfileId;
   const sender = getEffectiveStaffCode();
   const catSelect = document.getElementById('cjFloatingChatCategory');
@@ -3663,7 +3817,8 @@ async function sendFloatingProxyImageMessage(imageUrl) {
         profile_id: profileId,
         sender_code: sender,
         message: imageUrl,
-        category: category
+        category: category,
+        media_metadata: mediaMetadata
       })
     });
     
@@ -3924,7 +4079,13 @@ async function uploadChatClipboardImageDirectly(file, profileId, inputId, catSel
             profile_id: profileId,
             sender_code: sender,
             message: data.url,
-            category: category
+            category: category,
+            media_metadata: {
+              type: 'photo',
+              file_path: data.file_path,
+              file_id: data.file_id,
+              name: file.name || 'clipboard_image.png'
+            }
           })
         });
 
@@ -3939,6 +4100,14 @@ async function uploadChatClipboardImageDirectly(file, profileId, inputId, catSel
       } else {
         // Stage in our temp preview box
         showTempMediaPreview(data.url, file.name || 'clipboard_image.png');
+        
+        window._tempUploadMediaMetadata = {
+          type: 'photo',
+          file_path: data.file_path,
+          file_id: data.file_id,
+          name: file.name || 'clipboard_image.png'
+        };
+        
         showToast('✅ Đã tải ảnh clipboard lên bộ nhớ tạm chat');
       }
     }

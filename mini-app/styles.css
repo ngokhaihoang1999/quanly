@@ -3625,6 +3625,63 @@ body.tour-active #cjFloatingChatWindow {
   100% { filter: none; box-shadow: none; }
 }
 
+/* Visual Media chat bubble style adjustments (Telegram bubble style) */
+.chat-message-bubble--has-visual-media {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remove gaps and interior borders/radii from visual wrappers in flush bubbles */
+.chat-message-bubble--has-visual-media .chat-image-wrap,
+.chat-message-bubble--has-visual-media .chat-gif-wrap,
+.chat-message-bubble--has-visual-media .chat-video-wrap {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-shadow: none !important;
+}
+
+.chat-message-bubble--has-visual-media .chat-image-wrap img,
+.chat-message-bubble--has-visual-media .chat-gif-wrap video,
+.chat-message-bubble--has-visual-media .chat-video-wrap video {
+  border-radius: 0 !important;
+  width: 100% !important;
+  max-height: 280px !important;
+}
+
+/* Custom layout for caption text below visual media */
+.chat-message-bubble-caption-text {
+  padding: 8px 12px 6px 12px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chat-message-bubble-caption-text > span {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+}
+
+/* Reply preview margin adjustment inside flush bubbles */
+.chat-message-bubble--has-visual-media .chat-reply-bubble-preview {
+  margin: 6px 10px 4px 10px !important;
+}
+
+/* Category badge alignment inside flush bubbles */
+.chat-message-bubble--has-visual-media .chat-cat-badge {
+  margin: 6px 12px 4px 12px;
+}
+
+
 
 
 

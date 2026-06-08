@@ -344,7 +344,16 @@ Deno.serve(async (req) => {
           }
         } else if (payload.type === 'app_message_updated') {
           if (tgMsgId) {
-            const hasMedia = record.media_metadata && record.media_metadata.file_path;
+            let hasMedia = record.media_metadata && record.media_metadata.file_path;
+            let messageText = record.message || '';
+            
+            if (!hasMedia && messageText) {
+              const lines = messageText.split('\n');
+              const firstLine = lines[0].trim();
+              if (firstLine.includes('/functions/v1/telegram-bot')) {
+                hasMedia = true;
+              }
+            }
             
             if (hasMedia) {
               // Parse caption (exclude the URL at the beginning)
@@ -439,7 +448,40 @@ Deno.serve(async (req) => {
           }
         } else if (payload.type === 'app_message' || payload.type === 'app_message_inserted') {
           // INSERT (or fallback 'app_message' which is insert)
-          const hasMedia = record.media_metadata && record.media_metadata.file_path;
+          let hasMedia = record.media_metadata && record.media_metadata.file_path;
+          let media = record.media_metadata;
+          let messageText = record.message || '';
+
+          if (!hasMedia && messageText) {
+            // Try to extract from the URL if messageText starts with the telegram-bot proxy URL
+            const lines = messageText.split('\n');
+            const firstLine = lines[0].trim();
+            if (firstLine.includes('/functions/v1/telegram-bot')) {
+              try {
+                const urlObj = new URL(firstLine);
+                const file_path = urlObj.searchParams.get('file');
+                const file_id = urlObj.searchParams.get('file_id');
+                if (file_path || file_id) {
+                  hasMedia = true;
+                  const name = urlObj.searchParams.get('name') || 'file';
+                  let type = urlObj.searchParams.get('type') || '';
+                  if (!type) {
+                    const isImg = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(file_path || name);
+                    type = isImg ? 'photo' : 'document';
+                  }
+                  media = {
+                    file_path,
+                    file_id,
+                    name,
+                    type
+                  };
+                  messageText = lines.slice(1).join('\n');
+                }
+              } catch (e) {
+                console.error("Failed to parse message proxy URL:", e);
+              }
+            }
+          }
           
           let tgRes;
           
@@ -457,18 +499,22 @@ Deno.serve(async (req) => {
           }
           
           if (hasMedia) {
-            const media = record.media_metadata;
             const filePath = media.file_path;
             const name = media.name || 'file';
             const type = media.type || 'photo';
             
             const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}&name=${encodeURIComponent(name)}`;
+            const mediaValue = media.file_id || proxyUrl;
             
             let captionText = '';
             if (messageText) {
               if (messageText.startsWith('http')) {
                 const lines = messageText.split('\n');
-                captionText = lines.slice(1).join('\n');
+                if (lines[0].includes('/functions/v1/telegram-bot') || lines[0].includes('/file/bot')) {
+                  captionText = lines.slice(1).join('\n');
+                } else {
+                  captionText = messageText;
+                }
               } else {
                 captionText = messageText;
               }
@@ -497,7 +543,7 @@ Deno.serve(async (req) => {
 
             const bodyPayload: any = {
               chat_id: fg.telegram_group_id,
-              [telegramField]: proxyUrl,
+              [telegramField]: mediaValue,
               caption: captionToSend,
               parse_mode: 'HTML'
             };
