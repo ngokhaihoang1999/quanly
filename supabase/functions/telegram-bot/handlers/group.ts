@@ -207,6 +207,7 @@ export async function handleGroupChat(update: any) {
             if (filePath) {
               mediaMetadata = {
                 type: mediaType,
+                file_id: fileId,
                 file_path: filePath,
                 caption: msg.caption || ''
               };

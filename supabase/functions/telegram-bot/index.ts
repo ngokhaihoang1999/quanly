@@ -21,6 +21,10 @@ import { handleGroupChat } from "./handlers/group.ts";
 import { handleCallback } from "./handlers/callbacks.ts";
 import { handlePrivateChat } from "./handlers/private.ts";
 
+// Simple in-memory cache for resolved file_paths (TTL: 50 minutes)
+const filePathCache = new Map<string, { filePath: string; expiresAt: number }>();
+
+
 // Helper to merge Telegram reactions into Supabase reactions JSONB
 function mergeReactions(existingReactions: any, staffCode: string, newTelegramReactions: any[]) {
   const reactions = typeof existingReactions === 'object' && existingReactions !== null 
@@ -109,28 +113,82 @@ Deno.serve(async (req) => {
     // ── Handle GET requests for file proxying ──
     if (req.method === 'GET') {
       const url = new URL(req.url);
-      const filePath = url.searchParams.get('file');
+      const filePathParam = url.searchParams.get('file');
+      const fileId = url.searchParams.get('file_id');
       
-      if (!filePath) {
-        return new Response("Missing 'file' parameter", { status: 400 });
+      if (!filePathParam && !fileId) {
+        return new Response("Missing 'file' or 'file_id' parameter", { status: 400 });
       }
 
       if (!BOT_TOKEN) {
         return new Response("Bot token not configured on server", { status: 500 });
       }
 
-      // Build the Telegram file URL
-      const telegramFileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
-      
-      // Fetch the file from Telegram
-      const tgRes = await fetch(telegramFileUrl);
-      if (!tgRes.ok) {
-        return new Response(`Error fetching file from Telegram: ${tgRes.statusText}`, { status: tgRes.status });
+      let finalFilePath = filePathParam;
+
+      // Check memory cache first if we have a file_id
+      if (fileId) {
+        const cached = filePathCache.get(fileId);
+        if (cached && cached.expiresAt > Date.now()) {
+          finalFilePath = cached.filePath;
+        }
       }
 
-      const contentType = tgRes.headers.get("content-type") || "application/octet-stream";
+      let fetchedFromTg = false;
+      let tgResponse: Response | null = null;
+
+      if (finalFilePath) {
+        // Build the Telegram file URL
+        const telegramFileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${finalFilePath}`;
+        
+        // Fetch the file from Telegram
+        const tgRes = await fetch(telegramFileUrl);
+        if (tgRes.ok) {
+          tgResponse = tgRes;
+          fetchedFromTg = true;
+          // Store/refresh in memory cache if we have a fileId
+          if (fileId) {
+            filePathCache.set(fileId, {
+              filePath: finalFilePath,
+              expiresAt: Date.now() + 50 * 60 * 1000 // 50 mins
+            });
+          }
+        }
+      }
+
+      // If the direct fetch failed or wasn't available, and we have file_id, resolve a new path
+      if (!fetchedFromTg && fileId) {
+        try {
+          const getFileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+          if (getFileRes.ok) {
+            const getFileData = await getFileRes.json();
+            const newFilePath = getFileData.result?.file_path;
+            if (newFilePath) {
+              const telegramFileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${newFilePath}`;
+              const tgRes = await fetch(telegramFileUrl);
+              if (tgRes.ok) {
+                tgResponse = tgRes;
+                fetchedFromTg = true;
+                // Cache the newly retrieved file_path
+                filePathCache.set(fileId, {
+                  filePath: newFilePath,
+                  expiresAt: Date.now() + 50 * 60 * 1000 // 50 mins
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`Error resolving fileId ${fileId}:`, e);
+        }
+      }
+
+      if (!fetchedFromTg || !tgResponse) {
+        return new Response(`Error fetching file: Not found or expired`, { status: 404 });
+      }
+
+      const contentType = tgResponse.headers.get("content-type") || "application/octet-stream";
       
-      return new Response(tgRes.body, {
+      return new Response(tgResponse.body, {
         status: 200,
         headers: {
           "Content-Type": contentType,
@@ -221,9 +279,9 @@ Deno.serve(async (req) => {
           }).catch(err => console.error("deleteMessage error:", err));
         }
 
-        const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${filePath}&name=${encodeURIComponent(file.name)}`;
+        const proxyUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file_id=${fileId}&file=${filePath}&name=${encodeURIComponent(file.name)}`;
         
-        return new Response(JSON.stringify({ file_path: filePath, url: proxyUrl }), {
+        return new Response(JSON.stringify({ file_path: filePath, file_id: fileId, url: proxyUrl }), {
           status: 200,
           headers: {
             "Content-Type": "application/json",

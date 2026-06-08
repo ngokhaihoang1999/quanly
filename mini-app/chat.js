@@ -209,7 +209,8 @@ function preprocessChatMessage(msg) {
       typeParam = 'sticker';
       msg.media_metadata.type = 'sticker'; // Ensure it is set in-memory
     }
-    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}&name=${encodeURIComponent(nameParam)}&type=${typeParam}`;
+    const fileIdParam = msg.media_metadata.file_id ? `&file_id=${msg.media_metadata.file_id}` : '';
+    mediaUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?file=${fileParam}${fileIdParam}&name=${encodeURIComponent(nameParam)}&type=${typeParam}`;
     
     const isFallbackLabel = isSticker || 
                             ['[📷 Ảnh]', '[🎥 Video]', '[🎙️ Voice Note]', '[✨ Sticker]', '[🎬 GIF]'].includes(msg.message?.trim()) || 
@@ -1747,6 +1748,7 @@ async function uploadChatImage(input) {
       window._tempUploadMediaMetadata = {
         type: mediaType,
         file_path: data.file_path,
+        file_id: data.file_id,
         name: file.name
       };
       
