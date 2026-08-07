@@ -98,12 +98,13 @@ Deno.serve(async (req) => {
     }
 
     // CASE 2: Text-only request (Mindmap, Chat Lacie, AI Parse Text)
-    // Primary: DeepSeek-V3
+    // Primary: DeepSeek-V4 Flash / DeepSeek Chat
     let responseData = null;
     let deepseekSuccess = false;
 
-    // Determine target DeepSeek model (valid API model is 'deepseek-chat')
-    const targetModel = 'deepseek-chat';
+    // Support requested model if specified (e.g. 'deepseek-v4-flash', 'deepseek-chat'), default to 'deepseek-chat'
+    const requestedModel = body.model || 'deepseek-chat';
+    const targetModel = (requestedModel.startsWith('deepseek') || requestedModel.startsWith('gpt')) ? requestedModel : 'deepseek-chat';
 
     if (DEEPSEEK_API_KEY) {
       try {
@@ -129,9 +130,32 @@ Deno.serve(async (req) => {
         } else {
           const errText = await deepseekRes.text();
           console.warn(`[AI Proxy] DeepSeek model ${targetModel} failed with status:`, deepseekRes.status, "Body:", errText);
+
+          // If custom model failed and it wasn't 'deepseek-chat', fallback to 'deepseek-chat'
+          if (targetModel !== 'deepseek-chat') {
+            console.log(`[AI Proxy] Retrying DeepSeek with fallback model: deepseek-chat...`);
+            const fallbackRes = await fetch('https://api.deepseek.com/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages,
+                temperature: safeTemp,
+                max_tokens: safeMaxTokens,
+              }),
+            });
+            if (fallbackRes.ok) {
+              responseData = await fallbackRes.json();
+              deepseekSuccess = true;
+              console.log(`[AI Proxy] DeepSeek fallback model deepseek-chat response success!`);
+            }
+          }
         }
       } catch (err) {
-        console.error(`[AI Proxy] DeepSeek model ${targetModel} fetch exception:`, err);
+        console.error(`[AI Proxy] DeepSeek model fetch exception:`, err);
       }
     } else {
       console.log("[AI Proxy] DEEPSEEK_API_KEY is not configured. Skipping...");

@@ -360,8 +360,9 @@ function openGuideCenter() {
     <div class="modal" style="max-height:85vh; overflow-y:auto;">
       <div class="modal-handle"></div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <button onclick="closeModal('guideCenterModal')" style="background:var(--surface2); border:1px solid var(--border); color:var(--accent); font-size:12px; cursor:pointer; font-weight:700; padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:4px;">← Quay lại</button>
         <div class="modal-title" style="margin:0; font-size:16px;">❓ Cẩm nang hướng dẫn</div>
-        <button onclick="closeModal('guideCenterModal')" style="background:none; border:none; color:var(--text2); font-size:16px; cursor:pointer; font-weight:bold; padding:4px;">✕</button>
+        <div style="width:70px;"></div>
       </div>
       
       <div class="guide-center-container">
