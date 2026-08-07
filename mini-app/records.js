@@ -134,14 +134,17 @@ async function loadJourney(profileId, currentPhase) {
 
 
   try {
-    const [sessRes, recRes, hjRes] = await Promise.all([
+    const [sessRes, recRes, hjRes, fhRes] = await Promise.all([
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`)
+      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`),
+      sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`)
     ]);
     const sessions = await sessRes.json();
     const recs = await recRes.json();
     const hapjas = await hjRes.json();
+    const fhs = await fhRes.json();
+    const fhData = (Array.isArray(fhs) && fhs[0]) ? (fhs[0].data || {}) : {};
 
 
     if (cp === 'tu_van_hinh') {
@@ -194,8 +197,9 @@ async function loadJourney(profileId, currentPhase) {
 
     // 1. Chakki — ALWAYS at bottom (oldest anchor)
     const currentP = allProfiles.find(x => x.id === profileId);
-    const t2Chakki = currentP?.t2_values?.t2_ngay_chakki;
-    const hjChakki = hapjas[0]?.data?.ngay_chakki;
+    const t2Chakki = fhData.t2_ngay_chakki || currentP?.t2_values?.t2_ngay_chakki;
+    const hjRecord = recs.find(r => r.record_type === 'hapja');
+    const hjChakki = hjRecord?.data?.ngay_chakki || hapjas[0]?.data?.ngay_chakki;
     const chakkiDate = t2Chakki || hjChakki || hapjas[0]?.created_at || currentP?.created_at;
     if (chakkiDate) {
       events.push({
