@@ -89,7 +89,7 @@ const AI_PARSE_PROMPTS = {
 
   hapja: AI_PARSE_PREFIX + `\n\nTrích xuất thông tin cho phiếu Check Hapja (thông tin ban đầu về trái quả mới) thành JSON. Chỉ điền field có dữ liệu:
 {
-  "hj_ndd": "Tên hoặc mã NDD (Người dẫn dắt). Ví dụ: Maize",
+  "hj_ndd": "Tên hoặc mã NDD (Người dẫn dắt). Ví dụ: TĐ A",
   "hj_ngay_chakki": "Ngày chakki (Định dạng YYYY-MM-DD. LƯU Ý: Nếu có năm Shin, quy đổi sang Dương lịch: Năm Dương Lịch = Năm Shin + 1983. Ví dụ: Shin 43.05.26 -> 2026-05-26)",
   "hj_concept": "concept/lý do tiếp cận",
   "hj_full_name": "họ và tên đầy đủ",

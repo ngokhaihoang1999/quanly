@@ -728,13 +728,13 @@ function openPersonalizationPanel() {
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Họ và tên TĐ <span style="color:var(--text3);font-weight:400;">(hiển thị khi xuất thẻ HV, báo cáo...)</span></label>
-            <input type="text" id="prof_full_name" value="${(myStaff?.full_name||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Ngô Khải Hoàng, Nguyễn Văn A..."
+            <input type="text" id="prof_full_name" value="${(myStaff?.full_name||'').replace(/"/g,'&quot;')}" placeholder="Nhập họ và tên đầy đủ..."
               oninput="const v=this.value.trim();document.getElementById('prof_fullname_header').textContent=v||myStaff?.staff_code||'---';"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="60" />
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã JD)</span></label>
-            <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Khải, Phi, Hoa..."
+            <input type="text" id="prof_nickname" value="${(myStaff?.nickname||'').replace(/"/g,'&quot;')}" placeholder="Nhập nickname..."
               oninput="const v=this.value.trim();document.getElementById('nickname_preview').textContent=v||'(chưa đặt)';"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="40" />
             <div style="font-size:10px;color:var(--text3);margin-top:3px;">Tên viết tắt: <b>${myStaff?.staff_code?.split('-')[1] || myStaff?.staff_code||''}</b> &nbsp;·&nbsp; Nickname: <b id="nickname_preview">${myStaff?.nickname||'(chưa đặt)'}</b></div>
@@ -782,7 +782,7 @@ function openPersonalizationPanel() {
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">📋 Tên/Bộ/KV/SĐT (Thẻ HV)</label>
-            <input type="text" id="prof_sinka_info" value="${(myStaff?.sinka_info||'').replace(/"/g,'&quot;')}" placeholder="VD: Nguyễn Văn A / Bộ 1 / Q.1 / 0901234567" maxlength="150"
+            <input type="text" id="prof_sinka_info" value="${(myStaff?.sinka_info||'').replace(/"/g,'&quot;')}" placeholder="Họ tên / Bộ / KV / SĐT..." maxlength="150"
               style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" />
           </div>
           <div>
