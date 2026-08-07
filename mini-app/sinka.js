@@ -261,7 +261,7 @@ async function _autoFillSinka(profileId, p) {
   // Date — Shin format (43.04.13)
   const today = new Date();
   const shinYear = today.getFullYear() - 1983;
-  const shinDateStr = `${shinYear}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+  const shinDateStr = `Shin ${shinYear}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
   fill('sk_ngay_ghi_chep', shinDateStr);
 
   // Section 1: NDD

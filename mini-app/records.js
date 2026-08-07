@@ -193,32 +193,77 @@ async function loadJourney(profileId, currentPhase) {
     const matchedBtvnIds = new Set();
 
     // 1. Chakki — ALWAYS at bottom (oldest anchor)
-    if (hapjas.length > 0) {
-      const hjData = hapjas[0].data || {};
-      const chakkiStr = hjData.ngay_chakki;
-      const chakkiDate = chakkiStr || hapjas[0].created_at;
-      // sortDate = 0 forces Chakki to always be last in descending sort
-      events.push({ date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)', sortDate: 0, deletable: false, isMajor: true, _type: 'chakki' });
+    const currentP = allProfiles.find(x => x.id === profileId);
+    const t2Chakki = currentP?.t2_values?.t2_ngay_chakki;
+    const hjChakki = hapjas[0]?.data?.ngay_chakki;
+    const chakkiDate = t2Chakki || hjChakki || hapjas[0]?.created_at || currentP?.created_at;
+    if (chakkiDate) {
+      events.push({
+        date: chakkiDate, icon: '🍎', text: 'Ngày Chakki (Hapja)',
+        sortDate: 0, deletable: false, isMajor: true, _type: 'chakki'
+      });
     }
 
-    // 2. Sessions (Chốt TV) — major events, clickable for editing
+    // 2. Pair Sessions (Chốt TV) and tu_van Records (Báo cáo TV) on the SAME ROW
+    const tuVanRecords = recs.filter(r => r.record_type === 'tu_van');
+    const matchedTuVanIds = new Set();
+
     sessions.forEach(s => {
+      const sessNum = Number(s.session_number);
+      const sessDate = s.scheduled_at || s.created_at;
+      const sSortDate = sessDate ? new Date(sessDate).getTime() : 0;
+
+      // Find matching tu_van record for this session number
+      const matchingTuVan = tuVanRecords.find(r => Number(r.content?.lan_thu) === sessNum);
+      let tuVanDate = null;
+      if (matchingTuVan) {
+        matchedTuVanIds.add(matchingTuVan.id);
+        tuVanDate = matchingTuVan.content?.report_date ? matchingTuVan.content.report_date + 'T12:00:00' : matchingTuVan.created_at;
+      }
+
+      const effectiveSortDate = sSortDate || (tuVanDate ? new Date(tuVanDate).getTime() : 0);
+
       events.push({
-        date: s.created_at, icon: '📅',
-        text: `Chốt TV lần ${s.session_number}${s.tool ? ' ('+s.tool+')' : ''}`,
-        sortDate: new Date(s.created_at).getTime(),
-        deletable: false, _type: 'session', _id: s.id, _num: s.session_number,
-        _session: s, isMajor: true
+        date: sessDate || tuVanDate,
+        sortDate: effectiveSortDate,
+        _type: 'paired_tv',
+        _session: s,
+        _sessionNum: sessNum,
+        _sessionDate: sessDate,
+        _tuVanRecord: matchingTuVan,
+        _tuVanDate: tuVanDate,
+        isMajor: false,
+        deletable: false
       });
     });
 
-    // 3. Records (BC TV, BC BB, Chốt BB, Chốt Center)
+    // Orphan tu_van records without matching session
+    tuVanRecords.forEach(r => {
+      if (matchedTuVanIds.has(r.id)) return;
+      const lanThu = r.content?.lan_thu ? Number(r.content.lan_thu) : null;
+      const _eventDate = r.content?.report_date ? r.content.report_date + 'T12:00:00' : r.created_at;
+      events.push({
+        date: _eventDate,
+        sortDate: new Date(_eventDate).getTime(),
+        _type: 'paired_tv',
+        _session: null,
+        _sessionNum: lanThu,
+        _sessionDate: null,
+        _tuVanRecord: r,
+        _tuVanDate: _eventDate,
+        isMajor: false,
+        deletable: false
+      });
+    });
+
+    // 3. Other Records (BC BB, Chốt BB, Chốt Center, etc.)
     recs.forEach(r => {
+      if (r.record_type === 'tu_van') return; // Handled in paired_tv above!
+
       let icon, text, isMajor = false;
       let _buoiThu = null;
 
-      if      (r.record_type === 'tu_van')      { const n=r.content?.lan_thu||'';  icon='📝'; text=`Báo cáo TV${n?' lần '+n:''}`; }
-      else if (r.record_type === 'bien_ban')    { 
+      if      (r.record_type === 'bien_ban')    { 
         _buoiThu = r.content?.buoi_thu;
         const _hasKT = r.content?.has_kt_content;
         icon='📋'; text=`Báo cáo BB${_buoiThu?' buổi '+_buoiThu:''}${_hasKT ? ' 📖' : ''}`;
@@ -268,12 +313,11 @@ async function loadJourney(profileId, currentPhase) {
         if (btvnMatch) {
           hasBTVN = true;
           btvnRecordId = btvnMatch.id;
-          btvnDeletable = true; // BTVN is always deletable!
+          btvnDeletable = true;
           matchedBtvnIds.add(btvnMatch.id);
         }
       }
 
-      // Use report_date from content when available (user-customized date), fall back to created_at
       const _eventDate = r.content?.report_date ? r.content.report_date + 'T12:00:00' : r.created_at;
       events.push({
         date: _eventDate, icon, text, sortDate: new Date(_eventDate).getTime(),
@@ -302,7 +346,7 @@ async function loadJourney(profileId, currentPhase) {
         ktRecordId: null,
         hasBDB: false,
         bdbRecordId: null,
-        hasBTVN: true, // Render as BTVN card
+        hasBTVN: true,
         btvnRecordId: b.id,
         btvnDeletable: true
       });
@@ -311,7 +355,6 @@ async function loadJourney(profileId, currentPhase) {
     // Sort descending: newest (top) → oldest (bottom)
     events.sort((a,b) => b.sortDate - a.sortDate);
 
-    // No separate KT events needed — KT is annotated on the matching bien_ban
     const finalEvents = [...events];
 
     // ── Determine which SINGLE event gets the 🗑 delete button ──
@@ -322,26 +365,20 @@ async function loadJourney(profileId, currentPhase) {
         }
       }
     } else if (cp === 'tu_van') {
-      let found = false;
       for (let i = 0; i < finalEvents.length; i++) {
         if (finalEvents[i]._type === 'record' && finalEvents[i]._rtype === 'bien_ban') {
-          finalEvents[i].deletable = true; found = true; break;
+          finalEvents[i].deletable = true; break;
         }
-      }
-      if (!found) {
-        // Only allow deleting Lập Group (chot_bb record) if no bien_ban exists but we wouldn't show it here anyway, 
-        // we handle Lập group via Undo Last Phase Change!
       }
     } else if (cp === 'tu_van_hinh' || cp === 'chakki') {
-      let found = false;
       for (let i = 0; i < finalEvents.length; i++) {
-        if (finalEvents[i]._type === 'record' && finalEvents[i]._rtype === 'tu_van') {
-          finalEvents[i].deletable = true; found = true; break;
-        }
-      }
-      if (!found) {
-        for (let i = 0; i < finalEvents.length; i++) {
-          if (finalEvents[i]._type === 'session') { finalEvents[i].deletable = true; break; }
+        if (finalEvents[i]._type === 'paired_tv') {
+          if (finalEvents[i]._tuVanRecord) {
+            finalEvents[i].tuVanDeletable = true;
+          } else if (finalEvents[i]._session) {
+            finalEvents[i].sessionDeletable = true;
+          }
+          break;
         }
       }
     }
@@ -362,7 +399,6 @@ async function loadJourney(profileId, currentPhase) {
         </div>
       `;
 
-      // Helper function to render a BTVN card in the 3rd column
       const renderBtvnCard = (btvnId, dateStr) => {
         if (!btvnId) return '';
         return `
@@ -395,18 +431,50 @@ async function loadJourney(profileId, currentPhase) {
           ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
           : '';
 
-        // Click-to-view for report records (read-only view)
         const viewAttr = (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban'))
           ? `onclick="viewRecord('${e._id}','${e._rtype}')" style="cursor:pointer;"`
           : '';
 
-        // Edit button for report records (always shown, not just when deletable)
         let editBtn = '';
         if (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban')) {
           editBtn = `<button onclick="event.stopPropagation();editRecord('${e._id}','${e._rtype}')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>`;
         }
 
-        if (e.hasKT || e.hasBDB) {
+        if (e._type === 'paired_tv') {
+          // ── PAIRED ROW: Chốt TV (left) + Báo cáo TV (right) ──
+          const sDateStr = e._sessionDate ? shinDate(e._sessionDate) : '';
+          const rDateStr = e._tuVanDate ? shinDate(e._tuVanDate) : '';
+
+          const sessEditBtn = e._session ? `<button onclick="event.stopPropagation();editSession('${e._session.id}')" title="Chỉnh sửa Chốt TV" class="tl-edit-btn">✏️</button>` : '';
+          const sessDelBtn = e.sessionDeletable ? `<button onclick="event.stopPropagation();deleteEventSession('${e._session.id}',${e._sessionNum})" title="Xóa Chốt TV" class="tl-del-btn">🗑</button>` : '';
+
+          const rEditBtn = e._tuVanRecord ? `<button onclick="event.stopPropagation();editRecord('${e._tuVanRecord.id}','tu_van')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>` : '';
+          const rDelBtn = e.tuVanDeletable ? `<button onclick="event.stopPropagation();deleteEventRecord('${e._tuVanRecord.id}','tu_van')" title="Xóa báo cáo" class="tl-del-btn">🗑</button>` : '';
+
+          html += `<div class="tl-item tl-paired-tv" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+            <div class="tl-left"${e._session ? ` onclick="editSession('${e._session.id}')" style="cursor:pointer;"` : ''}>
+              ${e._session ? `
+                <span class="tl-icon">📅</span>
+                <div class="tl-left-info">
+                  <span class="tl-label">Chốt TV lần ${e._sessionNum}${e._session.tool ? ' ('+e._session.tool+')' : ''}</span>
+                  ${sDateStr ? `<span class="tl-date">${sDateStr}</span>` : ''}
+                </div>
+                <div class="tl-btn-group">${sessEditBtn}${sessDelBtn}</div>
+              ` : ''}
+            </div>
+            <div class="tl-right${e._tuVanRecord ? ' tl-clickable' : ''}" ${e._tuVanRecord ? `onclick="viewRecord('${e._tuVanRecord.id}','tu_van')" style="cursor:pointer;"` : ''}>
+              ${e._tuVanRecord ? `
+                <span class="tl-icon" style="flex-shrink:0">📝</span>
+                <div class="tl-right-info">
+                  <span class="tl-label">Báo cáo TV${e._sessionNum ? ' lần '+e._sessionNum : ''}</span>
+                  ${rDateStr ? `<span class="tl-date">${rDateStr}</span>` : ''}
+                </div>
+                <div class="tl-btn-group">${rEditBtn}${rDelBtn}</div>
+              ` : ''}
+            </div>
+            <div class="tl-btvn"></div>
+          </div>`;
+        } else if (e.hasKT || e.hasBDB) {
           // ── SPLIT ROW: milestone(s) left + BB report middle + BTVN right ──
           let leftHtml = '';
           if (e.hasKT) {
@@ -933,17 +1001,21 @@ async function saveScheduleTV() {
   try {
     if (editingSessionId) {
       // UPDATE existing session
-      await sbFetch(`/rest/v1/consultation_sessions?id=eq.${editingSessionId}`, { method:'PATCH', body: JSON.stringify({
+      const patchData = {
         session_number: num, tool,
         scheduled_at: dt || null, tvv_staff_code: tvv || null
-      })});
+      };
+      if (dt) patchData.created_at = dt;
+      await sbFetch(`/rest/v1/consultation_sessions?id=eq.${editingSessionId}`, { method:'PATCH', body: JSON.stringify(patchData)});
     } else {
       // CREATE new session
-      await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify({
+      const postData = {
         profile_id: currentProfileId, session_number: num, tool,
         scheduled_at: dt || null, tvv_staff_code: tvv || null,
         created_by: getEffectiveStaffCode()
-      })});
+      };
+      if (dt) postData.created_at = dt;
+      await sbFetch('/rest/v1/consultation_sessions', { method:'POST', body: JSON.stringify(postData)});
 
       const p = allProfiles.find(x => x.id === currentProfileId);
       if (num > 1 && p && (p.phase === 'new' || p.phase === 'chakki' || !p.phase)) {
@@ -1000,6 +1072,9 @@ async function saveScheduleTV() {
 
     editingSessionId = null;
     await _refreshCurrentProfile();
+    if (typeof loadJourney === 'function' && currentProfileId) {
+      await loadJourney(currentProfileId);
+    }
   } catch(e) {
     showToast('❌ Lỗi: ' + (e.message || 'Hệ thống bận'));
     console.error('saveScheduleTV:', e);

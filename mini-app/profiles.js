@@ -763,6 +763,26 @@ async function saveInfoSheet() {
       filterProfiles();
     }
 
+    // 5. Update local t2_values & sync Ngày Chakki with Hapja record & Timeline
+    const idx = allProfiles.findIndex(x => x.id === currentProfileId);
+    if (idx >= 0) {
+      if (!allProfiles[idx].t2_values) allProfiles[idx].t2_values = {};
+      Object.assign(allProfiles[idx].t2_values, data);
+    }
+    if (data.t2_ngay_chakki) {
+      try {
+        const hjRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.hapja&select=id,data`);
+        const hjRows = await hjRes.json();
+        if (hjRows && hjRows.length > 0) {
+          const hjObj = hjRows[0];
+          const hjData = hjObj.data || {};
+          hjData.ngay_chakki = data.t2_ngay_chakki;
+          await sbFetch(`/rest/v1/records?id=eq.${hjObj.id}`, { method: 'PATCH', body: JSON.stringify({ data: hjData }) });
+        }
+      } catch(e) {}
+      if (typeof loadJourney === 'function') loadJourney(currentProfileId);
+    }
+
     showToast('✅ Đã lưu Phiếu Thông tin!');
     if (typeof DirtyFormGuard !== 'undefined') DirtyFormGuard.snapshot('thongTinTab');
     // Auto-sync form changes to Google Sheets
@@ -779,8 +799,21 @@ function copyInfoSheet() {
   // Get current semester label
   const semLabel = (typeof currentSemesterId !== 'undefined' && currentSemesterId && typeof allSemesters !== 'undefined')
     ? (allSemesters.find(s => s.id === currentSemesterId)?.name || '') : '';
-  // Format date for copy
-  const fmtDate = val => { if (!val) return ''; try { const d = new Date(val); return d.toLocaleDateString('vi-VN'); } catch { return val; } };
+  // Format date for copy — DD.MM.YYYY or Shin XX.MM.DD
+  const fmtDate = val => {
+    if (!val) return '';
+    if (typeof val === 'string' && val.startsWith('Shin')) return val;
+    const m = String(val).match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    if (m) {
+      return `${String(m[3]).padStart(2, '0')}.${String(m[2]).padStart(2, '0')}.${m[1]}`;
+    }
+    try {
+      const d = new Date(val);
+      if (isNaN(d)) return String(val);
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+    } catch { return String(val); }
+  };
   
   const fields = [
     { l: 'Họ tên', v: name },
