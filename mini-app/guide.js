@@ -894,6 +894,10 @@ function endAppTour(completed = false) {
     tourTooltipEl.remove();
     tourTooltipEl = null;
   }
+
+  if (completed && typeof showToast === 'function') {
+    showToast('🎉 Đã hoàn thành hướng dẫn!');
+  }
 }
 
 // Filter Guide Steps based on Staff Role
@@ -926,11 +930,6 @@ function filterGuideRole(role, btnEl) {
   // Select first allowed step
   if (allowedSteps.length > 0) {
     selectGuideStep(allowedSteps[0]);
-  }
-}
-
-  if (completed && typeof showToast === 'function') {
-    showToast('🎉 Đã hoàn thành hướng dẫn!');
   }
 }
 
