@@ -826,22 +826,30 @@
 .ai-fullscreen .markmap {
   height: 100vh !important;
 }
-/* Fullscreen close button */
+/* Fullscreen close button - Top Left for Telegram Mini App compatibility */
 .ai-fs-close {
   position: fixed;
-  top: 12px; right: 12px;
+  top: 12px; left: 12px; right: auto;
   z-index: 100000;
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.2);
-  font-size: 18px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
+  gap: 6px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.ai-fs-close:active {
+  transform: scale(0.95);
 }
 /* Chat in fullscreen */
 .ai-fullscreen .ai-chat-msgs {

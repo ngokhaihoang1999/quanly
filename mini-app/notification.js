@@ -23,11 +23,11 @@ function toggleNotifPanel() {
     panel.className = 'notif-panel';
     panel.innerHTML = `
       <div class="notif-panel-header">
-        <span>🔔 Thông báo</span>
-        <div style="display:flex;align-items:center;gap:4px;">
+        <button onclick="notifPanelOpen=false;document.getElementById('notifPanel').classList.remove('open');document.getElementById('notifBackdrop').style.display='none';" style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;padding:4px 10px;display:flex;align-items:center;gap:4px;">← Quay lại</button>
+        <span style="font-weight:700;margin-left:8px;">🔔 Thông báo</span>
+        <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
           <button onclick="markAllRead()" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;font-weight:600;padding:6px;">Đọc hết</button>
           <button onclick="openNotifSettings()" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:6px;" title="Cài đặt">⚙️</button>
-          <button onclick="notifPanelOpen=false;document.getElementById('notifPanel').classList.remove('open');document.getElementById('notifBackdrop').style.display='none';" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:6px;line-height:1;">✕</button>
         </div>
       </div>
       <div class="notif-panel-body" id="notifPanelBody"></div>

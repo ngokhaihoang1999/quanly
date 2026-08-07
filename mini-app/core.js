@@ -599,9 +599,10 @@ function openPersonalizationPanel() {
   modal.innerHTML = `
     <div style="width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,0.3);">
       <div style="position:sticky;top:0;background:var(--surface);padding:16px 16px 12px;border-radius:20px 20px 0 0;z-index:2;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <button onclick="document.getElementById('personalizationModal').remove()" style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:4px;">← Quay lại</button>
           <div style="font-weight:700;font-size:16px;">⚙️ Cài đặt</div>
-          <button onclick="document.getElementById('personalizationModal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);">✕</button>
+          <div style="width:75px;"></div>
         </div>
         <div id="pref_preview_bar" style="height:5px;border-radius:3px;background:${hex0};transition:background 0.25s;"></div>
       </div>

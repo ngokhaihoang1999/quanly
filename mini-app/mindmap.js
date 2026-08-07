@@ -709,7 +709,7 @@ function toggleFullscreen(elId) {
     var btn = document.createElement('button');
     btn.id = 'aiFsClose';
     btn.className = 'ai-fs-close';
-    btn.innerHTML = '\u2715';
+    btn.innerHTML = '<span style="font-size:15px;">←</span> Quay lại Hồ sơ';
     btn.onclick = function(e) { e.stopPropagation(); toggleFullscreen(elId); };
     el.appendChild(btn);
     const triggerBtn = el.querySelector('.chat-fs-trigger');
