@@ -102,8 +102,8 @@ Deno.serve(async (req) => {
     let responseData = null;
     let deepseekSuccess = false;
 
-    // Determine target DeepSeek model (default to deepseek-v4-pro if not specified)
-    const targetModel = (model === 'deepseek-v4-flash' || model === 'deepseek-v4-pro') ? model : 'deepseek-v4-pro';
+    // Determine target DeepSeek model (valid API model is 'deepseek-chat')
+    const targetModel = 'deepseek-chat';
 
     if (DEEPSEEK_API_KEY) {
       try {
@@ -119,7 +119,6 @@ Deno.serve(async (req) => {
             messages,
             temperature: safeTemp,
             max_tokens: safeMaxTokens,
-            thinking: { type: 'disabled' },
           }),
         });
 

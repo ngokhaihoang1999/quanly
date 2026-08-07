@@ -464,9 +464,17 @@ async function runAIAnalysis() {
 
     var data = await callAIProxy(
       [{role:'system',content:sysPrompt},{role:'user',content:context}],
-      { model: 'deepseek-v4-pro', temperature: 0.3, max_tokens: 1000 }
+      { model: 'deepseek-chat', temperature: 0.3, max_tokens: 1200 }
     );
     var md = (data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '').trim();
+
+    // Strip code block fences if present (e.g. ```markdown ... ```)
+    md = md.replace(/^```(?:markdown)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    var firstHash = md.indexOf('#');
+    if (firstHash !== -1) {
+      md = md.substring(firstHash).trim();
+    }
+
     if (!md || md.charAt(0) !== '#') throw new Error('AI response invalid');
     var u = data.usage || {};
     trackCost((u.prompt_tokens||0)/1e6*0.40 + (u.completion_tokens||0)/1e6*1.60);
