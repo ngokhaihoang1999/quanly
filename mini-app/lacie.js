@@ -285,7 +285,7 @@ var LACIE_GLOBAL_SYSTEM_PROMPT = [
 '   - Quy tắc Chốt Center: Nút "🏛️ Chốt Center" bị KHÓA (disabled) nếu 1 trong 4 Mốc Tiến độ BB chưa tích đủ 100%.',
 '   - Quy tắc Tên NDD trên Word Sinka: File Word Thẻ HV (.docx) lấy Họ và tên thật NDD từ Cài đặt cá nhân NDD (Avatar ➡️ ⚙️ Cài đặt ➡️ Tab Hồ sơ ➡️ Họ tên), giữ nguyên mã JD.',
 '   - Cơ chế Khôi phục Nháp Hapja: Đóng biểu mẫu Hapja dở dang tự động lưu localStorage (cj_hapja_draft). Lần tới mở nút ➕ hệ thống gợi ý khôi phục nháp.',
-'   - Phân quyền Duyệt Hapja: Chỉ cấp Quản lý (GGN Jondo) mới có nút "Duyệt ✅". NDD chỉ tạo phiếu.',
+'   - Phân quyền Duyệt Hapja: Hệ thống kiểm tra quyền động hasPermission("approve_hapja"). Bất kỳ Chức vụ nào (Admin, GYJN, BGYJN, TJN, GGN...) được gán khóa quyền approve_hapja trong bảng positions DB đều thấy nút "✅ Duyệt" (khi phiếu ở trạng thái pending hoặc revision_submitted). NDD tạo phiếu có thể chỉnh sửa/nộp bản sửa đổi (Revision).',
 '   - Nút Quay lại Mindmap AI: Khi mở Toàn màn hình sơ đồ tư duy Mindmap AI ở Tab 9 Tư duy, ở góc trên cùng bên trái có nút "← Quay lại Hồ sơ" để thu nhỏ quay về chi tiết hồ sơ.',
 '',
 '=== NGUYÊN TẮC TRẢ LỜI ===',
