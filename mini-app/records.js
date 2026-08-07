@@ -208,20 +208,60 @@ async function loadJourney(profileId, currentPhase) {
     const tuVanRecords = recs.filter(r => r.record_type === 'tu_van');
     const matchedTuVanIds = new Set();
 
+    const parseNum = val => {
+      if (val === null || val === undefined) return null;
+      if (typeof val === 'number') return isNaN(val) ? null : val;
+      const m = String(val).match(/\d+/);
+      return m ? parseInt(m[0], 10) : null;
+    };
+
+    // Sort sessions by session_number ascending (1, 2, 3...)
+    const sortedSessions = [...sessions].sort((a,b) => (parseNum(a.session_number)||0) - (parseNum(b.session_number)||0));
+    // Sort tu_van records by report date / created_at ascending
+    const sortedTuVan = [...tuVanRecords].sort((a,b) => {
+      const tA = new Date(a.content?.report_date || a.created_at).getTime();
+      const tB = new Date(b.content?.report_date || b.created_at).getTime();
+      return tA - tB;
+    });
+
+    const sessionMatchMap = new Map();
+
+    // Step 1: Match by explicit parsed session_number / lan_thu
+    sortedSessions.forEach(s => {
+      const sNum = parseNum(s.session_number);
+      if (sNum !== null) {
+        const match = sortedTuVan.find(r => !matchedTuVanIds.has(r.id) && parseNum(r.content?.lan_thu) === sNum);
+        if (match) {
+          matchedTuVanIds.add(match.id);
+          sessionMatchMap.set(s.id, match);
+        }
+      }
+    });
+
+    // Step 2: Fallback match by order index for remaining unmatched sessions & tu_van records
+    sortedSessions.forEach(s => {
+      if (!sessionMatchMap.has(s.id)) {
+        const match = sortedTuVan.find(r => !matchedTuVanIds.has(r.id));
+        if (match) {
+          matchedTuVanIds.add(match.id);
+          sessionMatchMap.set(s.id, match);
+        }
+      }
+    });
+
     sessions.forEach(s => {
-      const sessNum = Number(s.session_number);
+      const sessNum = parseNum(s.session_number) || s.session_number;
       const sessDate = s.scheduled_at || s.created_at;
       const sSortDate = sessDate ? new Date(sessDate).getTime() : 0;
 
-      // Find matching tu_van record for this session number
-      const matchingTuVan = tuVanRecords.find(r => Number(r.content?.lan_thu) === sessNum);
+      const matchingTuVan = sessionMatchMap.get(s.id) || null;
       let tuVanDate = null;
       if (matchingTuVan) {
-        matchedTuVanIds.add(matchingTuVan.id);
         tuVanDate = matchingTuVan.content?.report_date ? matchingTuVan.content.report_date + 'T12:00:00' : matchingTuVan.created_at;
       }
 
-      const effectiveSortDate = sSortDate || (tuVanDate ? new Date(tuVanDate).getTime() : 0);
+      const tuVanSortDate = tuVanDate ? new Date(tuVanDate).getTime() : 0;
+      const effectiveSortDate = Math.max(sSortDate, tuVanSortDate);
 
       events.push({
         date: sessDate || tuVanDate,
@@ -238,9 +278,9 @@ async function loadJourney(profileId, currentPhase) {
     });
 
     // Orphan tu_van records without matching session
-    tuVanRecords.forEach(r => {
+    sortedTuVan.forEach(r => {
       if (matchedTuVanIds.has(r.id)) return;
-      const lanThu = r.content?.lan_thu ? Number(r.content.lan_thu) : null;
+      const lanThu = parseNum(r.content?.lan_thu);
       const _eventDate = r.content?.report_date ? r.content.report_date + 'T12:00:00' : r.created_at;
       events.push({
         date: _eventDate,
