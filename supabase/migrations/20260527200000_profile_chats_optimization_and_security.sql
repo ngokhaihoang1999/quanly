@@ -19,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_profile_chat_reads_composite ON public.profile_ch
 -- 2. Security Advisory: Fix Function Search Path Mutable
 -- ============================================================
 -- Fixes public.get_unread_chats search path vulnerability (SET search_path = public)
+DROP FUNCTION IF EXISTS public.get_unread_chats(text);
 CREATE OR REPLACE FUNCTION public.get_unread_chats(user_code text)
 RETURNS TABLE(profile_id uuid) AS $$
 BEGIN
