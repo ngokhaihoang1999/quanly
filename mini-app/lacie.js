@@ -287,15 +287,44 @@ var LACIE_GLOBAL_SYSTEM_PROMPT = [
 // Global Lacie Chat History
 window.globalLacieHistory = [];
 
-// Parse AI Action Executer tags like [ACTION:openCreateHapjaModal|➕ Tạo phiếu Check Hapja]
-function parseLacieActionButtons(text) {
+// Parse AI Action Executer tags and format Markdown text to rich HTML for Lacie AI Chat
+function formatLacieMarkdown(text) {
   if (!text) return '';
+
+  // 1. Temporarily replace Action Buttons [ACTION:fnName|Label]
   const actionRegex = /\[ACTION:([a-zA-Z0-9_]+)\|([^\]]+)\]/g;
-  return text.replace(actionRegex, (match, fnName, label) => {
-    return `<button class="lacie-action-btn" onclick="closeModal('globalLacieModal'); if(typeof ${fnName}==='function') ${fnName}();">
-      <span>${label}</span> ➔
-    </button>`;
+  let placeholders = [];
+  let html = text.replace(actionRegex, (match, fnName, label) => {
+    const idx = placeholders.length;
+    placeholders.push(`<button class="lacie-action-btn" onclick="closeModal('globalLacieModal'); if(typeof ${fnName}==='function') ${fnName}();"><span>${label}</span> ➔</button>`);
+    return `___ACTION_PLACEHOLDER_${idx}___`;
   });
+
+  // 2. Bold: **text** -> <b>text</b>
+  html = html.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+  // 3. Italic: *text* -> <i>text</i>
+  html = html.replace(/\*([^\*\n]+)\*/g, '<i>$1</i>');
+
+  // 4. Code: `code` -> <code>code</code>
+  html = html.replace(/`([^`\n]+)`/g, '<code style="background:var(--surface); border:1px solid var(--border); padding:2px 6px; border-radius:4px; font-size:11.5px; color:var(--accent);">$1</code>');
+
+  // 5. Bullet lists: - item -> • item
+  html = html.replace(/^[\s]*-\s+(.*)$/gm, '<span style="color:var(--accent); font-weight:bold;">•</span> $1');
+
+  // 6. Line breaks \n -> <br/>
+  html = html.replace(/\n/g, '<br/>');
+
+  // 7. Restore Action Buttons
+  placeholders.forEach((btnHtml, idx) => {
+    html = html.replace(`___ACTION_PLACEHOLDER_${idx}___`, `<br/>${btnHtml}`);
+  });
+
+  return html;
+}
+
+function parseLacieActionButtons(text) {
+  return formatLacieMarkdown(text);
 }
 
 // Get dynamic Preset Chips based on current app tab or page
