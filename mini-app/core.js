@@ -722,9 +722,15 @@ function openPersonalizationPanel() {
         <div style="background:var(--surface2);border-radius:12px;border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
             <div>
-              <div style="font-weight:700;font-size:14px;">${myStaff?.full_name||myStaff?.staff_code||'---'}</div>
+              <div style="font-weight:700;font-size:14px;" id="prof_fullname_header">${myStaff?.full_name||myStaff?.staff_code||'---'}</div>
               <div style="font-size:11px;color:var(--text3);">${myStaff?.staff_code||''} · ${getPositionName(myStaff?.position)}${getStaffUnit(myStaff?.staff_code) ? ' · <span style="color:var(--accent);">' + getStaffUnit(myStaff.staff_code) + '</span>' : ''}</div>
             </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Họ và tên TĐ <span style="color:var(--text3);font-weight:400;">(hiển thị khi xuất thẻ HV, báo cáo...)</span></label>
+            <input type="text" id="prof_full_name" value="${(myStaff?.full_name||'').replace(/"/g,'&quot;')}" placeholder="Ví dụ: Ngô Khải Hoàng, Nguyễn Văn A..."
+              oninput="const v=this.value.trim();document.getElementById('prof_fullname_header').textContent=v||myStaff?.staff_code||'---';"
+              style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;" maxlength="60" />
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nickname <span style="color:var(--text3);font-weight:400;">(tên tự đặt, khác với mã JD)</span></label>

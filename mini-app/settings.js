@@ -364,6 +364,7 @@ async function _resetPrefs() {
 // ── Lưu hồ sơ TĐ cá nhân ──
 async function saveMyStaffProfile() {
   if (!myStaff?.staff_code) { showToast('⚠️ Chưa đăng nhập'); return; }
+  const full_name  = document.getElementById('prof_full_name')?.value?.trim() || null;
   const nickname   = document.getElementById('prof_nickname')?.value?.trim() || null;
   const gRaw       = document.getElementById('prof_gender')?.value || '';
   const gMap       = { 'Nam':'Nam', 'Nu':'Nữ' };
@@ -385,14 +386,24 @@ async function saveMyStaffProfile() {
     const staff_avatar_color = document.getElementById('prof_staff_avatar_color')?.value || null;
     await sbFetch(`/rest/v1/staff?staff_code=eq.${myStaff.staff_code}`, {
       method: 'PATCH',
-      body: JSON.stringify({ nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, sinka_info, staff_avatar_color })
+      body: JSON.stringify({ full_name, nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, sinka_info, staff_avatar_color })
     });
-    Object.assign(myStaff, { nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, sinka_info, staff_avatar_color });
+    Object.assign(myStaff, { full_name, nickname, gender, birth_year, bio, avatar_emoji, motto, scj_code, sinka_info, staff_avatar_color });
+    if (Array.isArray(allStaff)) {
+      const sObj = allStaff.find(s => s.staff_code === myStaff.staff_code);
+      if (sObj) {
+        sObj.full_name = full_name;
+        sObj.nickname = nickname;
+        sObj.scj_code = scj_code;
+        sObj.sinka_info = sinka_info;
+      }
+    }
     const badge = document.getElementById('myStaffBadge');
-    if (badge && nickname) {
+    if (badge && (nickname || full_name)) {
       const code = myStaff.staff_code;
       const pos  = getPositionName(myStaff.position);
-      let txt = `${nickname} (${code}) · ${pos}`;
+      const nameDisp = nickname || full_name || code;
+      let txt = `${nameDisp} (${code}) · ${pos}`;
       if (myStaff.specialist_position) txt += ` + ${getPositionName(myStaff.specialist_position)}`;
       badge.textContent = txt;
     }
