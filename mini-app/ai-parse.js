@@ -369,19 +369,11 @@ async function executeAIParse(formType) {
       filledCount = fillHapjaForm(json);
     }
 
-    const activeModel = data.model || 'AI';
-    const isAdmin = (typeof getCurrentPosition === 'function' && getCurrentPosition() === 'admin');
     if (filledCount > 0) {
-      const msg = isAdmin 
-        ? `✨ [${activeModel}] đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`
-        : `✨ AI đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`;
-      showToast(msg);
+      showToast(`✨ AI đã điền ${filledCount} field — hãy kiểm tra trước khi lưu!`);
       haptic('success');
     } else {
-      const msg = isAdmin
-        ? `⚠️ [${activeModel}] không tìm được thông tin phù hợp trong text`
-        : `⚠️ AI không tìm được thông tin phù hợp trong text`;
-      showToast(msg);
+      showToast(`⚠️ AI không tìm được thông tin phù hợp trong text`);
     }
 
   } catch(e) {

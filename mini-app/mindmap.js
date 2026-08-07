@@ -482,11 +482,7 @@ async function runAIAnalysis() {
     renderMarkmap(container, md);
     saveAIMindmap(p.id, md);
     if (typeof showToast === 'function') {
-      const isAdmin = (typeof getCurrentPosition === 'function' && getCurrentPosition() === 'admin');
-      const msg = isAdmin 
-        ? '👼 Phân tích bằng [' + (data.model || 'AI') + '] thành công!'
-        : '👼 Phân tích hồ sơ thành công!';
-      showToast(msg);
+      showToast('👼 Phân tích hồ sơ thành công!');
     }
   } catch(e) {
     console.error('AI Mindmap error:', e);
@@ -676,11 +672,7 @@ async function sendAIChat() {
     renderChatBubbles(msgBox);
     saveChatToDB();
     if (typeof showToast === 'function') {
-      const isAdmin = (typeof getCurrentPosition === 'function' && getCurrentPosition() === 'admin');
-      const msg = isAdmin
-        ? '💬 Trả lời từ [' + (data.model || 'AI') + ']'
-        : '💬 Trợ lý Lacie đã phản hồi~';
-      showToast(msg);
+      showToast('💬 Trợ lý Lacie đã phản hồi~');
     }
   } catch(e) {
     var el2 = document.getElementById('aiTyping'); if(el2) el2.remove();
