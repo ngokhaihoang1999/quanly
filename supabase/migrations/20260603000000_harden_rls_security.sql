@@ -15,7 +15,7 @@ ALTER TABLE IF EXISTS public.semesters ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "semesters_open" ON public.semesters;
 CREATE POLICY "semesters_select_policy" ON public.semesters FOR SELECT USING (true);
 
--- 3. Table: staff (Public select, write/delete restricted)
+-- 3. Table: staff (Allow Mini App management)
 ALTER TABLE IF EXISTS public.staff ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read staff" ON public.staff;
 DROP POLICY IF EXISTS "Allow public insert staff" ON public.staff;
@@ -23,8 +23,9 @@ DROP POLICY IF EXISTS "Allow public update staff" ON public.staff;
 DROP POLICY IF EXISTS "Allow public delete staff" ON public.staff;
 
 CREATE POLICY "staff_select_policy" ON public.staff FOR SELECT USING (true);
-CREATE POLICY "staff_insert_policy" ON public.staff FOR INSERT WITH CHECK (auth.role() = 'authenticated' OR auth.role() = 'service_role');
-CREATE POLICY "staff_update_policy" ON public.staff FOR UPDATE USING (auth.role() = 'authenticated' OR auth.role() = 'service_role');
+CREATE POLICY "staff_insert_policy" ON public.staff FOR INSERT WITH CHECK (true);
+CREATE POLICY "staff_update_policy" ON public.staff FOR UPDATE USING (true);
+CREATE POLICY "staff_delete_policy" ON public.staff FOR DELETE USING (true);
 
 -- 4. Table: profiles
 ALTER TABLE IF EXISTS public.profiles ENABLE ROW LEVEL SECURITY;
