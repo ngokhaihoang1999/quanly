@@ -96,11 +96,12 @@ const JONDO_STEPS_DATA = [
     title: "2. Thông tin & Trạng thái hồ sơ 👤",
     label: "Trạng thái",
     icon: "👤",
-    keywords: ["profile", "hồ sơ", "trạng thái", "alive", "pause", "dropout", "nghỉ học", "tạm dừng", "hoạt động"],
+    keywords: ["profile", "hồ sơ", "trạng thái", "alive", "pause", "dropout", "nghỉ học", "tạm dừng", "hoạt động", "chakki"],
     content: `
       <p><b>Quản lý Thông tin hành chính & Vòng đời học tập của học viên:</b></p>
       <ul>
         <li><b>Xem & Chỉnh sửa hồ sơ:</b> Tại màn hình chi tiết của học viên, người dẫn dắt (NDD) hoặc quản lý có thể cập nhật các thông tin cơ bản: SĐT, người kết nối, phân công nhân sự phụ trách (TVV, GVBB, Lá), điều chỉnh tổ nhóm học tập.</li>
+        <li><b>Đồng bộ Ngày Chakki (Trường 21):</b> Ngày Chakki nhập tại Tab Thông tin sẽ tự động đồng bộ hai chiều với mốc <i>Ngày Chakki (Hapja)</i> ở Tab Giai đoạn, đảm bảo dòng thời gian luôn chính xác.</li>
         <li><b>Quản lý 3 trạng thái cốt lõi:</b></li>
         <li>🟢 <b>Alive (Hoạt động):</b> Học viên đang tham gia đầy đủ các buổi gặp mặt, học tập BB hoặc lớp Center bình thường. Đây là trạng thái mặc định của mọi học viên mới được duyệt.</li>
         <li>⏸️ <b>Pause (Tạm dừng):</b> Dùng khi học viên tạm thời nghỉ học ngắn hạn (do ốm đau, bận việc gia đình đột xuất, đi du lịch, đổi ca học). Khi ở trạng thái này, nhóm hỗ trợ cần liên tục tương tác giữ ấm mối quan hệ để kích hoạt trở lại trạng thái hoạt động (🟢 Alive).</li>
@@ -120,16 +121,17 @@ const JONDO_STEPS_DATA = [
     title: "3. Chốt lịch & Báo cáo Tư vấn (TV) 💬",
     label: "Tư vấn",
     icon: "💬",
-    keywords: ["tư vấn", "tv", "báo cáo", "nhật ký", "tình trạng", "tâm lý", "ghi chú"],
+    keywords: ["tư vấn", "tv", "báo cáo", "nhật ký", "tình trạng", "tâm lý", "ghi chú", "bảng timeline", "hàng ngang"],
     content: `
       <p><b>Quản lý cuộc hẹn và Ghi nhận báo cáo Tư vấn tâm lý:</b></p>
       <ul>
-        <li><b>Đặt lịch chốt TV:</b> NDD hoặc quản lý đặt lịch hẹn tư vấn trực tiếp trên hệ thống, có thời gian và Tư vấn viên (TVV) cụ thể. <b>Lưu ý tự động hóa:</b> Sau 1 tiếng kể từ thời điểm giờ hẹn chốt TV, hệ thống sẽ tự động tạo một công việc <i>"Viết Báo cáo Tư vấn"</i> trong tab <b>Ưu tiên</b> của TVV/NDD để nhắc nhở họ làm báo cáo kịp thời.</li>
+        <li><b>Đặt lịch chốt TV & Đồng bộ Timeline:</b> NDD hoặc quản lý đặt lịch hẹn tư vấn trực tiếp trên hệ thống. <b>Cải tiến mới:</b> Trong bảng Giai đoạn, mốc <i>Chốt TV lần N</i> (cột Sự kiện) và <i>Báo cáo TV lần N</i> (cột Báo cáo) được gom nằm trên <b>CÙNG 1 HÀNG NGANG</b> mượt mà. Đổi ngày chốt TV trong popup sẽ tự động cập nhật mốc ngày và sắp xếp lại vị trí dòng thời gian.</li>
+        <li><b>Lưu ý tự động hóa:</b> Sau 1 tiếng kể từ thời điểm giờ hẹn chốt TV, hệ thống sẽ tự động tạo một công việc <i>"Viết Báo cáo Tư vấn"</i> trong tab <b>Ưu tiên</b> của TVV/NDD để nhắc nhở họ làm báo cáo kịp thời.</li>
         <li><b>Quy trình Tư vấn:</b> TVV thực hiện các buổi trò chuyện sâu (thường có ít nhất 2 lần tư vấn). Sử dụng các công cụ trắc nghiệm tính cách chính xác như <b>Enneagram</b> và một số công cụ khác tuỳ theo mỗi học viên.</li>
         <li><b>Ghi nhận báo cáo:</b> TVV hoặc người được phân quyền truy cập hồ sơ nhấn nút <b>📝 Viết báo cáo Tư vấn</b> để lưu lại diễn biến buổi tư vấn. Nội dung báo cáo bao gồm: Ngày giờ, công cụ áp dụng, đánh giá mức độ tin cậy/tiếp thu, các điểm tâm lý nhạy cảm cần lưu ý và đề xuất định hướng hỗ trợ tiếp theo.</li>
       </ul>
       <div class="guide-flowchart">
-        <div class="guide-flow-step"><span>Hẹn Lịch 📅</span><small>Tự động tạo task sau 1h</small></div>
+        <div class="guide-flow-step"><span>Hẹn Lịch 📅</span><small>Tự động ghép cùng hàng</small></div>
         <div class="guide-flow-arrow">➔</div>
         <div class="guide-flow-step"><span>Tư vấn</span><small>Enneagram,...</small></div>
         <div class="guide-flow-arrow">➔</div>
@@ -197,13 +199,14 @@ const JONDO_STEPS_DATA = [
     title: "6. Điền Sinka & Chốt Center 🏛️",
     label: "Chốt Center",
     icon: "🏛️",
-    keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "thẻ hv", "hoàn thành"],
+    keywords: ["sinka", "chốt", "nhập học", "center", "xuất word", "in thẻ", "thẻ hv", "hoàn thành", "tên ndd"],
     content: `
       <p><b>Hoàn tất hồ sơ hành chính ĐK BB/Sinka và chốt danh sách lên lớp Center:</b></p>
       <ul>
         <li><b>ĐK BB:</b> Đây là thẻ thông tin đăng kí BB, hỗ trợ cho SGN báo cáo dễ dàng hơn về quá trình học BB của học viên.</li>
         <li><b>Phiếu Sinka (Thẻ học viên):</b> Đây là phiếu lý lịch nhập học chi tiết của học viên. Phiếu Sinka cần được điền tích lũy và cập nhật <i>liên tục và xuyên suốt</i> ngay sau khi học viên bước vào giai đoạn Tư vấn. Tránh dồn việc điền Sinka vào phút chót.</li>
         <li><b>Điền thông tin Sinka:</b> Vào tab <b>Thẻ HV</b> trong hồ sơ học viên. Điền chi tiết các trường thông tin hành chính, học vấn, công việc, đặc điểm tính cách, và nhận xét chung của nhóm hỗ trợ. Bấm <b>Lưu thông tin Sinka</b> để cập nhật dữ liệu.</li>
+        <li><b>Họ tên NDD trên Thẻ HV:</b> Tên NDD thể hiện trên file Word xuất ra được đồng bộ trực tiếp từ mục <b>Họ và tên</b> trong <i>Cài đặt hồ sơ cá nhân</i> của NDD (Mã JD cá nhân giữ nguyên).</li>
         <li><b>Tải phiếu Sinka:</b> Trong tab <b>Thẻ HV</b> sẽ có chức năng tải <b>📄 Word</b>, bấm vào để tải Thẻ HV dưới dạng Word đã được đặt tên đúng cú pháp.</li>
         <li><b>Nút Chốt Center:</b> Khi học viên đã hoàn thành đầy đủ cả 4 mốc tiến độ quan trọng ở giai đoạn học BB, nút <b>🏛️ Chốt Center</b> sẽ tự động hiển thị trong tab Giai đoạn.</li>
         <li><b>Chốt Center:</b> Người được phân quyền bấm <b>Chốt Center</b> để chính thức đóng hồ sơ giai đoạn BB và chuyển học viên lên danh sách lớp Center.</li>
@@ -228,6 +231,26 @@ const WIKI_ITEMS = [
     content: "Bấm vào ảnh đại diện (avatar) của bạn ở góc trên cùng bên trái. Mục <b>Cá nhân hóa</b> sẽ mở ra, tại đây bạn có thể nhập biệt danh mới và chọn mã màu yêu thích làm màu chủ đề chính cho toàn bộ ứng dụng."
   },
   {
+    title: "Làm thế nào để chỉnh sửa Họ và tên thật của nhân sự (dùng khi xuất Thẻ HV Sinka)?",
+    keywords: ["họ tên", "tên", "sinka", "thẻ học viên", "tên thật", "profile", "cài đặt"],
+    content: "Vào biểu tượng Avatar ➡️ Chọn <b>⚙️ Cài đặt</b> ➡️ Chuyển sang Tab <b>Hồ sơ</b> ➡️ Nhập <b>Họ và tên</b> của bạn ➡️ Bấm <b>Lưu hồ sơ</b>. Tên này sẽ thể hiện trực tiếp trên file Word Thẻ học viên (Sinka) tại vị trí NDD phụ trách. Mã JD của bạn vẫn được giữ nguyên."
+  },
+  {
+    title: "Bảng dòng thời gian (Timeline) ở Tab Giai đoạn hiển thị như thế nào?",
+    keywords: ["timeline", "giai đoạn", "hàng ngang", "chốt tv", "báo cáo tv", "ghép hàng", "đổi ngày"],
+    content: "Bảng timeline chia làm 3 cột: <b>Sự kiện | Báo cáo | BTVN</b>. Hệ thống tự động ghép <i>Chốt TV lần N</i> và <i>Báo cáo TV lần N</i> nằm trên <b>CÙNG 1 HÀNG NGANG</b>. Khi chỉnh sửa ngày Chốt TV, mốc thời gian sẽ tự động sắp xếp lại theo vị trí mới."
+  },
+  {
+    title: "Trường '21. Ngày Chakki' ở Tab Thông tin đồng bộ như thế nào?",
+    keywords: ["chakki", "ngày chakki", "21", "hapja", "đồng bộ", "thông tin"],
+    content: "Trường <b>21. Ngày Chakki</b> tại Tab Thông tin tự động đồng bộ 2 chiều với mốc <i>Ngày Chakki (Hapja)</i> ở Tab Giai đoạn. Thay đổi tại Tab Thông tin sẽ lập tức cập nhật ở Tab Giai đoạn và CSDL."
+  },
+  {
+    title: "Định dạng Lịch Shin và Ngày tháng năm hoạt động như thế nào?",
+    keywords: ["shin", "năm shin", "định dạng", "ngày tháng", "format"],
+    content: "Hệ thống chuẩn hóa 2 kiểu định dạng: 1 là Lịch Shin (tính bằng `Năm Dương Lịch - 1983`, ví dụ năm 2026 là `Shin 43.MM.DD`), 2 là Lịch Dương `DD.MM.YYYY` (Ngày.Tháng.Năm). Không sử dụng kiểu Tháng.Ngày.Năm."
+  },
+  {
     title: "Làm thế nào để bật/tắt nhận thông báo qua Telegram?",
     keywords: ["thông báo", "notif", "telegram", "chuông", "lọc", "nhận tin"],
     content: "Bấm vào biểu tượng <b>Chuông thông báo 🔔</b> ở góc trên bên phải. Tiếp tục bấm vào biểu tượng <b>Bánh răng ⚙️</b> ở góc phải của panel thông báo. Tại đây, bạn có thể tích chọn/bỏ chọn từng loại thông báo muốn nhận (Nhận trong App hoặc nhận qua Telegram)."
@@ -250,84 +273,68 @@ const PROFILE_TABS_DATA = [
     title: "1. Thông tin",
     icon: "ℹ️",
     desc: `<b>Quản lý Hồ sơ Hành chính & Liên hệ:</b><br/>
-      • <b>Nội dung:</b> Nơi tập trung toàn bộ lý lịch hành chính cốt lõi gồm Họ tên, năm sinh, SĐT liên lạc cá nhân, liên kết người giới thiệu/người dẫn dắt (NDD), Tư vấn viên (TVV) phụ trách, và phân khu đơn vị sinh hoạt (Tổ/Nhóm/Khu vực).<br/>
-      • <b>Phân quyền:</b> Chỉ Admin, Người dẫn dắt trực tiếp (NDD) và các cấp quản lý từ Đơn vị trở lên (Tổ trưởng GYJN+) mới có quyền chỉnh sửa các thông tin này để bảo mật dữ liệu tuyệt đối.<br/>
-      • <b>Tính năng nổi bật:</b> Hỗ trợ tính năng <i>Lưu nháp tự động (Auto-Save Draft)</i> khi chỉnh sửa. Nếu xảy ra sự cố sập app, mất mạng hoặc vô tình đóng modal, hệ thống sẽ lưu tạm để bạn khôi phục lại ngay lần mở sau mà không bị mất dữ liệu đã nhập.`
+      • <b>Nội dung:</b> Nơi tập trung toàn bộ lý lịch hành chính cốt lõi gồm Họ tên, năm sinh, SĐT liên lạc cá nhân, liên kết NDD, TVV phụ trách, và phân khu đơn vị sinh hoạt.<br/>
+      • <b>Đồng bộ Ngày Chakki:</b> Trường <b>21. Ngày Chakki</b> tự động đồng bộ hai chiều với mốc <i>Ngày Chakki (Hapja)</i> ở Tab Giai đoạn.<br/>
+      • <b>Phân quyền & Bảo mật:</b> Chỉ Admin, NDD trực tiếp và các cấp quản lý mới có quyền chỉnh sửa. Hỗ trợ <i>Lưu nháp tự động (Auto-Save Draft)</i> chống mất dữ liệu.`
   },
   {
     id: "stage",
     title: "2. Giai đoạn",
     icon: "🗓️",
-    desc: `<b>Kiểm soát Vòng đời Học tập & Lịch trình (5 Giai đoạn):</b><br/>
-      • <b>Nội dung:</b> Quản lý quá trình chuyển giao từng bước một cách chặt chẽ qua 5 Giai đoạn: <b>Chakki</b> ➔ <b>TV Hình</b> ➔ <b>Tư vấn</b> ➔ <b>BB (Học tập)</b> ➔ <b>Center</b>.<br/>
-      • <b>Các nút hành động nghiệp vụ quan trọng:</b><br/>
-      &nbsp;&nbsp; - <i>Lập group TV-BB:</i> Tự động kiểm tra điều kiện nhân sự trước khi cho phép liên kết nhóm Telegram hỗ trợ.<br/>
-      &nbsp;&nbsp; - <i>Mở KT (Kinh Thánh):</i> Đánh dấu bước tiến quan trọng khi bắt đầu tiết lộ nội dung Kinh thánh cho học viên.<br/>
-      &nbsp;&nbsp; - <i>Chốt Center:</i> Nút bấm quan trọng nhất để hoàn thành giai đoạn học BB và chuyển lên lớp Center 100 buổi.<br/>
-      • <b>Mẹo thao tác:</b> Có thể bấm hoàn tác khi lỡ bấm chuyển giai đoạn ngoài ý muốn, chỉnh sửa Chốt Tư vấn và Báo cáo, xoá các báo cáo TV và BB theo trình tự.`
+    desc: `<b>Kiểm soát Vòng đời Học tập & Bảng Dòng thời gian (Timeline):</b><br/>
+      • <b>Nội dung:</b> Quản lý quá trình chuyển giao qua 5 Giai đoạn: <b>Chakki</b> ➔ <b>TV Hình</b> ➔ <b>Tư vấn</b> ➔ <b>BB</b> ➔ <b>Center</b>.<br/>
+      • <b>Bảng Timeline thông minh:</b> <i>Chốt TV lần N</i> (Sự kiện) và <i>Báo cáo TV lần N</i> (Báo cáo) được ghép trên <b>CÙNG 1 HÀNG NGANG</b>. Đổi ngày Chốt TV tự động sắp xếp lại dòng thời gian theo vị trí mới.<br/>
+      • <b>Nút nghiệp vụ:</b> Lập group TV-BB, Mở KT (Kinh Thánh), Chốt Center.`
   },
   {
     id: "tv",
     title: "3. TV (Tư vấn)",
     icon: "💬",
     desc: `<b>Quản lý Lịch hẹn & Nhật ký Tư vấn tâm lý:</b><br/>
-      • <b>Nội dung:</b> Ghi nhận thời gian các buổi hẹn tư vấn và toàn bộ báo cáo chi tiết sau mỗi lần gặp gỡ. Thường quy trình có tối thiểu 2 lần tư vấn chính thức trước khi học viên bước vào khóa học.<br/>
-      • <b>Các trường thông tin cốt lõi:</b> Lần tư vấn thứ mấy, tên công cụ áp dụng (ví dụ: trắc nghiệm tâm lý Enneagram, MBTI), kết quả bài test, vấn đề/nhu cầu khai thác được, phản hồi sau tư vấn, Điểm hái trái của học viên và đề xuất hướng đi tiếp theo.<br/>
-      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian hẹn chốt TV, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo TV"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/NDD, giúp hạn chế tối đa việc quên ghi nhận báo cáo.<br/>
-      • <b>Mẹo thao tác:</b> Dùng <b>AI nhập nhanh</b> để có thể nhập nhanh nội dung báo cáo, cần xem xét và chỉnh sửa trước khi lưu.`
+      • <b>Nội dung:</b> Ghi nhận thời gian các buổi hẹn tư vấn và toàn bộ báo cáo chi tiết sau mỗi lần gặp gỡ.<br/>
+      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian hẹn chốt TV, hệ thống sẽ tự động tạo task <i>"Viết Báo cáo TV"</i> trong tab <b>Ưu tiên</b> của TVV/NDD.`
   },
   {
     id: "bb",
     title: "4. BB (Học tập)",
     icon: "📖",
     desc: `<b>Giám sát Mạch bài giảng 12 buổi BB & 4 Mốc hồ sơ:</b><br/>
-      • <b>Nội dung:</b> GVBB bấm vào <b>📝 Viết báo cáo BB</b> sau mỗi buổi dạy về mức độ phản hồi, thái độ tiếp thu, và các thông tin khai thác mới của học viên.<br/>
-      • <b>Tự động hóa thông minh:</b> 1 giờ sau mốc thời gian dạy BB, hệ thống sẽ tự động tạo một task nhắc nhở <i>"Viết Báo cáo BB"</i> gửi thẳng vào tab <b>Ưu tiên</b> của TVV/GVBB, giúp hạn chế tối đa việc quên ghi nhận báo cáo.<br/>
-      • <b>Nhắc lịch dạy tiếp theo:</b> Khi lưu báo cáo buổi học, GVBB nhập thời gian dự kiến cho buổi tiếp theo. Đúng 1 giờ sau giờ học đó, hệ thống sẽ tự động tạo task <i>"Viết BC BB buổi N"</i> trong tab <b>Ưu tiên</b>.`
+      • <b>Nội dung:</b> GVBB cập nhật chi tiết sau mỗi buổi dạy và kiểm soát 4 mốc tiến độ (Bài đặc biệt, PV GVBB, ĐK Center, PV Học viên).`
   },
   {
     id: "btvn",
     title: "5. BTVN (Bài tập)",
     icon: "📝",
     desc: `<b>Quản lý Giao bài & Chấm bài tập về nhà:</b><br/>
-      • <b>Nội dung:</b> GVBB báo cáo lại bài làm của học viên từ nội dung câu hỏi được giao.<br/>
-      • <b>Mẹo thao tác:</b> Dùng <b>AI nhập nhanh</b> để nhập nhanh câu hỏi và câu trả lời của học viên.`
+      • <b>Nội dung:</b> GVBB báo cáo lại bài làm của học viên từ nội dung câu hỏi được giao.`
   },
   {
     id: "notes",
     title: "6. Ghi chú",
     icon: "🗒️",
     desc: `<b>Không gian Ghi chép nội bộ & Bảo an nhạy cảm:</b><br/>
-      • <b>Nội dung:</b> Lưu trữ các ghi chép nhanh, thông báo khẩn cấp, các phát hiện tâm lý nhạy cảm hoặc kế hoạch bảo an đặc biệt dành riêng cho học viên.<br/>
-      • <b>Lưu trữ an toàn:</b> Mọi thông tin tại đây được bảo mật tuyệt đối, chỉ hiển thị với các thành viên trong nhóm hỗ trợ trực tiếp và các cấp quản lý đơn vị phụ trách.<br/>
-      • <b>Mẹo cộng tác:</b> Các thành viên có thể đọc và cập nhật liên tục để hiểu rõ hiện trạng mới nhất của học viên trước khi tiến hành dạy học hoặc tư vấn, tránh tình trạng thông tin bị lệch pha giữa TVV, NDD và GVBB.`
+      • <b>Nội dung:</b> Lưu trữ các ghi chép nhanh, thông báo khẩn cấp, các phát hiện tâm lý nhạy cảm hoặc kế hoạch bảo an đặc biệt dành riêng cho học viên.`
   },
   {
     id: "discuss",
     title: "7. Thảo luận",
     icon: "💬",
     desc: `<b>Kênh Chat nội bộ Bảo mật & Tức thời:</b><br/>
-      • <b>Nội dung:</b> Phòng chat nội bộ thời gian thực tích hợp sẵn ngay trong hồ sơ học viên, cho phép TVV, NDD, GVBB và các Lá trao đổi, bàn bạc phương án hỗ trợ học viên mọi lúc mọi nơi.<br/>
-      • <b>Chức năng nâng cao:</b> Hỗ trợ gửi tin nhắn văn bản, emoji, tag tên đồng nghiệp (@mention), ghi âm giọng nói trực tiếp (Voice message), gửi tệp tin đa phương tiện (ảnh, video) kèm trình phát đa phương tiện độc lập ngay trong app.<br/>
-      • <b>Lợi ích:</b> Giúp tập trung toàn bộ lịch sử thảo luận về học viên tại một nơi duy nhất trên hệ thống, không bị trôi tin nhắn hoặc lộ lọt thông tin nhạy cảm ra các nền tảng chat công cộng bên ngoài.`
+      • <b>Nội dung:</b> Phòng chat nội bộ thời gian thực tích hợp sẵn ngay trong hồ sơ học viên, hỗ trợ tin nhắn văn bản, emoji, tag tên (@mention), ghi âm voice, gửi ảnh/video.`
   },
   {
     id: "sinkacard",
     title: "8. Thẻ HV (Sinka)",
     icon: "📜",
     desc: `<b>Điền Sinka Lý lịch & Xuất file Word nhập học:</b><br/>
-      • <b>Nội dung:</b> Biểu mẫu Thẻ HV thu thập thông tin lý lịch nhập học chi tiết của học viên (tiểu sử gia đình, hoàn cảnh học tập, xu hướng tâm lý, công việc hiện tại, nhận xét của nhóm hỗ trợ). Bên cạnh đó là mẫu ĐK BB hỗ trợ cho việc báo cáo về quá trình học BB của học viên.<br/>
-      • <b>Điền thông tin tích lũy:</b> Nên điền tích lũy dần thông tin ngay từ giai đoạn tư vấn học viên để dữ liệu đầy đủ và chính xác nhất.<br/>
-      • <b>Tự động điền & Xuất Word (.docx):</b> Hệ thống tự động lấy các thông tin hành chính có sẵn trong hồ sơ để điền sẵn vào biểu mẫu Thẻ HV. Khi học viên sẵn sàng nhập học, người dùng chỉ cần bấm nút xuất thẻ để tải ngay file Word (.docx) mẫu Thẻ Học viên Center chính thức được thiết kế chuẩn chỉ để lưu trữ vật lý.`
+      • <b>Nội dung:</b> Tự động điền dữ liệu và xuất file Word (.docx) Thẻ Học viên Center chính thức. Họ và tên NDD thể hiện trên file Word được đồng bộ từ mục <b>Hồ sơ</b> trong Cài đặt cá nhân.`
   },
   {
     id: "mindmap",
     title: "9. Tư Duy",
     icon: "🗺️",
     desc: `<b>Sơ đồ Tư duy Tâm lý (Mindmap) Trực quan:</b><br/>
-      • <b>Nội dung:</b> Biến toàn bộ các dữ liệu phân tích tâm lý, hoàn cảnh, khó khăn và chiến lược dẫn dắt học viên thành một sơ đồ tư duy dạng cây tương tác cực kỳ trực quan và sinh động.<br/>
-      • <b>Công nghệ tích hợp:</b> Sử dụng thư viện <b>Markmap CDN</b> cao cấp để biên dịch mã Markdown thành sơ đồ SVG tương tác. Bạn có thể thu phóng (zoom in/out), kéo di chuyển (drag) và đóng/mở các nút nhánh sơ đồ một cách mượt mà.<br/>
-      • <b>Lợi ích:</b> Giúp người xem (đặc biệt là quản lý cấp trên hoặc GVBB mới nhận lớp) chỉ cần nhìn lướt qua trong 30 giây là nắm bắt được toàn bộ chiến lược chăm sóc và "chìa khóa tâm lý" của học viên.`
+      • <b>Nội dung:</b> Trợ lý AI Lacie (DeepSeek AI) hỗ trợ tự động phân tích dữ liệu tạo sơ đồ tư duy dạng cây trực quan. Có nút <b>← Quay lại Hồ sơ</b> ở góc trên bên trái khi mở toàn màn hình.`
   }
 ];
 
