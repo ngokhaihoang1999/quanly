@@ -462,9 +462,6 @@ async function submitGlobalLacieMessage() {
   chatBody.scrollTop = chatBody.scrollHeight;
 
   try {
-    const supabaseUrl = window.SUPABASE_URL || 'https://vupqszuhhuztpxysgqpt.supabase.co';
-    const anonKey = window.SUPABASE_ANON_KEY || '';
-
     // Prepare API payload for ai-proxy using deepseek-v4-flash
     const apiPayload = {
       model: 'deepseek-v4-flash',
@@ -478,12 +475,10 @@ async function submitGlobalLacieMessage() {
       ]
     };
 
-    const res = await fetch(`${supabaseUrl}/functions/v1/ai-proxy`, {
+    const res = await sbFetch('/functions/v1/ai-proxy', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anonKey}`,
-        'apikey': anonKey
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(apiPayload)
     });
