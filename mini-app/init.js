@@ -503,7 +503,7 @@ async function loadStaffInfo() {
             </div>
             <div style="display:flex;flex-direction:column;gap:1px;white-space:nowrap;">
               <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;" title="${displayName}">${displayName}</span>
-              <span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;white-space:nowrap;">Hệ thống quản lý · v6.02.0029</span>
+              <span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;white-space:nowrap;">Hệ thống quản lý · v6.02.0030</span>
             </div>
           </div>`;
         headerAv.style.display = 'block';
