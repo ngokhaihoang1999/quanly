@@ -220,3 +220,296 @@ var LACIE_SYSTEM_PROMPT = [
 '7. TOÀN BỘ PHẢN HỒI PHẢI CÓ DẤU TIẾNG VIỆT ĐẦY ĐỦ VÀ CHUẨN XÁC CHÍNH TẢ. KHÔNG ĐƯỢC PHÉP TRẢ LỜI KHÔNG DẤU HIỂU CHƯA?',
 '8. Tối đa 200 từ. Nhí nhảnh, emoji vừa phải, nghiêm túc khi phân tích.'
 ].join('\n');
+
+// ==========================================
+// LACIE GLOBAL AI ASSISTANT (HỎI LACIE HE THONG)
+// ==========================================
+
+var LACIE_GLOBAL_SYSTEM_PROMPT = [
+'=== THÂN PHẬN TRỢ LÝ HỆ THỐNG ===',
+'Tên: Lacie 👼',
+'Vai trò: Trợ lý AI Toàn Hệ Thống của Maize (Checking Jondo). Chuyên giải đáp mọi thắc mắc về Quy trình Jondo 6 bước, 4 Mốc tiến độ, Quy định 3 Trạng thái (Alive/Pause/Dropout), Quy chuẩn Lịch Shin và Hướng dẫn sử dụng Mini App.',
+'Tính cách: Nhí nhảnh, dễ thương, ấm áp, thông minh, hay dùng emoji hợp lý. Xưng "Lacie" hoặc "mình".',
+'',
+'=== CÁCH BẮT ĐẦU TRẢ LỜI ===',
+'- Khi người dùng ĐƯA RA YÊU CẦU / NHỜ GIÚP ĐỠ: bắt đầu bằng "Amen~" rồi trả lời.',
+'  Ví dụ: "Amen~ Để Lacie hướng dẫn bạn cách chuyển trạng thái học viên nhé!"',
+'- Khi người dùng HỎI / TRA CỨU QUY TRÌNH: bắt đầu bằng "Nae~" rồi giải đáp.',
+'  Ví dụ: "Nae~ Khi học viên bận nghỉ học ngắn hạn thì mình đổi sang Pause..."',
+'',
+'=== NGUYÊN TẮC BẢO MẬT & PHÂN QUYỀN (TUYỆT ĐỐI BẮT BỘC) ===',
+'1. KHÔNG TIẾT LỘ DỮ LIỆU TRÁI QUẢ CÁ NHÂN: Ở chế độ Hệ thống này, Lacie KHÔNG NẠP VÀ KHÔNG ĐƯỢC PHÉP TRẢ LỜI về dữ liệu riêng tư của bất kỳ học viên/trái quả cụ thể nào.',
+'   Nếu người dùng hỏi thông tin học viên cá nhân (ví dụ: "Cho tôi biết thông tin học viên A", "Trái quả B học tới buổi mấy?"):',
+'   BẮT BUỘC TỪ CHỐI & HƯỚNG DẪN:',
+'   "Nae~ Lacie không được phép chia sẻ thông tin cá nhân của trái quả tại đây để bảo mật dữ liệu. Bạn vui lòng truy cập trực tiếp vào màn hình hồ sơ của trái quả đó (nếu bạn được phân quyền) để xem chi tiết nhé!"',
+'2. KHÔNG TIẾT LỘ THÔNG TIN NHÂN SỰ NGOÀI SCOPE: Không cung cấp danh sách SĐT, địa chỉ cá nhân hay mã JD của các thành viên khác.',
+'',
+'=== BẢNG NÚT HÀNH ĐỘNG TƯƠNG TÁC (ACTION EXECUTER) ===',
+'Khi hướng dẫn các thao tác trong App, bạn CÓ THỂ chèn thêm mã nút bấm hành động theo cú pháp đặc biệt [ACTION:tên_hàm|Nhãn Nút Bấm] ở cuối câu để người dùng bấm dùng ngay:',
+'- Muốn người dùng mở Cài đặt Hồ sơ / Họ tên NDD: dùng [ACTION:openPersonalizationPanel|🎨 Mở Cài đặt Hồ sơ ngay]',
+'- Muốn người dùng mở Biểu mẫu Tạo phiếu Check Hapja: dùng [ACTION:openCreateHapjaModal|➕ Tạo phiếu Check Hapja]',
+'- Muốn người dùng mở Cài đặt Thông báo Telegram: dùng [ACTION:openNotifSettingsModal|🔔 Cài đặt Thông báo]',
+'- Muốn người dùng mở Tour Hướng dẫn Giao diện: dùng [ACTION:startAppTour|✨ Bắt đầu Tour Hướng dẫn]',
+'- Muốn người dùng mở Cẩm nang hướng dẫn: dùng [ACTION:openGuideCenter|❓ Mở Cẩm nang hướng dẫn]',
+'',
+'=== KIẾN THỨC VẬN HÀNH QUY TRÌNH JONDO ===',
+'1. 6 Bước quy trình: 1. Check Hapja (Tạo & duyệt phiếu) -> 2. Thông tin & Trạng thái -> 3. Chốt lịch & BC Tư vấn -> 4. Group TV-BB -> 5. Dạy BB & 4 Mốc tiến độ -> 6. Điền Sinka & Chốt Center.',
+'2. 3 Trạng thái hồ sơ: 🟢 Alive (Đang hoạt động) | ⏸️ Pause (Tạm dừng ngắn hạn: ốm, bận việc, đổi ca) | 🔴 Drop-out (Nghỉ hẳn, yêu cầu chọn lý do cụ thể).',
+'3. 4 Mốc tiến độ BB: 1. Bài đặc biệt | 2. Phỏng vấn GVBB | 3. Đăng ký Center | 4. Phỏng vấn Học viên. (Phải hoàn thành 100% cả 4 mốc mới mở nút Chốt Center).',
+'4. Lịch Shin: Tính theo công thức Năm Shin = Năm Dương Lịch - 1983 (Ví dụ: Năm 2026 là Shin 43.MM.DD). Định dạng Dương lịch là DD.MM.YYYY.',
+'5. File Word Thẻ HV (Sinka): Điền tích lũy thông tin Sinka ở Tab Thẻ HV. Họ tên NDD trên file Word đồng bộ từ mục Họ và tên trong Cài đặt hồ sơ của NDD.',
+'',
+'=== NGUYÊN TẮC TRẢ LỜI ===',
+'1. Bắt đầu bằng "Amen~" hoặc "Nae~".',
+'2. Văn phong nhí nhảnh, dễ thương, truyền cảm hứng, dùng emoji hợp lý.',
+'3. Ngắn gọn, súc tích (dưới 180 từ). Dùng tiếng Việt có dấu chuẩn xác.',
+'4. Thêm nút [ACTION:hàm|Nhãn] phù hợp ở cuối nếu câu trả lời liên quan đến thao tác app.'
+].join('\n');
+
+// Global Lacie Chat History
+window.globalLacieHistory = [];
+
+// Parse AI Action Executer tags like [ACTION:openCreateHapjaModal|➕ Tạo phiếu Check Hapja]
+function parseLacieActionButtons(text) {
+  if (!text) return '';
+  const actionRegex = /\[ACTION:([a-zA-Z0-9_]+)\|([^\]]+)\]/g;
+  return text.replace(actionRegex, (match, fnName, label) => {
+    return `<button class="lacie-action-btn" onclick="closeModal('globalLacieModal'); if(typeof ${fnName}==='function') ${fnName}();">
+      <span>${label}</span> ➔
+    </button>`;
+  });
+}
+
+// Get dynamic Preset Chips based on current app tab or page
+function getGlobalLaciePresets() {
+  const currentTab = window.currentMainTab || 'dashboard';
+  if (currentTab === 'hapja') {
+    return [
+      { text: "Điều kiện duyệt phiếu Hapja?", query: "Điều kiện để GGN duyệt phiếu Check Hapja là gì?" },
+      { text: "Cách lưu bản nháp Hapja?", query: "Làm thế nào để lưu bản nháp phiếu Check Hapja?" },
+      { text: "Hapja lên Alive như thế nào?", query: "Sau khi duyệt Hapja thì hồ sơ chuyển sang trạng thái gì?" }
+    ];
+  } else if (currentTab === 'records' || currentTab === 'profiles') {
+    return [
+      { text: "Bảo lưu 2 tuần chọn trạng thái gì?", query: "Học viên tạm nghỉ đi công tác hoặc ốm 2 tuần thì đổi sang trạng thái gì?" },
+      { text: "Khi nào đủ điều kiện Chốt Center?", query: "Điều kiện 4 mốc tiến độ để mở nút Chốt Center là gì?" },
+      { text: "Cách xuất Thẻ HV Sinka?", query: "Làm thế nào để xuất file Word Thẻ học viên Sinka đúng tên NDD?" }
+    ];
+  } else if (currentTab === 'calendar') {
+    return [
+      { text: "Cách chốt lịch Tư vấn?", query: "Hướng dẫn cách đặt lịch hẹn chốt Tư vấn trên hệ thống?" },
+      { text: "Lịch Shin tính như thế nào?", query: "Công thức tính Năm Shin và định dạng ngày tháng chuẩn là gì?" }
+    ];
+  }
+  
+  // Default general presets
+  return [
+    { text: "Học viên tạm nghỉ chọn trạng thái gì?", query: "Học viên bận đi công tác 2 tuần thì chọn trạng thái Alive, Pause hay Drop-out?" },
+    { text: "Cách xuất Thẻ HV Sinka?", query: "Làm thế nào để xuất file Word Thẻ học viên Sinka có đúng tên thật của NDD?" },
+    { text: "Điều kiện 4 mốc Chốt Center?", query: "4 mốc tiến độ BB gồm những gì để được Chốt Center?" }
+  ];
+}
+
+// Open Global Lacie AI Modal
+function openGlobalLacieModal(defaultQuery = '', contextPreset = null) {
+  let modal = document.getElementById('globalLacieModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'globalLacieModal';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  const presets = contextPreset || getGlobalLaciePresets();
+
+  modal.innerHTML = `
+    <div class="modal" style="max-height:85vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); background:var(--surface2);">
+        <button onclick="closeModal('globalLacieModal')" style="background:var(--surface); border:1px solid var(--border); color:var(--accent); font-size:12px; cursor:pointer; font-weight:700; padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:4px;">← Quay lại</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:20px;">👼</span>
+          <div>
+            <div style="font-size:15px; font-weight:800; color:var(--accent);">Lacie AI Hệ Thống</div>
+            <div style="font-size:10.5px; color:var(--text3); font-weight:500;">Hỏi đáp Quy trình & Ứng dụng</div>
+          </div>
+        </div>
+        <div style="width:70px;"></div>
+      </div>
+
+      <!-- Presets Area (1-Tap Chips) -->
+      <div style="padding:10px 14px; background:var(--surface); border-bottom:1px solid var(--border); overflow-x:auto; white-space:nowrap; display:flex; gap:8px;" id="globalLaciePresetsArea">
+        ${presets.map(p => `
+          <button class="lacie-preset-chip" onclick="clickGlobalLaciePreset('${encodeURIComponent(p.query)}')">
+            💡 ${p.text}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Chat Body -->
+      <div id="globalLacieChatBody" style="flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; min-height:280px; max-height:480px; background:var(--bg);">
+        <!-- Welcome Message -->
+        <div style="display:flex; gap:10px; align-items:flex-start;">
+          <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">👼</div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:14px; border-top-left-radius:2px; padding:12px 14px; max-width:85%; font-size:13px; color:var(--text1); line-height:1.5; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <b>Nae~ Lacie chào bạn!</b> 👼<br/>
+            Lacie là Trợ lý AI Hệ Thống, sẵn sàng giải đáp mọi thắc mắc của bạn về <b>Quy trình Jondo, 4 Mốc tiến độ, Trạng thái hồ sơ</b> hoặc <b>Cách thao tác trên Mini App</b>!<br/>
+            <small style="color:var(--text3); margin-top:4px; display:block;">🔒 <i>Lacie không truy cập dữ liệu cá nhân của trái quả để bảo mật tuyệt đối.</i></small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div style="padding:12px 14px; background:var(--surface2); border-top:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+        <input type="text" id="globalLacieInput" placeholder="Hỏi Lacie về quy trình, trạng thái, nút bấm..." style="flex:1; padding:10px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text1); font-size:13px; outline:none;" onkeydown="if(event.key==='Enter') submitGlobalLacieMessage()" autocomplete="off" />
+        <button onclick="submitGlobalLacieMessage()" id="globalLacieSendBtn" style="background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:white; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; flex-shrink:0; box-shadow:0 3px 8px var(--fab-shadow);">
+          ➔
+        </button>
+      </div>
+    </div>
+  `;
+
+  if (typeof haptic === 'function') haptic('selection');
+  modal.classList.add('open');
+
+  // Render existing history if any
+  if (window.globalLacieHistory.length > 0) {
+    const chatBody = document.getElementById('globalLacieChatBody');
+    if (chatBody) {
+      window.globalLacieHistory.forEach(msg => {
+        appendGlobalLacieBubble(msg.sender, msg.text, false);
+      });
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+  }
+
+  // If default query provided, submit immediately
+  if (defaultQuery) {
+    document.getElementById('globalLacieInput').value = defaultQuery;
+    setTimeout(() => submitGlobalLacieMessage(), 300);
+  }
+}
+
+// Click preset chip
+function clickGlobalLaciePreset(encodedQuery) {
+  const query = decodeURIComponent(encodedQuery);
+  const input = document.getElementById('globalLacieInput');
+  if (input) {
+    input.value = query;
+    submitGlobalLacieMessage();
+  }
+}
+
+// Append message bubble to Global Lacie Chat
+function appendGlobalLacieBubble(sender, rawText, scroll = true) {
+  const chatBody = document.getElementById('globalLacieChatBody');
+  if (!chatBody) return;
+
+  const isUser = sender === 'user';
+  const bubbleDiv = document.createElement('div');
+  bubbleDiv.style.display = 'flex';
+  bubbleDiv.style.gap = '10px';
+  bubbleDiv.style.justifyContent = isUser ? 'flex-end' : 'flex-start';
+
+  const processedText = isUser ? rawText : parseLacieActionButtons(rawText);
+
+  if (isUser) {
+    bubbleDiv.innerHTML = `
+      <div style="background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; border-radius:14px; border-top-right-radius:2px; padding:10px 14px; max-width:80%; font-size:13px; line-height:1.45; box-shadow:0 2px 6px var(--fab-shadow);">
+        ${processedText}
+      </div>
+    `;
+  } else {
+    bubbleDiv.innerHTML = `
+      <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">👼</div>
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:14px; border-top-left-radius:2px; padding:12px 14px; max-width:85%; font-size:13px; color:var(--text1); line-height:1.5; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        ${processedText}
+      </div>
+    `;
+  }
+
+  chatBody.appendChild(bubbleDiv);
+  if (scroll) chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+// Submit Global Lacie Message via ai-proxy
+async function submitGlobalLacieMessage() {
+  const input = document.getElementById('globalLacieInput');
+  const sendBtn = document.getElementById('globalLacieSendBtn');
+  if (!input || !input.value.trim()) return;
+
+  const query = input.value.trim();
+  input.value = '';
+  if (sendBtn) sendBtn.disabled = true;
+
+  // Append user bubble
+  appendGlobalLacieBubble('user', query);
+  window.globalLacieHistory.push({ sender: 'user', text: query });
+
+  // Append loading indicator
+  const chatBody = document.getElementById('globalLacieChatBody');
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'globalLacieLoading';
+  loadingDiv.style.display = 'flex';
+  loadingDiv.style.gap = '10px';
+  loadingDiv.innerHTML = `
+    <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; display:flex; align-items:center; justify-content:center; font-size:16px;">👼</div>
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:10px 14px; font-size:12px; color:var(--text2); display:flex; align-items:center; gap:6px;">
+      <span class="spinner" style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></span> Lacie đang suy nghĩ...
+    </div>
+  `;
+  chatBody.appendChild(loadingDiv);
+  chatBody.scrollTop = chatBody.scrollHeight;
+
+  try {
+    const supabaseUrl = window.SUPABASE_URL || 'https://vupqszuhhuztpxysgqpt.supabase.co';
+    const anonKey = window.SUPABASE_ANON_KEY || '';
+
+    // Prepare API payload for ai-proxy using deepseek-v4-flash
+    const apiPayload = {
+      model: 'deepseek-v4-flash',
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: LACIE_GLOBAL_SYSTEM_PROMPT },
+        ...window.globalLacieHistory.map(m => ({
+          role: m.sender === 'user' ? 'user' : 'assistant',
+          content: m.text
+        }))
+      ]
+    };
+
+    const res = await fetch(`${supabaseUrl}/functions/v1/ai-proxy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey
+      },
+      body: JSON.stringify(apiPayload)
+    });
+
+    const loadingEl = document.getElementById('globalLacieLoading');
+    if (loadingEl) loadingEl.remove();
+
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data.choices && data.choices[0]?.message?.content
+        ? data.choices[0].message.content
+        : 'Nae~ Lacie chưa nhận được phản hồi, bạn thử hỏi lại giúp Lacie nhé!';
+
+      appendGlobalLacieBubble('lacie', reply);
+      window.globalLacieHistory.push({ sender: 'lacie', text: reply });
+    } else {
+      const errTxt = await res.text();
+      console.error("[Global Lacie] Edge function error:", errTxt);
+      appendGlobalLacieBubble('lacie', 'Nae~ Kết nối bị chập chờn một xíu. Bạn bấm thử lại giúp Lacie nhé!');
+    }
+  } catch (err) {
+    console.error("[Global Lacie] Exception:", err);
+    const loadingEl = document.getElementById('globalLacieLoading');
+    if (loadingEl) loadingEl.remove();
+    appendGlobalLacieBubble('lacie', 'Nae~ Đang có sự cố kết nối mạng. Bạn thử lại sau ít phút nhé!');
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}

@@ -360,6 +360,15 @@ function openGuideCenter() {
 
         <!-- Tab 1: Stepper quy trình -->
         <div id="guidePane_jondo">
+          <!-- Role Filter Chips -->
+          <div style="display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px;" id="guideRoleChips">
+            <button class="guide-role-chip active" onclick="filterGuideRole('all', this)">Tất cả</button>
+            <button class="guide-role-chip" onclick="filterGuideRole('ndd', this)">👤 NDD</button>
+            <button class="guide-role-chip" onclick="filterGuideRole('tvv', this)">💬 TVV</button>
+            <button class="guide-role-chip" onclick="filterGuideRole('gvbb', this)">📖 GVBB</button>
+            <button class="guide-role-chip" onclick="filterGuideRole('ggn', this)">🛡️ Quản lý (GGN)</button>
+          </div>
+
           <!-- Stepper horizontal -->
           <div class="guide-stepper" id="guideStepper">
             ${JONDO_STEPS_DATA.map(step => `
@@ -434,6 +443,20 @@ function openGuideCenter() {
               </div>
             `).join('')}
           </div>
+        </div>
+
+        <!-- Ask Lacie AI Banner -->
+        <div style="margin-top:16px; background:linear-gradient(135deg,rgba(124,106,247,0.12),rgba(167,139,250,0.06)); border:1px solid var(--accent); border-radius:var(--radius); padding:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:24px;">👼</span>
+            <div>
+              <div style="font-size:13px; font-weight:700; color:var(--accent);">Thắc mắc khác về Quy trình hoặc App?</div>
+              <div style="font-size:11px; color:var(--text2);">Hỏi Trợ lý AI Lacie để được giải đáp tức thì!</div>
+            </div>
+          </div>
+          <button onclick="closeModal('guideCenterModal'); openGlobalLacieModal();" style="background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; border:none; border-radius:20px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 3px 10px var(--fab-shadow); flex-shrink:0;">
+            🤖 Hỏi Lacie
+          </button>
         </div>
       </div>
     </div>
@@ -871,6 +894,40 @@ function endAppTour(completed = false) {
     tourTooltipEl.remove();
     tourTooltipEl = null;
   }
+}
+
+// Filter Guide Steps based on Staff Role
+function filterGuideRole(role, btnEl) {
+  document.querySelectorAll('#guideRoleChips .guide-role-chip').forEach(c => c.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  const roleStepMap = {
+    'all': [1, 2, 3, 4, 5, 6],
+    'ndd': [2, 3, 4, 6],
+    'tvv': [2, 3, 4],
+    'gvbb': [4, 5],
+    'ggn': [1, 2, 5, 6]
+  };
+
+  const allowedSteps = roleStepMap[role] || [1, 2, 3, 4, 5, 6];
+  JONDO_STEPS_DATA.forEach(step => {
+    const nodeEl = document.getElementById(`gstep_${step.step}`);
+    if (nodeEl) {
+      if (allowedSteps.includes(step.step)) {
+        nodeEl.style.opacity = '1';
+        nodeEl.style.filter = 'none';
+      } else {
+        nodeEl.style.opacity = '0.35';
+        nodeEl.style.filter = 'grayscale(1)';
+      }
+    }
+  });
+
+  // Select first allowed step
+  if (allowedSteps.length > 0) {
+    selectGuideStep(allowedSteps[0]);
+  }
+}
 
   if (completed && typeof showToast === 'function') {
     showToast('🎉 Đã hoàn thành hướng dẫn!');

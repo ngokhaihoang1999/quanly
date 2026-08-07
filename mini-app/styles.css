@@ -3689,6 +3689,71 @@ body.tour-active #cjFloatingChatWindow {
   margin: 6px 12px 4px 12px;
 }
 
+/* Lacie AI Action Buttons */
+.lacie-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--fab-shadow);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.lacie-action-btn:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+/* Lacie Preset Chips */
+.lacie-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text1);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+.lacie-preset-chip:hover, .lacie-preset-chip:active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Guide Role Filter Chips */
+.guide-role-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.guide-role-chip.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px var(--fab-shadow);
+}
+
+
 
 
 
