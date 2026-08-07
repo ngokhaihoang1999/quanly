@@ -196,3 +196,38 @@ async function bulkSyncDatabaseToSheet() {
     showToast('❌ Lỗi đồng bộ Sheet');
   }
 }
+
+// Automatically sync affected profiles to Google Sheets when an org Team/Group is transferred
+async function syncProfilesByTeamOrGroup(teamId, groupId) {
+  if (!window.HAPJA_SHEET_WEBHOOK) return;
+  try {
+    // Re-build unit maps
+    if (typeof buildStaffUnitMap === 'function') {
+      await buildStaffUnitMap();
+    }
+    
+    // Find staff codes belonging to this team or group
+    let staffCodes = [];
+    if (typeof allStaff !== 'undefined' && allStaff.length) {
+      staffCodes = allStaff
+        .filter(s => (teamId && s.team_id === teamId) || (groupId && s.group_id === groupId))
+        .map(s => s.staff_code);
+    }
+    
+    if (!staffCodes.length) return;
+    
+    // Query profiles assigned to these NDDs
+    const res = await sbFetch(`/rest/v1/profiles?ndd_staff_code=in.(${staffCodes.join(',')})&select=id`);
+    const affectedProfiles = await res.json();
+    if (affectedProfiles && affectedProfiles.length) {
+      console.log(`Cascade syncing ${affectedProfiles.length} profiles to Google Sheets after org transfer...`);
+      // Sync in batches of 5
+      for (let i = 0; i < affectedProfiles.length; i += 5) {
+        const batch = affectedProfiles.slice(i, i + 5);
+        await Promise.all(batch.map(p => syncToGoogleSheet(p.id)));
+      }
+    }
+  } catch(e) {
+    console.warn('syncProfilesByTeamOrGroup error:', e);
+  }
+}

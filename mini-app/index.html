@@ -6,11 +6,11 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=6.02.0030" />
-  <link rel="stylesheet" href="desktop.css?v=6.02.0030" />
-  <link rel="stylesheet" href="avatar.css?v=6.02.0030" />
-  <link rel="stylesheet" href="reports.css?v=6.02.0030" />
-  <link rel="stylesheet" href="profile-filter.css?v=6.02.0030" />
+  <link rel="stylesheet" href="styles.css?v=6.02.0031" />
+  <link rel="stylesheet" href="desktop.css?v=6.02.0031" />
+  <link rel="stylesheet" href="avatar.css?v=6.02.0031" />
+  <link rel="stylesheet" href="reports.css?v=6.02.0031" />
+  <link rel="stylesheet" href="profile-filter.css?v=6.02.0031" />
   <style>
     /* Critical WebView cache-busting layout fixes — inlined to guarantee no stale cache */
     .chat-messages-area {
@@ -1013,42 +1013,79 @@
   <button onclick="closeModal('shareNoteModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;">Đóng</button>
 </div>
 </div>
+
+<!-- Bulk Transfer Modal (Chuyển Hàng Loạt Tổ/Nhóm) -->
+<div class="modal-overlay" id="bulkTransferModal">
+<div class="modal" style="max-width:440px;">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="bulkTransferTitle">🔄 Chuyển Đơn Vị Hàng Loạt</div>
+  <div id="bulkTransferCurrentInfo" style="font-size:13px;color:var(--text2);background:var(--surface2);padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:12px;line-height:1.5;"></div>
+  <div class="field-group">
+    <label id="bulkTransferTargetLabel">Chọn Đơn Vị Đích Mới:</label>
+    <select id="bulkTransferTargetSelect" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;"></select>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.4;">
+    ℹ️ Hệ thống sẽ tự động cập nhật đơn vị cho toàn bộ Nhân sự thuộc Tổ/Nhóm này và kích hoạt đồng bộ dữ liệu xuống Google Sheets.
+  </div>
+  <button class="save-btn" onclick="executeBulkTransfer()">🔄 Xác nhận chuyển ngay</button>
+  <button onclick="closeModal('bulkTransferModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px;width:100%;text-align:center;margin-top:4px;">Hủy</button>
+</div>
+</div>
+
+<!-- Bulk Staff Assign Modal (Gán Hàng Loạt Nhân Sự Vào Tổ) -->
+<div class="modal-overlay" id="bulkStaffAssignModal">
+<div class="modal" style="max-width:480px;max-height:85vh;display:flex;flex-direction:column;">
+  <div class="modal-handle"></div>
+  <div class="modal-title" id="bulkAssignTitle">👥 Gán Hàng Loạt Nhân Sự Vào Tổ</div>
+  <div id="bulkAssignSubInfo" style="font-size:12px;color:var(--text3);margin-bottom:8px;"></div>
+  
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+    <input type="text" id="bulkAssignSearch" oninput="renderBulkStaffList()" placeholder="🔍 Tìm theo mã JD, Tên..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;" />
+    <span id="bulkAssignCount" style="font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;">Đã chọn: 0 TĐ</span>
+  </div>
+
+  <div id="bulkAssignList" style="flex:1;overflow-y:auto;max-height:340px;border:1px solid var(--border);border-radius:8px;background:var(--surface);margin-bottom:12px;"></div>
+
+  <button class="save-btn" onclick="executeBulkStaffAssign()">💾 Lưu gán Tổ ngay</button>
+  <button onclick="closeModal('bulkStaffAssignModal')" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:6px;width:100%;text-align:center;margin-top:4px;">Hủy</button>
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="utils.js?v=6.02.0030"></script>
-<script src="combobox.js?v=6.02.0030"></script>
-<script src="webhook.js?v=6.02.0030"></script>
-<script src="avatar.js?v=6.02.0030"></script>
-<script src="reports.js?v=6.02.0030"></script>
-<script src="profile-filter.js?v=6.02.0030"></script>
-<script src="transitions.js?v=6.02.0030"></script>
+<script src="utils.js?v=6.02.0031"></script>
+<script src="combobox.js?v=6.02.0031"></script>
+<script src="webhook.js?v=6.02.0031"></script>
+<script src="avatar.js?v=6.02.0031"></script>
+<script src="reports.js?v=6.02.0031"></script>
+<script src="profile-filter.js?v=6.02.0031"></script>
+<script src="transitions.js?v=6.02.0031"></script>
 <!-- ── Core + Extracted Modules (dependency order) ── -->
-<script src="core.js?v=6.02.0030"></script>
-<script src="pin.js?v=6.02.0030"></script>
-<script src="permissions.js?v=6.02.0030"></script>
-<script src="desktop.js?v=6.02.0030"></script>
-<script src="settings.js?v=6.02.0030"></script>
-<script src="fruit-actions.js?v=6.02.0030"></script>
+<script src="core.js?v=6.02.0031"></script>
+<script src="pin.js?v=6.02.0031"></script>
+<script src="permissions.js?v=6.02.0031"></script>
+<script src="desktop.js?v=6.02.0031"></script>
+<script src="settings.js?v=6.02.0031"></script>
+<script src="fruit-actions.js?v=6.02.0031"></script>
 <!-- ── Feature Modules ── -->
-<script src="dashboard.js?v=6.02.0030"></script>
-<script src="profiles.js?v=6.02.0030"></script>
-<script src="hapja.js?v=6.02.0030"></script>
-<script src="records.js?v=6.02.0030"></script>
-<script src="staff.js?v=6.02.0030"></script>
-<script src="structure.js?v=6.02.0030"></script>
-<script src="calendar.js?v=6.02.0030"></script>
-<script src="notification.js?v=6.02.0030"></script>
-<script src="priority.js?v=6.02.0030"></script>
-<script src="notes.js?v=6.02.0030"></script>
-<script src="sinka.js?v=6.02.0030"></script>
-<script src="dkbb.js?v=6.02.0030"></script>
-<script src="strategy.js?v=6.02.0030"></script>
-<script src="lacie.js?v=6.02.0030"></script>
-<script src="ai-parse.js?v=6.02.0030"></script>
-<script src="mindmap.js?v=6.02.0030"></script>
-<script src="chat.js?v=6.02.0030"></script>
-<script src="guide.js?v=6.02.0030"></script>
+<script src="dashboard.js?v=6.02.0031"></script>
+<script src="profiles.js?v=6.02.0031"></script>
+<script src="hapja.js?v=6.02.0031"></script>
+<script src="records.js?v=6.02.0031"></script>
+<script src="staff.js?v=6.02.0031"></script>
+<script src="structure.js?v=6.02.0031"></script>
+<script src="calendar.js?v=6.02.0031"></script>
+<script src="notification.js?v=6.02.0031"></script>
+<script src="priority.js?v=6.02.0031"></script>
+<script src="notes.js?v=6.02.0031"></script>
+<script src="sinka.js?v=6.02.0031"></script>
+<script src="dkbb.js?v=6.02.0031"></script>
+<script src="strategy.js?v=6.02.0031"></script>
+<script src="lacie.js?v=6.02.0031"></script>
+<script src="ai-parse.js?v=6.02.0031"></script>
+<script src="mindmap.js?v=6.02.0031"></script>
+<script src="chat.js?v=6.02.0031"></script>
+<script src="guide.js?v=6.02.0031"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=6.02.0030"></script>
+<script src="init.js?v=6.02.0031"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;

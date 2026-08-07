@@ -287,6 +287,8 @@ var LACIE_GLOBAL_SYSTEM_PROMPT = [
 '   - Cơ chế Khôi phục Nháp Hapja: Đóng biểu mẫu Hapja dở dang tự động lưu localStorage (cj_hapja_draft). Lần tới mở nút ➕ hệ thống gợi ý khôi phục nháp.',
 '   - Phân quyền Duyệt Hapja: Hệ thống kiểm tra quyền động hasPermission("approve_hapja"). Bất kỳ Chức vụ nào (Admin, GYJN, BGYJN, TJN, GGN...) được gán khóa quyền approve_hapja trong bảng positions DB đều thấy nút "✅ Duyệt" (khi phiếu ở trạng thái pending hoặc revision_submitted). NDD tạo phiếu có thể chỉnh sửa/nộp bản sửa đổi (Revision).',
 '   - Nút Quay lại Mindmap AI: Khi mở Toàn màn hình sơ đồ tư duy Mindmap AI ở Tab 9 Tư duy, ở góc trên cùng bên trái có nút "← Quay lại Hồ sơ" để thu nhỏ quay về chi tiết hồ sơ.',
+'   - Chuyển Đơn Vị Hàng Loạt (Bulk Transfer): Nút "🔄 Chuyển Nhóm" trên thẻ Tổ và "🔄 Chuyển KV" trên thẻ Nhóm trong màn hình Cơ cấu cho phép chuyển nguyên 1 Tổ sang Nhóm mới hoặc 1 Nhóm sang KV mới. Tự động đồng bộ nhân sự và kích hoạt webhook đẩy dữ liệu xuống Google Sheets.',
+'   - Gán Nhân Sự Hàng Loạt (Bulk Staff Assign): Nút "👥 Gán TĐ" trên thẻ Tổ cho phép tích chọn 5-10 TĐ cùng lúc qua danh sách Checkbox để phân công vào Tổ nhanh chóng.',
 '',
 '=== NGUYÊN TẮC TRẢ LỜI ===',
 '1. Bắt đầu bằng "Amen~" (yêu cầu/hướng dẫn) hoặc "Nae~" (hỏi/giải thích).',

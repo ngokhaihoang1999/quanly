@@ -87,12 +87,13 @@ async function loadStructure(force = false) {
         const gOpen = _isTreeOpen('g_'+g.id, true);
         const teamCount = (g.teams||[]).length;
         const gMembers = (g.teams||[]).reduce((s,t) => s + (t.staff||[]).length, 0);
+        const gTransferBtn = canGrp ? `<button onclick="event.stopPropagation();openBulkTransferModal('group','${g.id}')" title="Chuyển Nhóm này sang Khu vực khác" style="background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.3);border-radius:4px;font-size:10px;padding:2px 6px;cursor:pointer;margin-left:6px;font-weight:600;">🔄 Chuyển KV</button>` : '';
         html += `<div class="tree-branch">
           <div class="tree-node group" onclick="_toggleTree('g_${g.id}',this)" style="cursor:pointer;">
             <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
-              <span class="tree-chevron${gOpen?' open':''}">\u25B6</span>
+              <span class="tree-chevron${gOpen?' open':''}">▶</span>
               <div style="flex:1;min-width:0;">
-                <div class="tree-label">\ud83d\udc65 ${g.name}${canGrp?`<span class="tree-edit-icon"${gEdit}> \u270f\ufe0f</span>`:''}</div>
+                <div class="tree-label">👥 ${g.name}${canGrp?`<span class="tree-edit-icon"${gEdit}> ✏️</span>`:''}${gTransferBtn}</div>
                 ${gT?`<div class="tree-manager">${gT}</div>`:''}
               </div>
             </div>
@@ -107,14 +108,16 @@ async function loadStructure(force = false) {
           const members = t.staff||[];
           const canTeam = canGrp || (['gyjn','bgyjn'].includes(pos) && (t.gyjn_staff_code===myCode||t.bgyjn_staff_code===myCode));
           const tEdit = canTeam ? ` onclick="event.stopPropagation();openEditStructModal('team','${t.id}')"` : '';
+          const tTransferBtn = canTeam ? `<button onclick="event.stopPropagation();openBulkTransferModal('team','${t.id}')" title="Chuyển Tổ này sang Nhóm khác" style="background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.3);border-radius:4px;font-size:10px;padding:2px 6px;cursor:pointer;margin-left:6px;font-weight:600;">🔄 Chuyển Nhóm</button>` : '';
+          const tAssignBtn = canTeam ? `<button onclick="event.stopPropagation();openBulkStaffAssignModal('${t.id}')" title="Gán hàng loạt TĐ vào Tổ này" style="background:rgba(34,197,94,0.12);color:#16a34a;border:1px solid rgba(34,197,94,0.3);border-radius:4px;font-size:10px;padding:2px 6px;cursor:pointer;margin-left:4px;font-weight:600;">👥 Gán TĐ</button>` : '';
           const tOpen = _isTreeOpen('t_'+t.id, false);
           html += `<div class="tree-branch">
             <div class="tree-node team" onclick="${members.length?`_toggleTree('t_${t.id}',this)`:'void(0)'}" style="cursor:${members.length?'pointer':'default'};">
               <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
-                ${members.length?`<span class="tree-chevron${tOpen?' open':''}">\u25B6</span>`:'<span style="width:16px;display:inline-block;"></span>'}
+                ${members.length?`<span class="tree-chevron${tOpen?' open':''}">▶</span>`:'<span style="width:16px;display:inline-block;"></span>'}
                 <div style="flex:1;min-width:0;">
-                  <div class="tree-label">\ud83d\udccc ${t.name}${canTeam?`<span class="tree-edit-icon"${tEdit}> \u270f\ufe0f</span>`:''}</div>
-                  ${tM?`<div class="tree-manager">\ud83d\udc51 ${tM}</div>`:''}
+                  <div class="tree-label">📌 ${t.name}${canTeam?`<span class="tree-edit-icon"${tEdit}> ✏️</span>`:''}${tTransferBtn}${tAssignBtn}</div>
+                  ${tM?`<div class="tree-manager">👑 ${tM}</div>`:''}
                 </div>
               </div>
               <div class="tree-meta">${members.length} TV</div>
@@ -894,4 +897,300 @@ async function showStaffWithoutTeam() {
   }).join('');
   
   await showConfirmAsync(`<div style="font-weight:bold;margin-bottom:8px;font-size:14px;color:var(--red);">👥 TĐ CHƯA CÓ ĐƠN VỊ TỔ </div><div style="font-size:13px;line-height:1.6;max-height:60vh;overflow-y:auto;text-align:left;">${content}</div>`);
+}
+
+// ============ BULK TRANSFER ENGINE & BULK STAFF ASSIGNMENT ============
+
+let _bulkTransferState = { type: null, id: null };
+let _bulkAssignState = { teamId: null, selectedCodes: new Set() };
+
+// Open modal to transfer an entire Team to a new Group OR an entire Group to a new Area
+function openBulkTransferModal(type, id) {
+  _bulkTransferState = { type, id };
+  const modalTitle = document.getElementById('bulkTransferTitle');
+  const targetLabel = document.getElementById('bulkTransferTargetLabel');
+  const selTarget = document.getElementById('bulkTransferTargetSelect');
+  const currentInfo = document.getElementById('bulkTransferCurrentInfo');
+  if (!modalTitle || !selTarget) return;
+
+  if (type === 'team') {
+    // Find Team
+    let foundTeam = null, currentGroup = null, currentArea = null;
+    for (const a of (structureData || [])) {
+      for (const g of (a.org_groups || [])) {
+        for (const t of (g.teams || [])) {
+          if (t.id === id) { foundTeam = t; currentGroup = g; currentArea = a; break; }
+        }
+        if (foundTeam) break;
+      }
+      if (foundTeam) break;
+    }
+    if (!foundTeam) { showToast('⚠️ Không tìm thấy Tổ'); return; }
+
+    modalTitle.textContent = `🔄 Chuyển Tổ "${foundTeam.name}" sang Nhóm mới`;
+    currentInfo.innerHTML = `Đang thuộc: <b>Nhóm ${currentGroup?.name} (${currentArea?.name})</b> · Sĩ số: <b>${(foundTeam.staff || []).length} TĐ</b>`;
+    targetLabel.textContent = 'Chọn Nhóm Đích Mới:';
+
+    // List all Groups across all Areas (excluding current group)
+    const allGroups = [];
+    (structureData || []).forEach(a => {
+      (a.org_groups || []).forEach(g => {
+        if (g.id !== currentGroup?.id) {
+          allGroups.push({ id: g.id, name: `${g.name} (${a.name})` });
+        }
+      });
+    });
+
+    if (!allGroups.length) {
+      showToast('⚠️ Không có Nhóm nào khác để chuyển đến');
+      return;
+    }
+
+    selTarget.innerHTML = allGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  } else if (type === 'group') {
+    // Find Group
+    let foundGroup = null, currentArea = null;
+    for (const a of (structureData || [])) {
+      for (const g of (a.org_groups || [])) {
+        if (g.id === id) { foundGroup = g; currentArea = a; break; }
+      }
+      if (foundGroup) break;
+    }
+    if (!foundGroup) { showToast('⚠️ Không tìm thấy Nhóm'); return; }
+
+    modalTitle.textContent = `🔄 Chuyển Nhóm "${foundGroup.name}" sang Khu vực mới`;
+    const gMembers = (foundGroup.teams || []).reduce((s, t) => s + (t.staff || []).length, 0);
+    currentInfo.innerHTML = `Đang thuộc: <b>Khu vực ${currentArea?.name}</b> · Quy mô: <b>${(foundGroup.teams || []).length} Tổ · ${gMembers} TĐ</b>`;
+    targetLabel.textContent = 'Chọn Khu Vực Đích Mới:';
+
+    const otherAreas = (structureData || []).filter(a => a.id !== currentArea?.id);
+    if (!otherAreas.length) {
+      showToast('⚠️ Không có Khu vực nào khác để chuyển đến');
+      return;
+    }
+
+    selTarget.innerHTML = otherAreas.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+  }
+
+  document.getElementById('bulkTransferModal').classList.add('open');
+}
+
+// Execute Bulk Transfer 1-Click
+async function executeBulkTransfer() {
+  const { type, id } = _bulkTransferState;
+  const selTarget = document.getElementById('bulkTransferTargetSelect');
+  const targetId = selTarget ? selTarget.value : null;
+  if (!type || !id || !targetId) { showToast('⚠️ Chưa chọn đơn vị đích'); return; }
+
+  const btn = document.querySelector('#bulkTransferModal .save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang chuyển...'; }
+
+  try {
+    if (type === 'team') {
+      // 1. Update team's group_id in DB
+      await sbFetch(`/rest/v1/teams?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ group_id: targetId })
+      });
+
+      // 2. Cascade update group_id for all staff members in this team
+      await sbFetch(`/rest/v1/staff?team_id=eq.${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ group_id: targetId })
+      });
+
+      showToast('✅ Đã chuyển Tổ và đồng bộ nhân sự sang Nhóm mới!');
+      closeModal('bulkTransferModal');
+      await loadStructure(true);
+      await loadStaff(true);
+
+      // 3. Cascade sync Google Sheets
+      if (typeof syncProfilesByTeamOrGroup === 'function') {
+        syncProfilesByTeamOrGroup(id, null);
+      }
+    } else if (type === 'group') {
+      // 1. Update group's area_id in DB
+      await sbFetch(`/rest/v1/org_groups?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ area_id: targetId })
+      });
+
+      showToast('✅ Đã chuyển Nhóm sang Khu vực mới!');
+      closeModal('bulkTransferModal');
+      await loadStructure(true);
+      await loadStaff(true);
+
+      // 2. Cascade sync Google Sheets
+      if (typeof syncProfilesByTeamOrGroup === 'function') {
+        syncProfilesByTeamOrGroup(null, id);
+      }
+    }
+  } catch (e) {
+    console.error('executeBulkTransfer error:', e);
+    showToast('❌ Lỗi chuyển đơn vị');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Xác nhận chuyển ngay'; }
+  }
+}
+
+// Open modal for Bulk Staff Assignment to a Team
+function openBulkStaffAssignModal(teamId) {
+  _bulkAssignState.teamId = teamId;
+  _bulkAssignState.selectedCodes.clear();
+
+  // Find Team
+  let foundTeam = null, foundGroup = null, foundArea = null;
+  for (const a of (structureData || [])) {
+    for (const g of (a.org_groups || [])) {
+      for (const t of (g.teams || [])) {
+        if (t.id === teamId) { foundTeam = t; foundGroup = g; foundArea = a; break; }
+      }
+      if (foundTeam) break;
+    }
+    if (foundTeam) break;
+  }
+  if (!foundTeam) { showToast('⚠️ Không tìm thấy Tổ'); return; }
+
+  document.getElementById('bulkAssignTitle').textContent = `👥 Gán hàng loạt TĐ vào Tổ "${foundTeam.name}"`;
+  document.getElementById('bulkAssignSubInfo').textContent = `Thuộc: Nhóm ${foundGroup?.name} (${foundArea?.name})`;
+
+  // Pre-select current staff members in team
+  const currentMembers = (foundTeam.staff || []).map(s => s.staff_code);
+  currentMembers.forEach(code => _bulkAssignState.selectedCodes.add(code));
+
+  const searchInput = document.getElementById('bulkAssignSearch');
+  if (searchInput) searchInput.value = '';
+
+  renderBulkStaffList();
+  document.getElementById('bulkStaffAssignModal').classList.add('open');
+}
+
+// Render Checkbox list for Bulk Staff Assignment
+function renderBulkStaffList() {
+  const container = document.getElementById('bulkAssignList');
+  if (!container || !allStaff) return;
+
+  const query = (document.getElementById('bulkAssignSearch')?.value || '').toLowerCase().trim();
+
+  // Filter staff by search query
+  const filteredStaff = allStaff.filter(s => {
+    if (s.position === 'admin') return false; // Exclude super admin
+    const codeMatch = s.staff_code.toLowerCase().includes(query);
+    const nameMatch = (s.full_name || '').toLowerCase().includes(query);
+    const nicknameMatch = (s.nickname || '').toLowerCase().includes(query);
+    return !query || codeMatch || nameMatch || nicknameMatch;
+  });
+
+  // Sort: selected first, then by staff_code
+  filteredStaff.sort((a, b) => {
+    const selA = _bulkAssignState.selectedCodes.has(a.staff_code) ? 0 : 1;
+    const selB = _bulkAssignState.selectedCodes.has(b.staff_code) ? 0 : 1;
+    if (selA !== selB) return selA - selB;
+    return a.staff_code.localeCompare(b.staff_code);
+  });
+
+  if (!filteredStaff.length) {
+    container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px;">Không tìm thấy nhân sự phù hợp</div>';
+    return;
+  }
+
+  container.innerHTML = filteredStaff.map(s => {
+    const isChecked = _bulkAssignState.selectedCodes.has(s.staff_code);
+    const unitLabel = typeof getStaffUnit === 'function' ? getStaffUnit(s.staff_code) : '';
+    const posLabel = getPositionName(s.position || 'td');
+    return `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;background:${isChecked?'rgba(34,197,94,0.06)':'transparent'};">
+      <input type="checkbox" value="${s.staff_code}" ${isChecked?'checked':''} onchange="toggleBulkStaffSelect('${s.staff_code}', this.checked)" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+          <span>${s.staff_code}</span>
+          <span style="font-weight:400;color:var(--text2);">${s.full_name || ''}</span>
+          <span class="staff-role-badge ${getBadgeClass(s.position||'td')}" style="font-size:9px;padding:1px 5px;">${posLabel}</span>
+        </div>
+        ${unitLabel ? `<div style="font-size:11px;color:var(--text3);">${unitLabel}</div>` : '<div style="font-size:11px;color:var(--amber); font-weight:500;">Chưa xếp Tổ</div>'}
+      </div>
+    </label>`;
+  }).join('');
+
+  updateBulkAssignCount();
+}
+
+function toggleBulkStaffSelect(staffCode, isChecked) {
+  if (isChecked) {
+    _bulkAssignState.selectedCodes.add(staffCode);
+  } else {
+    _bulkAssignState.selectedCodes.delete(staffCode);
+  }
+  updateBulkAssignCount();
+}
+
+function updateBulkAssignCount() {
+  const countEl = document.getElementById('bulkAssignCount');
+  if (countEl) {
+    countEl.textContent = `Đã chọn: ${_bulkAssignState.selectedCodes.size} TĐ`;
+  }
+}
+
+// Execute Bulk Staff Assignment
+async function executeBulkStaffAssign() {
+  const teamId = _bulkAssignState.teamId;
+  if (!teamId) return;
+
+  // Find parent group for this team
+  let parentGroupId = null;
+  for (const a of (structureData || [])) {
+    for (const g of (a.org_groups || [])) {
+      if ((g.teams || []).some(t => t.id === teamId)) {
+        parentGroupId = g.id;
+        break;
+      }
+    }
+    if (parentGroupId) break;
+  }
+
+  const selectedCodesArr = Array.from(_bulkAssignState.selectedCodes);
+
+  // Find staff currently in this team
+  const currentTeamMembers = allStaff.filter(s => s.team_id === teamId).map(s => s.staff_code);
+  const newMembers = selectedCodesArr;
+  const removedMembers = currentTeamMembers.filter(code => !selectedCodesArr.includes(code));
+
+  const saveBtn = document.querySelector('#bulkStaffAssignModal .save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Đang lưu gán...'; }
+
+  try {
+    // 1. Assign selected staff to teamId & parentGroupId
+    if (newMembers.length > 0) {
+      await sbFetch(`/rest/v1/staff?staff_code=in.(${newMembers.join(',')})`, {
+        method: 'PATCH',
+        body: JSON.stringify({ team_id: teamId, group_id: parentGroupId })
+      });
+    }
+
+    // 2. Remove unchecked staff from teamId
+    if (removedMembers.length > 0) {
+      await sbFetch(`/rest/v1/staff?staff_code=in.(${removedMembers.join(',')})`, {
+        method: 'PATCH',
+        body: JSON.stringify({ team_id: null })
+      });
+    }
+
+    showToast(`✅ Đã gán ${newMembers.length} TĐ vào Tổ!`);
+    closeModal('bulkStaffAssignModal');
+
+    await loadStructure(true);
+    await loadStaff(true);
+
+    // 3. Cascade sync Google Sheets for affected team
+    if (typeof syncProfilesByTeamOrGroup === 'function') {
+      syncProfilesByTeamOrGroup(teamId, null);
+    }
+  } catch (e) {
+    console.error('executeBulkStaffAssign error:', e);
+    showToast('❌ Lỗi gán nhân sự');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Lưu gán Tổ ngay'; }
+  }
 }
