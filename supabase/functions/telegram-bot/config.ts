@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 export const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || '';
+export const TELEGRAM_SECRET_TOKEN = Deno.env.get('TELEGRAM_SECRET_TOKEN') || '';
 export const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 export const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || '';
 export const ADMIN_STAFF_CODE = '000142-NKH';

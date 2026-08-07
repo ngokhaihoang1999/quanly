@@ -14,7 +14,7 @@
  *     private.ts      → Private chat: /start, /search, /check_hapja, /support, /reply
  */
 
-import { supabase, ADMIN_STAFF_CODE, BOT_TOKEN, SUPABASE_URL } from "./config.ts";
+import { supabase, ADMIN_STAFF_CODE, BOT_TOKEN, TELEGRAM_SECRET_TOKEN, SUPABASE_URL } from "./config.ts";
 import { sendText, getAdminTelegramId } from "./telegram.ts";
 import { getStaffByTelegramId } from "./telegram.ts";
 import { handleGroupChat } from "./handlers/group.ts";
@@ -288,6 +288,14 @@ Deno.serve(async (req) => {
             "Access-Control-Allow-Origin": "*",
           }
         });
+      }
+    }
+
+    // Validate Telegram secret token if configured
+    if (TELEGRAM_SECRET_TOKEN) {
+      const incomingSecret = req.headers.get("x-telegram-bot-api-secret-token");
+      if (incomingSecret !== TELEGRAM_SECRET_TOKEN) {
+        return new Response("Unauthorized", { status: 401 });
       }
     }
 

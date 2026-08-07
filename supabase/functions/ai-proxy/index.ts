@@ -21,8 +21,9 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing auth' }), {
+    const apiKeyHeader = req.headers.get('apikey');
+    if (!authHeader || (!authHeader.startsWith('Bearer ') && !apiKeyHeader)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid or missing authentication credentials' }), {
         status: 401,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       });
