@@ -41,17 +41,25 @@
       return;
     }
 
-    // 2. Fetch recent records & notes for context rendering if needed
-    let recentRecord = null;
-    if (contextType === 'calendar' || contextType === 'overview') {
-      try {
-        const res = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&order=created_at.desc&limit=1`);
-        if (res.ok) {
-          const rArr = await res.json();
-          if (rArr && rArr[0]) recentRecord = rArr[0];
-        }
-      } catch(e) {}
-    }
+    // 2. Fetch sessions & records for stage intelligence
+    let sessions = [];
+    let records = [];
+    try {
+      const [sRes, rRes] = await Promise.all([
+        sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
+        sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.desc`)
+      ]);
+      if (sRes.ok) {
+        const sArr = await sRes.json();
+        if (Array.isArray(sArr)) sessions = sArr;
+      }
+      if (rRes.ok) {
+        const rArr = await rRes.json();
+        if (Array.isArray(rArr)) records = rArr;
+      }
+    } catch(e) {}
+
+    const recentRecord = records[0] || null;
 
     // Remove existing popover if any
     const existing = document.getElementById('profileQuickPopoverContainer');
@@ -77,7 +85,7 @@
     // Check last record age (> 7 days warning)
     if (recentRecord && recentRecord.created_at) {
       const diffDays = Math.floor((new Date() - new Date(recentRecord.created_at)) / (86400 * 1000));
-      if (diffDays > 7 && profile.status !== 'drop_out' && profile.status !== 'pause') {
+      if (diffDays > 7 && profile.fruit_status !== 'dropout' && profile.fruit_status !== 'pause') {
         warningChips.push(`<span class="chip-warning" style="background:rgba(239,68,68,0.15);color:#dc2626;border:1px solid rgba(239,68,68,0.3);padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;">⚠️ Chưa có báo cáo > ${diffDays} ngày</span>`);
       }
     }
@@ -100,22 +108,20 @@
     const rawNdd = profile.ndd_staff_code || profile.ndd_code || profile.ndd_name || '';
     let nddLabel = 'Chưa gán';
     if (rawNdd) {
-      if (typeof getStaffLabel === 'function') {
-        nddLabel = getStaffLabel(rawNdd);
-      } else {
-        nddLabel = rawNdd;
-      }
+      nddLabel = typeof getStaffLabel === 'function' ? getStaffLabel(rawNdd) : rawNdd;
     }
 
     const rawGvbb = profile.gvbb_staff_code || profile.gvbb_code || '';
     let gvbbLabel = '';
     if (rawGvbb) {
-      if (typeof getStaffLabel === 'function') {
-        gvbbLabel = getStaffLabel(rawGvbb);
-      } else {
-        gvbbLabel = rawGvbb;
-      }
+      gvbbLabel = typeof getStaffLabel === 'function' ? getStaffLabel(rawGvbb) : rawGvbb;
     }
+
+    // Sessions & TV records lookup
+    const tvv1Session = sessions.find(s => s.session_number === 1);
+    const tvv2Session = sessions.find(s => s.session_number === 2);
+    const tv1Record = records.find(r => r.record_type === 'tu_van' && Number(r.content?.lan_thu) === 1);
+    const tv2Record = records.find(r => r.record_type === 'tu_van' && Number(r.content?.lan_thu) === 2);
 
     if (contextType === 'calendar') {
       // Focus: Next Appointment & Latest Report
@@ -126,46 +132,54 @@
           ${recentRecord && recentRecord.created_at ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">⏱ Ngày: ${shinDate(recentRecord.created_at)}</div>` : ''}
         </div>
       `;
-    } else if (contextType === 'homework') {
-      // Focus: BTVN & Progress
-      contextBodyHtml = `
-        <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
-          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">📚 Bài Tập & Tiến Độ</div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">${profile.phase === 'bb' || profile.phase === 'center' ? `Tiến độ BB: ${profile.bb_progress || 0}/12 bài` : `Giai đoạn: ${phaseLabel}`}</div>
-          ${profile.diem_hai ? `<div style="font-size:11.5px;color:var(--text2);margin-top:4px;">🎯 Điểm hái trái: ${escHtml(profile.diem_hai)}</div>` : ''}
-        </div>
-      `;
     } else {
-      // Focus: Overview (Phase-Accurate display)
+      // Focus: Stage Intelligence
       if (['chakki','new'].includes(profile.phase)) {
         const chakkiD = profile.t2_values?.t2_ngay_chakki || profile.chakki_date || (profile.created_at ? shinDate(profile.created_at) : 'Chưa cập nhật');
+        const tv1Text = tvv1Session
+          ? `<span style="color:var(--green);font-weight:700;">✅ ${shinDate(tvv1Session.created_at)}</span> (TVV: <b>${escHtml(typeof getStaffLabel === 'function' ? getStaffLabel(tvv1Session.tvv_staff_code) : tvv1Session.tvv_staff_code)}</b>${tvv1Session.tool ? ' · 🛠️ '+tvv1Session.tool : ''})`
+          : '<span style="color:#f59e0b;font-weight:600;">⏳ Chưa chốt lịch TV</span>';
+        const bc1Text = tv1Record ? '<span style="color:var(--green);font-weight:700;">✅ Đã gửi báo cáo</span>' : '<span style="color:var(--text3);">⚪ Chưa có báo cáo</span>';
+
         contextBodyHtml = `
           <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🌱 GIAI ĐOẠN CHAKKI (HAPJA)</div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);">Đang tìm hiểu & tiếp cận ban đầu</div>
-            <div style="font-size:11.5px;color:var(--text2);margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">🌱 GIAI ĐOẠN CHAKKI (HAPJA)</div>
+            <div style="font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:5px;">
               <div>👤 <b>NDD:</b> ${escHtml(nddLabel)}</div>
-              <div>📅 <b>Ngày Chakki:</b> ${chakkiD}</div>
+              <div>📅 <b>Chốt TV 1:</b> ${tv1Text}</div>
+              <div>📝 <b>Báo cáo TV 1:</b> ${bc1Text}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">📆 Ngày Chakki: ${chakkiD}</div>
             </div>
           </div>
         `;
       } else if (['tu_van','tu_van_hinh'].includes(profile.phase)) {
+        const tv1Text = tvv1Session
+          ? `<b>${escHtml(typeof getStaffLabel === 'function' ? getStaffLabel(tvv1Session.tvv_staff_code) : tvv1Session.tvv_staff_code)}</b> ${tv1Record ? '<span style="color:var(--green);font-weight:700;">(✅ Đã BC)</span>' : '<span style="color:#f59e0b;">(⏳ Chờ BC)</span>'}`
+          : '<span style="color:var(--text3);">⚪ Chưa chốt</span>';
+
+        const tv2Text = tvv2Session
+          ? `<b>${escHtml(typeof getStaffLabel === 'function' ? getStaffLabel(tvv2Session.tvv_staff_code) : tvv2Session.tvv_staff_code)}</b> ${tv2Record ? '<span style="color:var(--green);font-weight:700;">(✅ Đã BC)</span>' : '<span style="color:#f59e0b;">(⏳ Chờ BC)</span>'}`
+          : '<span style="color:var(--text3);">⚪ Chưa chốt</span>';
+
         contextBodyHtml = `
           <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🧭 GIAI ĐOẠN TƯ VẤN</div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);">${recentRecord ? (recentRecord.noi_dung || recentRecord.ten_cong_cu || 'Đang trong quá trình tư vấn') : 'Đang hẹn tư vấn'}</div>
-            <div style="font-size:11.5px;color:var(--text2);margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">🧭 TIẾN ĐỘ TƯ VẤN</div>
+            <div style="font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:5px;">
               <div>👤 <b>NDD:</b> ${escHtml(nddLabel)}</div>
-              ${profile.diem_hai ? `<div>🎯 <b>Điểm hái trái:</b> ${escHtml(profile.diem_hai)}</div>` : ''}
-              ${recentRecord && recentRecord.created_at ? `<div>⏱ <b>Nhật ký gần nhất:</b> ${shinDate(recentRecord.created_at)}</div>` : ''}
+              <div style="border-top:1px solid var(--border);padding-top:4px;">1️⃣ <b>TV Lần 1:</b> ${tv1Text}</div>
+              <div style="border-top:1px dashed var(--border);padding-top:4px;">2️⃣ <b>TV Lần 2:</b> ${tv2Text}</div>
+              ${profile.diem_hai ? `<div style="border-top:1px dashed var(--border);padding-top:4px;color:var(--text1);font-weight:600;">🎯 <b>Điểm hái trái:</b> ${escHtml(profile.diem_hai)}</div>` : ''}
             </div>
           </div>
         `;
       } else {
-        // BB / Center / Completed Phase: Show 12 BB progress bar + 4 milestones
+        // BB / Center / Completed Phase
         const progressPercent = Math.min(Math.round(((profile.bb_progress || 0) / 12) * 100), 100);
         contextBodyHtml = `
           <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
+            <div style="font-size:11.5px;color:var(--text2);margin-bottom:8px;">
+              👤 <b>NDD:</b> ${escHtml(nddLabel)} ${gvbbLabel ? ` | 📖 <b>GVBB:</b> ${escHtml(gvbbLabel)}` : ''}
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
               <span style="font-size:12px;font-weight:700;color:var(--text);">Tiến độ 12 bài BB: ${profile.bb_progress || 0}/12</span>
               <span style="font-size:11px;font-weight:700;color:var(--accent);">${progressPercent}%</span>
@@ -173,12 +187,11 @@
             <div style="width:100%;height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:10px;">
               <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.3s;"></div>
             </div>
-            
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-              <div style="color:${m1?'var(--green)':'var(--text3)'};">● Bài ĐB ${m1?'✓':''}</div>
-              <div style="color:${m2?'var(--green)':'var(--text3)'};">● PV GVBB ${m2?'✓':''}</div>
-              <div style="color:${m3?'var(--green)':'var(--text3)'};">● ĐK Center ${m3?'✓':''}</div>
-              <div style="color:${m4?'var(--green)':'var(--text3)'};">● PV Học viên ${m4?'✓':''}</div>
+              <div style="color:${m1?'var(--green)':'var(--text3)'};font-weight:${m1?'700':'400'};">● Bài ĐB ${m1?'✓':''}</div>
+              <div style="color:${m2?'var(--green)':'var(--text3)'};font-weight:${m2?'700':'400'};">● PV GVBB ${m2?'✓':''}</div>
+              <div style="color:${m3?'var(--green)':'var(--text3)'};font-weight:${m3?'700':'400'};">● ĐK Center ${m3?'✓':''}</div>
+              <div style="color:${m4?'var(--green)':'var(--text3)'};font-weight:${m4?'700':'400'};">● PV Học viên ${m4?'✓':''}</div>
             </div>
           </div>
         `;
@@ -223,12 +236,8 @@
 
         ${contextBodyHtml}
 
-        <div style="font-size:11.5px;color:var(--text2);margin-bottom:12px;line-height:1.5;">
-          👤 NDD: <b>${escHtml(nddLabel)}</b> ${gvbbLabel ? ` | 📖 GVBB: <b>${escHtml(gvbbLabel)}</b>` : ''}
-        </div>
-
         <!-- Quick Action Dock -->
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
           ${zaloUrl ? `<a href="${zaloUrl}" target="_blank" class="popover-action-btn" style="background:#0068ff;color:white;" title="Mở Zalo">💬 Zalo</a>` : ''}
           ${phoneCallUrl ? `<a href="${phoneCallUrl}" class="popover-action-btn" style="background:var(--surface2);color:var(--text);" title="Gọi điện">📞 Gọi</a>` : ''}
           <button onclick="openFloatingChat('${profile.id}')" class="popover-action-btn" style="background:var(--surface2);color:var(--text);" title="Chat nhóm">💬 Chat</button>

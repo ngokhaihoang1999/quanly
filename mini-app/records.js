@@ -42,8 +42,11 @@ async function loadJourney(profileId, currentPhase) {
   const tlEl = document.getElementById('timelineList');
   if (!phBtnEl || !tlEl) return;
 
+  tlEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">⏳ Đang tải hành trình...</div>';
+
   const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
-  const isDropout = ['dropout','pause'].includes(allProfiles.find(x => x.id === profileId)?.fruit_status);
+  const targetP = allProfiles.find(x => String(x.id) === String(profileId));
+  const isDropout = ['dropout','pause'].includes(targetP?.fruit_status);
 
   // Fetch group info (for tu_van/BB/center phase — after Lập Group)
   let bbGroupInfo = null;
@@ -202,7 +205,7 @@ async function loadJourney(profileId, currentPhase) {
     const matchedBtvnIds = new Set();
 
     // 1. Chakki — ALWAYS at bottom (oldest anchor)
-    const currentP = allProfiles.find(x => x.id === profileId);
+    const currentP = targetP || allProfiles.find(x => String(x.id) === String(profileId));
     const t2Chakki = fhData.t2_ngay_chakki || currentP?.t2_values?.t2_ngay_chakki;
     const hjRecord = recs.find(r => r.record_type === 'hapja');
     const hjChakki = hjRecord?.data?.ngay_chakki || hapjas[0]?.data?.ngay_chakki;
