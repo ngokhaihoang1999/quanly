@@ -354,7 +354,7 @@ async function loadDashboard(force = false) {
         const ndd = allR.find(x=>x.role_type==='ndd')?.staff_code || p?.ndd_staff_code || '—';
         const tvv = allR.filter(x=>x.role_type==='tvv').map(x=>x.staff_code).join(', ') || '—';
         const gvbb = allR.find(x=>x.role_type==='gvbb')?.staff_code || '—';
-        const latest = latestActivityLabel(recordMap[pid], sessionMap[pid]);
+        const latest = typeof latestActivityLabel === 'function' ? latestActivityLabel(recordMap[pid], sessionMap[pid]) : '';
         const fStatus = p?.fruit_status || 'alive';
         const sDot = fStatus === 'dropout' ? '🔴' : fStatus === 'pause' ? '⏸️' : '🟢';
         

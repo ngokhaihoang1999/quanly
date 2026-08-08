@@ -38,14 +38,51 @@ function getTimeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   if (isNaN(diff)) return '';
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'Vừa xong';
-  if (m < 60) return `${m} phút trước`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} giờ trước`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d} ngày trước`;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'Vừa xong';
+  if (min < 60) return `${min} phút trước`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} giờ trước`;
+  const dy = Math.floor(hr / 24);
+  if (dy < 7) return `${dy} ngày trước`;
   return shinDate(dateStr);
+}
+
+// ── Shared utility: label for the latest activity of a profile ──────────────
+function latestActivityLabel(rec, sess) {
+  try {
+    const recTime = rec && rec.created_at ? new Date(rec.created_at).getTime() : 0;
+    const sessTime = sess && sess.created_at ? new Date(sess.created_at).getTime() : 0;
+    if (!rec && !sess) return '';
+    let label = '', actDate = null;
+    if (recTime >= sessTime) {
+      const rt = rec?.record_type || '';
+      const c = rec?.content || {};
+      actDate = rec.created_at;
+      if (rt === 'tu_van')          label = `Báo cáo TV lần ${c?.lan_thu||''}`;
+      else if (rt === 'bien_ban')    label = `Báo cáo BB buổi ${c?.buoi_thu||''}`;
+      else if (rt === 'chot_bb')     label = '🎓 Chốt BB';
+      else if (rt === 'chot_center') label = '🏛️ Chốt Center';
+      else if (rt === 'mo_kt')       label = '📖 Đã mở KT';
+      else if (rt === 'drop_out')    label = '🔴 Drop-out';
+      else if (rt === 'pause')       label = '⏸️ Pause';
+      else if (rt === 'alive')       label = '🟢 Khôi phục Alive';
+      else if (rt === 'bai_dac_biet') label = `⭐ Bài đặc biệt${c?.buoi_thu ? ' (buổi '+c.buoi_thu+')' : ''}`;
+      else if (rt === 'pv_gvbb')     label = '🎤 PV GVBB';
+      else if (rt === 'dky_center')   label = '📋 ĐKý Center';
+      else if (rt === 'pv_hs')       label = '🎓 PV HS';
+      else if (rt === 'btvn')        label = '📝 BTVN';
+      else if (rt === 'team_meeting') label = '🤝 Team Meeting';
+      else label = rt || '';
+    } else {
+      actDate = sess.created_at;
+      label = `Chốt TV lần ${sess.session_number||''}${sess.tool ? ' ('+sess.tool+')' : ''}`;
+    }
+    const ago = typeof getTimeAgo === 'function' ? getTimeAgo(actDate) : '';
+    return ago ? `${label} · ${ago}` : label;
+  } catch(e) {
+    return '';
+  }
 }
 
 // ── HTML escape ──

@@ -209,7 +209,9 @@ async function openProfile(p, cardEl, initialTabId) {
 
     const sortedSessions = [...sessionsRows].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     const latestSession = sortedSessions[0] || null;
-    latestInfo = latestActivityLabel(latestRecord, latestSession);
+    try {
+      latestInfo = typeof latestActivityLabel === 'function' ? latestActivityLabel(latestRecord, latestSession) : '';
+    } catch(err) { latestInfo = ''; }
     
     // ── Parse ĐK Center milestone ──
     if (dkRes && dkRes.ok) {

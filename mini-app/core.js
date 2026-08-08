@@ -932,7 +932,6 @@ function safeBind(fnName) {
       return await orig.apply(this, args);
     } catch(e) {
       console.error(`[ErrorBoundary] ${fnName}:`, e);
-      if (typeof showToast === 'function') showToast(`⚠️ Lỗi tại ${fnName}`);
     }
   };
 }
