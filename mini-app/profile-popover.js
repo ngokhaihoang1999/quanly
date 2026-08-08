@@ -17,7 +17,10 @@
 
     // 1. Fetch profile from cache or database
     let profile = null;
-    if (window._profilesCache && Array.isArray(window._profilesCache)) {
+    if (window.allProfiles && Array.isArray(window.allProfiles)) {
+      profile = window.allProfiles.find(p => p.id === profileId);
+    }
+    if (!profile && window._profilesCache && Array.isArray(window._profilesCache)) {
       profile = window._profilesCache.find(p => p.id === profileId);
     }
     

@@ -504,6 +504,20 @@ async function loadDashboard(force = false) {
     // ── SECTION 2: CÁ NHÂN ──
     const isManagerWithEdit = hasPermission('edit_profile');
     
+    function renderDashPersonalMetrics(nddList = [], tvvList = [], gvbbList = [], managedPids = new Set()) {
+      const el = document.getElementById('dashPersonalMetrics');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="dash-card-row">
+          <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('ndd')"><div class="num" style="color:var(--accent);">${nddList.length}</div><div class="lbl">Trái NDD</div></div>
+          <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('tvv')"><div class="num" style="color:var(--green);">${tvvList.length}</div><div class="lbl">Trái TV</div></div>
+        </div>
+        <div class="dash-card-row">
+          <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('gvbb')"><div class="num" style="color:#f59e0b;">${gvbbList.length}</div><div class="lbl">Trái BB</div></div>
+          <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('managed')"><div class="num" style="color:#8b5cf6;">${managedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
+        </div>`;
+    }
+    
     const nddList = [];
     const tvvList = [];
     const gvbbList = [];
@@ -540,26 +554,20 @@ async function loadDashboard(force = false) {
     window._personalRecordMap = recordMap;
     window._personalSessionMap = sessionMap;
 
-    document.getElementById('dashPersonalMetrics').innerHTML = `
-      <div class="dash-card-row">
-        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('ndd')"><div class="num" style="color:var(--accent);">${nddList.length}</div><div class="lbl">Trái NDD</div></div>
-        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('tvv')"><div class="num" style="color:var(--green);">${tvvList.length}</div><div class="lbl">Trái TV</div></div>
-      </div>
-      <div class="dash-card-row">
-        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('gvbb')"><div class="num" style="color:#f59e0b;">${gvbbList.length}</div><div class="lbl">Trái BB</div></div>
-        <div class="dash-stat" style="cursor:pointer;" onclick="renderPersonalList('managed')"><div class="num" style="color:#8b5cf6;">${managedPids.size}</div><div class="lbl">Tổng được Quản lý</div></div>
-      </div>`;
+    renderDashPersonalMetrics(nddList, tvvList, gvbbList, managedPids);
 
     // Render NDD by default
     renderPersonalList('ndd');
 
   } catch(e) {
     console.error('Dashboard error:', e);
+    // Guarantee dashPersonalMetrics renders even on error
+    renderDashPersonalMetrics();
     // Clear any stuck loading states
     const stuck = ['dashHapjaList','dashMyList','dashNDDList'];
     stuck.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
+      if (el && !el.children.length) el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
     });
     ['dashUnitList','dashSubUnits'].forEach(id => {
       const el = document.getElementById(id);
@@ -567,9 +575,7 @@ async function loadDashboard(force = false) {
     });
     // Also clear metrics areas
     const metricsEl = document.getElementById('dashUnitMetrics');
-    const personalEl = document.getElementById('dashPersonalMetrics');
     if (metricsEl && !metricsEl.innerHTML.trim()) metricsEl.innerHTML = '';
-    if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '';
   } finally {
     markFresh('dashboard');
     // GUARANTEE: After loadDashboard completes (success or error), any element still
