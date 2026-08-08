@@ -450,17 +450,21 @@ window.saveOfflineQueue = function(q) {
   } catch(e) {}
 };
 
-window.enqueueOfflineMutation = function(path, opts) {
+window.enqueueOfflineMutation = function(path, opts, showNotification = false) {
   const q = getOfflineQueue();
-  q.push({
-    id: Date.now() + '_' + Math.random().toString(36).substring(2,7),
-    path: path,
-    opts: opts,
-    created_at: new Date().toISOString()
-  });
-  saveOfflineQueue(q);
-  if (typeof showToast === 'function') {
-    showToast('🟡 Đã lưu vào Hàng chờ Offline (sẽ tự đồng bộ khi có mạng)');
+  // Avoid duplicate queuing of identical write operations
+  const isDup = q.some(item => item.path === path && JSON.stringify(item.opts.body) === JSON.stringify(opts.body));
+  if (!isDup) {
+    q.push({
+      id: Date.now() + '_' + Math.random().toString(36).substring(2,7),
+      path: path,
+      opts: opts,
+      created_at: new Date().toISOString()
+    });
+    saveOfflineQueue(q);
+  }
+  if (showNotification && typeof showToast === 'function') {
+    showToast('🟡 Đã lưu vào Hàng chờ Offline (tự đồng bộ khi có mạng)');
   }
 };
 

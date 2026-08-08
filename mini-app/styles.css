@@ -3793,6 +3793,18 @@ body.tour-active #cjFloatingChatWindow {
   transform: scale(0.96);
 }
 
+@media (max-width: 480px) {
+  .quick-popover-card {
+    max-width: 94vw;
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+  .popover-action-btn {
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+}
+
 .offline-sync-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 700;

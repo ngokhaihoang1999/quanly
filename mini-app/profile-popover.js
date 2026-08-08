@@ -80,9 +80,16 @@
     }
 
     // 4. Build Context-Aware Body HTML
-    let contextBodyHtml = '';
     const statusLabel = profile.status === 'drop_out' ? '🔴 Drop-out' : profile.status === 'pause' ? '⏸️ Tạm ngưng' : '🟢 Alive';
-    const phaseLabel = (profile.phase || 'chakki').toUpperCase();
+    
+    const phasePrettyMap = {
+      'chakki': '🌱 Chakki',
+      'tu_van': '🧭 Tư vấn',
+      'bb': '📖 Bài Bài (BB)',
+      'center': '🏛️ Center',
+      'completed': '🎓 Tốt nghiệp'
+    };
+    const phaseLabel = phasePrettyMap[profile.phase] || profile.phase || '🌱 Chakki';
 
     if (contextType === 'calendar') {
       // Focus: Next Appointment & Latest Report
@@ -90,7 +97,7 @@
         <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
           <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">📅 Lịch hẹn & Nhật ký gần nhất</div>
           <div style="font-size:13px;font-weight:600;color:var(--text);">${recentRecord ? (recentRecord.noi_dung || recentRecord.noi_dung_tiep || 'Chưa có thông tin lịch hẹn') : 'Chưa có nhật ký báo cáo mới'}</div>
-          ${recentRecord && recentRecord.report_date ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">⏱ Ngàys: ${recentRecord.report_date}</div>` : ''}
+          ${recentRecord && recentRecord.report_date ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">⏱ Ngày: ${recentRecord.report_date}</div>` : ''}
         </div>
       `;
     } else if (contextType === 'homework') {
@@ -98,31 +105,50 @@
       contextBodyHtml = `
         <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
           <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">📚 Bài Tập & Tiến Độ</div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);">Tiến độ BB: ${profile.bb_progress || 0}/12 bài</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${profile.phase === 'bb' || profile.phase === 'center' ? `Tiến độ BB: ${profile.bb_progress || 0}/12 bài` : `Giai đoạn: ${phaseLabel}`}</div>
           <div style="font-size:11.5px;color:var(--text2);margin-top:4px;">Điểm hái trái: ${profile.diem_hai || 'Chưa có'}</div>
         </div>
       `;
     } else {
-      // Focus: Overview (Status, Phase, BB progress, Milestones, NDD & GVBB)
-      const progressPercent = Math.min(Math.round(((profile.bb_progress || 0) / 12) * 100), 100);
-      contextBodyHtml = `
-        <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:12px;font-weight:700;color:var(--text);">Tiến độ 12 bài BB: ${profile.bb_progress || 0}/12</span>
-            <span style="font-size:11px;font-weight:700;color:var(--accent);">${progressPercent}%</span>
+      // Focus: Overview (Phase-Accurate display)
+      if (profile.phase === 'chakki') {
+        contextBodyHtml = `
+          <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🌱 Giai đoạn Chakki</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">Đang tìm hiểu & tiếp cận ban đầu</div>
+            <div style="font-size:11.5px;color:var(--text2);margin-top:4px;">📅 Ngày Chakki: ${profile.chakki_date || 'Chưa cập nhật'}</div>
           </div>
-          <div style="width:100%;height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
-            <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.3s;"></div>
+        `;
+      } else if (profile.phase === 'tu_van') {
+        contextBodyHtml = `
+          <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🧭 Giai đoạn Tư vấn</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${recentRecord ? (recentRecord.noi_dung || recentRecord.ten_cong_cu || 'Đang trong quá trình tư vấn') : 'Chưa có nhật ký tư vấn'}</div>
+            ${profile.diem_hai ? `<div style="font-size:11.5px;color:var(--text2);margin-top:4px;">🎯 Điểm hái: ${escHtml(profile.diem_hai)}</div>` : ''}
           </div>
-          
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font-size:11px;">
-            <div style="color:${m1?'var(--green)':'var(--text3)'};">● Bài ĐB ${m1?'✓':''}</div>
-            <div style="color:${m2?'var(--green)':'var(--text3)'};">● PV GVBB ${m2?'✓':''}</div>
-            <div style="color:${m3?'var(--green)':'var(--text3)'};">● ĐK Center ${m3?'✓':''}</div>
-            <div style="color:${m4?'var(--green)':'var(--text3)'};">● PV Học viên ${m4?'✓':''}</div>
+        `;
+      } else {
+        // BB / Center / Completed Phase: Show 12 BB progress bar + 4 milestones
+        const progressPercent = Math.min(Math.round(((profile.bb_progress || 0) / 12) * 100), 100);
+        contextBodyHtml = `
+          <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:12px;font-weight:700;color:var(--text);">Tiến độ 12 bài BB: ${profile.bb_progress || 0}/12</span>
+              <span style="font-size:11px;font-weight:700;color:var(--accent);">${progressPercent}%</span>
+            </div>
+            <div style="width:100%;height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
+              <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.3s;"></div>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font-size:11px;">
+              <div style="color:${m1?'var(--green)':'var(--text3)'};">● Bài ĐB ${m1?'✓':''}</div>
+              <div style="color:${m2?'var(--green)':'var(--text3)'};">● PV GVBB ${m2?'✓':''}</div>
+              <div style="color:${m3?'var(--green)':'var(--text3)'};">● ĐK Center ${m3?'✓':''}</div>
+              <div style="color:${m4?'var(--green)':'var(--text3)'};">● PV Học viên ${m4?'✓':''}</div>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      }
     }
 
     // Phone / Zalo action URL
