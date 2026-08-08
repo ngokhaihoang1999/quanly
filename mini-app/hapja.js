@@ -587,6 +587,9 @@ async function loadRecords(profileId, type, listElId, countElId) {
     const listEl = document.getElementById(listElId);
     if (!listEl) return;
 
+    if (typeof profileId === 'object' && profileId !== null) {
+      profileId = profileId.id || profileId.profile_id;
+    }
     if (!profileId || profileId === 'undefined' || profileId === 'null') {
       profileId = window.currentProfileId;
     }
@@ -595,11 +598,11 @@ async function loadRecords(profileId, type, listElId, countElId) {
       return;
     }
 
-    const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh)' : `eq.${type}`;
+    const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh,chot_bb)' : type === 'bien_ban' ? 'in.(bien_ban,chot_bb)' : `eq.${type}`;
 
     const [recRes, latestRes, sessRes] = await Promise.all([
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
-      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban,chot_bb)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null),
       type === 'tu_van' ? sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`).catch(() => null) : Promise.resolve(null)
     ]);
 
