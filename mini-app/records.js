@@ -147,18 +147,21 @@ async function loadJourney(profileId, currentPhase) {
   try {
     const [sessRes, recRes, hjRes, fhRes] = await Promise.all([
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`).catch(() => null),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`).catch(() => null)
     ]);
     const rawSessions = (sessRes && sessRes.ok) ? await sessRes.json() : [];
     let rawRecs = (recRes && recRes.ok) ? await recRes.json() : [];
     if (!Array.isArray(rawRecs) || rawRecs.length === 0) {
-      const fbRecRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`).catch(() => null);
+      const fbRecRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null);
       if (fbRecRes && fbRecRes.ok) {
         const fbRecs = await fbRecRes.json();
         if (Array.isArray(fbRecs) && fbRecs.length > 0) rawRecs = fbRecs;
       }
+    }
+    if (Array.isArray(rawRecs)) {
+      rawRecs = rawRecs.filter(r => !['ai_mindmap', 'ai_chat', 'note', 'phase_change'].includes(r.record_type));
     }
     const rawHapjas = (hjRes && hjRes.ok) ? await hjRes.json() : [];
     const rawFhs = (fhRes && fhRes.ok) ? await fhRes.json() : [];
@@ -466,9 +469,6 @@ async function loadJourney(profileId, currentPhase) {
     if (finalEvents.length === 0) {
       tlEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có sự kiện nào</div>';
     } else {
-      const hoverIn  = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.add('visible'))`;
-      const hoverOut = `this.querySelectorAll('.tl-del-btn,.tl-edit-btn').forEach(b=>b.classList.remove('visible'))`;
-
       let html = '<div class="tl-container">';
       html += `
         <div class="tl-header-row">
@@ -530,7 +530,7 @@ async function loadJourney(profileId, currentPhase) {
           const rEditBtn = e._tuVanRecord ? `<button onclick="event.stopPropagation();editRecord('${e._tuVanRecord.id}','tu_van')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>` : '';
           const rDelBtn = e.tuVanDeletable ? `<button onclick="event.stopPropagation();deleteEventRecord('${e._tuVanRecord.id}','tu_van')" title="Xóa báo cáo" class="tl-del-btn">🗑</button>` : '';
 
-          html += `<div class="tl-item tl-paired-tv" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          html += `<div class="tl-item tl-paired-tv">
             <div class="tl-left"${e._session ? ` onclick="editSession('${e._session.id}')" style="cursor:pointer;"` : ''}>
               ${e._session ? `
                 <span class="tl-icon">📅</span>
@@ -578,7 +578,7 @@ async function loadJourney(profileId, currentPhase) {
               ${bdbDel}
             </div>`;
           }
-          html += `<div class="tl-item tl-kt" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          html += `<div class="tl-item tl-kt">
             <div class="tl-left"${(e.hasKT && e.hasBDB) ? ' style="flex-direction:column;gap:8px;"' : ''}>
               ${leftHtml}
             </div>
@@ -600,7 +600,7 @@ async function loadJourney(profileId, currentPhase) {
           const dateEditBtn = canEditDate
             ? `<button onclick="event.stopPropagation();editEventDate('${e._id}')" title="Đổi ngày" class="tl-edit-btn" style="font-size:11px;">📅</button>`
             : '';
-          html += `<div class="tl-item tl-major" ${clickAttr} onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          html += `<div class="tl-item tl-major" ${clickAttr}>
             <div class="tl-left">
               <span class="tl-icon">${e.icon}</span>
               <div class="tl-left-info">
@@ -614,7 +614,7 @@ async function loadJourney(profileId, currentPhase) {
           </div>`;
         } else if (e._rtype === 'btvn') {
           // ── STANDALONE BTVN: right column only ──
-          html += `<div class="tl-item tl-btvn-standalone" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          html += `<div class="tl-item tl-btvn-standalone">
             <div class="tl-left"></div>
             <div class="tl-right"></div>
             <div class="tl-btvn">
@@ -623,7 +623,7 @@ async function loadJourney(profileId, currentPhase) {
           </div>`;
         } else {
           // ── REPORT: middle column only ──
-          html += `<div class="tl-item tl-report-row" onmouseenter="${hoverIn}" onmouseleave="${hoverOut}">
+          html += `<div class="tl-item tl-report-row">
             <div class="tl-left"></div>
             <div class="tl-right tl-clickable" ${viewAttr}>
               <span class="tl-icon" style="flex-shrink:0">${e.icon}</span>
