@@ -18,10 +18,10 @@
     // 1. Fetch profile from cache or database
     let profile = null;
     if (window.allProfiles && Array.isArray(window.allProfiles)) {
-      profile = window.allProfiles.find(p => p.id === profileId);
+      profile = window.allProfiles.find(p => String(p.id) === String(profileId));
     }
     if (!profile && window._profilesCache && Array.isArray(window._profilesCache)) {
-      profile = window._profilesCache.find(p => p.id === profileId);
+      profile = window._profilesCache.find(p => String(p.id) === String(profileId));
     }
     
     if (!profile && typeof sbFetch === 'function') {
@@ -83,6 +83,7 @@
     }
 
     // 4. Build Context-Aware Body HTML
+    let contextBodyHtml = '';
     const statusLabel = profile.status === 'drop_out' ? '🔴 Drop-out' : profile.status === 'pause' ? '⏸️ Tạm ngưng' : '🟢 Alive';
     
     const phasePrettyMap = {
