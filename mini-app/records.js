@@ -60,10 +60,12 @@ async function loadJourney(profileId, currentPhase) {
   let bbGroupInfo = null;
   if (['tu_van','bb','center','completed'].includes(cp)) {
     try {
-      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title,invite_link`);
-      const fgs = await fgRes.json();
-      // Find real group (not null, not -Date.now() placeholder)
-      bbGroupInfo = (fgs||[]).find(g => g.telegram_group_id && g.telegram_group_id > -1000000000000) || null;
+      const fgRes = await sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${profileId}&select=id,telegram_group_id,telegram_group_title,invite_link`).catch(() => null);
+      if (fgRes && fgRes.ok) {
+        const fgs = await fgRes.json();
+        // Find real group (not null, not -Date.now() placeholder)
+        bbGroupInfo = (Array.isArray(fgs) ? fgs : []).find(g => g && g.telegram_group_id && g.telegram_group_id > -1000000000000) || null;
+      }
     } catch(e) {}
   }
 
@@ -896,13 +898,13 @@ async function editRecord(recordId, recordType) {
 
 // ── Helper: refresh current profile view and global UI ──
 async function _refreshCurrentProfile() {
-  const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
+  const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`).catch(() => null);
+  if (!pRes || !pRes.ok) return;
   const ps = await pRes.json();
-  if (ps[0]) {
+  if (Array.isArray(ps) && ps[0]) {
     const idx = allProfiles.findIndex(x => String(x.id) === String(currentProfileId));
     if (idx >= 0) allProfiles[idx] = ps[0];
     openProfile(ps[0]);
-    // Ensure lists and dashboard metrics are never stale when navigating away
     if (typeof invalidateCache === 'function') {
       invalidateCache('profiles');
       invalidateCache('reports');
@@ -917,8 +919,8 @@ async function deleteEventSession(sessionId, sessionNum) {
   if (!await showConfirmAsync(`Xóa "Chốt TV lần ${sessionNum}"?\n\nChú ý: Hành động này có thể làm thay đổi giai đoạn hệ thống nếu đó là mốc chuyển giai đoạn.`)) return;
   try {
     await sbFetch(`/rest/v1/consultation_sessions?id=eq.${sessionId}`, { method:'DELETE' });
-    const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&limit=1&order=session_number.desc`);
-    const rem = await remRes.json();
+    const remRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&limit=1&order=session_number.desc`).catch(() => null);
+    const rem = (remRes && remRes.ok) ? await remRes.json() : [];
     if (rem.length === 0) {
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     } else if (rem[0].session_number === 1) {
@@ -1218,16 +1220,18 @@ async function completeSession(sessionId) {
 async function openBaoCaoTV() {
   openAddRecordModal('tu_van');
   try {
-    const res = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number,tool&order=session_number.desc&limit=1`);
-    const sessions = await res.json();
-    if (sessions && sessions.length > 0) {
-      setTimeout(() => {
-        const lanEl = document.getElementById('rm_lan_thu');
-        const toolEl = document.getElementById('rm_ten_cong_cu');
-        // Chỉ điền tự động nếu đang trống (tránh ghi đè khi edit)
-        if (lanEl && !lanEl.value) lanEl.value = sessions[0].session_number;
-        if (toolEl && !toolEl.value) toolEl.value = sessions[0].tool || '';
-      }, 100);
+    const res = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number,tool&order=session_number.desc&limit=1`).catch(() => null);
+    if (res && res.ok) {
+      const sessions = await res.json();
+      if (Array.isArray(sessions) && sessions.length > 0) {
+        setTimeout(() => {
+          const lanEl = document.getElementById('rm_lan_thu');
+          const toolEl = document.getElementById('rm_ten_cong_cu');
+          // Chỉ điền tự động nếu đang trống (tránh ghi đè khi edit)
+          if (lanEl && !lanEl.value) lanEl.value = sessions[0].session_number;
+          if (toolEl && !toolEl.value) toolEl.value = sessions[0].tool || '';
+        }, 100);
+      }
     }
   } catch(e) { console.warn('Could not auto-fill session info:', e); }
 }
@@ -1249,12 +1253,12 @@ async function openChotBBModal() {
   if (!currentProfileId) return;
   // Kiểm tra: phải có Báo cáo TV ít nhất 1 lần thay vì bỏ qua, để đảm bảo logic
   try {
-    const sessRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`);
-    const sessList = await sessRes.json();
+    const sessRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&select=session_number&order=session_number.desc&limit=1`).catch(() => null);
+    const sessList = (sessRes && sessRes.ok) ? await sessRes.json() : [];
     if (sessList && sessList.length > 0) {
       const lastSessNum = sessList[0].session_number;
-      const bcRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&content->>lan_thu=eq.${lastSessNum}&select=id&limit=1`);
-      const bcRows = await bcRes.json();
+      const bcRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&content->>lan_thu=eq.${lastSessNum}&select=id&limit=1`).catch(() => null);
+      const bcRows = (bcRes && bcRes.ok) ? await bcRes.json() : [];
       if (!bcRows || bcRows.length === 0) {
         showToast(`⚠️ Phải có Báo cáo TV lần ${lastSessNum} rồi mới được Lập Group!`);
         return;
