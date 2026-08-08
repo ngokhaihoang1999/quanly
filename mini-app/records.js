@@ -527,8 +527,8 @@ async function loadJourney(profileId, currentPhase) {
           const sessEditBtn = e._session ? `<button onclick="event.stopPropagation();editSession('${e._session.id}')" title="Chỉnh sửa Chốt TV" class="tl-edit-btn">✏️</button>` : '';
           const sessDelBtn = e.sessionDeletable ? `<button onclick="event.stopPropagation();deleteEventSession('${e._session.id}',${e._sessionNum})" title="Xóa Chốt TV" class="tl-del-btn">🗑</button>` : '';
 
-          const rEditBtn = e._tuVanRecord ? `<button onclick="event.stopPropagation();editRecord('${e._tuVanRecord.id}','tu_van')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>` : '';
-          const rDelBtn = e.tuVanDeletable ? `<button onclick="event.stopPropagation();deleteEventRecord('${e._tuVanRecord.id}','tu_van')" title="Xóa báo cáo" class="tl-del-btn">🗑</button>` : '';
+          const rEditBtn = e._tuVanRecord ? `<button onclick="event.stopPropagation();editRecord('${e._tuVanRecord.id}','${e._tuVanRecord.record_type || 'tu_van'}')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>` : '';
+          const rDelBtn = e.tuVanDeletable ? `<button onclick="event.stopPropagation();deleteEventRecord('${e._tuVanRecord.id}','${e._tuVanRecord.record_type || 'tu_van'}')" title="Xóa báo cáo" class="tl-del-btn">🗑</button>` : '';
 
           html += `<div class="tl-item tl-paired-tv">
             <div class="tl-left"${e._session ? ` onclick="editSession('${e._session.id}')" style="cursor:pointer;"` : ''}>
@@ -541,7 +541,7 @@ async function loadJourney(profileId, currentPhase) {
                 <div class="tl-btn-group">${sessEditBtn}${sessDelBtn}</div>
               ` : ''}
             </div>
-            <div class="tl-right${e._tuVanRecord ? ' tl-clickable' : ''}" ${e._tuVanRecord ? `onclick="viewRecord('${e._tuVanRecord.id}','tu_van')" style="cursor:pointer;"` : ''}>
+            <div class="tl-right${e._tuVanRecord ? ' tl-clickable' : ''}" ${e._tuVanRecord ? `onclick="viewRecord('${e._tuVanRecord.id}','${e._tuVanRecord.record_type || 'tu_van'}')" style="cursor:pointer;"` : ''}>
               ${e._tuVanRecord ? `
                 <span class="tl-icon" style="flex-shrink:0">📝</span>
                 <div class="tl-right-info">

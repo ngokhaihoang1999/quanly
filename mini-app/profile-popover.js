@@ -121,8 +121,8 @@
       // Sessions & TV records lookup
       const tvv1Session = sessions.find(s => s.session_number === 1);
       const tvv2Session = sessions.find(s => s.session_number === 2);
-      const tv1Record = records.find(r => r.record_type === 'tu_van' && Number(r.content?.lan_thu) === 1);
-      const tv2Record = records.find(r => r.record_type === 'tu_van' && Number(r.content?.lan_thu) === 2);
+      const tv1Record = records.find(r => ['tu_van','tu_van_hinh'].includes(r.record_type) && Number(r.content?.lan_thu) === 1);
+      const tv2Record = records.find(r => ['tu_van','tu_van_hinh'].includes(r.record_type) && Number(r.content?.lan_thu) === 2);
 
       const formatD = (dStr) => typeof shinDate === 'function' ? shinDate(dStr) : (dStr || '');
 

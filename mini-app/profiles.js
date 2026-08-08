@@ -159,7 +159,7 @@ async function openProfile(p, cardEl, initialTabId) {
   try {
     const [fgRes, rRes, sRes, dkRes] = await Promise.all([
       sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(id,staff_code,role_type,display_name)`),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${p.id}&select=record_type,content,created_at&order=created_at.desc&limit=10`),
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=id,session_number,tool,tvv_staff_code,created_at,scheduled_at&order=session_number.asc`),
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
     ]);
@@ -198,7 +198,9 @@ async function openProfile(p, cardEl, initialTabId) {
     let latestRecord = null;
     if (rRes && rRes.ok) {
       const rData = await rRes.json();
-      if (Array.isArray(rData)) latestRecord = rData[0] || null;
+      if (Array.isArray(rData)) {
+        latestRecord = rData.find(r => !['mo_kt','note','ai_mindmap','ai_chat','phase_change'].includes(r.record_type)) || null;
+      }
     }
 
     if (sRes && sRes.ok) {
