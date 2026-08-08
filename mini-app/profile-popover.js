@@ -84,10 +84,11 @@
 
     // 4. Build Context-Aware Body HTML
     let contextBodyHtml = '';
-    const statusLabel = profile.status === 'drop_out' ? '🔴 Drop-out' : profile.status === 'pause' ? '⏸️ Tạm ngưng' : '🟢 Alive';
+    const statusLabel = profile.fruit_status === 'dropout' ? '🔴 Drop-out' : profile.fruit_status === 'pause' ? '⏸️ Tạm ngưng' : '🟢 Alive';
     
     const phasePrettyMap = {
       'chakki': '🌱 Chakki',
+      'tu_van_hinh': '🧭 TV Hình',
       'tu_van': '🧭 Tư vấn',
       'bb': '📖 BB',
       'center': '🏛️ Center',
@@ -95,13 +96,34 @@
     };
     const phaseLabel = phasePrettyMap[profile.phase] || profile.phase || '🌱 Chakki';
 
+    // Resolve NDD & GVBB labels accurately
+    const rawNdd = profile.ndd_staff_code || profile.ndd_code || profile.ndd_name || '';
+    let nddLabel = 'Chưa gán';
+    if (rawNdd) {
+      if (typeof getStaffLabel === 'function') {
+        nddLabel = getStaffLabel(rawNdd);
+      } else {
+        nddLabel = rawNdd;
+      }
+    }
+
+    const rawGvbb = profile.gvbb_staff_code || profile.gvbb_code || '';
+    let gvbbLabel = '';
+    if (rawGvbb) {
+      if (typeof getStaffLabel === 'function') {
+        gvbbLabel = getStaffLabel(rawGvbb);
+      } else {
+        gvbbLabel = rawGvbb;
+      }
+    }
+
     if (contextType === 'calendar') {
       // Focus: Next Appointment & Latest Report
       contextBodyHtml = `
         <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
           <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">📅 Lịch hẹn & Nhật ký gần nhất</div>
           <div style="font-size:13px;font-weight:600;color:var(--text);">${recentRecord ? (recentRecord.noi_dung || recentRecord.noi_dung_tiep || 'Chưa có thông tin lịch hẹn') : 'Chưa có nhật ký báo cáo mới'}</div>
-          ${recentRecord && recentRecord.report_date ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">⏱ Ngày: ${recentRecord.report_date}</div>` : ''}
+          ${recentRecord && recentRecord.created_at ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">⏱ Ngày: ${shinDate(recentRecord.created_at)}</div>` : ''}
         </div>
       `;
     } else if (contextType === 'homework') {
@@ -110,25 +132,33 @@
         <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
           <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">📚 Bài Tập & Tiến Độ</div>
           <div style="font-size:13px;font-weight:600;color:var(--text);">${profile.phase === 'bb' || profile.phase === 'center' ? `Tiến độ BB: ${profile.bb_progress || 0}/12 bài` : `Giai đoạn: ${phaseLabel}`}</div>
-          <div style="font-size:11.5px;color:var(--text2);margin-top:4px;">Điểm hái trái: ${profile.diem_hai || 'Chưa có'}</div>
+          ${profile.diem_hai ? `<div style="font-size:11.5px;color:var(--text2);margin-top:4px;">🎯 Điểm hái trái: ${escHtml(profile.diem_hai)}</div>` : ''}
         </div>
       `;
     } else {
       // Focus: Overview (Phase-Accurate display)
-      if (profile.phase === 'chakki') {
+      if (['chakki','new'].includes(profile.phase)) {
+        const chakkiD = profile.t2_values?.t2_ngay_chakki || profile.chakki_date || (profile.created_at ? shinDate(profile.created_at) : 'Chưa cập nhật');
         contextBodyHtml = `
           <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🌱 Giai đoạn Chakki</div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🌱 GIAI ĐOẠN CHAKKI (HAPJA)</div>
             <div style="font-size:13px;font-weight:600;color:var(--text);">Đang tìm hiểu & tiếp cận ban đầu</div>
-            <div style="font-size:11.5px;color:var(--text2);margin-top:4px;">📅 Ngày Chakki: ${profile.chakki_date || 'Chưa cập nhật'}</div>
+            <div style="font-size:11.5px;color:var(--text2);margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+              <div>👤 <b>NDD:</b> ${escHtml(nddLabel)}</div>
+              <div>📅 <b>Ngày Chakki:</b> ${chakkiD}</div>
+            </div>
           </div>
         `;
-      } else if (profile.phase === 'tu_van') {
+      } else if (['tu_van','tu_van_hinh'].includes(profile.phase)) {
         contextBodyHtml = `
           <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;border:1px solid var(--border);margin-bottom:12px;">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🧭 Giai đoạn Tư vấn</div>
-            <div style="font-size:13px;font-weight:600;color:var(--text);">${recentRecord ? (recentRecord.noi_dung || recentRecord.ten_cong_cu || 'Đang trong quá trình tư vấn') : 'Chưa có nhật ký tư vấn'}</div>
-            ${profile.diem_hai ? `<div style="font-size:11.5px;color:var(--text2);margin-top:4px;">🎯 Điểm hái: ${escHtml(profile.diem_hai)}</div>` : ''}
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">🧭 GIAI ĐOẠN TƯ VẤN</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${recentRecord ? (recentRecord.noi_dung || recentRecord.ten_cong_cu || 'Đang trong quá trình tư vấn') : 'Đang hẹn tư vấn'}</div>
+            <div style="font-size:11.5px;color:var(--text2);margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+              <div>👤 <b>NDD:</b> ${escHtml(nddLabel)}</div>
+              ${profile.diem_hai ? `<div>🎯 <b>Điểm hái trái:</b> ${escHtml(profile.diem_hai)}</div>` : ''}
+              ${recentRecord && recentRecord.created_at ? `<div>⏱ <b>Nhật ký gần nhất:</b> ${shinDate(recentRecord.created_at)}</div>` : ''}
+            </div>
           </div>
         `;
       } else {
@@ -140,11 +170,11 @@
               <span style="font-size:12px;font-weight:700;color:var(--text);">Tiến độ 12 bài BB: ${profile.bb_progress || 0}/12</span>
               <span style="font-size:11px;font-weight:700;color:var(--accent);">${progressPercent}%</span>
             </div>
-            <div style="width:100%;height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
+            <div style="width:100%;height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:10px;">
               <div style="width:${progressPercent}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.3s;"></div>
             </div>
             
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font-size:11px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
               <div style="color:${m1?'var(--green)':'var(--text3)'};">● Bài ĐB ${m1?'✓':''}</div>
               <div style="color:${m2?'var(--green)':'var(--text3)'};">● PV GVBB ${m2?'✓':''}</div>
               <div style="color:${m3?'var(--green)':'var(--text3)'};">● ĐK Center ${m3?'✓':''}</div>
@@ -156,7 +186,7 @@
     }
 
     // Phone / Zalo action URL
-    const cleanPhone = (profile.phone || '').replace(/\D/g, '');
+    const cleanPhone = (profile.phone || profile.phone_number || '').replace(/\D/g, '');
     const zaloUrl = cleanPhone ? `https://zalo.me/${cleanPhone}` : null;
     const phoneCallUrl = cleanPhone ? `tel:${cleanPhone}` : null;
 
@@ -168,6 +198,8 @@
       if (e.target === popoverOverlay) closeProfileQuickPopover();
     };
 
+    const birthYearText = profile.birth_year ? ` · ${profile.birth_year}${profile.gender ? ' · '+profile.gender : ''}` : '';
+
     popoverOverlay.innerHTML = `
       <div class="quick-popover-card glassmorphic-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -176,7 +208,7 @@
               ${(profile.full_name || 'H')[0].toUpperCase()}
             </div>
             <div>
-              <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.2;">${escHtml(profile.full_name || 'Chưa tên')}</div>
+              <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.2;">${escHtml(profile.full_name || 'Chưa tên')}<span style="font-size:12px;color:var(--text3);font-weight:400;">${birthYearText}</span></div>
               <div style="font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px;">
                 <span>${statusLabel}</span>
                 <span>•</span>
@@ -192,7 +224,7 @@
         ${contextBodyHtml}
 
         <div style="font-size:11.5px;color:var(--text2);margin-bottom:12px;line-height:1.5;">
-          👤 NĐD: <b>${escHtml(profile.ndd_code || profile.ndd_name || 'Chưa gán')}</b> ${profile.gvbb_code ? ` | 📖 GVBB: <b>${escHtml(profile.gvbb_code)}</b>` : ''}
+          👤 NDD: <b>${escHtml(nddLabel)}</b> ${gvbbLabel ? ` | 📖 GVBB: <b>${escHtml(gvbbLabel)}</b>` : ''}
         </div>
 
         <!-- Quick Action Dock -->
