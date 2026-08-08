@@ -49,7 +49,7 @@
       try {
         const [sRes, rRes, fbRes, fhRes] = await Promise.all([
           sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
-          sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.desc`),
+          sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.desc`),
           sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.desc`),
           sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`)
         ]);

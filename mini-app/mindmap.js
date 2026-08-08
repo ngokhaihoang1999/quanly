@@ -200,7 +200,7 @@ async function renderCollectMM(container, p) {
   container.style.height = 'auto'; container.style.overflow = 'auto';
   container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">\u23f3 \u0110ang t\u1ea3i...</div>';
   try {
-    var r = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.ai_mindmap&select=id,content&order=created_at.desc&limit=1');
+    var r = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.ai_mindmap&select=id,content&order=created_at.desc&limit=1');
     var rows = await r.json();
     if (rows.length && rows[0].content && rows[0].content.markdown) {
       var saved = rows[0].content.markdown;
@@ -369,9 +369,9 @@ async function runAIAnalysis() {
   container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">👼 AI đang phân tích...<br><small style="color:var(--text3);">10-20 giây</small></div>';
   container.style.height = 'auto';
   try {
-    var r1 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
-    var r2 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc');
-    var r3 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content,created_at&order=created_at.asc');
+    var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content,created_at&order=created_at.asc');
+    var r2 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=content,created_at&order=created_at.asc');
+    var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content,created_at&order=created_at.asc');
     var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
     var d = window._currentInfoSheet || {};
     if (!tvs.length && !bbs.length && !nts.length && !Object.keys(d).length) {
@@ -498,16 +498,16 @@ async function runAIAnalysis() {
 async function saveAIMindmap(profileId, md) {
   try {
     // Check existing
-    var r = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+profileId+'&record_type=eq.ai_mindmap&select=id&order=created_at.desc&limit=1');
+    var r = await sbFetch('/rest/v1/records?profile_id=eq.'+profileId+'&record_type=eq.ai_mindmap&select=id&order=created_at.desc&limit=1');
     var rows = await r.json();
     if (rows.length) {
-      await sbFetch('/rest/v1/profile_records?id=eq.'+rows[0].id, {
+      await sbFetch('/rest/v1/records?id=eq.'+rows[0].id, {
         method: 'PATCH',
         headers: { 'Content-Type':'application/json', 'Prefer':'return=minimal' },
         body: JSON.stringify({ content: { markdown: md } })
       });
     } else {
-      await sbFetch('/rest/v1/profile_records', {
+      await sbFetch('/rest/v1/records', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Prefer':'return=minimal' },
         body: JSON.stringify({ profile_id: profileId, record_type: 'ai_mindmap', content: { markdown: md } })
@@ -522,7 +522,7 @@ function clearMindmapCache(profileId) {
   else Object.keys(_mmCache).forEach(function(k){delete _mmCache[k];});
   // Also delete from Supabase so next analysis is fresh
   if (profileId) {
-    sbFetch('/rest/v1/profile_records?profile_id=eq.'+profileId+'&record_type=eq.ai_mindmap', { method:'DELETE' }).catch(function(){});
+    sbFetch('/rest/v1/records?profile_id=eq.'+profileId+'&record_type=eq.ai_mindmap', { method:'DELETE' }).catch(function(){});
   }
 }
 
@@ -554,7 +554,7 @@ async function toggleAIChat() {
       var msgBox = document.getElementById('aiChatMessages');
       msgBox.innerHTML = '<div class="ai-msg ai-msg-system">\u23f3 \u0110ang t\u1ea3i...</div>';
       try {
-        var r = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+currentProfileId+'&record_type=eq.ai_chat&select=id,content&order=created_at.desc&limit=1');
+        var r = await sbFetch('/rest/v1/records?profile_id=eq.'+currentProfileId+'&record_type=eq.ai_chat&select=id,content&order=created_at.desc&limit=1');
         var rows = await r.json();
         if (rows.length && rows[0].content && rows[0].content.messages) {
           _aiChatRecordId = rows[0].id;
@@ -572,13 +572,13 @@ async function saveChatToDB() {
   var payload = { messages: _aiChatHistory };
   try {
     if (_aiChatRecordId) {
-      await sbFetch('/rest/v1/profile_records?id=eq.'+_aiChatRecordId, {
+      await sbFetch('/rest/v1/records?id=eq.'+_aiChatRecordId, {
         method: 'PATCH',
         headers: { 'Content-Type':'application/json', 'Prefer':'return=minimal' },
         body: JSON.stringify({ content: payload })
       });
     } else {
-      var r = await sbFetch('/rest/v1/profile_records', {
+      var r = await sbFetch('/rest/v1/records', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Prefer':'return=representation' },
         body: JSON.stringify({ profile_id: currentProfileId, record_type: 'ai_chat', content: payload })
@@ -593,9 +593,9 @@ async function buildChatCtx() {
   if (_aiChatContext) return _aiChatContext;
   var p = allProfiles.find(function(x){return x.id===currentProfileId;});
   if (!p) return '';
-  var r1 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content&order=created_at.asc');
-  var r2 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=content&order=created_at.asc');
-  var r3 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content&order=created_at.asc');
+  var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=content&order=created_at.asc');
+  var r2 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=content&order=created_at.asc');
+  var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=content&order=created_at.asc');
   var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
   var d = window._currentInfoSheet || {};
   var nddName = window._rolesDisplay?.ndd || 'chưa rõ';

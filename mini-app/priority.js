@@ -177,7 +177,7 @@ async function loadPriority() {
         
         // Parallel fetch of records, sessions, and Sinka (form_hanh_chinh)
         const [recsRes, sessRes, fhcRes] = await Promise.all([
-          sbFetch(`/rest/v1/profile_records?profile_id=in.(${pidsIn})&select=profile_id,created_at&order=created_at.desc`),
+          sbFetch(`/rest/v1/records?profile_id=in.(${pidsIn})&select=profile_id,created_at&order=created_at.desc`),
           sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${pidsIn})&select=profile_id,created_at&order=created_at.desc`),
           settings.enabledTypes['sinka_chua_hoan_thien']
             ? sbFetch(`/rest/v1/form_hanh_chinh?profile_id=in.(${pidsIn})&select=profile_id,data`)

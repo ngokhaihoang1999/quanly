@@ -268,7 +268,7 @@ async function toggleFruitStatus(profileId, current) {
       const _cn = newStatus === 'dropout' ? { reason: reason || 'Không có lý do' }
                : newStatus === 'pause'   ? { reason: reason || 'Tạm dừng' }
                : { note: 'Chuyển lại trạng thái Alive' };
-      await sbFetch('/rest/v1/profile_records', {
+      await sbFetch('/rest/v1/records', {
         method: 'POST',
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({ profile_id: profileId, record_type: recType, content: _cn })
@@ -323,7 +323,7 @@ async function toggleKTStatus(profileId, newState) {
   } else {
     window._currentKTProfileId = profileId;
     try {
-      const bRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=content`);
+      const bRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=content`);
       const bbs = await bRes.json();
       const buois = bbs.map(b => b.content?.buoi_thu).filter(Boolean).map(x => parseInt(x)).sort((a,b) => a-b);
       
@@ -356,7 +356,7 @@ async function executeKTToggle(profileId, newState, buoiThu) {
     const myCode = getEffectiveStaffCode();
     
     if (newState) {
-      const postRes = await sbFetch('/rest/v1/profile_records', {
+      const postRes = await sbFetch('/rest/v1/records', {
          method: 'POST',
          headers: { 'Prefer': 'return=representation' },
          body: JSON.stringify({
@@ -379,7 +379,7 @@ async function executeKTToggle(profileId, newState, buoiThu) {
       
       showToast('✅ Đã xác nhận Mở KT!');
     } else {
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.mo_kt`, { method: 'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.mo_kt`, { method: 'DELETE' });
       await sbFetch(`/rest/v1/profiles?id=eq.${profileId}`, {
         method: 'PATCH',
         headers: { 'Prefer': 'return=minimal' },
