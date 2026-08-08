@@ -515,19 +515,9 @@ async function openProfile(p, cardEl, initialTabId) {
   loadNotes(p.id);
   // Sinka: lazy-load khi mở tab (trigger trong switchFormTab)
 
-  // ── Smart default tab theo phase ──────────────────────────────────────────
-  let defaultTabId = initialTabId || 'journeyTab';    // mặc định Giai đoạn
+  // ── Default tab: Giai đoạn (journeyTab) ──────────────────────────────────────────
+  let defaultTabId = initialTabId || 'journeyTab';
   let defaultTabEl = null;
-
-  if (!initialTabId) {
-    if (['tu_van_hinh','chakki','new'].includes(ph) && showTabTV) {
-      // Có TVV → mở tab TV để viết báo cáo
-      defaultTabId = 'tuVan';
-    } else if (ph === 'tu_van' && canEditBB) {
-      // Đã vào Group TV (phase 3) → mở BB
-      defaultTabId = 'bienBan';
-    }
-  }
 
   document.querySelectorAll('#profileTabs .form-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.form-card').forEach(c => c.classList.remove('active'));

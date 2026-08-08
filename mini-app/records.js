@@ -140,11 +140,17 @@ async function loadJourney(profileId, currentPhase) {
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`)
     ]);
-    const sessions = await sessRes.json();
-    const recs = await recRes.json();
-    const hapjas = await hjRes.json();
-    const fhs = await fhRes.json();
-    const fhData = (Array.isArray(fhs) && fhs[0]) ? (fhs[0].data || {}) : {};
+    const rawSessions = (sessRes && sessRes.ok) ? await sessRes.json() : [];
+    const rawRecs = (recRes && recRes.ok) ? await recRes.json() : [];
+    const rawHapjas = (hjRes && hjRes.ok) ? await hjRes.json() : [];
+    const rawFhs = (fhRes && fhRes.ok) ? await fhRes.json() : [];
+
+    const sessions = Array.isArray(rawSessions) ? rawSessions : [];
+    const recs = Array.isArray(rawRecs) ? rawRecs : [];
+    const hapjas = Array.isArray(rawHapjas) ? rawHapjas : [];
+    const fhs = Array.isArray(rawFhs) ? rawFhs : [];
+
+    const fhData = (fhs[0] && typeof fhs[0] === 'object') ? (fhs[0].data || {}) : {};
 
 
     if (cp === 'tu_van_hinh') {

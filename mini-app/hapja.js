@@ -583,26 +583,38 @@ async function rejectHapja(id) {
 // Records (Tư vấn / BB)
 async function loadRecords(profileId, type, listElId, countElId) {
   try {
+    const countEl = document.getElementById(countElId);
+    const listEl = document.getElementById(listElId);
+    if (!listEl) return;
+
     // Lấy cả danh sách tab lẫn record mới nhất TOÀN BỘ dòng thời gian song song
     const [res, latestRes] = await Promise.all([
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`)
     ]);
-    const records = await res.json();
-    const latestRows = await latestRes.json();
-    document.getElementById(countElId).textContent = records.length + ' phiếu';
-    const listEl = document.getElementById(listElId);
-    if (!records.length) { listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>'; return; }
+
+    const rawRecords = (res && res.ok) ? await res.json() : [];
+    const rawLatest = (latestRes && latestRes.ok) ? await latestRes.json() : [];
+
+    const records = Array.isArray(rawRecords) ? rawRecords : [];
+    const latestRows = Array.isArray(rawLatest) ? rawLatest : [];
+
+    if (countEl) countEl.textContent = records.length + ' phiếu';
+
+    if (!records.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>';
+      return;
+    }
 
     // ID mới nhất trên toàn bộ dòng thời gian (không phân biệt TV/BB)
     const globalNewestId = latestRows[0]?.id;
     const globalNewestType = latestRows[0]?.record_type;
 
     listEl.innerHTML = records.map((r, i) => {
-      const c = r.content||{};
+      const c = r.content || {};
       const title = c.lan_thu ? `Lần thứ ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` :
                     c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
-                    c.ten_cong_cu || 'Phiếu #'+(i+1);
+                    c.ten_cong_cu || 'Phiếu #' + (i + 1);
       const preview = c.van_de || c.noi_dung || c.phan_hoi || '';
       const date = shinDate(r.created_at);
       // Nút xóa chỉ hiện nếu đây là record mới nhất TRÊN TOÀN BỘ dòng thời gian, hoặc BTVN thì xoá tự do
@@ -614,13 +626,17 @@ async function loadRecords(profileId, type, listElId, countElId) {
         <div class="record-number">${i+1}</div>
         <div class="record-content">
           <div class="record-date">📅 ${date}</div>
-          <div class="record-title">${title}</div>
-          <div class="record-preview">${preview.substring(0,80)}${preview.length>80?'...':''}</div>
+          <div class="record-title">${escHtml(title)}</div>
+          <div class="record-preview">${escHtml(preview.substring(0,80))}${preview.length>80?'...':''}</div>
         </div>
         ${delBtn}
       </div>`;
     }).join('');
-  } catch {}
+  } catch(e) {
+    console.error('loadRecords error:', e);
+    const listEl = document.getElementById(listElId);
+    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Lỗi tải dữ liệu phiếu</div>';
+  }
 }
 async function deleteProfile() {
   if (!currentProfileId || !await showConfirmAsync('Xác nhận xoá hồ sơ này?')) return;
