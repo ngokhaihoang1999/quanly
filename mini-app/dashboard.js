@@ -325,7 +325,7 @@ async function loadDashboard(force = false) {
       const idsStr = allPids.map(id=>`"${id}"`).join(',');
       try {
         const [rRes, sRes] = await Promise.all([
-          sbFetch(`/rest/v1/records?profile_id=in.(${idsStr})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+          sbFetch(`/rest/v1/profile_records?profile_id=in.(${idsStr})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
           sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
         ]);
         const recs = await rRes.json(); recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
@@ -557,13 +557,13 @@ async function loadDashboard(force = false) {
     const stuck = ['dashHapjaList','dashMyList','dashUnitList','dashSubUnits','dashNDDList'];
     stuck.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">⚠️ Không tải được dữ liệu</div>';
+      if (el) el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
     });
     // Also clear metrics areas
     const metricsEl = document.getElementById('dashUnitMetrics');
     const personalEl = document.getElementById('dashPersonalMetrics');
     if (metricsEl && !metricsEl.innerHTML.trim()) metricsEl.innerHTML = '';
-    if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">⚠️ Không tải được dữ liệu</div>';
+    if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
   } finally {
     markFresh('dashboard');
     // GUARANTEE: After loadDashboard completes (success or error), any element still
@@ -615,7 +615,7 @@ window.renderPersonalList = async function(type) {
     const ids = missingIds.map(id => `"${id}"`).join(',');
     try {
       const [recRes, sRes2] = await Promise.all([
-        sbFetch(`/rest/v1/records?profile_id=in.(${ids})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
+        sbFetch(`/rest/v1/profile_records?profile_id=in.(${ids})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
         sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${ids})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
       ]);
       const recs2 = await recRes.json(); recs2.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });

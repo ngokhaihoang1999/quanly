@@ -501,9 +501,9 @@ async function loadStaffInfo() {
             <div class="header-avatar-wrapper" style="padding:2px;border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,0.5),rgba(255,255,255,0.15));box-shadow:0 0 12px rgba(255,255,255,0.2);">
               ${avatarHtml}
             </div>
-            <div style="display:flex;flex-direction:column;gap:1px;white-space:nowrap;">
-              <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;" title="${displayName}">${displayName}</span>
-              <span style="font-size:10px;font-weight:500;color:rgba(255,255,255,0.6);line-height:1;white-space:nowrap;">Hệ thống quản lý · v6.02.0035</span>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;" title="${displayName}">${displayName}</span>
+              <span style="font-size:9.5px;font-weight:500;color:rgba(255,255,255,0.65);line-height:1.2;">Hệ thống quản lý<br/><span style="opacity:0.8;">v6.02.0036</span></span>
             </div>
           </div>`;
         headerAv.style.display = 'block';
