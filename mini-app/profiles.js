@@ -117,6 +117,7 @@ async function openProfileById(id, evt, initialTabId) {
 }
 async function openProfile(p, cardEl, initialTabId) {
   currentProfileId = p.id;
+  window.currentProfileObj = p;
 
   window.isDetailViewOpen = true;
   document.body.classList.add('detail-view-open');

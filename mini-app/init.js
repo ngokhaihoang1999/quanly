@@ -627,7 +627,7 @@ function _doSwitchFormTab(el, cardId) {
     }
   }
   if (cardId === 'journeyTab' && typeof loadJourney === 'function' && currentProfileId) {
-    const curP = window.allProfiles?.find(x => String(x.id) === String(currentProfileId));
+    const curP = window.allProfiles?.find(x => String(x.id) === String(currentProfileId)) || window.currentProfileObj;
     loadJourney(currentProfileId, curP?.phase || 'chakki');
   }
   if (cardId === 'tuVan' && typeof loadRecords === 'function' && currentProfileId) {
@@ -635,6 +635,9 @@ function _doSwitchFormTab(el, cardId) {
   }
   if (cardId === 'bienBan' && typeof loadRecords === 'function' && currentProfileId) {
     loadRecords(currentProfileId, 'bien_ban', 'bbList', 'bbCount');
+  }
+  if (cardId === 'btvnTab' && typeof loadRecords === 'function' && currentProfileId) {
+    loadRecords(currentProfileId, 'btvn', 'btvnList', 'btvnCount');
   }
   if (cardId === 'chatTab' && typeof loadProfileChat === 'function' && currentProfileId) {
     if (typeof markChatAsRead === 'function') markChatAsRead(currentProfileId);

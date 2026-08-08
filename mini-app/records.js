@@ -52,7 +52,7 @@ async function loadJourney(profileId, currentPhase) {
 
   tlEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">⏳ Đang tải hành trình...</div>';
 
-  const targetP = allProfiles.find(x => String(x.id) === String(profileId));
+  const targetP = allProfiles.find(x => String(x.id) === String(profileId)) || window.currentProfileObj;
   const cp = (currentPhase || targetP?.phase || 'chakki').toString().trim().toLowerCase();
   const isDropout = ['dropout','pause'].includes(targetP?.fruit_status);
 
@@ -98,7 +98,7 @@ async function loadJourney(profileId, currentPhase) {
   const ktBox = document.getElementById('ktStatusBox');
   const ktText = document.getElementById('ktStatusText');
   const btnMoKT = document.getElementById('btnMoKT');
-  const pData = targetP || allProfiles.find(x => String(x.id) === String(profileId));
+  const pData = targetP || window.currentProfileObj;
   if (ktBox && pData) {
     if (['tu_van','bb','center','completed'].includes(cp)) {
       ktBox.style.display = 'flex';
@@ -499,12 +499,12 @@ async function loadJourney(profileId, currentPhase) {
           ? `onclick="editSession('${e._id}')" style="cursor:pointer;"`
           : '';
 
-        const viewAttr = (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban'))
+        const viewAttr = (e._type === 'record' && e._id && ['tu_van', 'tu_van_hinh', 'bien_ban', 'btvn', 'team_meeting'].includes(e._rtype))
           ? `onclick="viewRecord('${e._id}','${e._rtype}')" style="cursor:pointer;"`
           : '';
 
         let editBtn = '';
-        if (e._type === 'record' && e._id && (e._rtype === 'tu_van' || e._rtype === 'bien_ban')) {
+        if (e._type === 'record' && e._id && ['tu_van', 'tu_van_hinh', 'bien_ban', 'btvn', 'team_meeting'].includes(e._rtype)) {
           editBtn = `<button onclick="event.stopPropagation();editRecord('${e._id}','${e._rtype}')" title="Chỉnh sửa báo cáo" class="tl-edit-btn">✏️</button>`;
         }
 
