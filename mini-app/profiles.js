@@ -474,15 +474,15 @@ async function openProfile(p, cardEl, initialTabId) {
     } catch(e) { /* silent */ }
   })();
 
-  // Tab TV: hiện khi có TVV, bất kể phase (vì Chốt TV có thể xảy ra ở phase Chakki)
+  // Tab TV & BB: Luôn hiển thị tab cho phép xem/ghi nhận báo cáo
   const tabTV = document.getElementById('tabTV');
   const tabBB = document.getElementById('tabBB');
   const tabMM = document.getElementById('tabMap');
-  const showTabTV = canEditTV && !!tvvCode;
-  if (tabTV) tabTV.style.display = showTabTV ? '' : 'none';
-  if (tabBB) tabBB.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
   const tabBTVN = document.getElementById('tabBTVN');
-  if (tabBTVN) tabBTVN.style.display = (canEditBB && ['tu_van','bb','center','completed'].includes(ph)) ? '' : 'none';
+
+  if (tabTV) tabTV.style.display = '';
+  if (tabBB) tabBB.style.display = '';
+  if (tabBTVN) tabBTVN.style.display = '';
   if (tabMM) tabMM.style.display = canAccessTuDuy ? '' : 'none';
   // Hỗ trợ BB sub-tab: only from tu_van phase
   const mmBtnCollect = document.getElementById('mmBtnCollect');

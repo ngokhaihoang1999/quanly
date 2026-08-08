@@ -561,6 +561,7 @@ async function sbFetch(path, opts={}) {
       throw new Error('Rate limited — vui lòng chờ giây lát');
     }
     _writeTimestamps.set(rateKey, now);
+    _getCache.clear(); // Invalidate GET cache on write operations
   }
 
   // ── GET cache (5s TTL) ──

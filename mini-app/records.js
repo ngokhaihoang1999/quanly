@@ -98,7 +98,7 @@ async function loadJourney(profileId, currentPhase) {
   const ktBox = document.getElementById('ktStatusBox');
   const ktText = document.getElementById('ktStatusText');
   const btnMoKT = document.getElementById('btnMoKT');
-  const pData = allProfiles.find(x => x.id === profileId);
+  const pData = targetP || allProfiles.find(x => String(x.id) === String(profileId));
   if (ktBox && pData) {
     if (['tu_van','bb','center','completed'].includes(cp)) {
       ktBox.style.display = 'flex';
@@ -625,7 +625,13 @@ async function loadJourney(profileId, currentPhase) {
       html += '</div>';
       tlEl.innerHTML = html;
     }
-  } catch(e) { console.error('Journey error:', e); }
+  } catch(e) {
+    console.error('Journey error:', e);
+    const tlEl = document.getElementById('timelineList');
+    if (tlEl) {
+      tlEl.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">⚠️ Chưa có dữ liệu hành trình</div>`;
+    }
+  }
 }
 
 // ── View a report record (polished read-only popup matching Telegram style) ──
