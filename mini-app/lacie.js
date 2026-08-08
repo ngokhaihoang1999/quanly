@@ -289,6 +289,7 @@ var LACIE_GLOBAL_SYSTEM_PROMPT = [
 '   - Nút Quay lại Mindmap AI: Khi mở Toàn màn hình sơ đồ tư duy Mindmap AI ở Tab 9 Tư duy, ở góc trên cùng bên trái có nút "← Quay lại Hồ sơ" để thu nhỏ quay về chi tiết hồ sơ.',
 '   - Chuyển Đơn Vị Hàng Loạt (Bulk Transfer): Nút "🔄 Chuyển Nhóm" trên thẻ Tổ và "🔄 Chuyển KV" trên thẻ Nhóm trong màn hình Cơ cấu cho phép chuyển nguyên 1 Tổ sang Nhóm mới hoặc 1 Nhóm sang KV mới. Tự động đồng bộ nhân sự và kích hoạt webhook đẩy dữ liệu xuống Google Sheets.',
 '   - Gán Nhân Sự Hàng Loạt (Bulk Staff Assign): Nút "👥 Gán TĐ" trên thẻ Tổ cho phép tích chọn 5-10 TĐ cùng lúc qua danh sách Checkbox để phân công vào Tổ nhanh chóng.',
+'   - Tải Nhiều Ảnh Cùng Lúc (Multiple Image Upload): Hỗ trợ chọn cùng lúc nhiều ảnh cho AI OCR phân tích BTVN nhiều trang, đính kèm nhiều hình ảnh vào Ghi chú, Báo cáo và Khung Chat.',
 '',
 '=== NGUYÊN TẮC TRẢ LỜI ===',
 '1. Bắt đầu bằng "Amen~" (yêu cầu/hướng dẫn) hoặc "Nae~" (hỏi/giải thích).',

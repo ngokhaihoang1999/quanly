@@ -170,7 +170,7 @@ function openAIParseModal(formType) {
     <label>Dán text${formType === 'btvn' ? ' hoặc tải ảnh lên' : ''} vào đây</label>
     <textarea id="aiParseInput" placeholder="${placeholders[formType] || ''}"
       style="resize:vertical;min-height:140px;font-size:13px;line-height:1.5;"></textarea>
-    ${formType === 'btvn' ? `<input type="file" id="aiParseImage" accept="image/*" style="margin-top:8px;font-size:12px;width:100%;" />` : ''}
+    ${formType === 'btvn' ? `<input type="file" id="aiParseImage" accept="image/*" multiple style="margin-top:8px;font-size:12px;width:100%;" /><div style="font-size:10px;color:var(--text3);margin-top:2px;">💡 Mẹo: Bạn có thể chọn cùng lúc nhiều ảnh (trang 1, trang 2...) để AI quét toàn bộ.</div>` : ''}
   </div>
   <div id="aiParseStatus" style="display:none;padding:12px;text-align:center;border-radius:var(--radius-sm);margin-bottom:8px;"></div>
   <button class="save-btn" id="aiParseBtn" onclick="executeAIParse('${formType}')" style="background:linear-gradient(135deg,var(--accent),var(--accent2));">
@@ -267,23 +267,29 @@ async function executeAIParse(formType) {
 
   var text = textarea.value.trim();
   var imageInput = document.getElementById('aiParseImage');
-  var base64Image = null;
+  var base64Images = [];
   
-  if (imageInput && imageInput.files && imageInput.files[0]) {
-    try {
-      base64Image = await _compressNoteImage(imageInput.files[0], 1024, 1024, 0.7);
-    } catch(err) {
-      console.warn('Image compress failed, using raw reader:', err);
-      base64Image = await new Promise((resolve) => {
-        var reader = new FileReader();
-        reader.onload = function(e) { resolve(e.target.result); };
-        reader.readAsDataURL(imageInput.files[0]);
-      });
+  if (imageInput && imageInput.files && imageInput.files.length > 0) {
+    var maxImgs = Math.min(imageInput.files.length, 5); // Process up to 5 multi-page photos
+    for (var i = 0; i < maxImgs; i++) {
+      var file = imageInput.files[i];
+      try {
+        var compressed = await _compressNoteImage(file, 1024, 1024, 0.7);
+        base64Images.push(compressed);
+      } catch(err) {
+        console.warn('Image compress failed for file', i, err);
+        var rawB64 = await new Promise((resolve) => {
+          var reader = new FileReader();
+          reader.onload = function(e) { resolve(e.target.result); };
+          reader.readAsDataURL(file);
+        });
+        if (rawB64) base64Images.push(rawB64);
+      }
     }
   }
 
-  if (!text && !base64Image) { showToast('⚠️ Cần dán text hoặc chọn ảnh'); return; }
-  if (text && text.length < 10 && !base64Image) { showToast('⚠️ Text quá ngắn, cần ít nhất vài câu'); return; }
+  if (!text && !base64Images.length) { showToast('⚠️ Cần dán text hoặc chọn 1-5 ảnh'); return; }
+  if (text && text.length < 10 && !base64Images.length) { showToast('⚠️ Text quá ngắn, cần ít nhất vài câu'); return; }
 
   // Validate business rules before proceeding
   var rulesOk = await _validateAIParseRules(formType);
@@ -295,7 +301,7 @@ async function executeAIParse(formType) {
   status.style.display = 'block';
   status.style.background = 'var(--bg2)';
   status.style.color = 'var(--text2)';
-  status.innerHTML = '🔍 Đang gửi dữ liệu đến AI... (~2-5 giây)';
+  status.innerHTML = `🔍 Đang phân tích dữ liệu (${base64Images.length ? base64Images.length + ' ảnh + ' : ''} text)... (~2-5 giây)`;
 
   try {
     var sysPrompt = AI_PARSE_PROMPTS[formType];
@@ -303,17 +309,18 @@ async function executeAIParse(formType) {
 
     var userContent = [];
     if (text) userContent.push({ type: "text", text: text });
-    if (base64Image) {
-      userContent.push({ type: "image_url", image_url: { url: base64Image } });
-      sysPrompt += '\n\nPhân tích thông tin từ cả chữ và (nếu có) hình ảnh được cung cấp.';
+    if (base64Images.length > 0) {
+      base64Images.forEach(function(imgUrl) {
+        userContent.push({ type: "image_url", image_url: { url: imgUrl } });
+      });
+      sysPrompt += '\n\nPhân tích tổng hợp thông tin từ tất cả ' + base64Images.length + ' hình ảnh được cung cấp.';
     }
-    // If only text, keep original string format just in case API wrapper prefers it
-    var msgContent = base64Image ? userContent : text;
+    var msgContent = base64Images.length > 0 ? userContent : text;
 
     var data = await callAIProxy([
       { role: 'system', content: sysPrompt },
       { role: 'user', content: msgContent }
-    ], { temperature: 0.1, max_tokens: 800 });
+    ], { temperature: 0.1, max_tokens: 1200 });
 
     if (!data) {
       throw new Error("Không nhận được phản hồi từ AI nhập nhanh.");

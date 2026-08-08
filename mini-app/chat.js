@@ -3066,70 +3066,77 @@ async function sendFloatingChatMessage() {
 
 // Upload file proxy streaming for floating chat
 async function uploadFloatingChatFile(input) {
-  const file = input.files?.[0];
+  const files = Array.from(input.files || []);
   const profileId = window._activeFloatingProfileId;
-  if (!file || !profileId) return;
+  if (!files.length || !profileId) return;
   
   input.value = '';
-  showToast('⌛ Đang tải tệp lên...');
+  showToast(`⏳ Đang gửi ${files.length} tệp...`);
   
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Upload failed: ${res.statusText}`);
-    }
-    
-    const data = await res.json();
-    if (data && data.url) {
-      const sender = getEffectiveStaffCode();
-      const catSelect = document.getElementById('cjFloatingChatCategory');
-      const category = catSelect ? catSelect.value : 'general';
+  let successCount = 0;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
       
-      const fileType = file.type || '';
-      let mediaType = 'document';
-      if (fileType.startsWith('image/')) mediaType = 'photo';
-      else if (fileType.startsWith('video/')) mediaType = 'video';
-      else if (fileType.startsWith('audio/')) mediaType = 'voice';
-
-      const dbRes = await sbFetch('/rest/v1/profile_chats', {
+      const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+      const res = await fetch(uploadUrl, {
         method: 'POST',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          profile_id: profileId,
-          sender_code: sender,
-          message: data.url,
-          category: category,
-          media_metadata: {
-            type: mediaType,
-            file_path: data.file_path,
-            file_id: data.file_id,
-            name: file.name
-          }
-        })
+        body: formData
       });
       
-      if (dbRes.ok) {
-        const newMsgArr = await dbRes.json();
-        if (newMsgArr && newMsgArr[0]) {
-          addFloatingChatMessageToDOM(newMsgArr[0]);
-          await markChatAsRead(profileId);
-          showToast('✅ Đã gửi tệp đính kèm');
+      if (!res.ok) {
+        throw new Error(`Upload failed: ${res.statusText}`);
+      }
+      
+      const data = await res.json();
+      if (data && data.url) {
+        const sender = getEffectiveStaffCode();
+        const catSelect = document.getElementById('cjFloatingChatCategory');
+        const category = catSelect ? catSelect.value : 'general';
+        
+        const fileType = file.type || '';
+        let mediaType = 'document';
+        if (fileType.startsWith('image/')) mediaType = 'photo';
+        else if (fileType.startsWith('video/')) mediaType = 'video';
+        else if (fileType.startsWith('audio/')) mediaType = 'voice';
+
+        const dbRes = await sbFetch('/rest/v1/profile_chats', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({
+            profile_id: profileId,
+            sender_code: sender,
+            message: data.url,
+            category: category,
+            media_metadata: {
+              type: mediaType,
+              file_path: data.file_path,
+              file_id: data.file_id,
+              name: file.name
+            }
+          })
+        });
+        
+        if (dbRes.ok) {
+          const newMsgArr = await dbRes.json();
+          if (newMsgArr && newMsgArr[0]) {
+            addFloatingChatMessageToDOM(newMsgArr[0]);
+            successCount++;
+          }
         }
       }
-    } else {
-      throw new Error('No URL returned');
+    } catch (e) {
+      console.error('uploadFloatingChatFile error for file:', file.name, e);
     }
-  } catch (e) {
+  }
+
+  if (successCount > 0) {
+    await markChatAsRead(profileId);
+    showToast(`✅ Đã gửi xong ${successCount} tệp đính kèm`);
+  } else {
     showToast('❌ Gửi tệp thất bại');
-    console.error('uploadFloatingChatFile error:', e);
   }
 }
 

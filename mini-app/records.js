@@ -702,11 +702,17 @@ async function viewRecord(recordId, recordType) {
     }
 
     if (c.image_url) {
+      const imgUrls = c.image_url.split(',').map(u => u.trim()).filter(Boolean);
+      const galleryHtml = imgUrls.map(url => `
+        <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; width:100px; height:100px; cursor:pointer; flex-shrink:0;" onclick="if(typeof openChatImageModal === 'function') openChatImageModal('${url}')">
+          <img src="${url}" style="width:100%; height:100%; object-fit:cover; display:block;" />
+        </div>
+      `).join('');
       sections += `
         <div style="margin-top:14px; border-top: 1px dashed var(--border); padding-top:14px;">
-          <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">📸 Hình ảnh đính kèm</div>
-          <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; max-width:240px; cursor:pointer;" onclick="if(typeof openChatImageModal === 'function') openChatImageModal('${c.image_url}')">
-            <img src="${c.image_url}" style="width:100%; display:block;" />
+          <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">📸 Hình ảnh đính kèm (${imgUrls.length} ảnh)</div>
+          <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;">
+            ${galleryHtml}
           </div>
           ${c.image_desc ? `<div style="font-size:11.5px;color:var(--text2);margin-top:6px;font-style:italic;line-height:1.4;">📝 ${escHtml(c.image_desc)}</div>` : ''}
         </div>
@@ -1385,7 +1391,7 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div class="field-group"><label>Đề xuất của TVV</label><textarea id="rm_de_xuat" placeholder="...">${c.de_xuat||''}</textarea></div>
       <div class="field-group">
         <label>📸 Ảnh đính kèm (gợi ý: kết quả bài test, sơ đồ...)</label>
-        <input type="file" id="rm_image_file" accept="image/*" style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
+        <input type="file" id="rm_image_file" accept="image/*" multiple style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
         
         <!-- Premium clipboard instruction block -->
         <div style="border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; text-align: center; background: rgba(124,106,247,0.03); margin-top: 6px; box-sizing: border-box; pointer-events: none;">
@@ -1442,7 +1448,7 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
       <div class="field-group"><label>Nội dung buổi tiếp theo</label><textarea id="rm_noi_dung_tiep" placeholder="...">${c.noi_dung_tiep||''}</textarea></div>
       <div class="field-group">
         <label>📸 Ảnh đính kèm (gợi ý: sơ đồ, kết quả buổi học...)</label>
-        <input type="file" id="rm_image_file" accept="image/*" style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
+        <input type="file" id="rm_image_file" accept="image/*" multiple style="margin-top:4px;font-size:12px;width:100%;" onchange="uploadRecordImage(this)" />
         
         <!-- Premium clipboard instruction block -->
         <div style="border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; text-align: center; background: rgba(124,106,247,0.03); margin-top: 6px; box-sizing: border-box; pointer-events: none;">
@@ -2068,76 +2074,100 @@ async function editEventDate(recordId) {
 }
 
 async function uploadRecordImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-  
-  if (file.size > 3 * 1024 * 1024) {
-    showToast('⚠️ Vui lòng chọn ảnh nhỏ hơn 3MB!');
-    input.value = '';
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+
+  showToast(`⏳ Đang tải ${files.length} ảnh đính kèm...`);
+  const urlEl = document.getElementById('rm_image_url');
+  let currentUrls = (urlEl?.value || '').split(',').map(u => u.trim()).filter(Boolean);
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(`⚠️ Ảnh ${file.name} vượt quá 5MB, bỏ qua`);
+      continue;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?document=true`;
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.url) {
+          currentUrls.push(data.url);
+          continue;
+        }
+      }
+      throw new Error('Upload server failed');
+    } catch (e) {
+      // Fallback to client-side compressed base64 DataURL
+      try {
+        const b64 = await _compressNoteImage(file, 1024, 1024, 0.7);
+        currentUrls.push(b64);
+      } catch (err) {
+        const rawB64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.readAsDataURL(file);
+        });
+        if (rawB64) currentUrls.push(rawB64);
+      }
+    }
+  }
+
+  input.value = '';
+  if (urlEl) urlEl.value = currentUrls.join(',');
+  renderRecordImagePreview();
+  showToast(`✅ Đã lưu ${currentUrls.length} ảnh đính kèm!`);
+}
+
+function renderRecordImagePreview() {
+  const urlEl = document.getElementById('rm_image_url');
+  const container = document.getElementById('rm_image_preview_container');
+  if (!urlEl || !container) return;
+
+  const urls = (urlEl.value || '').split(',').map(u => u.trim()).filter(Boolean);
+  if (!urls.length) {
+    container.style.display = 'none';
+    container.innerHTML = '';
     return;
   }
 
-  // Instant local preview for immediate visual feedback
-  let localUrl = '';
-  try {
-    localUrl = URL.createObjectURL(file);
-    const preview = document.getElementById('rm_image_preview');
-    if (preview) preview.src = localUrl;
-    const container = document.getElementById('rm_image_preview_container');
-    if (container) {
-      container.style.display = 'block';
-      container.style.opacity = '0.6'; // show a nice semi-transparent loading state
-    }
-  } catch (e) {
-    console.warn('Failed to create local Object URL:', e);
-  }
+  container.style.display = 'flex';
+  container.style.flexWrap = 'wrap';
+  container.style.gap = '8px';
+  container.style.marginTop = '8px';
+  container.style.maxWidth = '100%';
 
-  showToast('⏳ Đang tải ảnh lên...');
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
+  container.innerHTML = urls.map((url, idx) => `
+    <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative; width:80px; height:80px; flex-shrink:0;">
+      <img src="${url}" style="width:100%; height:100%; object-fit:cover; display:block;" />
+      <button type="button" onclick="removeRecordImageSingle(${idx})" style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.7); color:white; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:bold; z-index:10;">×</button>
+    </div>
+  `).join('');
+}
 
-    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot?document=true`;
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!res.ok) {
-      throw new Error(`Upload failed: ${res.statusText}`);
-    }
-
-    const data = await res.json();
-    if (data && data.url) {
-      document.getElementById('rm_image_url').value = data.url;
-      const preview = document.getElementById('rm_image_preview');
-      if (preview) preview.src = data.url;
-      const container = document.getElementById('rm_image_preview_container');
-      if (container) {
-        container.style.display = 'block';
-        container.style.opacity = '1'; // restore full opacity
-      }
-      showToast('✅ Đã tải ảnh thành công!');
-    } else {
-      throw new Error('No URL returned from proxy server');
-    }
-  } catch (e) {
-    showToast('❌ Tải ảnh thất bại');
-    console.error('uploadRecordImage error:', e);
-    // Hide preview container on error if not loaded
-    const container = document.getElementById('rm_image_preview_container');
-    if (container) container.style.display = 'none';
-  } finally {
-    input.value = '';
-    if (localUrl) {
-      try { URL.revokeObjectURL(localUrl); } catch (e) {}
-    }
-  }
+function removeRecordImageSingle(index) {
+  const urlEl = document.getElementById('rm_image_url');
+  if (!urlEl) return;
+  let urls = (urlEl.value || '').split(',').map(u => u.trim()).filter(Boolean);
+  urls.splice(index, 1);
+  urlEl.value = urls.join(',');
+  renderRecordImagePreview();
 }
 
 function removeRecordImage() {
   const urlEl = document.getElementById('rm_image_url');
   if (urlEl) urlEl.value = '';
+  renderRecordImagePreview();
+}
   
   const fileEl = document.getElementById('rm_image_file');
   if (fileEl) fileEl.value = '';

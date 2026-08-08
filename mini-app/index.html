@@ -6,11 +6,11 @@
   <title>Checking Jondo - Quản lý</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=6.02.0031" />
-  <link rel="stylesheet" href="desktop.css?v=6.02.0031" />
-  <link rel="stylesheet" href="avatar.css?v=6.02.0031" />
-  <link rel="stylesheet" href="reports.css?v=6.02.0031" />
-  <link rel="stylesheet" href="profile-filter.css?v=6.02.0031" />
+  <link rel="stylesheet" href="styles.css?v=6.02.0032" />
+  <link rel="stylesheet" href="desktop.css?v=6.02.0032" />
+  <link rel="stylesheet" href="avatar.css?v=6.02.0032" />
+  <link rel="stylesheet" href="reports.css?v=6.02.0032" />
+  <link rel="stylesheet" href="profile-filter.css?v=6.02.0032" />
   <style>
     /* Critical WebView cache-busting layout fixes — inlined to guarantee no stale cache */
     .chat-messages-area {
@@ -361,7 +361,7 @@
               </select>
             </div>
             
-            <input type="file" id="chatImageInput" style="display:none;" onchange="uploadChatImage(this)" />
+            <input type="file" id="chatImageInput" style="display:none;" multiple onchange="uploadChatImage(this)" />
             <button type="button" class="chat-image-trigger" id="chatImageTrigger" onclick="document.getElementById('chatImageInput').click()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'" title="Gửi tệp đính kèm">📎</button>
             <button type="button" class="chat-emoji-trigger" onclick="toggleChatEmojiPicker()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'" title="Chọn emoji">😀</button>
             <button type="button" class="chat-voice-trigger" id="chatVoiceTrigger" onclick="toggleVoiceRecording()" style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: background 0.15s; color:var(--text);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface2)'" title="Ghi âm thoại">🎙️</button>
@@ -1051,41 +1051,41 @@
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="utils.js?v=6.02.0031"></script>
-<script src="combobox.js?v=6.02.0031"></script>
-<script src="webhook.js?v=6.02.0031"></script>
-<script src="avatar.js?v=6.02.0031"></script>
-<script src="reports.js?v=6.02.0031"></script>
-<script src="profile-filter.js?v=6.02.0031"></script>
-<script src="transitions.js?v=6.02.0031"></script>
+<script src="utils.js?v=6.02.0032"></script>
+<script src="combobox.js?v=6.02.0032"></script>
+<script src="webhook.js?v=6.02.0032"></script>
+<script src="avatar.js?v=6.02.0032"></script>
+<script src="reports.js?v=6.02.0032"></script>
+<script src="profile-filter.js?v=6.02.0032"></script>
+<script src="transitions.js?v=6.02.0032"></script>
 <!-- ── Core + Extracted Modules (dependency order) ── -->
-<script src="core.js?v=6.02.0031"></script>
-<script src="pin.js?v=6.02.0031"></script>
-<script src="permissions.js?v=6.02.0031"></script>
-<script src="desktop.js?v=6.02.0031"></script>
-<script src="settings.js?v=6.02.0031"></script>
-<script src="fruit-actions.js?v=6.02.0031"></script>
+<script src="core.js?v=6.02.0032"></script>
+<script src="pin.js?v=6.02.0032"></script>
+<script src="permissions.js?v=6.02.0032"></script>
+<script src="desktop.js?v=6.02.0032"></script>
+<script src="settings.js?v=6.02.0032"></script>
+<script src="fruit-actions.js?v=6.02.0032"></script>
 <!-- ── Feature Modules ── -->
-<script src="dashboard.js?v=6.02.0031"></script>
-<script src="profiles.js?v=6.02.0031"></script>
-<script src="hapja.js?v=6.02.0031"></script>
-<script src="records.js?v=6.02.0031"></script>
-<script src="staff.js?v=6.02.0031"></script>
-<script src="structure.js?v=6.02.0031"></script>
-<script src="calendar.js?v=6.02.0031"></script>
-<script src="notification.js?v=6.02.0031"></script>
-<script src="priority.js?v=6.02.0031"></script>
-<script src="notes.js?v=6.02.0031"></script>
-<script src="sinka.js?v=6.02.0031"></script>
-<script src="dkbb.js?v=6.02.0031"></script>
-<script src="strategy.js?v=6.02.0031"></script>
-<script src="lacie.js?v=6.02.0031"></script>
-<script src="ai-parse.js?v=6.02.0031"></script>
-<script src="mindmap.js?v=6.02.0031"></script>
-<script src="chat.js?v=6.02.0031"></script>
-<script src="guide.js?v=6.02.0031"></script>
+<script src="dashboard.js?v=6.02.0032"></script>
+<script src="profiles.js?v=6.02.0032"></script>
+<script src="hapja.js?v=6.02.0032"></script>
+<script src="records.js?v=6.02.0032"></script>
+<script src="staff.js?v=6.02.0032"></script>
+<script src="structure.js?v=6.02.0032"></script>
+<script src="calendar.js?v=6.02.0032"></script>
+<script src="notification.js?v=6.02.0032"></script>
+<script src="priority.js?v=6.02.0032"></script>
+<script src="notes.js?v=6.02.0032"></script>
+<script src="sinka.js?v=6.02.0032"></script>
+<script src="dkbb.js?v=6.02.0032"></script>
+<script src="strategy.js?v=6.02.0032"></script>
+<script src="lacie.js?v=6.02.0032"></script>
+<script src="ai-parse.js?v=6.02.0032"></script>
+<script src="mindmap.js?v=6.02.0032"></script>
+<script src="chat.js?v=6.02.0032"></script>
+<script src="guide.js?v=6.02.0032"></script>
 <!-- ── Init (MUST be last ── depends on all modules) ── -->
-<script src="init.js?v=6.02.0031"></script>
+<script src="init.js?v=6.02.0032"></script>
 <script>
 // Lazy-load markmap CDN  Echỉ load khi mở tab Tư Dưy lần đầu tiên
 window._markmapLoaded = false;
@@ -1188,7 +1188,7 @@ window._lazyMarkmap = function() {
           </select>
           <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:9px; color:var(--text3); pointer-events:none;">▼</span>
         </div>
-        <input type="file" id="cjFloatingChatImageInput" style="display:none;" onchange="uploadFloatingChatFile(this)" />
+        <input type="file" id="cjFloatingChatImageInput" style="display:none;" multiple onchange="uploadFloatingChatFile(this)" />
         <button onclick="document.getElementById('cjFloatingChatImageInput').click()" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; width:28px; height:28px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface)'" title="Gửi tệp">📎</button>
         <button id="cjFloatingChatVoiceTrigger" onclick="toggleFloatingVoiceRecording()" style="background:var(--surface); border:1px solid var(--border); border-radius:8px; width:28px; height:28px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background 0.15s; color:var(--text);" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--surface)'" title="Ghi âm thoại">🎙️</button>
       </div>

@@ -345,7 +345,7 @@ function renderNoteCard(note) {
     </div>
     <div class="media-link-popover" id="mediaPopover-${note.id}" style="display:none;" onmousedown="event.stopPropagation();">
       <input type="text" placeholder="Dán link ảnh, mp3, mp4, youtube..." onkeydown="if(event.key==='Enter') { insertMediaUrl('${note.id}', this.value, this); this.value=''; }" style="width:100%; box-sizing:border-box; margin-bottom:4px;" />
-      <input type="file" accept="image/*,audio/*,video/*" onchange="uploadNoteMedia(this, '${note.id}')" style="display:none;" id="noteMediaUpload-${note.id}" />
+      <input type="file" accept="image/*,audio/*,video/*" multiple onchange="uploadNoteMedia(this, '${note.id}')" style="display:none;" id="noteMediaUpload-${note.id}" />
       <button class="chip" onmousedown="event.preventDefault();" onclick="document.getElementById('noteMediaUpload-${note.id}').click()" style="font-size:10px;padding:4px 8px;margin-top:2px;width:100%;text-align:center;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">📤 Tải tệp lên</button>
     </div>
   ` : '';
@@ -490,7 +490,7 @@ function renderBoardNoteCard(note, idx) {
     <!-- Media link insert popover -->
     <div class="media-link-popover" id="mediaPopover-${note.id}" style="display:none;" onmousedown="event.stopPropagation();">
       <input type="text" placeholder="Dán link ảnh, mp3, mp4, youtube..." onkeydown="if(event.key==='Enter') { insertMediaUrl('${note.id}', this.value, this); this.value=''; }" style="width:100%; box-sizing:border-box; margin-bottom:4px;" />
-      <input type="file" accept="image/*,audio/*,video/*" onchange="uploadNoteMedia(this, '${note.id}')" style="display:none;" id="noteMediaUpload-${note.id}" />
+      <input type="file" accept="image/*,audio/*,video/*" multiple onchange="uploadNoteMedia(this, '${note.id}')" style="display:none;" id="noteMediaUpload-${note.id}" />
       <button class="chip" onmousedown="event.preventDefault();" onclick="document.getElementById('noteMediaUpload-${note.id}').click()" style="font-size:10px;padding:4px 8px;margin-top:2px;width:100%;text-align:center;background:var(--accent);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">📤 Tải tệp lên</button>
     </div>
     ` : ''}
@@ -1791,47 +1791,56 @@ function toggleFloatNote(noteId) {
 }
 
 async function uploadNoteMedia(input, noteId) {
-  const file = input.files[0];
-  if (!file) return;
-  if (file.size > 3 * 1024 * 1024) {
-    showToast('⚠️ Vui lòng chọn tệp nhỏ hơn 3MB!');
-    input.value = '';
-    return;
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+
+  showToast(`⏳ Đang tải ${files.length} tệp đính kèm...`);
+  let successCount = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(`⚠️ Tệp ${file.name} vượt quá 5MB, bỏ qua`);
+      continue;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.url) {
+          insertMediaUrl(noteId, data.url, input);
+          successCount++;
+          continue;
+        }
+      }
+      throw new Error('Upload server returned non-ok status');
+    } catch (e) {
+      // Fallback to client-side compressed base64
+      try {
+        const b64 = await _compressNoteImage(file, 1024, 1024, 0.7);
+        insertMediaUrl(noteId, b64, input);
+        successCount++;
+      } catch(err) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          insertMediaUrl(noteId, ev.target.result, input);
+        };
+        reader.readAsDataURL(file);
+        successCount++;
+      }
+    }
   }
 
-  showToast('⏳ Đang tải tệp đính kèm...');
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const uploadUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!res.ok) {
-      throw new Error(`Upload failed: ${res.statusText}`);
-    }
-
-    const data = await res.json();
-    if (data && data.url) {
-      insertMediaUrl(noteId, data.url, input);
-      showToast('✅ Đã tải tệp đính kèm!');
-    } else {
-      throw new Error('No URL returned from proxy server');
-    }
-  } catch (e) {
-    showToast('⚠️ Tải tệp thất bại, đang chuyển sang chế độ dự phòng...');
-    console.error('uploadNoteMedia error:', e);
-    
-    // Fallback to base64 DataURL
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      insertMediaUrl(noteId, ev.target.result, input);
-    };
-    reader.readAsDataURL(file);
-  } finally {
-    input.value = '';
+  input.value = '';
+  if (successCount > 0) {
+    showToast(`✅ Đã tải xong ${successCount} tệp đính kèm!`);
   }
 }
