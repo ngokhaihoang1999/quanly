@@ -644,17 +644,25 @@ async function loadJourney(profileId, currentPhase) {
 // ── View a report record (polished read-only popup matching Telegram style) ──
 async function viewRecord(recordId, recordType) {
   try {
-    const res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`);
-    const rows = await res.json();
+    let res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
+    let rows = (res && res.ok) ? await res.json() : [];
+    if (!Array.isArray(rows) || !rows[0]) {
+      const fbRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
+      if (fbRes && fbRes.ok) {
+        const fbRows = await fbRes.json();
+        if (Array.isArray(fbRows) && fbRows[0]) rows = fbRows;
+      }
+    }
     if (!rows[0]) { showToast('⚠️ Không tìm thấy báo cáo'); return; }
     const r = rows[0];
+    const rType = r.record_type || recordType;
     const c = r.content || {};
     const date = shinDate(r.created_at);
-    const pName = allProfiles.find(x => x.id === r.profile_id)?.full_name || '';
-    const isTV = recordType === 'tu_van';
-    const isBB = recordType === 'bien_ban';
-    const isBTVN = recordType === 'btvn';
-    const isTeamMeeting = recordType === 'team_meeting';
+    const pName = allProfiles.find(x => String(x.id) === String(r.profile_id))?.full_name || '';
+    const isTV = ['tu_van', 'tu_van_hinh'].includes(rType);
+    const isBB = ['bien_ban', 'chot_bb'].includes(rType);
+    const isBTVN = rType === 'btvn';
+    const isTeamMeeting = rType === 'team_meeting';
 
     // Build styled content sections
     let sections = '';
@@ -842,11 +850,18 @@ function showReportPopup(contentHtml, recordId, recordType, copyText) {
 // ── Edit a report record (fetch content & open modal in EDIT mode) ──
 async function editRecord(recordId, recordType) {
   try {
-    const res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`);
-    const rows = await res.json();
+    let res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
+    let rows = (res && res.ok) ? await res.json() : [];
+    if (!Array.isArray(rows) || !rows[0]) {
+      const fbRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
+      if (fbRes && fbRes.ok) {
+        const fbRows = await fbRes.json();
+        if (Array.isArray(fbRows) && fbRows[0]) rows = fbRows;
+      }
+    }
     if (rows[0]) {
       currentRecordId = rows[0].id; // set ID so saveRecord does PATCH
-      openAddRecordModal(recordType, rows[0].content, false); // false = editable
+      openAddRecordModal(recordType || rows[0].record_type, rows[0].content, false); // false = editable
     }
   } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
@@ -856,7 +871,7 @@ async function _refreshCurrentProfile() {
   const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}&select=*`);
   const ps = await pRes.json();
   if (ps[0]) {
-    const idx = allProfiles.findIndex(x => x.id === currentProfileId);
+    const idx = allProfiles.findIndex(x => String(x.id) === String(currentProfileId));
     if (idx >= 0) allProfiles[idx] = ps[0];
     openProfile(ps[0]);
     // Ensure lists and dashboard metrics are never stale when navigating away
@@ -893,7 +908,8 @@ async function deleteEventRecord(recordId, recordType) {
   const confirmMsg = recordType === 'btvn' ? `Xóa "${label}" này?` : `Xóa "${label}" mới nhất?`;
   if (!await showConfirmAsync(confirmMsg)) return;
   try {
-    await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}`, { method:'DELETE' });
+    await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}`, { method:'DELETE' }).catch(() => null);
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' }).catch(() => null);
     showToast(`✅ Đã xóa ${label}`);
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi xóa'); console.error(e); }

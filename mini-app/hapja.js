@@ -595,12 +595,12 @@ async function loadRecords(profileId, type, listElId, countElId) {
       return;
     }
 
-    const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh)' : type === 'bien_ban' ? 'in.(bien_ban,chot_bb)' : `eq.${type}`;
+    const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh)' : `eq.${type}`;
 
     // Lấy cả danh sách tab lẫn record mới nhất TOÀN BỘ dòng thời gian song song
     const [res, latestRes] = await Promise.all([
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban,chot_bb)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
     ]);
 
     let rawRecords = (res && res.ok) ? await res.json() : [];
