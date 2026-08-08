@@ -2248,7 +2248,6 @@ function removeRecordImage() {
   const urlEl = document.getElementById('rm_image_url');
   if (urlEl) urlEl.value = '';
   renderRecordImagePreview();
-}
   
   const fileEl = document.getElementById('rm_image_file');
   if (fileEl) fileEl.value = '';
