@@ -328,8 +328,10 @@ async function loadDashboard(force = false) {
           sbFetch(`/rest/v1/profile_records?profile_id=in.(${idsStr})&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=profile_id,record_type,content,created_at&order=created_at.desc`),
           sbFetch(`/rest/v1/consultation_sessions?profile_id=in.(${idsStr})&select=profile_id,session_number,tool,created_at&order=created_at.desc`)
         ]);
-        const recs = await rRes.json(); recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
-        const ss   = await sRes.json(); ss.forEach(s =>   { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
+        const recs = (rRes && rRes.ok) ? await rRes.json() : [];
+        if (Array.isArray(recs)) recs.forEach(r => { if (!recordMap[r.profile_id]) recordMap[r.profile_id] = r; });
+        const ss = (sRes && sRes.ok) ? await sRes.json() : [];
+        if (Array.isArray(ss)) ss.forEach(s => { if (!sessionMap[s.profile_id]) sessionMap[s.profile_id] = s; });
       } catch(e) {}
     }
     // Helper: render fruit cards for a list of staff_codes
@@ -554,16 +556,20 @@ async function loadDashboard(force = false) {
   } catch(e) {
     console.error('Dashboard error:', e);
     // Clear any stuck loading states
-    const stuck = ['dashHapjaList','dashMyList','dashUnitList','dashSubUnits','dashNDDList'];
+    const stuck = ['dashHapjaList','dashMyList','dashNDDList'];
     stuck.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
+    });
+    ['dashUnitList','dashSubUnits'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
     });
     // Also clear metrics areas
     const metricsEl = document.getElementById('dashUnitMetrics');
     const personalEl = document.getElementById('dashPersonalMetrics');
     if (metricsEl && !metricsEl.innerHTML.trim()) metricsEl.innerHTML = '';
-    if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px;">Chưa có dữ liệu</div>';
+    if (personalEl && !personalEl.innerHTML.trim()) personalEl.innerHTML = '';
   } finally {
     markFresh('dashboard');
     // GUARANTEE: After loadDashboard completes (success or error), any element still

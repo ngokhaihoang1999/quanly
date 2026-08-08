@@ -115,11 +115,20 @@ async function loadReports(force = false) {
       sbFetch('/rest/v1/profiles?select=id,phase,fruit_status,semester_id,ndd_staff_code&order=created_at.desc'),
     ]);
 
-    const allRoles = codeFilter ? await rolesRes.json() : [];
-    const allHapja = codeFilter ? await hapjaRes.json() : [];
-    const allRecords = codeFilter ? await recordsRes.json() : [];
-    const allSessions = codeFilter ? await sessionsRes.json() : [];
-    const allProfilesXSem = allProfXSemRes.ok ? await allProfXSemRes.json() : [];
+    const rawRoles = (codeFilter && rolesRes && rolesRes.ok) ? await rolesRes.json() : [];
+    const allRoles = Array.isArray(rawRoles) ? rawRoles : [];
+
+    const rawHapja = (codeFilter && hapjaRes && hapjaRes.ok) ? await hapjaRes.json() : [];
+    const allHapja = Array.isArray(rawHapja) ? rawHapja : [];
+
+    const rawRecords = (codeFilter && recordsRes && recordsRes.ok) ? await recordsRes.json() : [];
+    const allRecords = Array.isArray(rawRecords) ? rawRecords : [];
+
+    const rawSessions = (codeFilter && sessionsRes && sessionsRes.ok) ? await sessionsRes.json() : [];
+    const allSessions = Array.isArray(rawSessions) ? rawSessions : [];
+
+    const rawProfXSem = (allProfXSemRes && allProfXSemRes.ok) ? await allProfXSemRes.json() : [];
+    const allProfilesXSem = Array.isArray(rawProfXSem) ? rawProfXSem : [];
 
     // Build records/sessions maps
     const recMap = {};
