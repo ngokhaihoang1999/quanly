@@ -673,14 +673,11 @@ async function loadJourney(profileId, currentPhase) {
 // ── View a report record (polished read-only popup matching Telegram style) ──
 async function viewRecord(recordId, recordType) {
   try {
-    let res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
-    let rows = (res && res.ok) ? await res.json() : [];
+    let recRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
+    let rows = await safeJson(recRes);
     if (!Array.isArray(rows) || !rows[0]) {
-      const fbRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
-      if (fbRes && fbRes.ok) {
-        const fbRows = await fbRes.json();
-        if (Array.isArray(fbRows) && fbRows[0]) rows = fbRows;
-      }
+      const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
+      rows = await safeJson(fbRes);
     }
     if (!rows[0]) { showToast('⚠️ Không tìm thấy báo cáo'); return; }
     const r = rows[0];
@@ -879,14 +876,11 @@ function showReportPopup(contentHtml, recordId, recordType, copyText) {
 // ── Edit a report record (fetch content & open modal in EDIT mode) ──
 async function editRecord(recordId, recordType) {
   try {
-    let res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
-    let rows = (res && res.ok) ? await res.json() : [];
+    let recRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
+    let rows = await safeJson(recRes);
     if (!Array.isArray(rows) || !rows[0]) {
-      const fbRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
-      if (fbRes && fbRes.ok) {
-        const fbRows = await fbRes.json();
-        if (Array.isArray(fbRows) && fbRows[0]) rows = fbRows;
-      }
+      const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
+      rows = await safeJson(fbRes);
     }
     if (rows[0]) {
       currentRecordId = rows[0].id; // set ID so saveRecord does PATCH

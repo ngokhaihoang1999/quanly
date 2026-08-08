@@ -37,6 +37,12 @@ function openZaloLink(phone, event) {
     if (typeof showToast === 'function') showToast('⚠️ Hồ sơ chưa cập nhật SĐT Zalo hợp lệ');
     return;
   }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(cleanPhone).catch(() => {});
+  }
+  if (typeof showToast === 'function') showToast(`📱 Đã chép SĐT (${cleanPhone}) & Mở Zalo...`);
+
   const url = `https://zalo.me/${cleanPhone}`;
   const tg = window.Telegram?.WebApp;
   if (tg && typeof tg.openLink === 'function') {
