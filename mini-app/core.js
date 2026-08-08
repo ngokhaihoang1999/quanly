@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
-window.APP_VERSION = 'v6.02.0067';
+window.APP_VERSION = 'v6.02.0068';
 const tg = window.Telegram?.WebApp;
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
@@ -565,8 +565,10 @@ async function sbFetch(path, opts={}) {
     _getCache.clear(); // Invalidate GET cache on write operations
   }
 
-  // ── GET cache (15s TTL using cached bodyText to avoid Response clone locks & reduce Supabase Disk I/O) ──
-  const bypassCache = opts.headers && (opts.headers['Cache-Control'] === 'no-cache' || opts.headers['cache-control'] === 'no-cache');
+  // ── GET cache ──
+  // Do NOT cache dynamic PostgREST queries (records, consultation_sessions, profiles) to guarantee 100% fresh live data!
+  const isDynamicQuery = path.includes('/rest/v1/records') || path.includes('/rest/v1/consultation_sessions') || path.includes('/rest/v1/profiles');
+  const bypassCache = isDynamicQuery || (opts.headers && (opts.headers['Cache-Control'] === 'no-cache' || opts.headers['cache-control'] === 'no-cache'));
   if (!isWrite && !bypassCache && _getCache.has(path)) {
     const cached = _getCache.get(path);
     if (Date.now() - cached.ts < 15000) {
