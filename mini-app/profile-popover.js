@@ -85,7 +85,7 @@
     const phasePrettyMap = {
       'chakki': '🌱 Chakki',
       'tu_van': '🧭 Tư vấn',
-      'bb': '📖 Bài Bài (BB)',
+      'bb': '📖 BB',
       'center': '🏛️ Center',
       'completed': '🎓 Tốt nghiệp'
     };

@@ -277,7 +277,7 @@ var LACIE_GLOBAL_SYSTEM_PROMPT = [
 '5. MA TRẬN XUẤT HIỆN TÍNH NĂNG THEO TỪNG GIAI ĐOẠN (PROGRESSIVE DISCLOSURE MATRIX):',
 '   - Giai đoạn 1 CHAKKI (phase=chakki): Chỉ có NDD, TVV1, Lá (CHƯA CÓ GVBB). Chỉ hiện Sub-tab 1 Thông tin, Tab 2 Giai đoạn, Tab 3 Tư vấn (TV1), Tab 9 Tư duy (Chiến lược 5 mục cl_* & Mindmap AI cơ bản). ❌ BỊ ẨN các sub-tabs: Bài học BB, BTVN, Thẻ HV Sinka, Hỗ trợ BB, Tag Mở KT và Nút Chốt Center.',
 '   - Giai đoạn 2 TƯ VẤN (phase=tu_van): Đã chốt TV, lập Group TV-BB nhưng CHƯA MỞ KT (is_kt_opened=false). ✅ BẮT ĐẦU XUẤT HIỆN: Phân công GVBB, Nút Lập Group TV-BB, Sub-tab Bài học BB, Sub-tab BTVN, Sub-tab Thẻ HV Sinka, Sub-tab Hỗ trợ BB trong Tab Tư duy, Nút Mở KT. ❌ CHƯA CÓ: Tag Đã mở KT và Nút Chốt Center.',
-'   - Giai đoạn 3 BB (phase=bb, is_kt_opened=true): ĐÃ MỞ KT. ✅ BẮT ĐẦU XUẤT HIỆN: Tag "📖 Đã mở KT" xanh lá, 4 Mốc tiến độ BB (Bài ĐB, PV GVBB, ĐK Center, PV Học viên), Tag "📋 ĐK Center". ✅ NÚT "🏛️ CHỐT CENTER" CHÍNH THỨC SÁNG LÊN khi tích đủ cả 4 mốc tiến độ BB!',
+'   - Giai đoạn 3 BB (phase=bb, is_kt_opened=true): BB là viết tắt của Before Bible (Giai đoạn học 12 bài Before Bible, trên giao diện chỉ hiển thị chữ BB). ✅ BẮT ĐẦU XUẤT HIỆN: Tag "📖 Đã mở KT" xanh lá, 4 Mốc tiến độ BB (Bài ĐB, PV GVBB, ĐK Center, PV Học viên), Tag "📋 ĐK Center". ✅ NÚT "🏛️ CHỐT CENTER" CHÍNH THỨC SÁNG LÊN khi tích đủ cả 4 mốc tiến độ BB!',
 '   - Giai đoạn 4 & 5 CENTER / COMPLETED: Tốt nghiệp kèm riêng, chốt file Word Sinka lên lớp Center 100 buổi.',
 '',
 '6. MA TRẬN QUY TẮC PHÂN QUYỀN & RÀO CẢN THAO TÁC ẨN (EDGE RULES MATRIX):',
