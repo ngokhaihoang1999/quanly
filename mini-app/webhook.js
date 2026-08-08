@@ -32,8 +32,8 @@ async function syncToGoogleSheet(pid) {
       sbFetch(`/rest/v1/profiles?id=eq.${pid}&select=*`),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${pid}&select=data`),
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${pid}&status=eq.approved&select=data&limit=1`),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${pid}&record_type=eq.note&select=content&order=created_at.desc&limit=1`),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${pid}&record_type=eq.tu_van&select=content&order=created_at.desc&limit=5`)
+      sbFetch(`/rest/v1/records?profile_id=eq.${pid}&record_type=eq.note&select=content&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/records?profile_id=eq.${pid}&record_type=eq.tu_van&select=content&order=created_at.desc&limit=5`)
     ]);
     const prs = await pRes.json(), hcs = await hcRes.json();
     const hjs = await hjRes.json();
@@ -98,8 +98,8 @@ async function bulkSyncDatabaseToSheet() {
       sbFetch(`/rest/v1/profiles?select=*&order=created_at.asc`),
       sbFetch(`/rest/v1/form_hanh_chinh?select=profile_id,data`),
       sbFetch(`/rest/v1/check_hapja?status=eq.approved&select=profile_id,data&order=created_at.asc`),
-      sbFetch(`/rest/v1/profile_records?record_type=eq.note&select=profile_id,content,created_at&order=created_at.desc`),
-      sbFetch(`/rest/v1/profile_records?record_type=eq.tu_van&select=profile_id,content,created_at&order=created_at.desc`),
+      sbFetch(`/rest/v1/records?record_type=eq.note&select=profile_id,content,created_at&order=created_at.desc`),
+      sbFetch(`/rest/v1/records?record_type=eq.tu_van&select=profile_id,content,created_at&order=created_at.desc`),
       sbFetch(`/rest/v1/fruit_groups?select=profile_id,fruit_roles(staff_code,role_type)`),
       sbFetch(`/rest/v1/areas?select=name,org_groups(name,teams(name,staff:staff!staff_team_id_fkey(staff_code)))`),
       sbFetch(`/rest/v1/semesters?select=id,name&order=created_at.asc`)

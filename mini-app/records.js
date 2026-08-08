@@ -149,7 +149,7 @@ async function loadJourney(profileId, currentPhase) {
   try {
     const [sessRes, recRes, fbRecRes, hjRes, fhRes] = await Promise.all([
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`).catch(() => null),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`).catch(() => null)
@@ -160,7 +160,7 @@ async function loadJourney(profileId, currentPhase) {
     if (!Array.isArray(prRecs)) prRecs = [];
     if (!Array.isArray(fbRecs)) fbRecs = [];
 
-    // Merge records from both profile_records and legacy records table by unique ID
+    // Merge records from both records and legacy records table by unique ID
     const combinedRecMap = new Map();
     [...prRecs, ...fbRecs].forEach(r => { if (r && r.id && !combinedRecMap.has(r.id)) combinedRecMap.set(r.id, r); });
     let rawRecs = Array.from(combinedRecMap.values());
@@ -685,7 +685,7 @@ async function viewRecord(recordId, recordType) {
       let recRes = await sbFetch(`/rest/v1/records?id=eq.${targetId}&select=*`).catch(() => null);
       let rows = await safeJson(recRes);
       if (!Array.isArray(rows) || !rows[0]) {
-        const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${targetId}&select=*`).catch(() => null);
+        const fbRes = await sbFetch(`/rest/v1/records?id=eq.${targetId}&select=*`).catch(() => null);
         rows = await safeJson(fbRes);
       }
       if (Array.isArray(rows) && rows[0]) targetRecord = rows[0];
@@ -903,7 +903,7 @@ async function editRecord(recordId, recordType) {
       let recRes = await sbFetch(`/rest/v1/records?id=eq.${targetId}&select=*`).catch(() => null);
       let rows = await safeJson(recRes);
       if (!Array.isArray(rows) || !rows[0]) {
-        const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${targetId}&select=*`).catch(() => null);
+        const fbRes = await sbFetch(`/rest/v1/records?id=eq.${targetId}&select=*`).catch(() => null);
         rows = await safeJson(fbRes);
       }
       if (Array.isArray(rows) && rows[0]) targetRecord = rows[0];
@@ -965,7 +965,7 @@ async function deleteEventRecord(recordId, recordType) {
   const confirmMsg = recordType === 'btvn' ? `Xóa "${label}" này?` : `Xóa "${label}" mới nhất?`;
   if (!await showConfirmAsync(confirmMsg)) return;
   try {
-    await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}`, { method:'DELETE' }).catch(() => null);
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' }).catch(() => null);
     await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' }).catch(() => null);
     showToast(`✅ Đã xóa ${label}`);
     await _refreshCurrentProfile();
@@ -976,9 +976,9 @@ async function deleteEventRecordKt(recordId) {
   if (!await showConfirmAsync('Hủy trạng thái Đã mở KT?')) return;
   try {
     if (recordId && recordId !== 'undefined' && recordId !== 'null') {
-      await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method:'DELETE' });
     } else {
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
     }
     
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, {
@@ -1009,27 +1009,27 @@ async function undoLastPhaseChange() {
     actionFn = async () => {
       // Just safely drop session > 1 and bc > 1. A bit tricky with JSON queries, so we delete ALL sessions/bc > 1 or just rely on API limit if needed, but for simplicity:
       // Actually, standard undo deletes EVERYTHING of that phase. Since it's Chakki vs TV, maybe just clear all.
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van`, { method:'DELETE' });
       await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${currentProfileId}&session_number=gt.1`, { method:'DELETE' });
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'chakki' }) });
     };
   } else if (phase === 'tu_van') {
     confirmMsg = '↩️ Hoàn tác về Tư vấn hình?\n\n⚠️ Sẽ xóa TẤT CẢ:\n• Sự kiện Lập Group\n• Tất cả Báo cáo BB\n\n(Báo cáo TV và Chốt TV được giữ nguyên)\nHành động này không thể hoàn tác!';
     actionFn = async () => {
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban`, { method:'DELETE' });
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.chot_bb`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_bb`, { method:'DELETE' });
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van_hinh' }) });
     };
   } else if (phase === 'bb') {
     confirmMsg = '↩️ Hoàn tác về Tư vấn?\n\n⚠️ Sẽ hủy trạng thái Đã mở KT (Báo cáo BB được giữ nguyên).\nHành động này không thể hoàn tác!';
     actionFn = async () => {
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt`, { method:'DELETE' });
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'tu_van', is_kt_opened: false }) });
     };
   } else if (phase === 'center') {
     confirmMsg = '↩️ Hoàn tác về BB?\n\n⚠️ Sẽ xóa sự kiện Chốt Center.\n(Báo cáo BB được giữ nguyên)\nHành động này không thể hoàn tác!';
     actionFn = async () => {
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.chot_center`, { method:'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.chot_center`, { method:'DELETE' });
       await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase:'bb' }) });
     };
   } else {
@@ -1089,7 +1089,7 @@ async function openScheduleTVModal(existingSession) {
     if (nextNum > 1) {
       try {
         const prevLan = nextNum - 1;
-        const bcCheckRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&select=id,content`);
+        const bcCheckRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&select=id,content`);
         const bcAllRows = await bcCheckRes.json();
         const hasPrevBC = bcAllRows.some(r => Number(r.content?.lan_thu) === prevLan);
         if (!hasPrevBC) {
@@ -1284,7 +1284,7 @@ async function openChotBBModal() {
     const sessList = (sessRes && sessRes.ok) ? await sessRes.json() : [];
     if (sessList && sessList.length > 0) {
       const lastSessNum = sessList[0].session_number;
-      const bcRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&content->>lan_thu=eq.${lastSessNum}&select=id&limit=1`).catch(() => null);
+      const bcRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.tu_van&content->>lan_thu=eq.${lastSessNum}&select=id&limit=1`).catch(() => null);
       const bcRows = (bcRes && bcRes.ok) ? await bcRes.json() : [];
       if (!bcRows || bcRows.length === 0) {
         showToast(`⚠️ Phải có Báo cáo TV lần ${lastSessNum} rồi mới được Lập Group!`);
@@ -1318,7 +1318,7 @@ async function saveChotBB() {
     // 1. Update phase
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'tu_van' })});
     // 2. Record chot_bb event on timeline
-    await sbFetch('/rest/v1/profile_records', { method:'POST', body: JSON.stringify({
+    await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
       profile_id: currentProfileId, record_type: 'chot_bb', content: { label: 'Lập Group TV - BB', phase: 'tu_van' }
     })});
     // 3. Save GVBB to fruit_roles
@@ -1405,7 +1405,7 @@ async function chotCenter() {
   if (!await showConfirmAsync('Xác nhận trái quả nhập học Center?')) return;
   try {
     await sbFetch(`/rest/v1/profiles?id=eq.${currentProfileId}`, { method:'PATCH', body: JSON.stringify({ phase: 'center' })});
-    await sbFetch('/rest/v1/profile_records', { method:'POST', body: JSON.stringify({
+    await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify({
       profile_id: currentProfileId, record_type: 'chot_center', content: { label: 'Chốt Center', phase: 'center' }
     })});
     const pName3 = allProfiles.find(x => x.id === currentProfileId)?.full_name || '';
@@ -1586,7 +1586,7 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
   } else if (isBTVN) {
     let bbOptions = '<option value="">-- Chọn Báo cáo BB --</option>';
     try {
-      const res = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content,created_at&order=created_at.desc`);
+      const res = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content,created_at&order=created_at.desc`);
       const bbRecs = await res.json();
       bbOptions += bbRecs.map(r => {
         const _buoi = r.content?.buoi_thu ? `Buổi ${r.content.buoi_thu}` : 'BB không rõ buổi';
@@ -1718,11 +1718,11 @@ async function saveRecord() {
     }
 
     if (currentRecordId) {
-      await sbFetch(`/rest/v1/profile_records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify(payload) });
+      await sbFetch(`/rest/v1/records?id=eq.${currentRecordId}`, { method:'PATCH', body: JSON.stringify(payload) });
       showToast('✅ Đã cập nhật!');
     } else {
       const postPayload = { profile_id: currentProfileId, record_type: currentRecordType, ...payload };
-      await sbFetch('/rest/v1/profile_records', { method:'POST', body: JSON.stringify(postPayload) });
+      await sbFetch('/rest/v1/records', { method:'POST', body: JSON.stringify(postPayload) });
       showToast('✅ Đã thêm!');
 
       const p = allProfiles.find(x => x.id === currentProfileId);
@@ -1772,7 +1772,7 @@ async function loadNotes(profileId) {
   const countEl = document.getElementById('noteCount');
   if (!listEl) return;
   try {
-    const res = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.note&select=id,content,created_at&order=created_at.desc`);
+    const res = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.note&select=id,content,created_at&order=created_at.desc`);
     const notes = await res.json();
     countEl.textContent = `${notes.length} ghi chú`;
     if (notes.length === 0) {
@@ -1811,7 +1811,7 @@ async function saveNote() {
   try {
     if (editId) {
       // Update existing note
-      await sbFetch(`/rest/v1/profile_records?id=eq.${editId}`, {
+      await sbFetch(`/rest/v1/records?id=eq.${editId}`, {
         method: 'PATCH',
         body: JSON.stringify({ content: { title: title || 'Ghi chú', body: body || '' } })
       });
@@ -1819,7 +1819,7 @@ async function saveNote() {
       document.getElementById('noteSaveBtn').textContent = '📌 Thêm ghi chú';
       showToast('✅ Đã cập nhật ghi chú!');
     } else {
-      await sbFetch('/rest/v1/profile_records', {
+      await sbFetch('/rest/v1/records', {
         method: 'POST',
         headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({ profile_id: currentProfileId, record_type: 'note', content: { title: title || 'Ghi chú', body: body || '' } })
@@ -1851,7 +1851,7 @@ function editNote(noteId, title, body) {
 async function deleteNote(noteId) {
   if (!await showConfirmAsync('Xoá ghi chú này?')) return;
   try {
-    await sbFetch(`/rest/v1/profile_records?id=eq.${noteId}`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/records?id=eq.${noteId}`, { method: 'DELETE' });
     showToast('🗑️ Đã xoá ghi chú');
     if (currentProfileId) loadNotes(currentProfileId);
   } catch(e) { showToast('❌ Lỗi xoá'); }
@@ -1865,14 +1865,14 @@ async function confirmMoKT() {
   try {
     const p = allProfiles.find(x => x.id === currentProfileId);
     // Fetch BB reports
-    const bbRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
+    const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
     const bbRecords = await bbRes.json();
     if (!bbRecords || bbRecords.length === 0) {
       showToast('⚠️ Chưa có báo cáo BB nào để xác nhận mở KT.');
       return;
     }
     // Fetch existing mo_kt records
-    const ktRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt&select=id,content`);
+    const ktRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.mo_kt&select=id,content`);
     const ktRecords = await ktRes.json();
     const confirmedSessions = new Set((ktRecords || []).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
     const sessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
@@ -1900,7 +1900,7 @@ async function confirmMoKT() {
 
     // Create mo_kt records
     for (const session of picked) {
-      await sbFetch('/rest/v1/profile_records', {
+      await sbFetch('/rest/v1/records', {
         method: 'POST',
         body: JSON.stringify({
           profile_id: currentProfileId,
@@ -2020,7 +2020,7 @@ async function toggleBBMilestone(type, isDone) {
     // Undo — delete the milestone record
     if (!await showConfirmAsync(`Hủy "${BB_MS_LABELS[type]}"?`)) return;
     try {
-      await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.${type}`, { method: 'DELETE' });
+      await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.${type}`, { method: 'DELETE' });
       showToast('↩️ Đã hủy');
       await _refreshCurrentProfile();
     } catch(e) { showToast('❌ Lỗi'); console.error(e); }
@@ -2034,7 +2034,7 @@ async function toggleBBMilestone(type, isDone) {
     const label = BB_MS_LABELS[type];
     if (!await showConfirmAsync(`Xác nhận "${label}" đã hoàn thành?`)) return;
     try {
-      await sbFetch('/rest/v1/profile_records', { method: 'POST', body: JSON.stringify({
+      await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
         profile_id: currentProfileId, record_type: type,
         content: { label }
       })});
@@ -2055,13 +2055,13 @@ async function pickBaiDacBiet() {
   if (!currentProfileId) return;
   try {
     // Fetch BB reports
-    const bbRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
+    const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bien_ban&select=id,content&order=created_at.asc`);
     const bbRecords = await bbRes.json();
     if (!bbRecords || bbRecords.length === 0) {
       showToast('⚠️ Chưa có báo cáo BB nào.'); return;
     }
     // Fetch existing bai_dac_biet
-    const bdRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.bai_dac_biet&select=id,content`);
+    const bdRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.bai_dac_biet&select=id,content`);
     const bdRecords = await bdRes.json();
     const doneSessions = new Set((bdRecords||[]).map(r => Number(r.content?.buoi_thu)).filter(Boolean));
     const allSessions = bbRecords.map(r => Number(r.content?.buoi_thu || 0)).filter(n => n > 0);
@@ -2075,7 +2075,7 @@ async function pickBaiDacBiet() {
     const picked = await showBDBSessionPicker(available, doneSessions, allSessions);
     if (!picked) return;
 
-    await sbFetch('/rest/v1/profile_records', { method: 'POST', body: JSON.stringify({
+    await sbFetch('/rest/v1/records', { method: 'POST', body: JSON.stringify({
       profile_id: currentProfileId, record_type: 'bai_dac_biet',
       content: { label: `Bài đặc biệt (buổi BB ${picked})`, buoi_thu: picked }
     })});
@@ -2139,7 +2139,7 @@ function showBDBSessionPicker(available, doneSessions, allSessions) {
 async function deleteBBMilestone(recordId) {
   if (!await showConfirmAsync('Hủy sự kiện này?')) return;
   try {
-    await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}`, { method: 'DELETE' });
+    await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'DELETE' });
     showToast('🗑️ Đã hủy');
     await _refreshCurrentProfile();
   } catch(e) { showToast('❌ Lỗi'); console.error(e); }
@@ -2148,7 +2148,7 @@ async function deleteBBMilestone(recordId) {
 // ── Edit date for a major timeline event ──
 async function editEventDate(recordId) {
   try {
-    const res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=id,content,record_type,created_at`);
+    const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=id,content,record_type,created_at`);
     const rows = await res.json();
     if (!rows[0]) { showToast('⚠️ Không tìm thấy sự kiện'); return; }
     const r = rows[0];
@@ -2172,7 +2172,7 @@ async function editEventDate(recordId) {
       if (!newDate) { showToast('⚠️ Chọn ngày'); return; }
       try {
         const updatedContent = { ...(r.content || {}), report_date: newDate };
-        await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}`, { method: 'PATCH', body: JSON.stringify({ content: updatedContent }) });
+        await sbFetch(`/rest/v1/records?id=eq.${recordId}`, { method: 'PATCH', body: JSON.stringify({ content: updatedContent }) });
         overlay.remove();
         showToast('✅ Đã đổi ngày');
         await _refreshCurrentProfile();

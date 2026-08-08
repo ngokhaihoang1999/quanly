@@ -216,7 +216,7 @@ async function _autoFillSinka(profileId, p) {
   // Get BB count
   let bbCount = 0;
   try {
-    const bbRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=id`, { headers: { 'Prefer': 'count=exact' } });
+    const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=id`, { headers: { 'Prefer': 'count=exact' } });
     const countHeader = bbRes.headers.get('content-range');
     if (countHeader) {
       const match = countHeader.match(/\/(\d+)/);
@@ -680,9 +680,9 @@ async function runAIScanSinka() {
     if (!p) throw new Error('Không tìm thấy hồ sơ học viên');
 
     // 1. Tải toàn bộ lịch sử thô từ DB (bao gồm id để tạo shortcut nguồn)
-    var r1 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=id,content,created_at&order=created_at.asc');
-    var r2 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=id,content,created_at&order=created_at.asc');
-    var r3 = await sbFetch('/rest/v1/profile_records?profile_id=eq.'+p.id+'&record_type=eq.note&select=id,content,created_at&order=created_at.asc');
+    var r1 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.tu_van&select=id,content,created_at&order=created_at.asc');
+    var r2 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.bien_ban&select=id,content,created_at&order=created_at.asc');
+    var r3 = await sbFetch('/rest/v1/records?profile_id=eq.'+p.id+'&record_type=eq.note&select=id,content,created_at&order=created_at.asc');
     var tvs = await r1.json(), bbs = await r2.json(), nts = await r3.json();
 
     // 2. Gom ngữ cảnh nén thông minh động
