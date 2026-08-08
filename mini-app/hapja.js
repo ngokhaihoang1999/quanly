@@ -601,7 +601,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
     const [res, fbRes, latestRes] = await Promise.all([
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
     ]);
 
     let prArr = (res && res.ok) ? await res.json() : [];
@@ -611,7 +611,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
 
     const recMap = new Map();
     [...prArr, ...fbArr].forEach(r => { if (r && r.id && !recMap.has(r.id)) recMap.set(r.id, r); });
-    const records = Array.from(recMap.values()).sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    const records = Array.from(recMap.values()).sort((a,b) => new Date(a.created_at || 0) - new Date(a.created_at || 0));
 
     const rawLatest = (latestRes && latestRes.ok) ? await latestRes.json() : [];
     const latestRows = Array.isArray(rawLatest) ? rawLatest : [];
@@ -632,7 +632,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
                   ${sArr.map(s => `
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);">
                       <div>
-                        <div style="font-size:13px;font-weight:600;color:var(--text);">Chốt TV lần ${s.session_number}${s.tool ? ' — '+escHtml(s.tool) : ''}</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text);">Chốt TV lần ${s.session_number}${s.tool ? ' — '+(typeof escHtml==='function'?escHtml(s.tool):s.tool) : ''}</div>
                         <div style="font-size:11px;color:var(--text3);">${shinDate(s.scheduled_at || s.created_at)}</div>
                       </div>
                       <button onclick="createTVFromSession('${s.id}', ${s.session_number}, '${(s.tool||'').replace(/'/g,"\\'")}')" style="padding:6px 12px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-size:12px;font-weight:700;border:none;cursor:pointer;">📝 Viết báo cáo</button>
@@ -644,7 +644,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
           }
         } catch(e) {}
       }
-      listEl.innerHTML = sessHtml + '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu báo cáo tư vấn nào</div>';
+      listEl.innerHTML = sessHtml + '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu báo cáo nào</div>';
       return;
     }
 
@@ -668,8 +668,8 @@ async function loadRecords(profileId, type, listElId, countElId) {
         <div class="record-number">${i+1}</div>
         <div class="record-content">
           <div class="record-date">📅 ${date}</div>
-          <div class="record-title">${escHtml(title)}</div>
-          <div class="record-preview">${escHtml(previewStr.substring(0,80))}${previewStr.length>80?'...':''}</div>
+          <div class="record-title">${typeof escHtml==='function'?escHtml(title):title}</div>
+          <div class="record-preview">${typeof escHtml==='function'?escHtml(previewStr.substring(0,80)):previewStr.substring(0,80)}${previewStr.length>80?'...':''}</div>
         </div>
         ${delBtn}
       </div>`;
@@ -677,7 +677,10 @@ async function loadRecords(profileId, type, listElId, countElId) {
   } catch(e) {
     console.error('loadRecords error:', e);
     const listEl = document.getElementById(listElId);
-    if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Lỗi tải dữ liệu phiếu</div>';
+    if (listEl) {
+      const msg = typeof escHtml === 'function' ? escHtml(e.message || String(e)) : String(e);
+      listEl.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px;">Lỗi tải dữ liệu phiếu: ${msg}</div>`;
+    }
   }
 }
 async function deleteProfile() {

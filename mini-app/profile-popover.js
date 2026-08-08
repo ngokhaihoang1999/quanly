@@ -42,14 +42,16 @@
         return;
       }
 
-      // 2. Fetch sessions & records for stage intelligence (merge profile_records & legacy records)
+      // 2. Fetch sessions, records & form_hanh_chinh for stage intelligence & phone numbers
       let sessions = [];
       let records = [];
+      let fhData = {};
       try {
-        const [sRes, rRes, fbRes] = await Promise.all([
+        const [sRes, rRes, fbRes, fhRes] = await Promise.all([
           sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
           sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.desc`),
-          sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.desc`)
+          sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.desc`),
+          sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`)
         ]);
         if (sRes && sRes.ok) {
           const sArr = await sRes.json();
@@ -63,6 +65,11 @@
         const recMap = new Map();
         [...prArr, ...fbArr].forEach(r => { if (r && r.id && !recMap.has(r.id)) recMap.set(r.id, r); });
         records = Array.from(recMap.values()).sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+        let fhArr = (fhRes && fhRes.ok) ? await fhRes.json() : [];
+        if (Array.isArray(fhArr) && fhArr[0] && fhArr[0].data) {
+          fhData = fhArr[0].data;
+        }
       } catch(e) {}
 
       const recentRecord = records[0] || null;
@@ -222,10 +229,16 @@
         }
       }
 
-      // Phone / Zalo action URL
-      const cleanPhone = (profile.phone || profile.phone_number || '').replace(/\D/g, '');
-      const zaloUrl = cleanPhone ? `https://zalo.me/${cleanPhone}` : null;
-      const phoneCallUrl = cleanPhone ? `tel:${cleanPhone}` : null;
+      // Phone / Zalo action URL resolution
+      let rawPhone = profile.phone || profile.sdt || profile.t2_sdt || fhData.t2_sdt || profile.t2_values?.t2_sdt || '';
+      let cleanPhone = String(rawPhone || '').replace(/\D/g, '');
+      if (cleanPhone.startsWith('84') && cleanPhone.length === 11) {
+        cleanPhone = '0' + cleanPhone.slice(2);
+      }
+      const isValidPhone = /^0[35789]\d{8}$/.test(cleanPhone);
+      const zaloActionAttr = isValidPhone 
+        ? `href="https://zalo.me/${cleanPhone}" target="_blank"` 
+        : `href="javascript:void(0)" onclick="if(typeof showToast==='function') showToast('⚠️ Hồ sơ chưa cập nhật SĐT Zalo hợp lệ')"` ;
 
       // 5. Create Popover DOM Container
       const popoverOverlay = document.createElement('div');
@@ -262,9 +275,8 @@
 
           <!-- Quick Action Dock -->
           <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
-            ${zaloUrl ? `<a href="${zaloUrl}" target="_blank" class="popover-action-btn" style="background:#0068ff;color:white;" title="Mở Zalo">💬 Zalo</a>` : ''}
-            ${phoneCallUrl ? `<a href="${phoneCallUrl}" class="popover-action-btn" style="background:var(--surface2);color:var(--text);" title="Gọi điện">📞 Gọi</a>` : ''}
-            <button onclick="openFloatingChat('${profile.id}')" class="popover-action-btn" style="background:var(--surface2);color:var(--text);" title="Chat nhóm">💬 Chat</button>
+            <a ${zaloActionAttr} class="popover-action-btn" style="background:#0068ff;color:white;" title="Mở Zalo">💬 Zalo</a>
+            <button onclick="expandToProfileChat('${profile.id}')" class="popover-action-btn" style="background:var(--surface2);color:var(--text);" title="Thảo luận hồ sơ">💬 Chat</button>
             <button onclick="expandToProfileDetail('${profile.id}')" class="popover-action-btn primary" style="flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-weight:700;">🚀 Chi tiết hồ sơ</button>
           </div>
         </div>
@@ -292,6 +304,13 @@
     closeProfileQuickPopover();
     if (typeof openProfileById === 'function') {
       openProfileById(profileId);
+    }
+  };
+
+  window.expandToProfileChat = function(profileId) {
+    closeProfileQuickPopover();
+    if (typeof openProfileById === 'function') {
+      openProfileById(profileId, null, 'chatTab');
     }
   };
 
