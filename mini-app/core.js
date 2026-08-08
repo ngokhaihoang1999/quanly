@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
-window.APP_VERSION = 'v6.02.0055';
+window.APP_VERSION = 'v6.02.0057';
 const tg = window.Telegram?.WebApp;
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];
@@ -565,17 +565,22 @@ async function sbFetch(path, opts={}) {
     _getCache.clear(); // Invalidate GET cache on write operations
   }
 
-  // ── GET cache (5s TTL) ──
+  // ── GET cache (15s TTL using cached bodyText to avoid Response clone locks & reduce Supabase Disk I/O) ──
   const bypassCache = opts.headers && (opts.headers['Cache-Control'] === 'no-cache' || opts.headers['cache-control'] === 'no-cache');
   if (!isWrite && !bypassCache && _getCache.has(path)) {
     const cached = _getCache.get(path);
-    if (Date.now() - cached.ts < 5000) return cached.res.clone();
+    if (Date.now() - cached.ts < 15000) {
+      return new Response(cached.bodyText, { status: 200, headers: cached.headers });
+    }
     _getCache.delete(path);
   }
 
   // ── In-flight dedup for GET ──
   if (!isWrite && _inflight.has(path)) {
-    return (await _inflight.get(path)).clone();
+    try {
+      const inflightRes = await _inflight.get(path);
+      return inflightRes.clone();
+    } catch(e) {}
   }
 
   let timeoutMs = isWrite ? 60000 : 20000;
@@ -588,6 +593,12 @@ async function sbFetch(path, opts={}) {
   const promise = (async () => {
     try {
       const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
+      if (!isWrite && res.ok && !bypassCache) {
+        try {
+          const bodyText = await res.clone().text();
+          _getCache.set(path, { ts: Date.now(), bodyText, headers: res.headers });
+        } catch(e) {}
+      }
       if (!res.ok && isWrite) {
         console.warn(`[sbFetch] ${opts.method} ${path} → ${res.status}`);
         if (res.status >= 500 || res.status === 0) {

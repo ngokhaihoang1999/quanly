@@ -597,23 +597,23 @@ async function loadRecords(profileId, type, listElId, countElId) {
 
     const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh)' : `eq.${type}`;
 
-    // Lấy cả danh sách tab lẫn record mới nhất TOÀN BỘ dòng thời gian song song
-    const [res, latestRes] = await Promise.all([
+    // Lấy danh sách từ cả profile_records và legacy records bàn giao song song
+    const [res, fbRes, latestRes] = await Promise.all([
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
     ]);
 
-    let rawRecords = (res && res.ok) ? await res.json() : [];
-    if (!Array.isArray(rawRecords) || rawRecords.length === 0) {
-      const fbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null);
-      if (fbRes && fbRes.ok) {
-        const fbArr = await fbRes.json();
-        if (Array.isArray(fbArr) && fbArr.length > 0) rawRecords = fbArr;
-      }
-    }
-    const rawLatest = (latestRes && latestRes.ok) ? await latestRes.json() : [];
+    let prArr = (res && res.ok) ? await res.json() : [];
+    let fbArr = (fbRes && fbRes.ok) ? await fbRes.json() : [];
+    if (!Array.isArray(prArr)) prArr = [];
+    if (!Array.isArray(fbArr)) fbArr = [];
 
-    const records = Array.isArray(rawRecords) ? rawRecords : [];
+    const recMap = new Map();
+    [...prArr, ...fbArr].forEach(r => { if (r && r.id && !recMap.has(r.id)) recMap.set(r.id, r); });
+    const records = Array.from(recMap.values()).sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+    const rawLatest = (latestRes && latestRes.ok) ? await latestRes.json() : [];
     const latestRows = Array.isArray(rawLatest) ? rawLatest : [];
 
     if (countEl) countEl.textContent = records.length + ' phiếu';

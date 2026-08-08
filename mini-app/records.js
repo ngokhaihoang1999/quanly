@@ -145,24 +145,25 @@ async function loadJourney(profileId, currentPhase) {
 
 
   try {
-    const [sessRes, recRes, hjRes, fhRes] = await Promise.all([
+    const [sessRes, recRes, fbRecRes, hjRes, fhRes] = await Promise.all([
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`).catch(() => null),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`).catch(() => null)
     ]);
     const rawSessions = (sessRes && sessRes.ok) ? await sessRes.json() : [];
-    let rawRecs = (recRes && recRes.ok) ? await recRes.json() : [];
-    if (!Array.isArray(rawRecs) || rawRecs.length === 0) {
-      const fbRecRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null);
-      if (fbRecRes && fbRecRes.ok) {
-        const fbRecs = await fbRecRes.json();
-        if (Array.isArray(fbRecs) && fbRecs.length > 0) rawRecs = fbRecs;
-      }
-    }
-    if (Array.isArray(rawRecs)) {
-      rawRecs = rawRecs.filter(r => !['ai_mindmap', 'ai_chat', 'note', 'phase_change'].includes(r.record_type));
-    }
+    let prRecs = (recRes && recRes.ok) ? await recRes.json() : [];
+    let fbRecs = (fbRecRes && fbRecRes.ok) ? await fbRecRes.json() : [];
+    if (!Array.isArray(prRecs)) prRecs = [];
+    if (!Array.isArray(fbRecs)) fbRecs = [];
+
+    // Merge records from both profile_records and legacy records table by unique ID
+    const combinedRecMap = new Map();
+    [...prRecs, ...fbRecs].forEach(r => { if (r && r.id && !combinedRecMap.has(r.id)) combinedRecMap.set(r.id, r); });
+    let rawRecs = Array.from(combinedRecMap.values());
+    rawRecs = rawRecs.filter(r => !['ai_mindmap', 'ai_chat', 'note', 'phase_change'].includes(r.record_type));
+
     const rawHapjas = (hjRes && hjRes.ok) ? await hjRes.json() : [];
     const rawFhs = (fhRes && fhRes.ok) ? await fhRes.json() : [];
 

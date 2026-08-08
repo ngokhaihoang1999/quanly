@@ -42,22 +42,27 @@
         return;
       }
 
-      // 2. Fetch sessions & records for stage intelligence
+      // 2. Fetch sessions & records for stage intelligence (merge profile_records & legacy records)
       let sessions = [];
       let records = [];
       try {
-        const [sRes, rRes] = await Promise.all([
+        const [sRes, rRes, fbRes] = await Promise.all([
           sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`),
-          sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.desc`)
+          sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&select=*&order=created_at.desc`),
+          sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&select=*&order=created_at.desc`)
         ]);
         if (sRes && sRes.ok) {
           const sArr = await sRes.json();
           if (Array.isArray(sArr)) sessions = sArr;
         }
-        if (rRes && rRes.ok) {
-          const rArr = await rRes.json();
-          if (Array.isArray(rArr)) records = rArr;
-        }
+        let prArr = (rRes && rRes.ok) ? await rRes.json() : [];
+        let fbArr = (fbRes && fbRes.ok) ? await fbRes.json() : [];
+        if (!Array.isArray(prArr)) prArr = [];
+        if (!Array.isArray(fbArr)) fbArr = [];
+
+        const recMap = new Map();
+        [...prArr, ...fbArr].forEach(r => { if (r && r.id && !recMap.has(r.id)) recMap.set(r.id, r); });
+        records = Array.from(recMap.values()).sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       } catch(e) {}
 
       const recentRecord = records[0] || null;
