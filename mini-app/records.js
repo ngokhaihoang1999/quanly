@@ -42,10 +42,18 @@ async function loadJourney(profileId, currentPhase) {
   const tlEl = document.getElementById('timelineList');
   if (!phBtnEl || !tlEl) return;
 
+  if (!profileId || profileId === 'undefined' || profileId === 'null') {
+    profileId = window.currentProfileId;
+  }
+  if (!profileId || profileId === 'undefined' || profileId === 'null') {
+    tlEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Chưa chọn hồ sơ</div>';
+    return;
+  }
+
   tlEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">⏳ Đang tải hành trình...</div>';
 
-  const cp = (currentPhase || 'chakki').toString().trim().toLowerCase();
   const targetP = allProfiles.find(x => String(x.id) === String(profileId));
+  const cp = (currentPhase || targetP?.phase || 'chakki').toString().trim().toLowerCase();
   const isDropout = ['dropout','pause'].includes(targetP?.fruit_status);
 
   // Fetch group info (for tu_van/BB/center phase — after Lập Group)
@@ -218,7 +226,7 @@ async function loadJourney(profileId, currentPhase) {
     }
 
     // 2. Pair Sessions (Chốt TV) and tu_van Records (Báo cáo TV) on the SAME ROW
-    const tuVanRecords = recs.filter(r => r.record_type === 'tu_van');
+    const tuVanRecords = recs.filter(r => ['tu_van', 'tu_van_hinh'].includes(r.record_type));
     const matchedTuVanIds = new Set();
 
     const parseNum = val => {
@@ -311,7 +319,7 @@ async function loadJourney(profileId, currentPhase) {
 
     // 3. Other Records (BC BB, Chốt BB, Chốt Center, etc.)
     recs.forEach(r => {
-      if (r.record_type === 'tu_van') return; // Handled in paired_tv above!
+      if (['tu_van', 'tu_van_hinh'].includes(r.record_type)) return; // Handled in paired_tv above!
 
       let icon, text, isMajor = false;
       let _buoiThu = null;

@@ -587,10 +587,20 @@ async function loadRecords(profileId, type, listElId, countElId) {
     const listEl = document.getElementById(listElId);
     if (!listEl) return;
 
+    if (!profileId || profileId === 'undefined' || profileId === 'null') {
+      profileId = window.currentProfileId;
+    }
+    if (!profileId || profileId === 'undefined' || profileId === 'null') {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa chọn hồ sơ</div>';
+      return;
+    }
+
+    const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh)' : type === 'bien_ban' ? 'in.(bien_ban,chot_bb)' : `eq.${type}`;
+
     // Lấy cả danh sách tab lẫn record mới nhất TOÀN BỘ dòng thời gian song song
     const [res, latestRes] = await Promise.all([
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`)
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban,chot_bb)&select=id,record_type&order=created_at.desc&limit=1`)
     ]);
 
     const rawRecords = (res && res.ok) ? await res.json() : [];
