@@ -118,11 +118,27 @@
         gvbbLabel = typeof getStaffLabel === 'function' ? getStaffLabel(rawGvbb) : rawGvbb;
       }
 
+      const getRecordContent = r => {
+        if (!r) return {};
+        let c = r.content || r.data || {};
+        if (typeof c === 'string') {
+          try { c = JSON.parse(c); } catch(e) { c = {}; }
+        }
+        return (c && typeof c === 'object') ? c : {};
+      };
+
+      const parseNum = val => {
+        if (val === null || val === undefined) return null;
+        if (typeof val === 'number') return isNaN(val) ? null : val;
+        const m = String(val).match(/\d+/);
+        return m ? parseInt(m[0], 10) : null;
+      };
+
       // Sessions & TV records lookup
-      const tvv1Session = sessions.find(s => s.session_number === 1);
-      const tvv2Session = sessions.find(s => s.session_number === 2);
-      const tv1Record = records.find(r => ['tu_van','tu_van_hinh'].includes(r.record_type) && Number(r.content?.lan_thu) === 1);
-      const tv2Record = records.find(r => ['tu_van','tu_van_hinh'].includes(r.record_type) && Number(r.content?.lan_thu) === 2);
+      const tvv1Session = sessions.find(s => parseNum(s.session_number) === 1);
+      const tvv2Session = sessions.find(s => parseNum(s.session_number) === 2);
+      const tv1Record = records.find(r => ['tu_van','tu_van_hinh'].includes(r.record_type) && parseNum(getRecordContent(r).lan_thu) === 1);
+      const tv2Record = records.find(r => ['tu_van','tu_van_hinh'].includes(r.record_type) && parseNum(getRecordContent(r).lan_thu) === 2);
 
       const formatD = (dStr) => typeof shinDate === 'function' ? shinDate(dStr) : (dStr || '');
 

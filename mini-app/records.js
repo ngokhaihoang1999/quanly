@@ -239,6 +239,16 @@ async function loadJourney(profileId, currentPhase) {
     const tuVanRecords = recs.filter(r => ['tu_van', 'tu_van_hinh'].includes(r.record_type));
     const matchedTuVanIds = new Set();
 
+    // Helper to safely extract content object regardless of JSON string/object/data variations
+    const getRecordContent = r => {
+      if (!r) return {};
+      let c = r.content || r.data || {};
+      if (typeof c === 'string') {
+        try { c = JSON.parse(c); } catch(e) { c = {}; }
+      }
+      return (c && typeof c === 'object') ? c : {};
+    };
+
     const parseNum = val => {
       if (val === null || val === undefined) return null;
       if (typeof val === 'number') return isNaN(val) ? null : val;
@@ -261,8 +271,10 @@ async function loadJourney(profileId, currentPhase) {
     const sortedSessions = [...sessions].sort((a,b) => (parseNum(a.session_number)||0) - (parseNum(b.session_number)||0));
     // Sort tu_van records by report date / created_at ascending
     const sortedTuVan = [...tuVanRecords].sort((a,b) => {
-      const tA = safeTimestamp(a.content?.report_date || a.created_at);
-      const tB = safeTimestamp(b.content?.report_date || b.created_at);
+      const cA = getRecordContent(a);
+      const cB = getRecordContent(b);
+      const tA = safeTimestamp(cA.report_date || a.created_at);
+      const tB = safeTimestamp(cB.report_date || b.created_at);
       return tA - tB;
     });
 
@@ -272,7 +284,7 @@ async function loadJourney(profileId, currentPhase) {
     sortedSessions.forEach(s => {
       const sNum = parseNum(s.session_number);
       if (sNum !== null) {
-        const match = sortedTuVan.find(r => !matchedTuVanIds.has(r.id) && parseNum(r.content?.lan_thu) === sNum);
+        const match = sortedTuVan.find(r => !matchedTuVanIds.has(r.id) && parseNum(getRecordContent(r).lan_thu) === sNum);
         if (match) {
           matchedTuVanIds.add(match.id);
           sessionMatchMap.set(s.id, match);
@@ -299,7 +311,8 @@ async function loadJourney(profileId, currentPhase) {
       const matchingTuVan = sessionMatchMap.get(s.id) || null;
       let tuVanDate = null;
       if (matchingTuVan) {
-        tuVanDate = matchingTuVan.content?.report_date || matchingTuVan.created_at;
+        const mc = getRecordContent(matchingTuVan);
+        tuVanDate = mc.report_date || matchingTuVan.created_at;
       }
 
       const tuVanSortDate = safeTimestamp(tuVanDate);
@@ -322,8 +335,9 @@ async function loadJourney(profileId, currentPhase) {
     // Orphan tu_van records without matching session
     sortedTuVan.forEach(r => {
       if (matchedTuVanIds.has(r.id)) return;
-      const lanThu = parseNum(r.content?.lan_thu);
-      const _eventDate = r.content?.report_date || r.created_at;
+      const rc = getRecordContent(r);
+      const lanThu = parseNum(rc.lan_thu);
+      const _eventDate = rc.report_date || r.created_at;
       events.push({
         date: _eventDate,
         sortDate: safeTimestamp(_eventDate),
@@ -342,12 +356,13 @@ async function loadJourney(profileId, currentPhase) {
     recs.forEach(r => {
       if (['tu_van', 'tu_van_hinh'].includes(r.record_type)) return; // Handled in paired_tv above!
 
+      const rc = getRecordContent(r);
       let icon, text, isMajor = false;
       let _buoiThu = null;
 
       if      (r.record_type === 'bien_ban')    { 
-        _buoiThu = r.content?.buoi_thu;
-        const _hasKT = r.content?.has_kt_content;
+        _buoiThu = rc.buoi_thu;
+        const _hasKT = rc.has_kt_content;
         icon='📋'; text=`Báo cáo BB${_buoiThu?' buổi '+_buoiThu:''}${_hasKT ? ' 📖' : ''}`;
       }
       else if (r.record_type === 'chot_bb')     { icon='🎓'; text='Lập Group TV - BB'; isMajor = true; }
@@ -361,15 +376,15 @@ async function loadJourney(profileId, currentPhase) {
       else if (r.record_type === 'mo_kt')       { return; }
       else if (r.record_type === 'note')        { return; }
       else if (r.record_type === 'phase_change') { return; }
-      else if (r.record_type === 'drop_out')    { icon='🔴'; text=`Drop-out: ${r.content?.reason||'Không có lý do'}`; isMajor = true; }
-      else if (r.record_type === 'pause')         { icon='⏸️'; text=`Pause: ${r.content?.reason||'Tạm dừng'}`; isMajor = true; }
+      else if (r.record_type === 'drop_out')    { icon='🔴'; text=`Drop-out: ${rc.reason||'Không có lý do'}`; isMajor = true; }
+      else if (r.record_type === 'pause')         { icon='⏸️'; text=`Pause: ${rc.reason||'Tạm dừng'}`; isMajor = true; }
       else if (r.record_type === 'alive')       { icon='🟢'; text='Khôi phục Alive'; isMajor = true; }
       else { icon='📌'; text=r.record_type; }
 
       // Check if this bien_ban has a matching KT
       let hasKT = false, ktRecordId = null;
       if (r.record_type === 'bien_ban' && _buoiThu != null) {
-        const ktMatch = moKtRecords.find(m => Number(m.content?.buoi_thu) === Number(_buoiThu));
+        const ktMatch = moKtRecords.find(m => Number(getRecordContent(m).buoi_thu) === Number(_buoiThu));
         if (ktMatch) {
           hasKT = true;
           ktRecordId = ktMatch.id;
@@ -380,7 +395,7 @@ async function loadJourney(profileId, currentPhase) {
       // Check if this bien_ban has a matching Bài đặc biệt
       let hasBDB = false, bdbRecordId = null;
       if (r.record_type === 'bien_ban' && _buoiThu != null) {
-        const bdbMatch = bdbRecords.find(m => Number(m.content?.buoi_thu) === Number(_buoiThu));
+        const bdbMatch = bdbRecords.find(m => Number(getRecordContent(m).buoi_thu) === Number(_buoiThu));
         if (bdbMatch) {
           hasBDB = true;
           bdbRecordId = bdbMatch.id;
@@ -391,7 +406,7 @@ async function loadJourney(profileId, currentPhase) {
       // Check if this bien_ban has a matching BTVN
       let hasBTVN = false, btvnRecordId = null, btvnDeletable = false;
       if (r.record_type === 'bien_ban') {
-        const btvnMatch = btvnRecords.find(b => b.content?.bb_record_id === r.id);
+        const btvnMatch = btvnRecords.find(b => getRecordContent(b).bb_record_id === r.id);
         if (btvnMatch) {
           hasBTVN = true;
           btvnRecordId = btvnMatch.id;
@@ -400,7 +415,7 @@ async function loadJourney(profileId, currentPhase) {
         }
       }
 
-      const _eventDate = r.content?.report_date || r.created_at;
+      const _eventDate = rc.report_date || r.created_at;
       events.push({
         date: _eventDate, icon, text, sortDate: safeTimestamp(_eventDate),
         deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type,
