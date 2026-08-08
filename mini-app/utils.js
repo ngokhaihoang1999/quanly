@@ -38,8 +38,9 @@ function openZaloLink(phone, event) {
     return;
   }
   const url = `https://zalo.me/${cleanPhone}`;
-  if (window.Telegram?.WebApp?.openLink) {
-    window.Telegram.WebApp.openLink(url);
+  const tg = window.Telegram?.WebApp;
+  if (tg && typeof tg.openLink === 'function') {
+    tg.openLink(url, { try_instant_view: false });
   } else {
     window.open(url, '_blank');
   }

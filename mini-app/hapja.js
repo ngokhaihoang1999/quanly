@@ -597,53 +597,47 @@ async function loadRecords(profileId, type, listElId, countElId) {
 
     const typeQuery = type === 'tu_van' ? 'in.(tu_van,tu_van_hinh)' : `eq.${type}`;
 
-    // Lấy danh sách từ cả profile_records và legacy records bàn giao song song
-    const [res, fbRes, latestRes] = await Promise.all([
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
+    const [recRes, latestRes, sessRes] = await Promise.all([
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
-      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
+      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null),
+      type === 'tu_van' ? sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`).catch(() => null) : Promise.resolve(null)
     ]);
 
-    let prArr = await safeJson(res);
-    let fbArr = await safeJson(fbRes);
-    if (!Array.isArray(prArr)) prArr = [];
-    if (!Array.isArray(fbArr)) fbArr = [];
-
-    const recMap = new Map();
-    [...prArr, ...fbArr].forEach(r => { if (r && r.id && !recMap.has(r.id)) recMap.set(r.id, r); });
-    const records = Array.from(recMap.values()).sort((a,b) => new Date(a.created_at || 0) - new Date(a.created_at || 0));
-
+    const records = await safeJson(recRes);
     const rawLatest = await safeJson(latestRes);
     const latestRows = Array.isArray(rawLatest) ? rawLatest : [];
+    const sessList = await safeJson(sessRes);
 
     if (countEl) countEl.textContent = records.length + ' phiếu';
 
-    if (!records.length) {
-      let sessHtml = '';
-      if (type === 'tu_van') {
-        try {
-          const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`).catch(() => null);
-          if (sRes && sRes.ok) {
-            const sArr = await sRes.json();
-            if (Array.isArray(sArr) && sArr.length > 0) {
-              sessHtml = `
-                <div style="margin-bottom:12px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-                  <div style="font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📅 LỊCH CHỐT TV DỰ KIẾN (CHƯA NỘP BÁO CÁO)</div>
-                  ${sArr.map(s => `
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);">
-                      <div>
-                        <div style="font-size:13px;font-weight:600;color:var(--text);">Chốt TV lần ${s.session_number}${s.tool ? ' — '+(typeof escHtml==='function'?escHtml(s.tool):s.tool) : ''}</div>
-                        <div style="font-size:11px;color:var(--text3);">${shinDate(s.scheduled_at || s.created_at)}</div>
-                      </div>
-                      <button onclick="createTVFromSession('${s.id}', ${s.session_number}, '${(s.tool||'').replace(/'/g,"\\'")}')" style="padding:6px 12px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-size:12px;font-weight:700;border:none;cursor:pointer;">📝 Viết báo cáo</button>
-                    </div>
-                  `).join('')}
+    let sessHtml = '';
+    if (type === 'tu_van' && Array.isArray(sessList) && sessList.length > 0) {
+      sessHtml = `
+        <div style="margin-bottom:12px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+          <div style="font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📅 LỊCH CHỐT TV DỰ KIẾN & TIẾN ĐỘ</div>
+          ${sessList.map(s => {
+            const hasReport = records.some(r => {
+              const c = typeof getRecordContent === 'function' ? getRecordContent(r) : (r.content || {});
+              return String(c.lan_thu) === String(s.session_number);
+            });
+            const statusBadge = hasReport 
+              ? `<span style="font-size:11px;font-weight:700;color:var(--green);padding:4px 8px;border-radius:12px;background:rgba(34,197,94,0.15);">✅ Đã nộp BC</span>`
+              : `<button onclick="createTVFromSession('${s.id}', ${s.session_number}, '${(s.tool||'').replace(/'/g,"\\'")}')" style="padding:6px 12px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-size:12px;font-weight:700;border:none;cursor:pointer;">📝 Viết báo cáo</button>`;
+            return `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text);">Chốt TV lần ${s.session_number}${s.tool ? ' — '+(typeof escHtml==='function'?escHtml(s.tool):s.tool) : ''}</div>
+                  <div style="font-size:11px;color:var(--text3);">${shinDate(s.scheduled_at || s.created_at)}</div>
                 </div>
-              `;
-            }
-          }
-        } catch(e) {}
-      }
+                ${statusBadge}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    if (!records.length) {
       listEl.innerHTML = sessHtml + '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu báo cáo nào</div>';
       return;
     }
@@ -652,7 +646,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
     const globalNewestId = latestRows[0]?.id;
     const globalNewestType = latestRows[0]?.record_type;
 
-    listEl.innerHTML = records.map((r, i) => {
+    const recsHtml = records.map((r, i) => {
       const c = typeof getRecordContent === 'function' ? getRecordContent(r) : (r.content || {});
       const title = c.lan_thu ? `Lần thứ ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` :
                     c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
@@ -674,6 +668,8 @@ async function loadRecords(profileId, type, listElId, countElId) {
         ${delBtn}
       </div>`;
     }).join('');
+
+    listEl.innerHTML = sessHtml + recsHtml;
   } catch(e) {
     console.error('loadRecords error:', e);
     const listEl = document.getElementById(listElId);
