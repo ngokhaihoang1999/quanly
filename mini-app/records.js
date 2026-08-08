@@ -146,10 +146,10 @@ async function loadJourney(profileId, currentPhase) {
 
   try {
     const [sessRes, recRes, hjRes, fhRes] = await Promise.all([
-      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`),
-      sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`)
+      sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`).catch(() => null),
+      sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`).catch(() => null)
     ]);
     const rawSessions = (sessRes && sessRes.ok) ? await sessRes.json() : [];
     const rawRecs = (recRes && recRes.ok) ? await recRes.json() : [];

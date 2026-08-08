@@ -599,8 +599,8 @@ async function loadRecords(profileId, type, listElId, countElId) {
 
     // Lấy cả danh sách tab lẫn record mới nhất TOÀN BỘ dòng thời gian song song
     const [res, latestRes] = await Promise.all([
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban,chot_bb)&select=id,record_type&order=created_at.desc&limit=1`)
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban,chot_bb)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
     ]);
 
     const rawRecords = (res && res.ok) ? await res.json() : [];
@@ -612,7 +612,32 @@ async function loadRecords(profileId, type, listElId, countElId) {
     if (countEl) countEl.textContent = records.length + ' phiếu';
 
     if (!records.length) {
-      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu nào</div>';
+      let sessHtml = '';
+      if (type === 'tu_van') {
+        try {
+          const sRes = await sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}&select=*&order=session_number.asc`).catch(() => null);
+          if (sRes && sRes.ok) {
+            const sArr = await sRes.json();
+            if (Array.isArray(sArr) && sArr.length > 0) {
+              sessHtml = `
+                <div style="margin-bottom:12px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                  <div style="font-size:11.5px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">📅 LỊCH CHỐT TV DỰ KIẾN (CHƯA NỘP BÁO CÁO)</div>
+                  ${sArr.map(s => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);">
+                      <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text);">Chốt TV lần ${s.session_number}${s.tool ? ' — '+escHtml(s.tool) : ''}</div>
+                        <div style="font-size:11px;color:var(--text3);">${shinDate(s.scheduled_at || s.created_at)}</div>
+                      </div>
+                      <button onclick="createTVFromSession('${s.id}', ${s.session_number}, '${(s.tool||'').replace(/'/g,"\\'")}')" style="padding:6px 12px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-size:12px;font-weight:700;border:none;cursor:pointer;">📝 Viết báo cáo</button>
+                    </div>
+                  `).join('')}
+                </div>
+              `;
+            }
+          }
+        } catch(e) {}
+      }
+      listEl.innerHTML = sessHtml + '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px;">Chưa có phiếu báo cáo tư vấn nào</div>';
       return;
     }
 
