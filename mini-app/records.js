@@ -171,6 +171,7 @@ async function loadJourney(profileId, currentPhase) {
 
     const sessions = Array.isArray(rawSessions) ? rawSessions : [];
     const recs = Array.isArray(rawRecs) ? rawRecs : [];
+    window.allCurrentRecords = recs;
     const hapjas = Array.isArray(rawHapjas) ? rawHapjas : [];
     const fhs = Array.isArray(rawFhs) ? rawFhs : [];
 
@@ -673,14 +674,29 @@ async function loadJourney(profileId, currentPhase) {
 // ── View a report record (polished read-only popup matching Telegram style) ──
 async function viewRecord(recordId, recordType) {
   try {
-    let recRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
-    let rows = await safeJson(recRes);
-    if (!Array.isArray(rows) || !rows[0]) {
-      const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
-      rows = await safeJson(fbRes);
+    let targetId = recordId;
+    let targetRecord = null;
+    if (typeof recordId === 'object' && recordId !== null) {
+      targetRecord = recordId;
+      targetId = recordId.id;
     }
-    if (!rows[0]) { showToast('⚠️ Không tìm thấy báo cáo'); return; }
-    const r = rows[0];
+    
+    if (!targetRecord && targetId) {
+      let recRes = await sbFetch(`/rest/v1/records?id=eq.${targetId}&select=*`).catch(() => null);
+      let rows = await safeJson(recRes);
+      if (!Array.isArray(rows) || !rows[0]) {
+        const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${targetId}&select=*`).catch(() => null);
+        rows = await safeJson(fbRes);
+      }
+      if (Array.isArray(rows) && rows[0]) targetRecord = rows[0];
+    }
+    
+    if (!targetRecord && targetId && window.allCurrentRecords && Array.isArray(window.allCurrentRecords)) {
+      targetRecord = window.allCurrentRecords.find(r => String(r.id) === String(targetId));
+    }
+
+    if (!targetRecord) { showToast('⚠️ Không tìm thấy báo cáo'); return; }
+    const r = targetRecord;
     const rType = r.record_type || recordType;
     const c = typeof getRecordContent === 'function' ? getRecordContent(r) : (r.content || {});
     const date = shinDate(r.created_at);
@@ -876,16 +892,33 @@ function showReportPopup(contentHtml, recordId, recordType, copyText) {
 // ── Edit a report record (fetch content & open modal in EDIT mode) ──
 async function editRecord(recordId, recordType) {
   try {
-    let recRes = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`).catch(() => null);
-    let rows = await safeJson(recRes);
-    if (!Array.isArray(rows) || !rows[0]) {
-      const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`).catch(() => null);
-      rows = await safeJson(fbRes);
+    let targetId = recordId;
+    let targetRecord = null;
+    if (typeof recordId === 'object' && recordId !== null) {
+      targetRecord = recordId;
+      targetId = recordId.id;
     }
-    if (rows[0]) {
-      currentRecordId = rows[0].id; // set ID so saveRecord does PATCH
-      const parsedContent = typeof getRecordContent === 'function' ? getRecordContent(rows[0]) : (rows[0].content || {});
-      openAddRecordModal(recordType || rows[0].record_type, parsedContent, false); // false = editable
+    
+    if (!targetRecord && targetId) {
+      let recRes = await sbFetch(`/rest/v1/records?id=eq.${targetId}&select=*`).catch(() => null);
+      let rows = await safeJson(recRes);
+      if (!Array.isArray(rows) || !rows[0]) {
+        const fbRes = await sbFetch(`/rest/v1/profile_records?id=eq.${targetId}&select=*`).catch(() => null);
+        rows = await safeJson(fbRes);
+      }
+      if (Array.isArray(rows) && rows[0]) targetRecord = rows[0];
+    }
+    
+    if (!targetRecord && targetId && window.allCurrentRecords && Array.isArray(window.allCurrentRecords)) {
+      targetRecord = window.allCurrentRecords.find(r => String(r.id) === String(targetId));
+    }
+
+    if (targetRecord) {
+      currentRecordId = targetRecord.id; // set ID so saveRecord does PATCH
+      const parsedContent = typeof getRecordContent === 'function' ? getRecordContent(targetRecord) : (targetRecord.content || {});
+      openAddRecordModal(recordType || targetRecord.record_type, parsedContent, false); // false = editable
+    } else {
+      showToast('⚠️ Không tìm thấy báo cáo để sửa');
     }
   } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
