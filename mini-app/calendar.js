@@ -420,7 +420,7 @@ function renderCalendarDayEvents(date) {
       // Only show action column if there are buttons
       const actionCol = actionBtns ? `<div style="display:flex;gap:3px;align-items:center;flex-shrink:0;margin-left:4px;">${actionBtns}</div>` : '';
 
-      return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileById('${ev.profile_id}')` : ''}">
+      return `<div class="cal-event-card" ${completedCls} onclick="${ev.profile_id ? `openProfileQuickPopover('${ev.profile_id}', 'calendar', event)` : ''}">
         <div class="cal-event-bar" style="background:${effectiveColor}"></div>
         <div class="cal-event-body" style="flex:1;min-width:0;">
           <div class="cal-event-title" style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:4px;">${ev.title}</div>

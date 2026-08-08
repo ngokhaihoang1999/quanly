@@ -93,7 +93,8 @@ function renderProfileCard(p, opts = {}) {
 
   const extraBadges = opts.extraBadges || '';
   const resolvedId = p.id || opts.profileId || '';
-  const clickFn = opts.clickFn || `openProfileById('${resolvedId}', event)`;
+  const defaultCtx = opts.contextType || 'overview';
+  const clickFn = opts.clickFn || `if(typeof openProfileQuickPopover === 'function'){ openProfileQuickPopover('${resolvedId}', '${defaultCtx}', event); } else { openProfileById('${resolvedId}', event); }`;
 
   // Check if profile has unread chat messages
   const isUnread = window.unreadChatProfileIds && window.unreadChatProfileIds.has(resolvedId);
@@ -435,10 +436,111 @@ function attachAutocomplete(input) {
   });
 }
 
+// ============ ZERO-OVERHEAD EVENT-DRIVEN OFFLINE QUEUE ============
+window.getOfflineQueue = function() {
+  try {
+    return JSON.parse(localStorage.getItem('cj_offline_queue') || '[]');
+  } catch(e) { return []; }
+};
+
+window.saveOfflineQueue = function(q) {
+  try {
+    localStorage.setItem('cj_offline_queue', JSON.stringify(q));
+    updateSyncBadgeState();
+  } catch(e) {}
+};
+
+window.enqueueOfflineMutation = function(path, opts) {
+  const q = getOfflineQueue();
+  q.push({
+    id: Date.now() + '_' + Math.random().toString(36).substring(2,7),
+    path: path,
+    opts: opts,
+    created_at: new Date().toISOString()
+  });
+  saveOfflineQueue(q);
+  if (typeof showToast === 'function') {
+    showToast('🟡 Đã lưu vào Hàng chờ Offline (sẽ tự đồng bộ khi có mạng)');
+  }
+};
+
+window.processOfflineQueue = async function() {
+  if (!navigator.onLine) return;
+  const q = getOfflineQueue();
+  if (!q.length) return;
+
+  const remaining = [];
+  let syncedCount = 0;
+
+  for (let i = 0; i < q.length; i++) {
+    const item = q[i];
+    try {
+      const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...(item.opts.headers || {}) };
+      const res = await fetch(SUPABASE_URL + item.path, { ...item.opts, headers });
+      if (res.ok) {
+        syncedCount++;
+      } else {
+        remaining.push(item);
+      }
+    } catch(e) {
+      remaining.push(item);
+    }
+  }
+
+  saveOfflineQueue(remaining);
+  if (syncedCount > 0) {
+    if (typeof showToast === 'function') showToast(`🟢 Đã đồng bộ thành công ${syncedCount} bản ghi offline!`);
+    triggerSyncBadgeSuccess();
+  }
+};
+
+window.updateSyncBadgeState = function() {
+  const badge = document.getElementById('offlineSyncBadge');
+  if (!badge) return;
+  const q = getOfflineQueue();
+  if (!navigator.onLine || q.length > 0) {
+    badge.style.display = 'inline-flex';
+    badge.style.background = 'rgba(245,158,11,0.15)';
+    badge.style.color = '#d97706';
+    badge.style.border = '1px solid rgba(245,158,11,0.3)';
+    badge.innerHTML = `🟡 ${!navigator.onLine ? 'Mất mạng' : 'Chờ mạng'} (${q.length})`;
+  } else {
+    badge.style.display = 'none';
+  }
+};
+
+window.triggerSyncBadgeSuccess = function() {
+  const badge = document.getElementById('offlineSyncBadge');
+  if (!badge) return;
+  badge.style.display = 'inline-flex';
+  badge.style.background = 'rgba(34,197,94,0.15)';
+  badge.style.color = '#16a34a';
+  badge.style.border = '1px solid rgba(34,197,94,0.3)';
+  badge.innerHTML = '🟢 Đã đồng bộ';
+  setTimeout(() => {
+    updateSyncBadgeState();
+  }, 2500);
+};
+
+// Event Driven native listeners — ZERO CPU overhead, NO POLLING
+window.addEventListener('online', () => {
+  updateSyncBadgeState();
+  processOfflineQueue();
+});
+window.addEventListener('offline', () => {
+  updateSyncBadgeState();
+});
+
 async function sbFetch(path, opts={}) {
   const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', ...opts.headers };
   if (opts.method === 'POST' && !headers['Prefer']) headers['Prefer'] = 'return=representation';
   const isWrite = opts.method && opts.method !== 'GET';
+
+  // If client is offline and it's a write request, enqueue into offline queue immediately
+  if (isWrite && !navigator.onLine) {
+    enqueueOfflineMutation(path, opts);
+    return new Response(JSON.stringify({ offline: true, message: 'Enqueued in offline queue' }), { status: 200 });
+  }
 
   // ── Security guard ──
   if (isWrite && !window.isGuestMode && myStaff === null && typeof _authChecked !== 'undefined' && _authChecked) {
@@ -482,9 +584,20 @@ async function sbFetch(path, opts={}) {
       const res = await fetch(SUPABASE_URL + path, { ...opts, headers, signal: controller.signal });
       if (!res.ok && isWrite) {
         console.warn(`[sbFetch] ${opts.method} ${path} → ${res.status}`);
-        if (typeof showToast === 'function') showToast(`⚠️ Lỗi lưu dữ liệu (${res.status})`);
+        if (res.status >= 500 || res.status === 0) {
+          // Server error or network drop, enqueue for offline retry
+          enqueueOfflineMutation(path, opts);
+        } else if (typeof showToast === 'function') {
+          showToast(`⚠️ Lỗi lưu dữ liệu (${res.status})`);
+        }
       }
       return res;
+    } catch(err) {
+      if (isWrite) {
+        enqueueOfflineMutation(path, opts);
+        return new Response(JSON.stringify({ offline: true, error: err.message }), { status: 200 });
+      }
+      throw err;
     } finally {
       clearTimeout(tid);
       _inflight.delete(path);
