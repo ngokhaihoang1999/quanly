@@ -603,7 +603,14 @@ async function loadRecords(profileId, type, listElId, countElId) {
       sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban,chot_bb)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
     ]);
 
-    const rawRecords = (res && res.ok) ? await res.json() : [];
+    let rawRecords = (res && res.ok) ? await res.json() : [];
+    if (!Array.isArray(rawRecords) || rawRecords.length === 0) {
+      const fbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=${typeQuery}&select=*&order=created_at.asc`).catch(() => null);
+      if (fbRes && fbRes.ok) {
+        const fbArr = await fbRes.json();
+        if (Array.isArray(fbArr) && fbArr.length > 0) rawRecords = fbArr;
+      }
+    }
     const rawLatest = (latestRes && latestRes.ok) ? await latestRes.json() : [];
 
     const records = Array.isArray(rawRecords) ? rawRecords : [];

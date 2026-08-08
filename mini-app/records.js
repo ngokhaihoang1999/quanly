@@ -152,7 +152,14 @@ async function loadJourney(profileId, currentPhase) {
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`).catch(() => null)
     ]);
     const rawSessions = (sessRes && sessRes.ok) ? await sessRes.json() : [];
-    const rawRecs = (recRes && recRes.ok) ? await recRes.json() : [];
+    let rawRecs = (recRes && recRes.ok) ? await recRes.json() : [];
+    if (!Array.isArray(rawRecs) || rawRecs.length === 0) {
+      const fbRecRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=not.in.(ai_mindmap,ai_chat)&select=*&order=created_at.asc`).catch(() => null);
+      if (fbRecRes && fbRecRes.ok) {
+        const fbRecs = await fbRecRes.json();
+        if (Array.isArray(fbRecs) && fbRecs.length > 0) rawRecs = fbRecs;
+      }
+    }
     const rawHapjas = (hjRes && hjRes.ok) ? await hjRes.json() : [];
     const rawFhs = (fhRes && fhRes.ok) ? await fhRes.json() : [];
 
