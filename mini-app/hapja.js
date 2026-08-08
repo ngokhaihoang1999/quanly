@@ -585,8 +585,8 @@ async function loadRecords(profileId, type, listElId, countElId) {
   try {
     // Lấy cả danh sách tab lẫn record mới nhất TOÀN BỘ dòng thời gian song song
     const [res, latestRes] = await Promise.all([
-      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.asc`),
-      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`)
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.${type}&select=*&order=created_at.asc`),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=in.(tu_van,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`)
     ]);
     const records = await res.json();
     const latestRows = await latestRes.json();
@@ -639,7 +639,7 @@ async function deleteProfile() {
     // 1. Delete check_hapja (Previously unlinked, now hard delete as requested)
     await del(`/rest/v1/check_hapja?profile_id=eq.${pid}`);
     // 2. Records FIRST (has FK session_id → consultation_sessions)
-    await del(`/rest/v1/records?profile_id=eq.${pid}`);
+    await del(`/rest/v1/profile_records?profile_id=eq.${pid}`);
     // 3. Consultation sessions
     await del(`/rest/v1/consultation_sessions?profile_id=eq.${pid}`);
     // 4. Form hanh chinh
@@ -662,7 +662,7 @@ async function deleteRecord(id, type) {
   // Nếu không phải btvn, Kiểm tra: đây có phải record mới nhất TRÊN TOÀN BỘ dòng thời gian không?
   if (type !== 'btvn') {
     try {
-      const checkRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=in.(tu_van,bien_ban)&select=id&order=created_at.desc&limit=1`);
+      const checkRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=in.(tu_van,bien_ban)&select=id&order=created_at.desc&limit=1`);
       const latest = await checkRes.json();
       if (!latest || !latest[0] || latest[0].id !== id) {
         showToast('⚠️ Chỉ xóa được báo cáo mới nhất trên dòng thời gian!');
@@ -675,7 +675,7 @@ async function deleteRecord(id, type) {
   const confirmMsg = type === 'btvn' ? `Xóa "${label}" này?` : `Xóa ${label} mới nhất này?`;
   if (!await showConfirmAsync(confirmMsg)) return;
   try {
-    await sbFetch(`/rest/v1/records?id=eq.${id}`, {method:'DELETE'});
+    await sbFetch(`/rest/v1/profile_records?id=eq.${id}`, {method:'DELETE'});
     showToast('✅ Đã xóa!');
     // Refresh cả timeline và cả các tab liên quan
     const p = allProfiles.find(x => x.id === currentProfileId);

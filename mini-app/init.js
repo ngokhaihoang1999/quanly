@@ -502,8 +502,9 @@ async function loadStaffInfo() {
               ${avatarHtml}
             </div>
             <div style="display:flex;flex-direction:column;gap:1px;">
-              <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;" title="${displayName}">${displayName}</span>
-              <span style="font-size:9.5px;font-weight:500;color:rgba(255,255,255,0.65);line-height:1.2;">Hệ thống quản lý<br/><span style="opacity:0.8;">v6.02.0036</span></span>
+              <span style="font-size:13.5px;font-weight:700;color:rgba(255,255,255,0.97);text-shadow:0 1px 3px rgba(0,0,0,0.2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;" title="${displayName}">${displayName}</span>
+              <span style="font-size:9.5px;font-weight:500;color:rgba(255,255,255,0.7);line-height:1.2;white-space:nowrap;">Hệ thống quản lý</span>
+              <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);line-height:1;white-space:nowrap;">v6.02.0037</span>
             </div>
           </div>`;
         headerAv.style.display = 'block';

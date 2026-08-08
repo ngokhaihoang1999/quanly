@@ -158,9 +158,9 @@ async function openProfile(p, cardEl, initialTabId) {
   try {
     const [fgRes, rRes, sRes, dkRes] = await Promise.all([
       sbFetch(`/rest/v1/fruit_groups?profile_id=eq.${p.id}&select=id,telegram_group_id,telegram_group_title,invite_link,fruit_roles(id,staff_code,role_type,display_name)`),
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${p.id}&record_type=not.in.(mo_kt,note,ai_mindmap,ai_chat,phase_change)&select=record_type,content,created_at&order=created_at.desc&limit=1`),
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${p.id}&select=id,session_number,tool,tvv_staff_code,created_at,scheduled_at&order=session_number.asc`),
-      sbFetch(`/rest/v1/records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${p.id}&record_type=eq.dky_center&select=id&limit=1`)
     ]);
 
     // ── Parse fruit_groups ──
@@ -771,13 +771,13 @@ async function saveInfoSheet() {
     }
     if (data.t2_ngay_chakki) {
       try {
-        const hjRes = await sbFetch(`/rest/v1/records?profile_id=eq.${currentProfileId}&record_type=eq.hapja&select=id,data`);
+        const hjRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${currentProfileId}&record_type=eq.hapja&select=id,data`);
         const hjRows = await hjRes.json();
         if (hjRows && hjRows.length > 0) {
           const hjObj = hjRows[0];
           const hjData = hjObj.data || {};
           hjData.ngay_chakki = data.t2_ngay_chakki;
-          await sbFetch(`/rest/v1/records?id=eq.${hjObj.id}`, { method: 'PATCH', body: JSON.stringify({ data: hjData }) });
+          await sbFetch(`/rest/v1/profile_records?id=eq.${hjObj.id}`, { method: 'PATCH', body: JSON.stringify({ data: hjData }) });
         }
       } catch(e) {}
       if (typeof loadJourney === 'function') loadJourney(currentProfileId);
@@ -850,7 +850,7 @@ function copyInfoSheet() {
 
 async function openRecord(recordId, type) {
   // Fetch full record from server
-  const res = await sbFetch(`/rest/v1/records?id=eq.${recordId}&select=*`);
+  const res = await sbFetch(`/rest/v1/profile_records?id=eq.${recordId}&select=*`);
   const rows = await res.json();
   if (!rows || !rows.length) return;
   const r = rows[0];
@@ -917,7 +917,7 @@ async function deleteProfile(profileId, name) {
     // Cascade delete in correct order (FK constraints)
     await Promise.all([
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}`, { method: 'DELETE' }),
-      sbFetch(`/rest/v1/records?profile_id=eq.${profileId}`, { method: 'DELETE' }),
+      sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}`, { method: 'DELETE' }),
       sbFetch(`/rest/v1/consultation_sessions?profile_id=eq.${profileId}`, { method: 'DELETE' }),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}`, { method: 'DELETE' }),
     ]);

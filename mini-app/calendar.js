@@ -146,7 +146,7 @@ async function _mergeRecordMilestones(startStr, endStr, myCode, scope) {
   try {
     // Fetch BB records (buoi_tiep in content) AND TV sessions (scheduled_at column) in parallel
     const [bbRes, tvRes] = await Promise.all([
-      sbFetch(`/rest/v1/records?record_type=eq.bien_ban&select=id,profile_id,content,created_at&order=created_at.asc`),
+      sbFetch(`/rest/v1/profile_records?record_type=eq.bien_ban&select=id,profile_id,content,created_at&order=created_at.asc`),
       sbFetch(`/rest/v1/consultation_sessions?scheduled_at=not.is.null&select=id,profile_id,session_number,tool,scheduled_at,tvv_staff_code&order=scheduled_at.asc`)
     ]);
     const bbRecords = bbRes.ok ? await bbRes.json() : [];

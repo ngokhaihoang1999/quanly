@@ -103,8 +103,8 @@
     try {
       const [hcRes, tvRes, dkRes] = await Promise.all([
         sbFetch('/rest/v1/form_hanh_chinh?select=profile_id,data'),
-        sbFetch('/rest/v1/records?record_type=eq.tu_van&select=profile_id,content&order=created_at.desc'),
-        sbFetch('/rest/v1/records?record_type=eq.chot_center&select=profile_id&order=created_at.desc'),
+        sbFetch('/rest/v1/profile_records?record_type=eq.tu_van&select=profile_id,content&order=created_at.desc'),
+        sbFetch('/rest/v1/profile_records?record_type=eq.chot_center&select=profile_id&order=created_at.desc'),
       ]);
       const hcData = await hcRes.json();
       const tvData = await tvRes.json();

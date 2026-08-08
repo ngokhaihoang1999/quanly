@@ -133,7 +133,7 @@ async function deleteStaffFromList(staffCode) {
     await sbFetch(`/rest/v1/consultation_sessions?tvv_staff_code=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ tvv_staff_code: null }) });
     await sbFetch(`/rest/v1/consultation_sessions?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
     // 5b. Clear records.created_by (text field, no FK but still references)
-    await sbFetch(`/rest/v1/records?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
+    await sbFetch(`/rest/v1/profile_records?created_by=eq.${sc}`, { method:'PATCH', body: JSON.stringify({ created_by: null }) });
     // 6. Clear calendar_events + priority_tasks
     await sbFetch(`/rest/v1/calendar_events?staff_code=eq.${sc}`, { method:'DELETE' });
     await sbFetch(`/rest/v1/priority_tasks?staff_code=eq.${sc}`, { method:'DELETE' });

@@ -161,7 +161,7 @@ async function loadDKBB(profileId) {
 
   // ── Fetch BB records count + KT content count ──
   try {
-    const bbRes = await sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=id,content`);
+    const bbRes = await sbFetch(`/rest/v1/profile_records?profile_id=eq.${profileId}&record_type=eq.bien_ban&select=id,content`);
     const bbRecords = await bbRes.json();
     const totalBB = bbRecords?.length || 0;
     const ktCount = (bbRecords || []).filter(r => r.content?.has_kt_content === true).length;
