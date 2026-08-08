@@ -243,12 +243,23 @@ async function loadJourney(profileId, currentPhase) {
       return m ? parseInt(m[0], 10) : null;
     };
 
+    const safeTimestamp = (d) => {
+      if (!d) return 0;
+      if (typeof d === 'number') return isNaN(d) ? 0 : d;
+      let s = String(d).trim();
+      if (!s) return 0;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) s += 'T12:00:00';
+      if (s.includes('T12:00:00T12:00:00')) s = s.replace('T12:00:00T12:00:00', 'T12:00:00');
+      const t = new Date(s).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+
     // Sort sessions by session_number ascending (1, 2, 3...)
     const sortedSessions = [...sessions].sort((a,b) => (parseNum(a.session_number)||0) - (parseNum(b.session_number)||0));
     // Sort tu_van records by report date / created_at ascending
     const sortedTuVan = [...tuVanRecords].sort((a,b) => {
-      const tA = new Date(a.content?.report_date || a.created_at).getTime();
-      const tB = new Date(b.content?.report_date || b.created_at).getTime();
+      const tA = safeTimestamp(a.content?.report_date || a.created_at);
+      const tB = safeTimestamp(b.content?.report_date || b.created_at);
       return tA - tB;
     });
 
@@ -280,15 +291,15 @@ async function loadJourney(profileId, currentPhase) {
     sessions.forEach(s => {
       const sessNum = parseNum(s.session_number) || s.session_number;
       const sessDate = s.scheduled_at || s.created_at;
-      const sSortDate = sessDate ? new Date(sessDate).getTime() : 0;
+      const sSortDate = safeTimestamp(sessDate);
 
       const matchingTuVan = sessionMatchMap.get(s.id) || null;
       let tuVanDate = null;
       if (matchingTuVan) {
-        tuVanDate = matchingTuVan.content?.report_date ? matchingTuVan.content.report_date + 'T12:00:00' : matchingTuVan.created_at;
+        tuVanDate = matchingTuVan.content?.report_date || matchingTuVan.created_at;
       }
 
-      const tuVanSortDate = tuVanDate ? new Date(tuVanDate).getTime() : 0;
+      const tuVanSortDate = safeTimestamp(tuVanDate);
       const effectiveSortDate = Math.max(sSortDate, tuVanSortDate);
 
       events.push({
@@ -309,10 +320,10 @@ async function loadJourney(profileId, currentPhase) {
     sortedTuVan.forEach(r => {
       if (matchedTuVanIds.has(r.id)) return;
       const lanThu = parseNum(r.content?.lan_thu);
-      const _eventDate = r.content?.report_date ? r.content.report_date + 'T12:00:00' : r.created_at;
+      const _eventDate = r.content?.report_date || r.created_at;
       events.push({
         date: _eventDate,
-        sortDate: new Date(_eventDate).getTime(),
+        sortDate: safeTimestamp(_eventDate),
         _type: 'paired_tv',
         _session: null,
         _sessionNum: lanThu,
@@ -386,9 +397,9 @@ async function loadJourney(profileId, currentPhase) {
         }
       }
 
-      const _eventDate = r.content?.report_date ? r.content.report_date + 'T12:00:00' : r.created_at;
+      const _eventDate = r.content?.report_date || r.created_at;
       events.push({
-        date: _eventDate, icon, text, sortDate: new Date(_eventDate).getTime(),
+        date: _eventDate, icon, text, sortDate: safeTimestamp(_eventDate),
         deletable: false, _type: 'record', _id: r.id, _rtype: r.record_type,
         isMajor, _buoiThu, hasKT, ktRecordId, hasBDB, bdbRecordId,
         hasBTVN, btvnRecordId, btvnDeletable
@@ -398,12 +409,12 @@ async function loadJourney(profileId, currentPhase) {
     // 4. Standalone BTVN records
     btvnRecords.forEach(b => {
       if (matchedBtvnIds.has(b.id)) return;
-      const _eventDate = b.content?.report_date ? b.content.report_date + 'T12:00:00' : b.created_at;
+      const _eventDate = b.content?.report_date || b.created_at;
       events.push({
         date: _eventDate,
         icon: '📝',
         text: 'Bài tập về nhà (Tự do)',
-        sortDate: new Date(_eventDate).getTime(),
+        sortDate: safeTimestamp(_eventDate),
         deletable: false,
         _type: 'record',
         _id: b.id,
@@ -421,7 +432,7 @@ async function loadJourney(profileId, currentPhase) {
     });
 
     // Sort descending: newest (top) → oldest (bottom)
-    events.sort((a,b) => b.sortDate - a.sortDate);
+    events.sort((a,b) => (b.sortDate || 0) - (a.sortDate || 0));
 
     const finalEvents = [...events];
 
