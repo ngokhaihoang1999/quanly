@@ -683,7 +683,7 @@ async function viewRecord(recordId, recordType) {
     if (!rows[0]) { showToast('⚠️ Không tìm thấy báo cáo'); return; }
     const r = rows[0];
     const rType = r.record_type || recordType;
-    const c = r.content || {};
+    const c = typeof getRecordContent === 'function' ? getRecordContent(r) : (r.content || {});
     const date = shinDate(r.created_at);
     const pName = allProfiles.find(x => String(x.id) === String(r.profile_id))?.full_name || '';
     const isTV = ['tu_van', 'tu_van_hinh'].includes(rType);
@@ -888,7 +888,8 @@ async function editRecord(recordId, recordType) {
     }
     if (rows[0]) {
       currentRecordId = rows[0].id; // set ID so saveRecord does PATCH
-      openAddRecordModal(recordType || rows[0].record_type, rows[0].content, false); // false = editable
+      const parsedContent = typeof getRecordContent === 'function' ? getRecordContent(rows[0]) : (rows[0].content || {});
+      openAddRecordModal(recordType || rows[0].record_type, parsedContent, false); // false = editable
     }
   } catch(e) { showToast('❌ Lỗi tải báo cáo'); console.error(e); }
 }
@@ -1448,7 +1449,10 @@ async function openAddRecordModal(type, existingContent = null, readOnly = false
   }
   document.getElementById('recordModalTitle').textContent = titleText;
   const body = document.getElementById('recordModalBody');
-  const c = existingContent || {};
+  let c = existingContent || {};
+  if (typeof c === 'string') {
+    try { c = JSON.parse(c); } catch(e) { c = {}; }
+  }
   const _today = new Date().toISOString().split('T')[0];
   const _reportDate = c.report_date || _today;
 

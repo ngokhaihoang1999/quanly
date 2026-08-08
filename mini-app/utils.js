@@ -2,6 +2,15 @@
 // Centralized date/time formatters and text helpers.
 // All files can rely on these being available globally.
 
+function getRecordContent(r) {
+  if (!r) return {};
+  let c = r.content || r.data || {};
+  if (typeof c === 'string') {
+    try { c = JSON.parse(c); } catch(e) { c = {}; }
+  }
+  return (c && typeof c === 'object') ? c : {};
+}
+
 // ── Shin Calendar: 2026 = Shin 43 → offset = year - 1983 ──
 const SHIN_OFFSET = 1983;
 

@@ -653,11 +653,11 @@ async function loadRecords(profileId, type, listElId, countElId) {
     const globalNewestType = latestRows[0]?.record_type;
 
     listEl.innerHTML = records.map((r, i) => {
-      const c = r.content || {};
+      const c = typeof getRecordContent === 'function' ? getRecordContent(r) : (r.content || {});
       const title = c.lan_thu ? `Lần thứ ${c.lan_thu}${c.ten_cong_cu ? ' — ' + c.ten_cong_cu : ''}` :
                     c.buoi_thu ? `Buổi thứ ${c.buoi_thu}` :
                     c.ten_cong_cu || 'Phiếu #' + (i + 1);
-      const preview = c.van_de || c.noi_dung || c.phan_hoi || '';
+      const previewStr = String(c.van_de || c.noi_dung || c.phan_hoi || c.meeting_notes || '');
       const date = shinDate(r.created_at);
       // Nút xóa chỉ hiện nếu đây là record mới nhất TRÊN TOÀN BỘ dòng thời gian, hoặc BTVN thì xoá tự do
       const isGlobalNewest = (r.id === globalNewestId && globalNewestType === type) || type === 'btvn';
@@ -669,7 +669,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
         <div class="record-content">
           <div class="record-date">📅 ${date}</div>
           <div class="record-title">${escHtml(title)}</div>
-          <div class="record-preview">${escHtml(preview.substring(0,80))}${preview.length>80?'...':''}</div>
+          <div class="record-preview">${escHtml(previewStr.substring(0,80))}${previewStr.length>80?'...':''}</div>
         </div>
         ${delBtn}
       </div>`;
