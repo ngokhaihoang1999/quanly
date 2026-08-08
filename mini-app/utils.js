@@ -11,6 +11,40 @@ function getRecordContent(r) {
   return (c && typeof c === 'object') ? c : {};
 }
 
+async function safeJson(res) {
+  if (!res || !res.ok) return [];
+  try {
+    const text = await res.text();
+    if (!text || !text.trim()) return [];
+    const data = JSON.parse(text);
+    return data !== null && data !== undefined ? data : [];
+  } catch(e) {
+    console.warn('safeJson parse warning:', e);
+    return [];
+  }
+}
+
+function openZaloLink(phone, event) {
+  if (event) {
+    try { event.preventDefault(); event.stopPropagation(); } catch(e) {}
+  }
+  let cleanPhone = String(phone || '').replace(/\D/g, '');
+  if (cleanPhone.startsWith('84') && cleanPhone.length === 11) {
+    cleanPhone = '0' + cleanPhone.slice(2);
+  }
+  const isValidPhone = /^0[35789]\d{8}$/.test(cleanPhone);
+  if (!isValidPhone) {
+    if (typeof showToast === 'function') showToast('⚠️ Hồ sơ chưa cập nhật SĐT Zalo hợp lệ');
+    return;
+  }
+  const url = `https://zalo.me/${cleanPhone}`;
+  if (window.Telegram?.WebApp?.openLink) {
+    window.Telegram.WebApp.openLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
 // ── Shin Calendar: 2026 = Shin 43 → offset = year - 1983 ──
 const SHIN_OFFSET = 1983;
 

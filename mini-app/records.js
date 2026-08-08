@@ -154,9 +154,9 @@ async function loadJourney(profileId, currentPhase) {
       sbFetch(`/rest/v1/check_hapja?profile_id=eq.${profileId}&select=data,created_at&limit=1`).catch(() => null),
       sbFetch(`/rest/v1/form_hanh_chinh?profile_id=eq.${profileId}&select=data&limit=1`).catch(() => null)
     ]);
-    const rawSessions = (sessRes && sessRes.ok) ? await sessRes.json() : [];
-    let prRecs = (recRes && recRes.ok) ? await recRes.json() : [];
-    let fbRecs = (fbRecRes && fbRecRes.ok) ? await fbRecRes.json() : [];
+    const rawSessions = await safeJson(sessRes);
+    let prRecs = await safeJson(recRes);
+    let fbRecs = await safeJson(fbRecRes);
     if (!Array.isArray(prRecs)) prRecs = [];
     if (!Array.isArray(fbRecs)) fbRecs = [];
 
@@ -166,8 +166,8 @@ async function loadJourney(profileId, currentPhase) {
     let rawRecs = Array.from(combinedRecMap.values());
     rawRecs = rawRecs.filter(r => !['ai_mindmap', 'ai_chat', 'note', 'phase_change'].includes(r.record_type));
 
-    const rawHapjas = (hjRes && hjRes.ok) ? await hjRes.json() : [];
-    const rawFhs = (fhRes && fhRes.ok) ? await fhRes.json() : [];
+    const rawHapjas = await safeJson(hjRes);
+    const rawFhs = await safeJson(fhRes);
 
     const sessions = Array.isArray(rawSessions) ? rawSessions : [];
     const recs = Array.isArray(rawRecs) ? rawRecs : [];

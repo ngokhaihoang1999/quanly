@@ -236,9 +236,7 @@
         cleanPhone = '0' + cleanPhone.slice(2);
       }
       const isValidPhone = /^0[35789]\d{8}$/.test(cleanPhone);
-      const zaloActionAttr = isValidPhone 
-        ? `href="https://zalo.me/${cleanPhone}" target="_blank"` 
-        : `href="javascript:void(0)" onclick="if(typeof showToast==='function') showToast('⚠️ Hồ sơ chưa cập nhật SĐT Zalo hợp lệ')"` ;
+      const zaloActionAttr = `onclick="openZaloLink('${cleanPhone}', event)"`;
 
       // 5. Create Popover DOM Container
       const popoverOverlay = document.createElement('div');

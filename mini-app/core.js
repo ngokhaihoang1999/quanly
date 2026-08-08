@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://smzoomekyvllsgppgvxw.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtem9vbWVreXZsbHNncHBndnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODg3MjcsImV4cCI6MjA4ODg2NDcyN30.TJ1BPyG8IlnxPSClIlJoOCpYUMhHHBmyL3cKFoXBJBY';
-window.APP_VERSION = 'v6.02.0061';
+window.APP_VERSION = 'v6.02.0062';
 const tg = window.Telegram?.WebApp;
 let currentProfileId = null, currentRecordType = null, currentRecordId = null;
 let allProfiles = [], allStaff = [], myStaff = null, structureData = [];

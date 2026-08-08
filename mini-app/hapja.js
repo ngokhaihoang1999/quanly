@@ -604,8 +604,8 @@ async function loadRecords(profileId, type, listElId, countElId) {
       sbFetch(`/rest/v1/records?profile_id=eq.${profileId}&record_type=in.(tu_van,tu_van_hinh,bien_ban)&select=id,record_type&order=created_at.desc&limit=1`).catch(() => null)
     ]);
 
-    let prArr = (res && res.ok) ? await res.json() : [];
-    let fbArr = (fbRes && fbRes.ok) ? await fbRes.json() : [];
+    let prArr = await safeJson(res);
+    let fbArr = await safeJson(fbRes);
     if (!Array.isArray(prArr)) prArr = [];
     if (!Array.isArray(fbArr)) fbArr = [];
 
@@ -613,7 +613,7 @@ async function loadRecords(profileId, type, listElId, countElId) {
     [...prArr, ...fbArr].forEach(r => { if (r && r.id && !recMap.has(r.id)) recMap.set(r.id, r); });
     const records = Array.from(recMap.values()).sort((a,b) => new Date(a.created_at || 0) - new Date(a.created_at || 0));
 
-    const rawLatest = (latestRes && latestRes.ok) ? await latestRes.json() : [];
+    const rawLatest = await safeJson(latestRes);
     const latestRows = Array.isArray(rawLatest) ? rawLatest : [];
 
     if (countEl) countEl.textContent = records.length + ' phiếu';
